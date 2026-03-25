@@ -213,14 +213,7 @@ const QUICK_ACTIONS = [
 ];
 
 // DEMO_THINKING_WORKFLOW removed — workflow now uses clarification flow
-
-const DEMO_THINKING_QUERY = [
-  'Analyzing query...',
-  'Identifying relevant data sources...',
-  'Querying SAP ERP — AP Module...',
-  'Processing 1.2M records...',
-  'Generating results...',
-];
+// DEMO_THINKING_QUERY moved into DETAILED_QUERY_CONFIG
 
 // WORKFLOW_FOLLOWUPS removed — workflow now uses UI recommendations flow
 
@@ -507,20 +500,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery]);
 
-  const isDuplicateInvoiceQuery = (msg: string): boolean => {
-    const lower = msg.toLowerCase();
-    return (lower.includes('duplicate') && lower.includes('invoice')) ||
-           (lower.includes('duplicate') && lower.includes('detect')) ||
-           lower.includes('duplicate invoice');
-  };
-
-  const classifyQuery = (msg: string): 'workflow' | 'query' => {
-    const lower = msg.toLowerCase();
-    if (lower.includes('workflow') || lower.includes('build a') || lower.includes('build me') || lower.includes('create a') || lower.includes('design a')) {
-      return 'workflow';
-    }
-    return 'query';
-  };
+  // isDuplicateInvoiceQuery and classifyQuery replaced by classifyDetailedQuery
 
   const startClarificationFlow = () => {
     clearTimers();

@@ -77,7 +77,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew }: Prop
 
   const handleBulkRun = () => {
     setBulkRunning(true);
-    addToast(`Running ${selectedWfs.size} workflows...`, 'success');
+    addToast({ message: `Running ${selectedWfs.size} workflows...`, type: 'success' });
     setTimeout(() => {
       addToast({ message: 'All workflows completed successfully', type: 'success' });
       setTimeout(() => {

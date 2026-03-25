@@ -4,7 +4,7 @@ import {
   Search, Plus, Upload, Link2,
   Clock, Play, ArrowUpRight,
   ChevronRight, ChevronDown, Sparkles, FileSpreadsheet, X, Check,
-  ArrowLeft, AlertTriangle, Shield, Workflow, CheckCircle2,
+  ArrowLeft, Shield, Workflow, CheckCircle2,
   ArrowRight, TrendingUp, RefreshCw, GitBranch, Network,
   Zap, Eye
 } from 'lucide-react';
@@ -495,7 +495,7 @@ function BPDetailView({ bp, onBack }: {
 
   const handleBulkRun = () => {
     const count = selectedWorkflows.size;
-    addToast(`Running ${count} workflows...`, 'info');
+    addToast({ message: `Running ${count} workflows...`, type: 'info' });
     setTimeout(() => {
       addToast({ message: 'All workflows completed. Generating report...', type: 'success' });
       setTimeout(() => {

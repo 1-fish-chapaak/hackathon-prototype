@@ -139,7 +139,7 @@ export default function App() {
               setArtifactMode={setArtifactMode}
               setWorkflowBuildStage={setWorkflowBuildStage}
               setWorkflowUiEnhancements={setWorkflowUiEnhancements}
-              initialQuery={state.chatInitialQuery}
+              initialQuery={state.chatInitialQuery ?? undefined}
               onInitialQueryProcessed={() => setChatInitialQuery(null)}
             />
             <AnimatePresence>
