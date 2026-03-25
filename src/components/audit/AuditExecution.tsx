@@ -7,6 +7,7 @@ import { ENGAGEMENTS, ENGAGEMENT_CONTROLS, DEFICIENCIES } from '../../data/mockD
 import { StatusBadge, SeverityBadge, FrameworkBadge, Avatar } from '../shared/StatusBadge';
 import SmartTable from '../shared/SmartTable';
 import Orb from '../shared/Orb';
+import { useToast } from '../shared/Toast';
 
 interface Props {
   onAskAboutControl: (controlId: string) => void;
@@ -20,12 +21,13 @@ function TestPill({ status }: { status: string }) {
     ineffective: { bg: 'bg-red-50', text: 'text-red-700', label: 'Ineffective' },
   };
   const s = map[status] || map['not-started'];
-  return <span className={`inline-flex items-center ${s.bg} ${s.text} px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap`}>{s.label}</span>;
+  return <span title={s.label} className={`inline-flex items-center ${s.bg} ${s.text} px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap`}>{s.label}</span>;
 }
 
 export default function AuditExecution({ onAskAboutControl }: Props) {
   const [selectedEngId, setSelectedEngId] = useState(ENGAGEMENTS[0].id);
   const [activeTab, setActiveTab] = useState<'controls' | 'deficiencies'>('controls');
+  const { addToast } = useToast();
 
   const eng = ENGAGEMENTS.find(e => e.id === selectedEngId)!;
   const controls = ENGAGEMENT_CONTROLS.filter(c => c.engId === selectedEngId);
@@ -52,7 +54,7 @@ export default function AuditExecution({ onAskAboutControl }: Props) {
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-[13px] font-medium transition-all cursor-pointer ${
                 selectedEngId === e.id
                   ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary/20'
-                  : 'border-border-light bg-white text-text-secondary hover:border-primary/30'
+                  : 'border-border-light bg-white text-text-secondary hover:shadow-md hover:border-primary/20 active:scale-[0.98]'
               }`}
             >
               <FrameworkBadge fw={e.type} />
@@ -71,30 +73,30 @@ export default function AuditExecution({ onAskAboutControl }: Props) {
                 {eng.start} — {eng.end} · Owner: {eng.owner}
               </p>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
+            <button onClick={() => addToast('Running control tests for selected engagement...', 'success')} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
               <Play size={14} />
               Run Tests
             </button>
           </div>
 
           <div className="grid grid-cols-5 gap-4">
-            <div className="bg-surface-2 rounded-lg p-3 text-center">
+            <div className="bg-surface-2 rounded-lg p-3 text-center hover:bg-surface-2/80 transition-colors duration-200">
               <div className="text-xl font-bold text-text">{eng.controls}</div>
               <div className="text-[10px] text-text-muted uppercase tracking-wider">Total Controls</div>
             </div>
-            <div className="bg-surface-2 rounded-lg p-3 text-center">
+            <div className="bg-surface-2 rounded-lg p-3 text-center hover:bg-surface-2/80 transition-colors duration-200">
               <div className="text-xl font-bold text-info">{eng.tested}</div>
               <div className="text-[10px] text-text-muted uppercase tracking-wider">Tested</div>
             </div>
-            <div className="bg-surface-2 rounded-lg p-3 text-center">
+            <div className="bg-surface-2 rounded-lg p-3 text-center hover:bg-surface-2/80 transition-colors duration-200">
               <div className="text-xl font-bold text-success">{eng.effective}</div>
               <div className="text-[10px] text-text-muted uppercase tracking-wider">Effective</div>
             </div>
-            <div className="bg-surface-2 rounded-lg p-3 text-center">
+            <div className="bg-surface-2 rounded-lg p-3 text-center hover:bg-surface-2/80 transition-colors duration-200">
               <div className="text-xl font-bold text-danger">{eng.deficiencies}</div>
               <div className="text-[10px] text-text-muted uppercase tracking-wider">Deficiencies</div>
             </div>
-            <div className="bg-surface-2 rounded-lg p-3 text-center">
+            <div className="bg-surface-2 rounded-lg p-3 text-center hover:bg-surface-2/80 transition-colors duration-200">
               <div className="text-xl font-bold text-primary">{progress}%</div>
               <div className="text-[10px] text-text-muted uppercase tracking-wider">Progress</div>
               <div className="mt-1.5 h-1.5 bg-border-light rounded-full overflow-hidden">
@@ -160,9 +162,9 @@ export default function AuditExecution({ onAskAboutControl }: Props) {
                   <span className="text-text-secondary text-[11px]">{String(item.assignee).split(' ')[0]}</span>
                 </div>
               )},
-              { key: 'wt', label: 'WT', align: 'center', width: '70px', render: (item) => <TestPill status={String(item.wt)} /> },
-              { key: 'de', label: 'DE', align: 'center', width: '70px', render: (item) => <TestPill status={String(item.de)} /> },
-              { key: 'oe', label: 'OE', align: 'center', width: '70px', render: (item) => <TestPill status={String(item.oe)} /> },
+              { key: 'wt', label: 'WT', align: 'center', width: '70px', render: (item) => <span title="Walkthrough Testing"><TestPill status={String(item.wt)} /></span> },
+              { key: 'de', label: 'DE', align: 'center', width: '70px', render: (item) => <span title="Design Effectiveness"><TestPill status={String(item.de)} /></span> },
+              { key: 'oe', label: 'OE', align: 'center', width: '70px', render: (item) => <span title="Operating Effectiveness"><TestPill status={String(item.oe)} /></span> },
               { key: 'evidence', label: 'Evidence', align: 'center', width: '70px', render: (item) => (
                 <span className="flex items-center justify-center gap-1 text-text-muted">
                   <FileText size={11} />
@@ -171,7 +173,7 @@ export default function AuditExecution({ onAskAboutControl }: Props) {
               )},
               { key: 'actions', label: '', width: '60px', sortable: false, align: 'right', render: (item) => (
                 <button
-                  onClick={(e) => { e.stopPropagation(); onAskAboutControl(String(item.id)); }}
+                  onClick={(e) => { e.stopPropagation(); addToast('Opening AI analysis...', 'info'); onAskAboutControl(String(item.id)); }}
                   className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1 text-[11px] text-primary font-medium hover:underline transition-all cursor-pointer"
                 >
                   <MessageSquare size={11} />

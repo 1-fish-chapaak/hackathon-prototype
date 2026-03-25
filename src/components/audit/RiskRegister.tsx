@@ -8,6 +8,7 @@ import { RISKS, BUSINESS_PROCESSES } from '../../data/mockData';
 import { StatusBadge, SeverityBadge } from '../shared/StatusBadge';
 import SmartTable from '../shared/SmartTable';
 import Orb from '../shared/Orb';
+import { useToast } from '../shared/Toast';
 
 interface Props {
   onAskAboutRisk: (riskId: string) => void;
@@ -21,6 +22,7 @@ const AI_RECOMMENDED_CONTROLS = [
 ];
 
 export default function RiskRegister({ onAskAboutRisk, onRunWorkflow }: Props) {
+  const { addToast } = useToast();
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showRecommendations, setShowRecommendations] = useState(true);
@@ -49,11 +51,11 @@ export default function RiskRegister({ onAskAboutRisk, onRunWorkflow }: Props) {
             <p className="text-sm text-text-secondary mt-1">{RISKS.length} risks across {BUSINESS_PROCESSES.length} business processes</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white transition-colors cursor-pointer">
+            <button onClick={() => addToast('Risk register exported as CSV', 'success')} className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white transition-colors cursor-pointer">
               <Download size={14} />
               Export
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
+            <button onClick={() => addToast('New risk template created — complete the details to save', 'info')} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
               <Plus size={14} />
               Add Risk
             </button>

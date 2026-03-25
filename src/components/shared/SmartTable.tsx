@@ -175,8 +175,18 @@ export default function SmartTable<T extends Record<string, unknown>>({
           {paged.length === 0 ? (
             <tbody>
               <tr>
-                <td colSpan={columns.length + (expandable ? 1 : 0)} className="px-4 py-10 text-center text-text-muted text-[13px]">
-                  {emptyMessage}
+                <td colSpan={columns.length + (expandable ? 1 : 0)} className="px-4 py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-10 h-10 rounded-xl bg-surface-2 flex items-center justify-center mb-1">
+                      <Search size={18} className="text-text-muted/50" />
+                    </div>
+                    <div className="text-[13px] font-medium text-text-secondary">{emptyMessage}</div>
+                    {search && (
+                      <button onClick={() => setSearch('')} className="text-[11px] text-primary font-medium hover:underline cursor-pointer mt-1">
+                        Clear search
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             </tbody>

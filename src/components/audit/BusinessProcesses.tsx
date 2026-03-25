@@ -3,13 +3,16 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Search, Plus, Upload, Link2,
   Clock, Play, ArrowUpRight,
-  ChevronRight, Sparkles, FileSpreadsheet, X, Check,
-  ArrowLeft, AlertTriangle, Shield
+  ChevronRight, ChevronDown, Sparkles, FileSpreadsheet, X, Check,
+  ArrowLeft, AlertTriangle, Shield, Workflow, CheckCircle2,
+  ArrowRight, TrendingUp, RefreshCw, GitBranch, Network,
+  Zap, Eye
 } from 'lucide-react';
-import { BUSINESS_PROCESSES, SOPS, RACMS, RISKS, CONTROLS, WORKFLOWS } from '../../data/mockData';
+import { BUSINESS_PROCESSES, SOPS, RACMS, RISKS, CONTROLS, WORKFLOWS, SOP_FLOWS, SOP_AI_RECOMMENDATIONS } from '../../data/mockData';
 import { StatusBadge, SeverityBadge, FrameworkBadge, TypeBadge, Avatar } from '../shared/StatusBadge';
 import { CardContainer, CardBody, CardItem } from '../shared/3DCard';
 import Orb from '../shared/Orb';
+import { useToast } from '../shared/Toast';
 
 interface Props {
   selectedBPId: string | null;
@@ -162,6 +165,310 @@ function UploadSOPModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+/* ─── SOP Flow Chart ─── */
+function SOPFlowChart({ steps }: { steps: typeof SOP_FLOWS[string] }) {
+  const nodeStyles: Record<string, string> = {
+    start: 'bg-green-50 border-green-400 text-green-700',
+    process: 'bg-blue-50 border-blue-300 text-blue-700',
+    decision: 'bg-amber-50 border-amber-400 text-amber-700',
+    end: 'bg-red-50 border-red-400 text-red-700',
+  };
+  const nodeShapes: Record<string, string> = {
+    start: 'rounded-full px-4 py-2',
+    process: 'rounded-xl px-4 py-2.5',
+    decision: 'rounded-xl px-4 py-2.5',
+    end: 'rounded-full px-4 py-2',
+  };
+  const nodeIcons: Record<string, string> = {
+    start: 'bg-green-400',
+    process: 'bg-blue-400',
+    decision: 'bg-amber-400',
+    end: 'bg-red-400',
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-1 py-4">
+      {steps.map((step, i) => (
+        <div key={step.id} className="flex flex-col items-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: i * 0.08 }}
+            className={`border-2 ${nodeStyles[step.type]} ${nodeShapes[step.type]} text-[11px] font-semibold text-center min-w-[120px] shadow-sm relative`}
+          >
+            {step.type === 'decision' && (
+              <div className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ${nodeIcons[step.type]} ring-2 ring-white`} />
+            )}
+            {step.label.split('\n').map((line, j) => <div key={j}>{line}</div>)}
+          </motion.div>
+          {i < steps.length - 1 && (
+            <div className="flex flex-col items-center">
+              <div className="w-px h-4 bg-gray-300" />
+              <ChevronDown size={12} className="text-gray-400 -mt-1" />
+            </div>
+          )}
+          {step.type === 'decision' && step.next && step.next.length > 1 && (
+            <div className="flex items-center gap-1 -mt-1 mb-1">
+              <span className="text-[9px] text-green-600 font-bold">Yes</span>
+              <span className="text-[9px] text-gray-400 mx-2">|</span>
+              <span className="text-[9px] text-red-600 font-bold">No</span>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── SOP Relationship Map ─── */
+function SOPRelationshipMap({ sopId, bpId }: { sopId: string; bpId: string }) {
+  const sop = SOPS.find(s => s.id === sopId);
+  const relatedRacms = RACMS.filter(r => r.sopId === sopId);
+  const relatedRisks = RISKS.filter(r => r.bpId === bpId).slice(0, 4);
+  const relatedControls = CONTROLS.filter(c => relatedRisks.some(r => r.id === c.riskId)).slice(0, 4);
+
+  return (
+    <div className="flex items-start gap-4 overflow-x-auto py-4 px-2">
+      {/* SOP */}
+      <div className="flex flex-col items-center shrink-0 min-w-[120px]">
+        <div className="px-3 py-2.5 bg-primary/10 border border-primary/20 rounded-xl text-center w-full">
+          <div className="text-[9px] font-bold text-primary uppercase tracking-wider mb-0.5">SOP</div>
+          <div className="text-[10px] font-semibold text-text leading-tight">{sop?.name || sopId}</div>
+        </div>
+      </div>
+      <div className="flex items-center self-center shrink-0"><ArrowRight size={16} className="text-text-muted" /></div>
+      {/* RACMs */}
+      <div className="flex flex-col gap-1.5 shrink-0 min-w-[130px]">
+        <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">RACMs</div>
+        {relatedRacms.length > 0 ? relatedRacms.map(r => (
+          <div key={r.id} className="px-2.5 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="text-[10px] font-semibold text-blue-700">{r.id}</div>
+            <div className="text-[9px] text-blue-500 truncate">{r.name}</div>
+          </div>
+        )) : <div className="text-[10px] text-text-muted italic">None linked</div>}
+      </div>
+      <div className="flex items-center self-center shrink-0"><ArrowRight size={16} className="text-text-muted" /></div>
+      {/* Risks */}
+      <div className="flex flex-col gap-1.5 shrink-0 min-w-[140px]">
+        <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Risks</div>
+        {relatedRisks.map(r => (
+          <div key={r.id} className="px-2.5 py-1.5 bg-orange-50 border border-orange-200 rounded-lg">
+            <div className="text-[10px] font-semibold text-orange-700">{r.id}</div>
+            <div className="text-[9px] text-orange-500 leading-tight truncate max-w-[130px]">{r.name.split(' ').slice(0, 4).join(' ')}...</div>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center self-center shrink-0"><ArrowRight size={16} className="text-text-muted" /></div>
+      {/* Controls */}
+      <div className="flex flex-col gap-1.5 shrink-0 min-w-[140px]">
+        <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Controls</div>
+        {relatedControls.map(c => (
+          <div key={c.id} className="px-2.5 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+            <div className="text-[10px] font-semibold text-green-700">{c.id}</div>
+            <div className="text-[9px] text-green-500 leading-tight truncate max-w-[130px]">{c.name}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── SOP AI Recommendations ─── */
+function SOPAIRecommendations({ sopId }: { sopId: string }) {
+  const recommendations = SOP_AI_RECOMMENDATIONS[sopId] || [];
+  const [expanded, setExpanded] = useState(false);
+
+  if (recommendations.length === 0) return null;
+
+  const typeConfig: Record<string, { icon: typeof Plus; bg: string; text: string }> = {
+    add: { icon: Plus, bg: 'bg-green-100 text-green-600', text: 'text-green-600' },
+    improve: { icon: TrendingUp, bg: 'bg-blue-100 text-blue-600', text: 'text-blue-600' },
+    remove: { icon: X, bg: 'bg-red-100 text-red-600', text: 'text-red-600' },
+    update: { icon: RefreshCw, bg: 'bg-amber-100 text-amber-600', text: 'text-amber-600' },
+  };
+
+  const impactColors: Record<string, string> = {
+    high: 'text-red-600',
+    medium: 'text-amber-600',
+    low: 'text-green-600',
+  };
+
+  return (
+    <div className="mt-3">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2 text-[12px] font-semibold text-primary hover:underline"
+      >
+        <Sparkles size={13} className="text-primary" />
+        AI Recommendations
+        <span className="text-[10px] font-bold bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">{recommendations.length}</span>
+        <ChevronDown size={12} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-2 mt-3">
+              {recommendations.map((rec, i) => {
+                const config = typeConfig[rec.type];
+                const TypeIcon = config.icon;
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.06 }}
+                    className="flex items-start gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-200"
+                  >
+                    <div className={`p-1.5 rounded-lg shrink-0 ${config.bg}`}>
+                      <TypeIcon size={12} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[11.5px] text-gray-800 leading-relaxed">{rec.text}</div>
+                      <div className={`text-[9px] font-bold uppercase tracking-wider mt-1 ${impactColors[rec.impact]}`}>
+                        {rec.impact} impact
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// Generate expanded workflow list for demo — simulates 100+ workflows per process
+const getExpandedWorkflows = (bpId: string) => {
+  const real = WORKFLOWS.filter(w => w.bpId === bpId);
+  const types = ['Detection', 'Monitoring', 'Compliance', 'Reconciliation'];
+  const statuses = ['active', 'active', 'active', 'paused', 'draft'] as const;
+  const names = [
+    'Payment Velocity Monitor', 'Threshold Breach Detector', 'Aging Analysis Runner',
+    'Approval Chain Validator', 'Bank Account Change Tracker', 'Credit Note Reconciler',
+    'Debit Memo Matcher', 'Early Payment Discount Tracker', 'Foreign Currency Validator',
+    'GRN Mismatch Detector', 'Holdback Payment Monitor', 'Invoice Aging Alert',
+    'Journal Posting Validator', 'KPI Threshold Monitor', 'Late Payment Predictor',
+    'Manual Entry Detector', 'Negative Balance Flagger', 'Orphan PO Detector',
+    'Payment Terms Validator', 'Queue Priority Analyzer', 'Receipt Matching Engine',
+    'Settlement Delay Tracker', 'Tax Compliance Checker', 'Unmatched Receipt Finder',
+    'Vendor Duplicate Scanner', 'Withholding Tax Validator', 'Year-End Accrual Checker',
+    'Zero Value Invoice Flagger', 'Abnormal Transaction Sizer', 'Budget Overrun Detector',
+  ];
+  const extra = names.map((name, i) => ({
+    id: `wf-gen-${bpId}-${i}`,
+    name,
+    desc: `Automated ${name.toLowerCase()} for ${bpId.toUpperCase()} process`,
+    bpId,
+    type: types[i % types.length],
+    lastRun: `Mar ${20 - (i % 15)}, 2026`,
+    runs: Math.floor(Math.random() * 50) + 1,
+    status: statuses[i % statuses.length],
+    steps: ['Ingest', 'Process', 'Analyze', 'Report', 'Notify'],
+  }));
+  return [...real, ...extra];
+};
+
+const RACM_RECOMMENDED_CONTROLS: Record<string, Array<{ control: string; risk: string; confidence: number; type: 'automated' | 'manual' | 'detective' }>> = {
+  'RACM-001': [
+    { control: 'Automated bank account verification before payment', risk: 'Unauthorized payments', confidence: 94, type: 'automated' },
+    { control: 'Real-time vendor master change alerts', risk: 'Vendor data manipulation', confidence: 88, type: 'detective' },
+  ],
+  'RACM-002': [
+    { control: 'Budget-to-PO automated threshold check', risk: 'Budget overrun', confidence: 91, type: 'automated' },
+    { control: 'Segregation of duties — PO creator vs approver', risk: 'Unauthorized PO', confidence: 96, type: 'manual' },
+  ],
+  'RACM-003': [
+    { control: 'Automated credit scoring refresh on repeat orders', risk: 'Credit limit breach', confidence: 85, type: 'automated' },
+    { control: 'Revenue recognition timing validation', risk: 'Revenue misstatement', confidence: 92, type: 'detective' },
+  ],
+  'RACM-004': [
+    { control: 'Automated sub-ledger to GL reconciliation', risk: 'GL discrepancy', confidence: 97, type: 'automated' },
+    { control: 'Journal entry anomaly detection (AI-powered)', risk: 'Fraudulent entries', confidence: 89, type: 'detective' },
+  ],
+  'RACM-005': [
+    { control: 'Inter-company elimination automated check', risk: 'Subsidiary discrepancies', confidence: 93, type: 'automated' },
+    { control: 'Month-end variance threshold alerting', risk: 'Reconciliation gaps', confidence: 87, type: 'detective' },
+  ],
+  'RACM-006': [
+    { control: 'Contract expiry proactive alerting (90/60/30 days)', risk: 'Missed renewals', confidence: 95, type: 'automated' },
+    { control: 'Vendor compliance document verification workflow', risk: 'Non-compliant vendors', confidence: 90, type: 'manual' },
+  ],
+};
+
+/* ─── RACM Workflow Panel (collapsible, searchable, paginated) ─── */
+function RACMWorkflowPanel({ bpId }: { bpId: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [search, setSearch] = useState('');
+  const [showCount, setShowCount] = useState(5);
+
+  const allWorkflows = getExpandedWorkflows(bpId);
+  const filtered = search
+    ? allWorkflows.filter(w => w.name.toLowerCase().includes(search.toLowerCase()))
+    : allWorkflows;
+  const visible = filtered.slice(0, showCount);
+  const hasMore = filtered.length > showCount;
+
+  return (
+    <div className="mt-3">
+      <button onClick={() => setExpanded(p => !p)} className="flex items-center gap-2 text-[11px] font-semibold text-primary cursor-pointer hover:underline">
+        <Workflow size={12} />
+        {allWorkflows.length} Linked Workflows
+        <ChevronDown size={11} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            {/* Search */}
+            <div className="relative mt-2 mb-2">
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+              <input
+                value={search}
+                onChange={e => { setSearch(e.target.value); setShowCount(5); }}
+                placeholder="Search workflows..."
+                className="w-full pl-7 pr-3 py-1.5 rounded-lg border border-border-light text-[11px] focus:outline-none focus:border-primary/40 transition-all bg-white"
+              />
+              {search && <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2"><X size={10} className="text-text-muted" /></button>}
+            </div>
+
+            {/* Results count */}
+            <div className="text-[10px] text-text-muted mb-1.5">{filtered.length} workflow{filtered.length !== 1 ? 's' : ''} found</div>
+
+            {/* Workflow list */}
+            <div className="space-y-1 max-h-[200px] overflow-y-auto">
+              {visible.map(wf => (
+                <div key={wf.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-primary-xlight/50 transition-colors cursor-pointer group">
+                  <Workflow size={10} className="text-primary/60 shrink-0" />
+                  <span className="text-[11px] text-text group-hover:text-primary transition-colors flex-1 truncate">{wf.name}</span>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                    wf.status === 'active' ? 'bg-green-50 text-green-600' : wf.status === 'paused' ? 'bg-amber-50 text-amber-600' : 'bg-gray-100 text-gray-500'
+                  }`}>{wf.status}</span>
+                  <span className="text-[9px] text-text-muted">{wf.runs} runs</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Load more */}
+            {hasMore && (
+              <button onClick={() => setShowCount(p => p + 10)} className="w-full text-center text-[10px] text-primary font-medium py-1.5 hover:underline cursor-pointer mt-1">
+                Show more ({filtered.length - showCount} remaining)
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 /* ─── BP Detail View ─── */
 function BPDetailView({ bp, onBack }: {
   bp: typeof BUSINESS_PROCESSES[0]; onBack: () => void;
@@ -169,6 +476,35 @@ function BPDetailView({ bp, onBack }: {
   const [tab, setTab] = useState<'overview' | 'sops' | 'racm' | 'workflows'>('overview');
   const [linkModal, setLinkModal] = useState<typeof RISKS[0] | null>(null);
   const [uploadModal, setUploadModal] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedWorkflows, setSelectedWorkflows] = useState<Set<string>>(new Set());
+  const [sopVisuals, setSopVisuals] = useState<Record<string, 'flow' | 'map' | null>>({});
+  const { addToast } = useToast();
+
+  const toggleSopVisual = (sopId: string, type: 'flow' | 'map') => {
+    setSopVisuals(prev => ({ ...prev, [sopId]: prev[sopId] === type ? null : type }));
+  };
+
+  const toggleWorkflow = (id: string) => {
+    setSelectedWorkflows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkRun = () => {
+    const count = selectedWorkflows.size;
+    addToast(`Running ${count} workflows...`, 'info');
+    setTimeout(() => {
+      addToast('All workflows completed. Generating report...', 'success');
+      setTimeout(() => {
+        addToast('Report generated — view in Reports', 'success');
+        setBulkMode(false);
+        setSelectedWorkflows(new Set());
+      }, 1000);
+    }, 2000);
+  };
 
   const bpRacms = RACMS.filter(r => r.bpId === bp.id);
   const bpSops = SOPS.filter(s => s.bpId === bp.id);
@@ -315,7 +651,7 @@ function BPDetailView({ bp, onBack }: {
                   </button>
                 </div>
                 {bpRacms.map(r => (
-                  <div key={r.id} className="flex items-center gap-3 py-3 border-b border-border-light last:border-0">
+                  <div key={r.id} className="flex items-center gap-3 py-3 border-b border-border-light last:border-0 hover:bg-primary-xlight/30 transition-colors duration-200 rounded-lg px-2 -mx-2">
                     <div className="flex-1 min-w-0">
                       <div className="text-[13px] font-medium text-text truncate">{r.name}</div>
                       <div className="text-[11px] text-text-muted mt-0.5">{r.id} · <FrameworkBadge fw={r.fw} /></div>
@@ -337,7 +673,7 @@ function BPDetailView({ bp, onBack }: {
                   <strong>{bp.abbr}</strong> has <strong>{bpRisks.filter(r => r.ctls === 0).length} risks</strong> with no controls mapped.
                   Coverage is at <strong>{bp.coverage}%</strong> — below the 80% benchmark. Consider prioritizing {bp.abbr} risk mitigation.
                 </p>
-                <button className="mt-3 text-[11px] text-primary font-semibold flex items-center gap-1 hover:underline">
+                <button onClick={() => addToast('Loading AI recommendations...', 'info')} className="mt-3 text-[11px] text-primary font-semibold flex items-center gap-1 hover:underline">
                   View recommendations <ChevronRight size={10} />
                 </button>
               </div>
@@ -381,38 +717,109 @@ function BPDetailView({ bp, onBack }: {
             <div className="space-y-3">
               {bpSops.map((sop, i) => {
                 const linked = bpRacms.find(r => r.id === sop.racmId);
+                const activeVisual = sopVisuals[sop.id] || null;
+                const flowSteps = SOP_FLOWS[sop.id];
                 return (
                   <motion.div
                     key={sop.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className="bg-white rounded-xl border border-border-light p-5 flex items-center gap-4 ai-card"
+                    className="bg-white rounded-xl border border-border-light p-5 ai-card hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-success-bg flex items-center justify-center shrink-0">
-                      <FileSpreadsheet size={18} className="text-success" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[13px] font-semibold text-text">{sop.name}</span>
-                        <span className="text-[10px] font-bold bg-gray-100 text-text-muted px-1.5 py-0.5 rounded">{sop.version}</span>
-                        <StatusBadge status={sop.status} />
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-success-bg flex items-center justify-center shrink-0">
+                        <FileSpreadsheet size={18} className="text-success" />
                       </div>
-                      <div className="text-[11px] text-text-muted">
-                        Uploaded by {sop.by} · {sop.at} · {sop.risks} risks · {sop.controls} controls extracted
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[13px] font-semibold text-text">{sop.name}</span>
+                          <span className="text-[10px] font-bold bg-gray-100 text-text-muted px-1.5 py-0.5 rounded">{sop.version}</span>
+                          <StatusBadge status={sop.status} />
+                        </div>
+                        <div className="text-[11px] text-text-muted">
+                          Uploaded by {sop.by} · {sop.at} · {sop.risks} risks · {sop.controls} controls extracted
+                        </div>
                       </div>
+                      {linked ? (
+                        <button className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-light text-primary rounded-lg text-[12px] font-semibold hover:bg-primary/15 transition-colors">
+                          <Link2 size={12} />
+                          View RACM
+                        </button>
+                      ) : (
+                        <button className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 transition-colors">
+                          <Plus size={12} />
+                          Generate RACM
+                        </button>
+                      )}
                     </div>
-                    {linked ? (
-                      <button className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-light text-primary rounded-lg text-[12px] font-semibold hover:bg-primary/15 transition-colors">
-                        <Link2 size={12} />
-                        View RACM
+
+                    {/* Visualization Toggle Buttons */}
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border-light">
+                      {flowSteps && (
+                        <button
+                          onClick={() => toggleSopVisual(sop.id, 'flow')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
+                            activeVisual === 'flow'
+                              ? 'bg-primary/10 text-primary border border-primary/20'
+                              : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+                          }`}
+                        >
+                          <GitBranch size={12} />
+                          Process Flow
+                        </button>
+                      )}
+                      <button
+                        onClick={() => toggleSopVisual(sop.id, 'map')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
+                          activeVisual === 'map'
+                            ? 'bg-primary/10 text-primary border border-primary/20'
+                            : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Network size={12} />
+                        Relationship Map
                       </button>
-                    ) : (
-                      <button className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 transition-colors">
-                        <Plus size={12} />
-                        Generate RACM
-                      </button>
-                    )}
+                    </div>
+
+                    {/* Inline Visualizations */}
+                    <AnimatePresence>
+                      {activeVisual === 'flow' && flowSteps && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-3 pt-3 border-t border-border-light">
+                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Process Flow</div>
+                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                              <SOPFlowChart steps={flowSteps} />
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                      {activeVisual === 'map' && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-3 pt-3 border-t border-border-light">
+                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Relationship Map</div>
+                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                              <SOPRelationshipMap sopId={sop.id} bpId={sop.bpId} />
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* AI Recommendations */}
+                    <SOPAIRecommendations sopId={sop.id} />
                   </motion.div>
                 );
               })}
@@ -446,82 +853,82 @@ function BPDetailView({ bp, onBack }: {
                   </tr>
                 </thead>
                 <tbody>
-                  {bpRacms.map((r, i) => (
-                    <motion.tr
-                      key={r.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: i * 0.04 }}
-                      className="border-b border-border-light last:border-0 hover:bg-primary-xlight/50 transition-colors cursor-pointer group"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="text-[13px] font-medium text-text group-hover:text-primary transition-colors">{r.name}</div>
-                        <div className="text-[11px] text-text-muted">{r.id}{r.sopId && <span className="text-primary"> · SOP linked</span>}</div>
-                      </td>
-                      <td className="px-3 py-3"><FrameworkBadge fw={r.fw} /></td>
-                      <td className="px-3 py-3"><StatusBadge status={r.status} /></td>
-                      <td className="px-3 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <Avatar name={r.owner} size={20} />
-                          <span className="text-text-secondary text-[11px]">{r.owner.split(' ')[0]}</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3 text-text-muted text-[11px] flex items-center gap-1">
-                        <Clock size={11} />
-                        {r.lastRun}
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Risks under this RACM - with Link Controls */}
-            <div className="mt-6">
-              <h3 className="text-sm font-semibold text-text mb-3 flex items-center gap-2">
-                <AlertTriangle size={14} className="text-orange-500" />
-                Risks in {bp.abbr} ({bpRisks.length})
-              </h3>
-              <div className="bg-white rounded-xl border border-border-light overflow-hidden">
-                <table className="w-full text-[12.5px]">
-                  <thead>
-                    <tr className="bg-surface-2 border-b border-border-light">
-                      <th className="text-left px-4 py-3 font-semibold text-text-secondary">Risk</th>
-                      <th className="text-left px-3 py-3 font-semibold text-text-secondary">Manage Controls</th>
-                      <th className="text-left px-3 py-3 font-semibold text-text-secondary">Severity</th>
-                      <th className="text-left px-3 py-3 font-semibold text-text-secondary">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {bpRisks.map((r, i) => (
+                  {bpRacms.map((r, i) => {
+                    return (
                       <motion.tr
                         key={r.id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        transition={{ delay: i * 0.03 }}
-                        className="border-b border-border-light last:border-0 hover:bg-primary-xlight/50 transition-colors"
+                        transition={{ delay: i * 0.04 }}
+                        className="border-b border-border-light last:border-0 hover:bg-primary-xlight/50 transition-colors cursor-pointer group"
                       >
-                        <td className="px-4 py-3">
-                          <div className="text-[13px] font-medium text-text">{r.name}</div>
-                          <div className="text-[10px] text-text-muted font-mono">{r.id}</div>
+                        <td className="px-4 py-3" colSpan={5}>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[13px] font-medium text-text group-hover:text-primary transition-colors">{r.name}</div>
+                              <div className="text-[11px] text-text-muted">{r.id}{r.sopId && <span className="text-primary"> · SOP linked</span>}</div>
+                            </div>
+                            <div className="shrink-0"><FrameworkBadge fw={r.fw} /></div>
+                            <div className="shrink-0"><StatusBadge status={r.status} /></div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Avatar name={r.owner} size={20} />
+                              <span className="text-text-secondary text-[11px]">{r.owner.split(' ')[0]}</span>
+                            </div>
+                            <div className="text-text-muted text-[11px] flex items-center gap-1 shrink-0">
+                              <Clock size={11} />
+                              {r.lastRun}
+                            </div>
+                          </div>
+                          {/* Linked Workflows */}
+                          <RACMWorkflowPanel bpId={r.bpId} />
+
+                          {/* AI Recommended Controls */}
+                          {RACM_RECOMMENDED_CONTROLS[r.id] && (
+                            <div className="mt-3 p-3 bg-gradient-to-r from-primary-xlight/50 to-white rounded-xl border border-primary/10">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <Sparkles size={12} className="text-primary" />
+                                <span className="text-[10px] font-bold text-primary uppercase tracking-wider">AI Recommended Controls</span>
+                              </div>
+                              <div className="space-y-2">
+                                {RACM_RECOMMENDED_CONTROLS[r.id].map((rec, idx) => (
+                                  <div key={idx} className="flex items-start gap-2.5 p-2 rounded-lg bg-white/80 border border-border-light hover:shadow-sm transition-all">
+                                    <div className={`p-1 rounded-md shrink-0 ${
+                                      rec.type === 'automated' ? 'bg-blue-50 text-blue-600' :
+                                      rec.type === 'detective' ? 'bg-amber-50 text-amber-600' :
+                                      'bg-green-50 text-green-600'
+                                    }`}>
+                                      {rec.type === 'automated' ? <Zap size={10} /> : rec.type === 'detective' ? <Eye size={10} /> : <Shield size={10} />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-[11px] font-medium text-text">{rec.control}</div>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <span className="text-[9px] text-text-muted">Mitigates: {rec.risk}</span>
+                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                                          rec.type === 'automated' ? 'bg-blue-50 text-blue-600' :
+                                          rec.type === 'detective' ? 'bg-amber-50 text-amber-600' :
+                                          'bg-green-50 text-green-600'
+                                        }`}>{rec.type}</span>
+                                      </div>
+                                    </div>
+                                    <div className="shrink-0 text-right">
+                                      <div className="text-[11px] font-bold text-primary">{rec.confidence}%</div>
+                                      <div className="w-12 h-1 bg-surface-3 rounded-full overflow-hidden mt-0.5">
+                                        <div className="h-full bg-primary rounded-full" style={{ width: `${rec.confidence}%` }} />
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </td>
-                        <td className="px-3 py-3">
-                          <button
-                            onClick={() => setLinkModal(r)}
-                            className="flex items-center gap-1.5 text-[12px] font-bold text-primary bg-primary-light px-3 py-1.5 rounded-lg hover:bg-primary/15 transition-colors"
-                          >
-                            <Link2 size={11} />
-                            {r.ctls > 0 ? `${r.keyCtls} Key / ${r.ctls} Total` : 'Link Controls'}
-                          </button>
-                        </td>
-                        <td className="px-3 py-3"><SeverityBadge severity={r.severity} /></td>
-                        <td className="px-3 py-3"><StatusBadge status={r.status} /></td>
                       </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
+
           </div>
         )}
 
@@ -530,10 +937,23 @@ function BPDetailView({ bp, onBack }: {
           <div>
             <div className="flex items-center justify-between mb-4">
               <p className="text-[13px] text-text-secondary">Independent workflows for {bp.name}</p>
-              <button className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-lg text-[12px] font-semibold hover:bg-primary-hover">
-                <Plus size={13} />
-                Create Workflow
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setBulkMode(!bulkMode); setSelectedWorkflows(new Set()); }}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold transition-colors ${
+                    bulkMode
+                      ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                      : 'border border-border text-text-secondary hover:bg-gray-50'
+                  }`}
+                >
+                  <CheckCircle2 size={13} />
+                  {bulkMode ? 'Exit Bulk Mode' : 'Bulk Run'}
+                </button>
+                <button className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-lg text-[12px] font-semibold hover:bg-primary-hover">
+                  <Plus size={13} />
+                  Create Workflow
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -543,14 +963,28 @@ function BPDetailView({ bp, onBack }: {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="bg-white rounded-xl border border-border-light p-5 ai-card"
+                  onClick={() => bulkMode && toggleWorkflow(wf.id)}
+                  className={`bg-white rounded-xl border p-5 ai-card hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.998] transition-all duration-300 group ${
+                    bulkMode && selectedWorkflows.has(wf.id)
+                      ? 'border-primary bg-primary-xlight/30'
+                      : 'border-border-light'
+                  } ${bulkMode ? 'cursor-pointer' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <div className="text-[14px] font-semibold text-text mb-1.5">{wf.name}</div>
-                      <div className="flex items-center gap-2">
-                        <TypeBadge type={wf.type} />
-                        <StatusBadge status={wf.status} />
+                    <div className="flex items-start gap-3">
+                      {bulkMode && (
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                          selectedWorkflows.has(wf.id) ? 'bg-primary border-primary' : 'border-border bg-white'
+                        }`}>
+                          {selectedWorkflows.has(wf.id) && <CheckCircle2 size={12} className="text-white" />}
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-[14px] font-semibold text-text group-hover:text-primary transition-colors mb-1.5">{wf.name}</div>
+                        <div className="flex items-center gap-2">
+                          <TypeBadge type={wf.type} />
+                          <StatusBadge status={wf.status} />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -558,16 +992,18 @@ function BPDetailView({ bp, onBack }: {
                     <div className="flex items-center gap-1"><Clock size={10} />{wf.lastRun}</div>
                     <div className="flex items-center gap-1">{wf.runs} runs</div>
                   </div>
-                  <div className="flex gap-2">
-                    <button className="flex items-center gap-1 px-3 py-1.5 bg-primary-light text-primary rounded-lg text-[11px] font-semibold hover:bg-primary/15">
-                      <Play size={10} />
-                      Run Now
-                    </button>
-                    <button className="flex items-center gap-1 px-3 py-1.5 border border-border rounded-lg text-[11px] font-medium text-text-secondary hover:bg-gray-50">
-                      <ArrowUpRight size={10} />
-                      Promote to Control
-                    </button>
-                  </div>
+                  {!bulkMode && (
+                    <div className="flex gap-2">
+                      <button onClick={() => addToast('Initializing workflow run...', 'success')} className="flex items-center gap-1 px-3 py-1.5 bg-primary-light text-primary rounded-lg text-[11px] font-semibold hover:bg-primary/15">
+                        <Play size={10} />
+                        Run Now
+                      </button>
+                      <button className="flex items-center gap-1 px-3 py-1.5 border border-border rounded-lg text-[11px] font-medium text-text-secondary hover:bg-gray-50">
+                        <ArrowUpRight size={10} />
+                        Promote to Control
+                      </button>
+                    </div>
+                  )}
                 </motion.div>
               ))}
 
@@ -580,6 +1016,26 @@ function BPDetailView({ bp, onBack }: {
                 <div className="text-[11px] text-text-muted">Or import from library</div>
               </div>
             </div>
+
+            {/* Bulk Run Floating Action Bar */}
+            <AnimatePresence>
+              {bulkMode && selectedWorkflows.size > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 glass-card-strong rounded-2xl px-6 py-3 flex items-center gap-4 shadow-2xl"
+                >
+                  <span className="text-[13px] font-semibold text-text">{selectedWorkflows.size} workflow{selectedWorkflows.size > 1 ? 's' : ''} selected</span>
+                  <button onClick={handleBulkRun} className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-xl text-[12px] font-semibold transition-colors cursor-pointer flex items-center gap-1.5">
+                    <Play size={13} /> Run Selected
+                  </button>
+                  <button onClick={() => { setBulkMode(false); setSelectedWorkflows(new Set()); }} className="px-3 py-2 text-[12px] text-text-muted hover:text-text-secondary cursor-pointer">
+                    Cancel
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </div>
@@ -643,7 +1099,7 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP }: Props) {
             >
               <CardContainer containerClassName="w-full">
                 <CardBody
-                  className="bg-white rounded-2xl border border-border-light p-6 cursor-pointer hover:border-primary/30 hover:shadow-lg transition-all group relative overflow-hidden"
+                  className="bg-white rounded-2xl border border-border-light p-6 cursor-pointer hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.998] transition-all duration-300 group relative overflow-hidden"
                 >
                   {/* Accent gradient orb */}
                   <div
@@ -658,7 +1114,7 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP }: Props) {
                   <div onClick={() => onSelectBP(bp.id)} className="relative">
                     <CardItem translateZ={40}>
                       <div className="flex items-center gap-3 mb-5">
-                        <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm" style={{ background: bp.color + '1a' }}>
+                        <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300" style={{ background: bp.color + '1a' }}>
                           <span className="text-sm font-bold" style={{ color: bp.color }}>{bp.abbr}</span>
                         </div>
                         <div className="flex-1">

@@ -1,13 +1,15 @@
-import { motion } from 'motion/react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Search, Plus, Activity, Eye,
   Zap, Shield, RefreshCw, Sparkles, TrendingUp, TrendingDown,
-  Clock, Lightbulb, ArrowRight
+  Clock, Lightbulb, ArrowRight, Play, Check, X
 } from 'lucide-react';
 import { WORKFLOWS } from '../../data/mockData';
 import { StatusBadge, TypeBadge } from '../shared/StatusBadge';
 import BorderGlow from '../shared/BorderGlow';
 import Orb from '../shared/Orb';
+import { useToast } from '../shared/Toast';
 
 interface Props {
   onSelectWorkflow: (id: string) => void;
@@ -55,6 +57,38 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew }: Prop
   const totalRuns = WORKFLOWS.reduce((a, w) => a + w.runs, 0);
   const avgScore = 82;
 
+  const { addToast } = useToast();
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedWfs, setSelectedWfs] = useState<Set<string>>(new Set());
+  const [bulkSearch, setBulkSearch] = useState('');
+  const [bulkRunning, setBulkRunning] = useState(false);
+
+  const filteredForBulk = bulkSearch
+    ? WORKFLOWS.filter(w => w.name.toLowerCase().includes(bulkSearch.toLowerCase()))
+    : WORKFLOWS;
+
+  const toggleWf = (id: string) => {
+    setSelectedWfs(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkRun = () => {
+    setBulkRunning(true);
+    addToast(`Running ${selectedWfs.size} workflows...`, 'success');
+    setTimeout(() => {
+      addToast('All workflows completed successfully', 'success');
+      setTimeout(() => {
+        addToast('Consolidated report generated — view in Reports', 'success');
+        setBulkRunning(false);
+        setBulkMode(false);
+        setSelectedWfs(new Set());
+      }, 1000);
+    }, 2500);
+  };
+
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
@@ -73,6 +107,15 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew }: Prop
                 className="pl-9 pr-4 py-2 rounded-lg border border-border bg-white text-[13px] outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 w-56 transition-all"
               />
             </div>
+            <button
+              onClick={() => { setBulkMode(p => !p); setSelectedWfs(new Set()); setBulkSearch(''); }}
+              className={`flex items-center gap-2 px-3 py-2 border rounded-lg text-[13px] font-medium transition-all cursor-pointer ${
+                bulkMode ? 'border-primary bg-primary/10 text-primary' : 'border-border text-text-secondary hover:bg-white'
+              }`}
+            >
+              <Play size={14} />
+              {bulkMode ? 'Cancel Bulk Run' : 'Bulk Run'}
+            </button>
             <button
               onClick={onBuildNew}
               className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer"
@@ -140,7 +183,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew }: Prop
                     colors={['#6a12cd', '#9b59d6', '#c084fc']}
                   >
                     <div
-                      className="p-5 relative cursor-pointer group rounded-2xl hover:shadow-sm transition-shadow"
+                      className="p-5 relative cursor-pointer group rounded-2xl hover:shadow-sm active:scale-[0.98] transition-all"
                       onClick={onBuildNew}
                     >
                       <div className="flex items-center gap-2 mb-3">
@@ -168,6 +211,99 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew }: Prop
           </div>
         </div>
 
+        {/* Bulk Run Panel */}
+        <AnimatePresence>
+          {bulkMode && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-5">
+              <div className="glass-card rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Zap size={15} className="text-primary" />
+                    <span className="text-[14px] font-semibold text-text">Select Workflows to Run</span>
+                    <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">{selectedWfs.size} selected</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => {
+                      const all = new Set(filteredForBulk.map(w => w.id));
+                      setSelectedWfs(prev => prev.size === all.size ? new Set() : all);
+                    }} className="text-[11px] text-primary font-medium hover:underline cursor-pointer">
+                      {selectedWfs.size === filteredForBulk.length ? 'Deselect All' : 'Select All'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Search within bulk */}
+                <div className="relative mb-3">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <input
+                    value={bulkSearch}
+                    onChange={e => setBulkSearch(e.target.value)}
+                    placeholder="Search workflows to select..."
+                    className="w-full pl-9 pr-8 py-2 rounded-xl border border-border-light text-[12px] focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
+                    autoFocus
+                  />
+                  {bulkSearch && <button onClick={() => setBulkSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2"><X size={13} className="text-text-muted" /></button>}
+                </div>
+
+                {/* Selectable workflow grid */}
+                <div className="grid grid-cols-2 gap-2 max-h-[280px] overflow-y-auto">
+                  {filteredForBulk.map(wf => {
+                    const isSelected = selectedWfs.has(wf.id);
+                    return (
+                      <button
+                        key={wf.id}
+                        onClick={() => toggleWf(wf.id)}
+                        className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                          isSelected ? 'border-primary bg-primary/5' : 'border-border-light hover:border-primary/30'
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${
+                          isSelected ? 'bg-primary text-white' : 'bg-surface-2 border border-border'
+                        }`}>
+                          {isSelected && <Check size={12} />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className={`text-[12px] font-semibold truncate ${isSelected ? 'text-primary' : 'text-text'}`}>{wf.name}</div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[9px] text-text-muted">{wf.type}</span>
+                            <span className={`text-[9px] font-bold ${wf.status === 'active' ? 'text-green-600' : 'text-gray-400'}`}>●</span>
+                            <span className="text-[9px] text-text-muted">{wf.runs} runs</span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Run button */}
+                {selectedWfs.size > 0 && (
+                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 flex items-center gap-3">
+                    <button
+                      onClick={handleBulkRun}
+                      disabled={bulkRunning}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary disabled:opacity-70 text-white rounded-xl text-[13px] font-semibold transition-all cursor-pointer shadow-md shadow-primary/20"
+                    >
+                      {bulkRunning ? (
+                        <>
+                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+                            <Sparkles size={15} />
+                          </motion.div>
+                          Running {selectedWfs.size} workflows...
+                        </>
+                      ) : (
+                        <>
+                          <Play size={15} />
+                          Run {selectedWfs.size} Workflow{selectedWfs.size > 1 ? 's' : ''} + Generate Report
+                        </>
+                      )}
+                    </button>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Workflow Cards - list style */}
         <div className="space-y-3">
           {WORKFLOWS.map((wf, i) => {
@@ -185,8 +321,17 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew }: Prop
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
                 onClick={() => onSelectWorkflow(wf.id)}
-                className="glass-card rounded-2xl p-5 cursor-pointer group relative overflow-hidden"
+                className="glass-card rounded-2xl p-5 cursor-pointer hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.998] transition-all duration-300 group relative overflow-hidden"
               >
+                {/* Bulk mode checkbox */}
+                {bulkMode && (
+                  <div className={`absolute top-3 right-3 w-5 h-5 rounded-md flex items-center justify-center z-10 ${
+                    selectedWfs.has(wf.id) ? 'bg-primary text-white' : 'bg-white border-2 border-border'
+                  }`} onClick={(e) => { e.stopPropagation(); toggleWf(wf.id); }}>
+                    {selectedWfs.has(wf.id) && <Check size={12} />}
+                  </div>
+                )}
+
                 {/* Top color strip on hover */}
                 <div className={`absolute top-0 left-0 right-0 h-[2px] opacity-0 group-hover:opacity-100 transition-opacity ${
                   score >= 80 ? 'bg-gradient-to-r from-green-400 to-emerald-400' :
@@ -196,7 +341,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew }: Prop
 
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <div className="p-2 rounded-lg bg-primary-xlight text-primary shrink-0 mt-0.5">
+                    <div className="p-2 rounded-lg bg-primary-xlight text-primary shrink-0 mt-0.5 group-hover:scale-105 transition-transform duration-300">
                       <Icon size={16} />
                     </div>
                     <div className="min-w-0">
@@ -206,7 +351,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew }: Prop
                   </div>
 
                   {/* Impact score ring */}
-                  <div className="text-center shrink-0 ml-4">
+                  <div className="text-center shrink-0 ml-4 group-hover:scale-105 group-hover:animate-pulse transition-transform duration-300">
                     <svg width="52" height="52" viewBox="0 0 52 52">
                       <circle cx="26" cy="26" r="22" fill="none" stroke="#f1edf9" strokeWidth="4" />
                       <circle cx="26" cy="26" r="22" fill="none"

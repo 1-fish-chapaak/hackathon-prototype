@@ -7,6 +7,7 @@ import {
 import { DATA_SOURCES } from '../../data/mockData';
 import { StatusBadge } from '../shared/StatusBadge';
 import Orb from '../shared/Orb';
+import { useToast } from '../shared/Toast';
 
 const TYPE_ICONS: Record<string, React.ElementType> = {
   sql: Database,
@@ -21,6 +22,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default function DataSourcesView() {
+  const { addToast } = useToast();
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
@@ -32,11 +34,11 @@ export default function DataSourcesView() {
             <p className="text-sm text-text-secondary mt-1">Manage connected databases, files, and integrations</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white transition-colors cursor-pointer">
+            <button onClick={() => addToast('File upload dialog opened', 'info')} className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white transition-colors cursor-pointer">
               <Upload size={14} />
               Upload File
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
+            <button onClick={() => addToast('New data source wizard starting...', 'info')} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
               <Plus size={14} />
               Connect Source
             </button>
@@ -79,13 +81,13 @@ export default function DataSourcesView() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className={`glass-card rounded-2xl p-5 ${
-                  !isConnected ? '!border-red-200 !bg-red-50/30' : ''
+                className={`glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 active:scale-[0.998] transition-all duration-300 group ${
+                  !isConnected ? '!border-red-200 !bg-red-50/30' : 'hover:border-primary/20'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className={`p-2.5 rounded-xl ${color}`}>
+                    <div className={`p-2.5 rounded-xl ${color} group-hover:scale-110 transition-transform duration-300`}>
                       <Icon size={20} />
                     </div>
                     <div>
@@ -102,15 +104,15 @@ export default function DataSourcesView() {
                   </div>
                   <div className="flex items-center gap-2">
                     {isConnected && (
-                      <button className="p-2 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-colors cursor-pointer" title="Refresh">
+                      <button onClick={() => addToast('Syncing data source...', 'success')} className="p-2 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-colors cursor-pointer" title="Refresh">
                         <RefreshCw size={14} />
                       </button>
                     )}
-                    <button className="p-2 text-text-muted hover:text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer" title="Settings">
+                    <button onClick={() => addToast('Data source settings opened', 'info')} className="p-2 text-text-muted hover:text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer" title="Settings">
                       <Settings size={14} />
                     </button>
                     {!isConnected && (
-                      <button className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
+                      <button onClick={() => addToast('Attempting to reconnect...', 'info')} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
                         <Link2 size={12} />
                         Reconnect
                       </button>

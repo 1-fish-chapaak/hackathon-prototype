@@ -93,13 +93,62 @@ export const WORKFLOWS = [
 
 // ─── Report Templates ───
 export const REPORT_TEMPLATES = [
-  { id: "rt-001", name: "SOX Compliance Report", desc: "Comprehensive SOX compliance status with control testing results", category: "Compliance", icon: "shield" },
-  { id: "rt-002", name: "Risk Assessment Summary", desc: "Overview of all identified risks, their ratings, and mitigation status", category: "Risk", icon: "alert-triangle" },
-  { id: "rt-003", name: "Control Effectiveness Report", desc: "Detailed analysis of control effectiveness across all business processes", category: "Controls", icon: "check-circle" },
-  { id: "rt-004", name: "Workflow Analytics Report", desc: "Performance metrics and insights from automated workflow executions", category: "Analytics", icon: "bar-chart" },
-  { id: "rt-005", name: "Deficiency Tracker", desc: "Status of all identified deficiencies with remediation progress", category: "Audit", icon: "file-text" },
-  { id: "rt-006", name: "Executive Dashboard Export", desc: "Board-ready summary of GRC posture and key metrics", category: "Executive", icon: "trending-up" },
-  { id: "rt-007", name: "Action Taken Report", desc: "Summary of exception actions, risk owner responses, and resolution status", category: "Audit", icon: "clipboard-check" },
+  { id: "rt-001", name: "SOX Compliance Report", desc: "Comprehensive SOX compliance status with control testing results", category: "Compliance", icon: "shield", sections: [
+    { name: 'Executive Summary', icon: 'file-text' },
+    { name: 'Scope & Objectives', icon: 'file-text' },
+    { name: 'Control Testing Results', icon: 'check-circle' },
+    { name: 'Deficiency Analysis', icon: 'alert-triangle' },
+    { name: 'Remediation Status', icon: 'shield' },
+    { name: 'Appendix', icon: 'file-text' },
+  ]},
+  { id: "rt-002", name: "Risk Assessment Summary", desc: "Overview of all identified risks, their ratings, and mitigation status", category: "Risk", icon: "alert-triangle", sections: [
+    { name: 'Executive Summary', icon: 'file-text' },
+    { name: 'Risk Identification', icon: 'alert-triangle' },
+    { name: 'Risk Matrix', icon: 'shield' },
+    { name: 'Mitigation Strategies', icon: 'check-circle' },
+    { name: 'Trend Analysis', icon: 'trending-up' },
+    { name: 'Recommendations', icon: 'file-text' },
+  ]},
+  { id: "rt-003", name: "Control Effectiveness Report", desc: "Detailed analysis of control effectiveness across all business processes", category: "Controls", icon: "check-circle", sections: [
+    { name: 'Executive Summary', icon: 'file-text' },
+    { name: 'Control Environment Overview', icon: 'shield' },
+    { name: 'Testing Methodology', icon: 'file-text' },
+    { name: 'Effectiveness Ratings', icon: 'check-circle' },
+    { name: 'Gap Analysis', icon: 'alert-triangle' },
+    { name: 'Improvement Plan', icon: 'trending-up' },
+  ]},
+  { id: "rt-004", name: "Workflow Analytics Report", desc: "Performance metrics and insights from automated workflow executions", category: "Analytics", icon: "bar-chart", sections: [
+    { name: 'Executive Summary', icon: 'file-text' },
+    { name: 'Workflow Performance Metrics', icon: 'bar-chart' },
+    { name: 'Exception Trends', icon: 'trending-up' },
+    { name: 'Processing Efficiency', icon: 'check-circle' },
+    { name: 'Anomaly Detection Results', icon: 'alert-triangle' },
+    { name: 'Recommendations', icon: 'file-text' },
+  ]},
+  { id: "rt-005", name: "Deficiency Tracker", desc: "Status of all identified deficiencies with remediation progress", category: "Audit", icon: "file-text", sections: [
+    { name: 'Executive Summary', icon: 'file-text' },
+    { name: 'Key Findings', icon: 'alert-triangle' },
+    { name: 'Deficiency Details', icon: 'shield' },
+    { name: 'Remediation Progress', icon: 'check-circle' },
+    { name: 'Timeline & Milestones', icon: 'trending-up' },
+    { name: 'Appendix', icon: 'file-text' },
+  ]},
+  { id: "rt-006", name: "Executive Dashboard Export", desc: "Board-ready summary of GRC posture and key metrics", category: "Executive", icon: "trending-up", sections: [
+    { name: 'Executive Summary', icon: 'file-text' },
+    { name: 'Key Metrics Dashboard', icon: 'bar-chart' },
+    { name: 'Risk Heatmap', icon: 'alert-triangle' },
+    { name: 'Compliance Scorecard', icon: 'shield' },
+    { name: 'Strategic Recommendations', icon: 'check-circle' },
+    { name: 'Outlook & Next Steps', icon: 'trending-up' },
+  ]},
+  { id: "rt-007", name: "Action Taken Report", desc: "Summary of exception actions, risk owner responses, and resolution status", category: "Audit", icon: "clipboard-check", sections: [
+    { name: 'Executive Summary', icon: 'file-text' },
+    { name: 'Exception Overview', icon: 'alert-triangle' },
+    { name: 'Actions Taken', icon: 'check-circle' },
+    { name: 'Risk Owner Responses', icon: 'shield' },
+    { name: 'Resolution Status', icon: 'clipboard-check' },
+    { name: 'Pending Items', icon: 'file-text' },
+  ]},
 ];
 
 // ─── Generated Reports ───
@@ -126,6 +175,32 @@ export const CHAT_HISTORY = [
   { id: "ch-004", title: "Control Effectiveness Query", preview: "Which controls are marked ineffective...", timestamp: "Mar 17, 2026", messages: 6 },
   { id: "ch-005", title: "Journal Entry Anomalies", preview: "Run the journal entry anomaly detector...", timestamp: "Mar 15, 2026", messages: 15 },
 ];
+
+// ─── Pre-built Chat Conversations ───
+export const CHAT_CONVERSATIONS: Record<string, Array<{ role: 'user' | 'assistant'; text: string }>> = {
+  'ch-001': [
+    { role: 'user', text: 'Show me all high-severity risks in P2P process' },
+    { role: 'assistant', text: '**P2P High-Severity Risks Found: 3**\n\nI\'ve analyzed your P2P risk register and identified 3 high-severity risks:\n\n• **RSK-001** — Unauthorized vendor payments processed without approval (3 controls mapped)\n• **RSK-002** — Duplicate invoices leading to overpayment (4 controls, 2 key)\n• **RSK-008** — Segregation of duties violation in AP (3 controls, 1 key)\n\nRSK-008 is the most concerning — the SOD violation detector control (CTR-006) remains untested.' },
+    { role: 'user', text: 'What controls cover RSK-008?' },
+    { role: 'assistant', text: '**Controls for RSK-008 (SOD Violation):**\n\n1. **CTR-004** — Privileged Access Review (quarterly) → Status: **Ineffective** ⚠️\n2. **CTR-006** — SOD Violation Detector Real-time → Status: **Not Tested**\n3. **CTR-002** — Dual Approval for Payments > 10L → Status: **Effective** ✓\n\n**Recommendation:** Prioritize testing CTR-006 and remediating CTR-004. The privileged access review failed because scope was limited to AP module only — expand to include all financial modules.' },
+  ],
+  'ch-002': [
+    { role: 'user', text: 'Build a workflow to detect duplicate invoices across all vendors' },
+    { role: 'assistant', text: 'I\'ll build a Duplicate Invoice Detector workflow. Let me configure the steps based on your requirements.\n\n**Workflow: Duplicate Invoice Detector v4**\n\n📊 Connected to: SAP ERP AP Module (1.2M records)\n🔍 Detection: Fuzzy match with 5% tolerance\n⚡ Processing: AI-powered pattern detection\n\nThe workflow is ready and saved to your library with 5 execution steps.' },
+  ],
+  'ch-003': [
+    { role: 'user', text: 'What\'s the current SOX compliance status?' },
+    { role: 'assistant', text: '**FY26 SOX Audit — Status Overview**\n\n📊 **Overall Progress: 58%** (14 of 24 controls tested)\n\n• **Effective:** 11 controls (79%)\n• **Ineffective:** 1 control (CTR-004 — Privileged Access Review)\n• **Not Tested:** 10 controls remaining\n• **Deficiencies Found:** 2 (1 Significant Deficiency, 1 Material Weakness)\n\n⚠️ **Critical Items:**\n- DEF-002 (Material Weakness): Journal entry approval override used 7 times without documentation — due Mar 31\n- 10 controls still pending testing before quarter-end\n\n**Recommendation:** Focus testing resources on remaining P2P and S2C controls. The Mar 31 deadline for DEF-002 remediation is at risk.' },
+  ],
+  'ch-004': [
+    { role: 'user', text: 'Which controls are marked ineffective?' },
+    { role: 'assistant', text: '**Ineffective Controls Report**\n\n1 control is currently marked ineffective:\n\n🔴 **CTR-004 — Privileged Access Review**\n- Risk: RSK-008 (SOD Violation in AP)\n- Engagement: FY26 SOX Audit\n- Assignee: Tushar Goel\n- Issue: Quarterly review scope limited to AP module; did not cover AR and GL modules\n- Deficiency: DEF-003 (Control Deficiency) — Resolved Feb 28, 2026\n\n**Additionally, 2 controls are Not Tested:**\n- CTR-006 — SOD Violation Detector (assigned to Tushar Goel)\n- 1 control in O2C process (PO dual sign-off pending)\n\n**Action:** Schedule CTR-006 testing this week to maintain SOX timeline.' },
+  ],
+  'ch-005': [
+    { role: 'user', text: 'Run the journal entry anomaly detector and show me the results' },
+    { role: 'assistant', text: '**Journal Entry Anomaly Detector — Results**\n\nScanned 3.8M GL transactions from R2R process.\n\n📊 **Summary:**\n- Records Analyzed: 3,847,231\n- Anomalies Detected: 23\n- Critical Anomalies: 3\n- Processing Time: 1.8s\n\n🔴 **Critical Findings:**\n1. 7 journal entries with approval overrides in Dec 2025 (linked to DEF-002)\n2. Unusual round-number entries totaling ₹4.2Cr posted at month-end\n3. 2 entries posted by user with revoked access (access not properly terminated)\n\n**Impact Score: 88/100**\nThis is a high-impact finding. Recommend immediate review of the 3 critical anomalies and escalation to the audit committee.' },
+  ],
+};
 
 // ─── Exception Data (Duplicate Invoice Detection) ───
 export const EXCEPTION_DATA = [
@@ -272,6 +347,15 @@ export const WORKFLOW_CLARIFICATION_STEPS = [
   },
 ];
 
+// ─── Workflow Assumptions per Clarification Step ───
+export const WORKFLOW_ASSUMPTIONS: Record<number, string[]> = {
+  1: ['Connecting via read-only access', 'Using production dataset (not staging)', 'Default timeout: 30 seconds'],
+  2: ['Matching on invoice number + vendor + amount fields', 'Excluding voided invoices', 'Looking back 12 months for historical matches'],
+  3: ['Tolerance applies to amount field only', 'Vendor name matching uses exact match', 'Currency conversion handled by source system'],
+  4: ['Date format: DD-MMM-YYYY', 'Amount includes tax', 'Output sorted by match score descending'],
+  5: ['Standard layout selected', 'Results auto-refresh on new data', 'Max 100 rows per page in output table'],
+};
+
 // ─── Dashboard Widgets ───
 export const DASHBOARD_WIDGETS = [
   { id: "dw-001", type: "kpi", title: "Total Risks", value: 12, change: "+2", trend: "up" },
@@ -283,3 +367,93 @@ export const DASHBOARD_WIDGETS = [
   { id: "dw-007", type: "progress", title: "Audit Progress — FY26 SOX", value: 58 },
   { id: "dw-008", type: "list", title: "Recent Workflow Runs", items: ["Duplicate Invoice Detector — 2h ago", "Vendor Master Monitor — 4h ago", "Journal Entry Anomaly — 1d ago"] },
 ];
+
+// ─── SOP Process Flows ───
+export const SOP_FLOWS: Record<string, Array<{ id: string; label: string; type: 'start' | 'process' | 'decision' | 'end'; next?: string[] }>> = {
+  'sop-001': [ // Vendor Payment SOP - P2P
+    { id: 's1', label: 'Invoice received\nvia AP portal', type: 'start', next: ['s2'] },
+    { id: 's2', label: 'OCR scan &\ndata extraction', type: 'process', next: ['s3'] },
+    { id: 's3', label: 'Three-way match\nPO ↔ GRN ↔ Invoice', type: 'process', next: ['s4'] },
+    { id: 's4', label: 'Match within\n5% tolerance?', type: 'decision', next: ['s5', 's6'] },
+    { id: 's5', label: 'Auto-route to\nL1 Approver\n(< ₹10L)', type: 'process', next: ['s7'] },
+    { id: 's6', label: 'Flag for AP\nManager review', type: 'process', next: ['s8'] },
+    { id: 's7', label: 'L2 Approval\nrequired?\n(> ₹10L)', type: 'decision', next: ['s9', 's10'] },
+    { id: 's8', label: 'Manual\nresolution &\nvendor callback', type: 'process', next: ['s3'] },
+    { id: 's9', label: 'Finance Controller\nsign-off', type: 'process', next: ['s10'] },
+    { id: 's10', label: 'Schedule payment\nin next batch run', type: 'process', next: ['s11'] },
+    { id: 's11', label: 'Payment released\n& posted to GL', type: 'end' },
+  ],
+  'sop-002': [ // Purchase Order SOP - P2P
+    { id: 's1', label: 'Purchase\nrequisition (PR)\nraised by dept', type: 'start', next: ['s2'] },
+    { id: 's2', label: 'Budget availability\ncheck in SAP', type: 'process', next: ['s3'] },
+    { id: 's3', label: 'Budget\nsufficient?', type: 'decision', next: ['s4', 's5'] },
+    { id: 's4', label: 'Auto-generate PO\nfrom approved PR', type: 'process', next: ['s6'] },
+    { id: 's5', label: 'Route to Dept Head\nfor budget override', type: 'process', next: ['s7'] },
+    { id: 's6', label: 'Vendor selection\nfrom approved\nvendor list (AVL)', type: 'process', next: ['s8'] },
+    { id: 's7', label: 'Override\napproved?', type: 'decision', next: ['s4', 's9'] },
+    { id: 's8', label: 'PO dispatched\nto vendor via EDI', type: 'process', next: ['s10'] },
+    { id: 's9', label: 'PR rejected —\nrequestor notified', type: 'end' },
+    { id: 's10', label: 'GRN created on\ngoods receipt', type: 'end' },
+  ],
+  'sop-003': [ // Invoice Management SOP - O2C
+    { id: 's1', label: 'Sales order\nconfirmed in CRM', type: 'start', next: ['s2'] },
+    { id: 's2', label: 'Delivery &\nshipping confirmed', type: 'process', next: ['s3'] },
+    { id: 's3', label: 'Auto-generate\ninvoice from SO', type: 'process', next: ['s4'] },
+    { id: 's4', label: 'Customer credit\nlimit check', type: 'decision', next: ['s5', 's6'] },
+    { id: 's5', label: 'Invoice sent\nto customer\nvia e-invoicing', type: 'process', next: ['s7'] },
+    { id: 's6', label: 'Hold & route to\nCredit Manager', type: 'process', next: ['s8'] },
+    { id: 's7', label: 'Payment\nreceived within\nterms?', type: 'decision', next: ['s9', 's10'] },
+    { id: 's8', label: 'Credit decision:\napprove / reject', type: 'decision', next: ['s5', 's11'] },
+    { id: 's9', label: 'Cash applied &\nreconciled in AR', type: 'end' },
+    { id: 's10', label: 'Dunning notice\nsent (30/60/90)', type: 'process', next: ['s7'] },
+    { id: 's11', label: 'Order cancelled\n& customer notified', type: 'end' },
+  ],
+  'sop-004': [ // Financial Close SOP - R2R
+    { id: 's1', label: 'Period-end\ncutoff triggered\n(T+0)', type: 'start', next: ['s2'] },
+    { id: 's2', label: 'Sub-ledger\npostings frozen\n(AP/AR/FA)', type: 'process', next: ['s3'] },
+    { id: 's3', label: 'Inter-company\nelimination entries', type: 'process', next: ['s4'] },
+    { id: 's4', label: 'Sub-ledger to\nGL reconciliation', type: 'process', next: ['s5'] },
+    { id: 's5', label: 'All accounts\nbalanced?', type: 'decision', next: ['s6', 's7'] },
+    { id: 's6', label: 'Management\nreview & topside\nadjustments', type: 'process', next: ['s8'] },
+    { id: 's7', label: 'Investigate &\npost adjusting\njournal entries', type: 'process', next: ['s4'] },
+    { id: 's8', label: 'Financial\nstatements\ngenerated', type: 'process', next: ['s9'] },
+    { id: 's9', label: 'CFO sign-off\n& period closed', type: 'end' },
+  ],
+  'sop-005': [ // GL Reconciliation SOP - R2R
+    { id: 's1', label: 'Month-end\ntrigger (T+1)', type: 'start', next: ['s2'] },
+    { id: 's2', label: 'Extract GL trial\nbalance per entity', type: 'process', next: ['s3'] },
+    { id: 's3', label: 'Auto-reconcile\nmatching entries\nacross subsidiaries', type: 'process', next: ['s4'] },
+    { id: 's4', label: 'Variances\nexceed ₹50K\nthreshold?', type: 'decision', next: ['s5', 's6'] },
+    { id: 's5', label: 'Flag & assign to\naccountant for\ninvestigation', type: 'process', next: ['s7'] },
+    { id: 's6', label: 'Auto-certify\nreconciliation', type: 'process', next: ['s8'] },
+    { id: 's7', label: 'Root cause\nidentified &\ncorrection posted?', type: 'decision', next: ['s6', 's9'] },
+    { id: 's8', label: 'Manager sign-off\non reconciliation', type: 'process', next: ['s10'] },
+    { id: 's9', label: 'Escalate to\nFinance Controller', type: 'process', next: ['s7'] },
+    { id: 's10', label: 'Reconciliation\ncomplete &\narchived', type: 'end' },
+  ],
+};
+
+// ─── SOP AI Recommendations ───
+export const SOP_AI_RECOMMENDATIONS: Record<string, Array<{ type: 'improve' | 'add' | 'remove' | 'update'; text: string; impact: 'high' | 'medium' | 'low'; }>> = {
+  'sop-001': [
+    { type: 'add', text: 'Add automated vendor bank account verification step before payment release', impact: 'high' },
+    { type: 'improve', text: 'Reduce three-way match tolerance from 5% to 2% for vendors with prior duplicates', impact: 'high' },
+    { type: 'update', text: 'Update escalation matrix — current approval threshold (10L) has not been revised since FY24', impact: 'medium' },
+  ],
+  'sop-002': [
+    { type: 'add', text: 'Include segregation of duties check between PO creator and approver', impact: 'high' },
+    { type: 'improve', text: 'Add real-time budget utilization dashboard visibility during PO creation', impact: 'medium' },
+  ],
+  'sop-003': [
+    { type: 'improve', text: 'Implement automated credit scoring refresh for repeat customers', impact: 'high' },
+    { type: 'add', text: 'Add dispute resolution workflow for rejected invoices', impact: 'medium' },
+  ],
+  'sop-004': [
+    { type: 'remove', text: 'Remove manual reconciliation step — automated sub-ledger reconciliation covers 98% of cases', impact: 'medium' },
+    { type: 'update', text: 'Revise close timeline from T+5 to T+3 days per new corporate directive', impact: 'high' },
+  ],
+  'sop-005': [
+    { type: 'add', text: 'Add inter-company elimination check for cross-subsidiary entries', impact: 'high' },
+    { type: 'improve', text: 'Replace threshold-based variance detection with AI anomaly detection', impact: 'medium' },
+  ],
+};

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowLeft, FileText, BarChart3, Plus,
   GripVertical, X, Eye, Download, Sparkles, AlertTriangle,
-  ClipboardCheck, PieChart, Type
+  ClipboardCheck, PieChart, Type, BookOpen, ChevronDown
 } from 'lucide-react';
 import { WORKFLOWS, EXCEPTION_DATA, ACTION_TAKEN_DATA } from '../../data/mockData';
 import { useToast } from '../shared/Toast';
@@ -40,6 +40,8 @@ function getInitialSections(context: Props['context']): ReportSection[] {
   return [];
 }
 
+const TEMPLATE_CATEGORIES = ['Compliance', 'Risk', 'Controls', 'Analytics', 'Audit', 'Executive'];
+
 export default function ReportBuilder({ context, onBack }: Props) {
   const { addToast } = useToast();
   const [title, setTitle] = useState(context === 'action-report' ? 'Action Taken Report — Duplicate Invoice Detection' : 'Untitled Audit Report');
@@ -47,6 +49,11 @@ export default function ReportBuilder({ context, onBack }: Props) {
   const [showPreview, setShowPreview] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [showWorkflowPicker, setShowWorkflowPicker] = useState(false);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDesc, setTemplateDesc] = useState('');
+  const [templateCategory, setTemplateCategory] = useState('Compliance');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
   const addSection = (type: ReportSection['type']) => {
     if (type === 'workflow-output') {
@@ -136,7 +143,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
             <button
               key={block.type}
               onClick={() => addSection(block.type)}
-              className="w-full text-left p-3 rounded-xl border border-border-light hover:border-primary/30 hover:bg-primary-xlight/50 transition-all cursor-pointer group"
+              className="w-full text-left p-3 rounded-xl border border-border-light hover:border-primary/30 hover:bg-primary-xlight/50 hover:shadow-sm transition-all duration-300 cursor-pointer group"
             >
               <div className="flex items-center gap-2 mb-1">
                 <div className={`p-1 rounded-md ${sectionColor(block.type)}`}>
@@ -192,6 +199,13 @@ export default function ReportBuilder({ context, onBack }: Props) {
               Preview
             </button>
             <button
+              onClick={() => { setTemplateName(title); setShowSaveTemplate(true); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 transition-colors cursor-pointer"
+            >
+              <BookOpen size={13} />
+              Save as Template
+            </button>
+            <button
               onClick={handleGenerate}
               className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-primary to-primary-medium text-white rounded-xl text-[12px] font-semibold hover:from-primary-hover hover:to-primary transition-all cursor-pointer"
             >
@@ -229,7 +243,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                   exit={{ opacity: 0, scale: 0.95 }}
                 >
                 <div
-                  className={`bg-white rounded-xl border shadow-sm transition-all ${
+                  className={`bg-white rounded-xl border shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 ${
                     dragOverIndex === index ? 'border-primary border-2' : 'border-border-light'
                   }`}
                   draggable
@@ -332,6 +346,97 @@ export default function ReportBuilder({ context, onBack }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Save as Template Modal */}
+      <AnimatePresence>
+        {showSaveTemplate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            onClick={() => setShowSaveTemplate(false)}
+          >
+            <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-white rounded-2xl shadow-2xl w-[420px] overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="px-5 py-4 border-b border-border-light flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-primary/10 text-primary rounded-lg"><BookOpen size={14} /></div>
+                  <h4 className="text-[14px] font-semibold text-text">Save as Template</h4>
+                </div>
+                <button onClick={() => setShowSaveTemplate(false)} className="p-1 hover:bg-gray-100 rounded-lg cursor-pointer">
+                  <X size={14} className="text-text-muted" />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="text-[12px] font-semibold text-text mb-1.5 block">Template Name</label>
+                  <input
+                    value={templateName}
+                    onChange={e => setTemplateName(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-border-light text-[13px] focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
+                    placeholder="Enter template name"
+                  />
+                </div>
+                <div>
+                  <label className="text-[12px] font-semibold text-text mb-1.5 block">Description</label>
+                  <textarea
+                    value={templateDesc}
+                    onChange={e => setTemplateDesc(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-border-light text-[13px] focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 resize-none min-h-[70px]"
+                    placeholder="Describe what this template is for..."
+                  />
+                </div>
+                <div className="relative">
+                  <label className="text-[12px] font-semibold text-text mb-1.5 block">Category</label>
+                  <button
+                    onClick={() => setShowCategoryDropdown(p => !p)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-border-light text-[13px] text-text hover:border-primary/30 transition-colors cursor-pointer"
+                  >
+                    {templateCategory}
+                    <ChevronDown size={14} className={`text-text-muted transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {showCategoryDropdown && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-border-light z-10 overflow-hidden"
+                      >
+                        {TEMPLATE_CATEGORIES.map(cat => (
+                          <button
+                            key={cat}
+                            onClick={() => { setTemplateCategory(cat); setShowCategoryDropdown(false); }}
+                            className={`w-full text-left px-3 py-2 text-[12px] hover:bg-primary-xlight transition-colors cursor-pointer ${templateCategory === cat ? 'text-primary font-semibold bg-primary/5' : 'text-text'}`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+              <div className="px-5 py-4 border-t border-border-light flex justify-end gap-2">
+                <button onClick={() => setShowSaveTemplate(false)} className="px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">Cancel</button>
+                <button
+                  onClick={() => { addToast({ type: 'success', message: 'Template saved to library!' }); setShowSaveTemplate(false); }}
+                  className="px-5 py-2 bg-primary text-white rounded-xl text-[12px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer"
+                >
+                  Save Template
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Workflow Picker Modal */}
       <AnimatePresence>

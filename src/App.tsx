@@ -1,5 +1,6 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { Sparkles } from 'lucide-react';
 import { useAppState } from './hooks/useAppState';
 import { ToastProvider } from './components/shared/Toast';
 import Sidebar from './components/sidebar/Sidebar';
@@ -20,6 +21,7 @@ import EmailPreviewModal from './components/modals/EmailPreviewModal';
 import ShareModal from './components/modals/ShareModal';
 import PowerBIImportWizard from './components/modals/PowerBIImportWizard';
 import ReportBuilder from './components/reports/ReportBuilder';
+import AuditPlanningView from './components/audit/AuditPlanningView';
 
 export default function App() {
   const {
@@ -40,9 +42,11 @@ export default function App() {
     openReportBuilder,
     setWorkflowBuildStage,
     setWorkflowUiEnhancements,
+    setChatInitialQuery,
   } = useAppState();
 
   const mainScrollRef = useRef<HTMLDivElement>(null);
+  const [viewLoading, setViewLoading] = useState(false);
 
   useEffect(() => {
     if (mainScrollRef.current) {
@@ -50,11 +54,34 @@ export default function App() {
     }
   }, [state.view]);
 
-  const handleAskAboutRisk = (_riskId: string) => {
+  useEffect(() => {
+    if (state.view === 'chat' || state.view === 'home') return;
+    setViewLoading(true);
+    const t = setTimeout(() => setViewLoading(false), 400);
+    return () => clearTimeout(t);
+  }, [state.view]);
+
+  const handleAskAboutRisk = (riskId: string) => {
+    const riskNames: Record<string, string> = {
+      'RSK-001': 'Unauthorized vendor payments processed without approval',
+      'RSK-002': 'Duplicate invoices leading to overpayment',
+      'RSK-003': 'Vendor master data manipulation by unauthorized users',
+      'RSK-004': 'Fictitious vendor registration bypassing approval',
+      'RSK-005': 'Unauthorized changes to payment terms',
+      'RSK-006': 'Late payment causing contractual penalty exposure',
+      'RSK-007': 'Malware infection via vendor portals',
+      'RSK-008': 'Segregation of duties violation in Accounts Payable',
+      'RSK-009': 'Third-party vendor access without proper controls',
+      'RSK-010': 'Revenue recognition timing manipulation',
+      'RSK-011': 'Incorrect period-end journal entries',
+      'RSK-012': 'GL balance discrepancy across subsidiaries',
+    };
+    setChatInitialQuery(`Analyze risk ${riskId}: ${riskNames[riskId] || riskId}. What controls exist, what's the current status, and what actions do you recommend?`);
     setView('chat');
   };
 
-  const handleAskAboutControl = (_controlId: string) => {
+  const handleAskAboutControl = (controlId: string) => {
+    setChatInitialQuery(`Review control ${controlId} effectiveness. Show test results and any findings.`);
     setView('chat');
   };
 
@@ -84,6 +111,19 @@ export default function App() {
   };
 
   const renderMainView = () => {
+    if (viewLoading) {
+      return (
+        <div className="h-full flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+              <Sparkles size={24} className="text-primary" />
+            </motion.div>
+            <span className="text-[13px] text-text-muted">Loading...</span>
+          </div>
+        </div>
+      );
+    }
+
     switch (state.view) {
       case 'home':
         return <HomeView setView={setView} />;
@@ -99,6 +139,8 @@ export default function App() {
               setArtifactMode={setArtifactMode}
               setWorkflowBuildStage={setWorkflowBuildStage}
               setWorkflowUiEnhancements={setWorkflowUiEnhancements}
+              initialQuery={state.chatInitialQuery}
+              onInitialQueryProcessed={() => setChatInitialQuery(null)}
             />
             <AnimatePresence>
               {renderArtifactPanel()}
@@ -176,6 +218,9 @@ export default function App() {
             onBack={() => setView('reports')}
           />
         );
+
+      case 'audit-planning':
+        return <AuditPlanningView />;
 
       case 'data-sources':
         return <DataSourcesView />;

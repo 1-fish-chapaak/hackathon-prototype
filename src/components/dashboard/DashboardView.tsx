@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   AlertTriangle, Shield, Activity, TrendingUp, TrendingDown,
   Plus, Settings, Maximize2, FileText, DollarSign,
-  XCircle, Clock, Sparkles,
+  XCircle, Clock, Sparkles, RefreshCw, ChevronDown,
   ShoppingCart, CreditCard, BarChart3,
   Package, Receipt, Handshake, ShieldCheck
 } from 'lucide-react';
 import Orb from '../shared/Orb';
+import { useToast } from '../shared/Toast';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -258,6 +259,86 @@ const DASHBOARDS: DashboardDef[] = [
   },
 ];
 
+// ─── Daily Digest Data ───────────────────────────────────────────────────────
+
+const DAILY_DIGESTS: Record<DashboardId, Array<{ type: 'change' | 'alert' | 'improvement' | 'new'; text: string; time: string }>> = {
+  p2p: [
+    { type: 'alert', text: '3 new duplicate invoice flags detected overnight — Acme Corp (2), Global Supplies (1)', time: '6h ago' },
+    { type: 'change', text: 'Compliance rate improved from 93.1% to 94.2% after vendor master cleanup', time: '12h ago' },
+    { type: 'improvement', text: 'Average processing time dropped to 1.8 days (was 2.1 days last week)', time: '1d ago' },
+    { type: 'new', text: 'New vendor "Atlas Manufacturing" onboarded — pending KYC verification', time: '1d ago' },
+  ],
+  o2c: [
+    { type: 'alert', text: '2 high-value invoices ($180K+) pending approval beyond SLA', time: '3h ago' },
+    { type: 'change', text: 'DSO improved from 42 to 38 days after collection drive', time: '8h ago' },
+    { type: 'improvement', text: 'Disputed orders down 15% vs last month', time: '1d ago' },
+    { type: 'new', text: 'Revenue recognition check flagged 1 timing discrepancy in Q4 entries', time: '2d ago' },
+  ],
+  s2c: [
+    { type: 'alert', text: '4 contracts expiring within 30 days — 2 are high-value (>$500K)', time: '4h ago' },
+    { type: 'change', text: 'Vendor risk scores updated — 3 vendors downgraded to Medium', time: '1d ago' },
+    { type: 'improvement', text: 'Cost savings tracking: $2.8M realized YTD vs $2.4M target', time: '1d ago' },
+    { type: 'new', text: 'New compliance clause added to template contracts per legal directive', time: '3d ago' },
+  ],
+  grc: [
+    { type: 'alert', text: 'DEF-002 remediation due in 6 days — currently "in progress" status', time: '2h ago' },
+    { type: 'change', text: '3 controls tested since yesterday — SOX progress now at 58%', time: '6h ago' },
+    { type: 'improvement', text: 'Workflow automation saved 45 person-hours this month', time: '1d ago' },
+    { type: 'new', text: 'New risk RSK-012 identified in R2R process — GL balance discrepancy', time: '2d ago' },
+  ],
+};
+
+// ─── Daily Digest Component ─────────────────────────────────────────────────
+
+function DailyDigest({ dashboardId }: { dashboardId: DashboardId }) {
+  const [expanded, setExpanded] = useState(true);
+  const items = DAILY_DIGESTS[dashboardId];
+
+  const typeIcons = { change: RefreshCw, alert: AlertTriangle, improvement: TrendingUp, new: Plus };
+  const typeColors = {
+    change: 'text-blue-600 bg-blue-50',
+    alert: 'text-orange-600 bg-orange-50',
+    improvement: 'text-green-600 bg-green-50',
+    new: 'text-purple-600 bg-purple-50'
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-4 mb-5">
+      <button onClick={() => setExpanded(p => !p)} className="w-full flex items-center justify-between cursor-pointer">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-primary-medium">
+            <Sparkles size={13} className="text-white" />
+          </div>
+          <span className="text-[13px] font-semibold text-text">Your Daily Digest</span>
+          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">AI Summary</span>
+        </div>
+        <ChevronDown size={14} className={`text-text-muted transition-transform ${expanded ? '' : '-rotate-90'}`} />
+      </button>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+            <div className="mt-3 space-y-2">
+              {items.map((item, i) => {
+                const Icon = typeIcons[item.type];
+                const color = typeColors[item.type];
+                return (
+                  <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-surface-2 transition-colors">
+                    <div className={`p-1.5 rounded-lg shrink-0 ${color}`}><Icon size={12} /></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[12px] text-text leading-relaxed">{item.text}</div>
+                      <div className="text-[10px] text-text-muted mt-0.5">{item.time}</div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
 function DashboardSkeleton() {
@@ -290,9 +371,9 @@ function KpiCard({ title, value, change, trend, icon: Icon, color, index }: KpiD
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 + index * 0.05 }}
     >
-      <div className="glass-card rounded-2xl p-5 group cursor-pointer">
+      <div className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300 group cursor-default">
         <div className="flex items-start justify-between mb-3">
-          <div className={`p-2 rounded-lg ${color}`}>
+          <div className={`p-2 rounded-lg ${color} group-hover:scale-110 transition-transform duration-300`}>
             <Icon size={16} />
           </div>
         </div>
@@ -311,7 +392,7 @@ function KpiCard({ title, value, change, trend, icon: Icon, color, index }: KpiD
 
 // ─── Donut Chart ─────────────────────────────────────────────────────────────
 
-function DonutChart({ title, segments, centerLabel }: { title: string; segments: DonutSegment[]; centerLabel?: string }) {
+function DonutChart({ title, segments, centerLabel, onExpand }: { title: string; segments: DonutSegment[]; centerLabel?: string; onExpand?: () => void }) {
   const total = segments.reduce((a, s) => a + s.value, 0);
   let offset = 0;
   const arcs = segments.map(s => {
@@ -323,10 +404,10 @@ function DonutChart({ title, segments, centerLabel }: { title: string; segments:
   });
 
   return (
-    <div className="glass-card rounded-2xl p-5">
+    <div className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-text">{title}</h3>
-        <button className="p-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
+        <button onClick={onExpand} className="p-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
           <Maximize2 size={12} className="text-text-muted hover:text-text-secondary" />
         </button>
       </div>
@@ -377,14 +458,14 @@ function DonutChart({ title, segments, centerLabel }: { title: string; segments:
 
 // ─── Bar Chart ───────────────────────────────────────────────────────────────
 
-function BarChart({ title, data, color }: { title: string; data: BarDatum[]; color: string }) {
+function BarChart({ title, data, color, onExpand }: { title: string; data: BarDatum[]; color: string; onExpand?: () => void }) {
   const max = Math.max(...data.map(d => d.value));
 
   return (
-    <div className="glass-card rounded-2xl p-5">
+    <div className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-text">{title}</h3>
-        <button className="p-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
+        <button onClick={onExpand} className="p-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
           <Maximize2 size={12} className="text-text-muted hover:text-text-secondary" />
         </button>
       </div>
@@ -416,12 +497,12 @@ function BarChart({ title, data, color }: { title: string; data: BarDatum[]; col
 
 // ─── Progress Bars ───────────────────────────────────────────────────────────
 
-function ProgressChart({ title, data }: { title: string; data: ProgressDatum[] }) {
+function ProgressChart({ title, data, onExpand }: { title: string; data: ProgressDatum[]; onExpand?: () => void }) {
   return (
-    <div className="glass-card rounded-2xl p-5">
+    <div className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-text">{title}</h3>
-        <button className="p-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
+        <button onClick={onExpand} className="p-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
           <Maximize2 size={12} className="text-text-muted hover:text-text-secondary" />
         </button>
       </div>
@@ -452,7 +533,7 @@ function ProgressChart({ title, data }: { title: string; data: ProgressDatum[] }
 
 function MiniTable({ title, headers, rows }: { title: string; headers: string[]; rows: TableRow[] }) {
   return (
-    <div className="glass-card rounded-2xl p-5">
+    <div className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-text">{title}</h3>
         <button className="text-[11px] text-primary font-medium hover:underline cursor-pointer">View all</button>
@@ -473,7 +554,7 @@ function MiniTable({ title, headers, rows }: { title: string; headers: string[];
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + i * 0.04 }}
-                className="border-b border-border/50 last:border-0 hover:bg-surface-2 transition-colors cursor-pointer"
+                className="border-b border-border/50 last:border-0 hover:bg-primary-xlight/50 transition-colors cursor-pointer"
               >
                 {row.cells.map((cell, j) => (
                   <td key={j} className={`text-[12.5px] py-2.5 pr-4 ${j === 0 ? 'font-medium text-text' : 'text-text-secondary'}`}>
@@ -509,7 +590,7 @@ function Sidebar({ dashboards, activeId, onSelect }: {
               key={d.id}
               onClick={() => onSelect(d.id)}
               className={`
-                w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-[13px] font-medium transition-all cursor-pointer
+                w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-[13px] font-medium active:scale-[0.97] transition-all duration-200 cursor-pointer
                 ${isActive
                   ? 'bg-primary/10 text-primary shadow-sm'
                   : 'text-text-secondary hover:bg-surface-2 hover:text-text'
@@ -534,6 +615,7 @@ interface DashboardProps {
 }
 
 export default function DashboardView({ onImportPowerBI, onShare }: DashboardProps = {}) {
+  const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<DashboardId>('p2p');
 
@@ -592,11 +674,11 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                     Share
                   </button>
                 )}
-                <button className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white transition-colors cursor-pointer">
+                <button onClick={() => addToast('Dashboard customization panel opening...', 'info')} className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white transition-colors cursor-pointer">
                   <Settings size={14} />
                   Customize
                 </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
+                <button onClick={() => addToast('Widget picker opening...', 'info')} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
                   <Plus size={14} />
                   Add Widget
                 </button>
@@ -608,7 +690,7 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.05 }}
-              className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-2xl border border-primary/10 p-4 mb-6 flex items-center gap-4 ai-shimmer"
+              className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-2xl border border-primary/10 p-4 mb-6 flex items-center gap-4 ai-shimmer hover:shadow-md transition-shadow duration-300"
             >
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shrink-0">
                 <Sparkles size={16} className="text-white" />
@@ -624,6 +706,9 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                 </div>
               </div>
             </motion.div>
+
+            {/* AI Daily Digest */}
+            <DailyDigest dashboardId={activeId} />
 
             {/* KPIs */}
             <div className="grid grid-cols-4 gap-4 mb-6">
@@ -652,6 +737,7 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                   title={dashboard.donut.title}
                   segments={dashboard.donut.segments}
                   centerLabel={dashboard.donut.centerLabel}
+                  onExpand={() => addToast('Chart expanded to fullscreen', 'info')}
                 />
               )}
               {dashboard.bars && (
@@ -659,12 +745,14 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                   title={dashboard.bars.title}
                   data={dashboard.bars.data}
                   color={dashboard.bars.color}
+                  onExpand={() => addToast('Chart expanded to fullscreen', 'info')}
                 />
               )}
               {dashboard.progress && (
                 <ProgressChart
                   title={dashboard.progress.title}
                   data={dashboard.progress.data}
+                  onExpand={() => addToast('Chart expanded to fullscreen', 'info')}
                 />
               )}
             </motion.div>

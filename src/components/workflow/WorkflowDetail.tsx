@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { WORKFLOWS } from '../../data/mockData';
 import Orb from '../shared/Orb';
+import { useToast } from '../shared/Toast';
 
 interface Props {
   workflowId: string;
@@ -55,7 +56,17 @@ function MiniTrend({ data, color }: { data: number[]; color: string }) {
 export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, onGenerateReport }: Props) {
   const wf = WORKFLOWS.find(w => w.id === workflowId);
   const [tab, setTab] = useState<'overview' | 'runs' | 'variables'>('overview');
+  const { addToast } = useToast();
+  const [running, setRunning] = useState(false);
+  const [version, setVersion] = useState('v3');
   if (!wf) return null;
+
+  const versionData: Record<string, { runs: number; flags: string; score: string; scoreNote: string }> = {
+    'v1': { runs: 4, flags: '12', score: '78', scoreNote: '-2 vs prior' },
+    'v2': { runs: 8, flags: '18', score: '87', scoreNote: '+9 vs v1' },
+    'v3': { runs: wf.runs, flags: '23', score: '95', scoreNote: '+5 vs last period' },
+  };
+  const vData = versionData[version] || versionData['v3'];
 
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
@@ -79,7 +90,22 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                 </div>
                 <span className="font-mono">{wf.id.toUpperCase()}</span>
               </div>
-              <h1 className="text-xl font-bold text-text tracking-tight mb-1.5">{wf.name}</h1>
+              <div className="flex items-center gap-3 mb-1.5">
+                <h1 className="text-xl font-bold text-text tracking-tight">{wf.name}</h1>
+                <div className="flex items-center gap-1 bg-surface-2 rounded-lg p-0.5">
+                  {['v1', 'v2', 'v3'].map(v => (
+                    <button
+                      key={v}
+                      onClick={() => setVersion(v)}
+                      className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer ${
+                        version === v ? 'bg-white text-primary shadow-sm' : 'text-text-muted hover:text-text-secondary'
+                      }`}
+                    >
+                      {v === 'v3' ? `${v} ★` : v}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <p className="text-[13px] text-text-secondary leading-relaxed max-w-xl">{wf.desc}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0 ml-6">
@@ -95,13 +121,35 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                   Report
                 </button>
               )}
-              <button className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 transition-colors cursor-pointer">
+              <button onClick={() => addToast('Workflow configuration panel opening...', 'info')} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 transition-colors cursor-pointer">
                 <Settings size={13} />
                 Configure
               </button>
-              <button className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
-                <Play size={13} />
-                Run Now
+              <button
+                onClick={() => {
+                  setRunning(true);
+                  addToast('Workflow execution started...', 'success');
+                  setTimeout(() => {
+                    setRunning(false);
+                    addToast('Workflow completed — 2 new flags raised', 'success');
+                  }, 2500);
+                }}
+                disabled={running}
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover disabled:opacity-70 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
+              >
+                {running ? (
+                  <>
+                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+                      <Sparkles size={13} />
+                    </motion.div>
+                    Running...
+                  </>
+                ) : (
+                  <>
+                    <Play size={13} />
+                    Run Now
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -109,12 +157,12 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
           {/* KPI strip */}
           <div className="grid grid-cols-3 gap-4">
             {[
-              { l: 'Total Runs', v: wf.runs.toString(), icon: Activity, color: 'bg-primary/10 text-primary', note: '+3 this week' },
-              { l: 'Flags Raised', v: '23', icon: AlertTriangle, color: 'bg-amber-50 text-amber-600', note: '8 critical' },
-              { l: 'Impact Score', v: '95', icon: TrendingUp, color: 'bg-green-50 text-green-600', note: '+5 vs last period' },
+              { l: 'Total Runs', v: vData.runs.toString(), icon: Activity, color: 'bg-primary/10 text-primary', note: '+3 this week' },
+              { l: 'Flags Raised', v: vData.flags, icon: AlertTriangle, color: 'bg-amber-50 text-amber-600', note: '8 critical' },
+              { l: 'Impact Score', v: vData.score, icon: TrendingUp, color: 'bg-green-50 text-green-600', note: vData.scoreNote },
             ].map(k => (
-              <div key={k.l} className="bg-surface-2 border border-border-light rounded-xl p-4">
-                <div className={`w-7 h-7 rounded-lg ${k.color} flex items-center justify-center mb-2.5`}>
+              <div key={k.l} className="bg-surface-2 border border-border-light rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all duration-300 group cursor-default">
+                <div className={`w-7 h-7 rounded-lg ${k.color} flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform duration-300`}>
                   <k.icon size={14} />
                 </div>
                 <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">{k.l}</div>
@@ -210,7 +258,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="bg-white rounded-xl border border-border-light p-5 hover:shadow-sm transition-all"
+                  className="bg-white rounded-xl border border-border-light p-5 hover:shadow-md hover:border-primary/20 cursor-default transition-all"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">{v.name}</span>
@@ -252,7 +300,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: i * 0.04 }}
-                className="grid grid-cols-[80px_1fr_80px_100px_80px_80px_70px] gap-3 px-5 py-3.5 border-b border-border-light last:border-0 hover:bg-primary-xlight/30 transition-colors items-center cursor-pointer"
+                className="grid grid-cols-[80px_1fr_80px_100px_80px_80px_70px] gap-3 px-5 py-3.5 border-b border-border-light last:border-0 hover:bg-primary-xlight/30 active:bg-primary-xlight/50 transition-colors items-center cursor-pointer"
               >
                 <span className="text-[12px] font-mono text-primary font-medium">{run.id}</span>
                 <span className="text-[12px] font-mono text-text-secondary">{run.date}</span>

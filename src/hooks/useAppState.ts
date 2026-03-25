@@ -15,7 +15,8 @@ export type View =
   | 'dashboards'
   | 'reports'
   | 'report-history'
-  | 'report-builder';
+  | 'report-builder'
+  | 'audit-planning';
 
 export type ChatMode = 'chat' | 'builder';
 export type ArtifactTab = 'plan' | 'code' | 'sources' | 'result';
@@ -45,6 +46,8 @@ export interface AppState {
   // Workflow build stage (0=none, 1-5=progressive build)
   workflowBuildStage: number;
   workflowUiEnhancements: string[];
+  // Chat initial query (from Ask AI actions)
+  chatInitialQuery: string | null;
 }
 
 const INITIAL_STATE: AppState = {
@@ -68,6 +71,7 @@ const INITIAL_STATE: AppState = {
   reportBuilderContext: null,
   workflowBuildStage: 0,
   workflowUiEnhancements: [],
+  chatInitialQuery: null,
 };
 
 export function useAppState() {
@@ -138,6 +142,10 @@ export function useAppState() {
     setState(prev => ({ ...prev, workflowUiEnhancements: enhancements }));
   }, []);
 
+  const setChatInitialQuery = useCallback((query: string | null) => {
+    setState(prev => ({ ...prev, chatInitialQuery: query }));
+  }, []);
+
   return {
     state,
     setView,
@@ -156,5 +164,6 @@ export function useAppState() {
     openReportBuilder,
     setWorkflowBuildStage,
     setWorkflowUiEnhancements,
+    setChatInitialQuery,
   };
 }

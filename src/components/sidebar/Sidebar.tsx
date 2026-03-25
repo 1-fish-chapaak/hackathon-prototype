@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   MessageSquare, Workflow, ShieldCheck, Database, LayoutDashboard,
   FileBarChart, ChevronDown, PanelLeftClose, PanelLeft,
-  AlertTriangle, ClipboardCheck, Sparkles, Building2, Library, Home, Plus
+  AlertTriangle, ClipboardCheck, Sparkles, Building2, Library, Home, Plus, Calendar
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
 
@@ -88,7 +88,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
   const [hoverExpanded, setHoverExpanded] = useState(false);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const auditViews: View[] = ['business-processes', 'bp-detail', 'audit-risk-register', 'audit-execution', 'workflow-library'];
+  const auditViews: View[] = ['business-processes', 'bp-detail', 'audit-risk-register', 'audit-execution', 'workflow-library', 'audit-planning'];
   const isAuditView = auditViews.includes(view);
   const isWorkflowView = view === 'workflow-builder' || view === 'workflow-templates' || view === 'workflow-detail';
 
@@ -220,6 +220,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
                     <SubNavItem icon={Building2} label="Business Processes" active={view === 'business-processes' || view === 'bp-detail'} onClick={() => setView('business-processes')} />
                     <SubNavItem icon={AlertTriangle} label="Risk Register" active={view === 'audit-risk-register'} onClick={() => setView('audit-risk-register')} />
                     <SubNavItem icon={ClipboardCheck} label="Engagements" active={view === 'audit-execution'} onClick={() => setView('audit-execution')} />
+                    <SubNavItem icon={Calendar} label="Audit Planning" active={view === 'audit-planning'} onClick={() => setView('audit-planning')} />
                     <SubNavItem icon={Library} label="Workflow Library" active={view === 'workflow-library'} onClick={() => setView('workflow-library')} />
                   </div>
                 </motion.div>

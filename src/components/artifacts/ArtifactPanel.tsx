@@ -86,6 +86,29 @@ function PlanTab() {
           ))}
         </div>
       </CollapsibleSection>
+
+      {/* Assumptions Section */}
+      <div className="mt-4 p-3 bg-amber-50/50 border border-amber-200/50 rounded-xl">
+        <div className="flex items-center gap-1.5 mb-2">
+          <AlertTriangle size={12} className="text-amber-500" />
+          <span className="text-[11px] font-bold text-amber-700">Assumptions Made</span>
+        </div>
+        <div className="space-y-1.5">
+          {[
+            'Date range: Full FY26 (Apr 2025 – Mar 2026)',
+            'Amount tolerance: ± 5% on invoice amounts',
+            'Vendor scope: All vendors in SAP AP Module',
+            'Matching logic: Fuzzy match on invoice number + vendor + amount',
+            'Excluded: Voided and reversed invoices',
+            'Currency: INR (converted at booking rate)',
+          ].map((assumption, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <div className="w-1 h-1 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+              <span className="text-[10.5px] text-amber-800">{assumption}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

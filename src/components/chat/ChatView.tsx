@@ -6,7 +6,7 @@ import {
   MessageSquare, ArrowRight, Mic, Plus, Lightbulb, Zap,
   Save, Monitor, Layout, CheckCircle, AlertTriangle, SlidersHorizontal
 } from 'lucide-react';
-import { CHAT_HISTORY, CLARIFICATION_STEPS, WORKFLOW_CLARIFICATION_STEPS } from '../../data/mockData';
+import { CHAT_HISTORY, CHAT_CONVERSATIONS, CLARIFICATION_STEPS, WORKFLOW_CLARIFICATION_STEPS, WORKFLOW_ASSUMPTIONS } from '../../data/mockData';
 import type { ArtifactTab } from '../../hooks/useAppState';
 import { TextShimmer } from '../shared/TextShimmer';
 import { AuditifyHelloEffect } from '../shared/HelloEffect';
@@ -41,7 +41,169 @@ interface ChatViewProps {
   setArtifactMode: (m: 'query' | 'workflow') => void;
   setWorkflowBuildStage?: (stage: number) => void;
   setWorkflowUiEnhancements?: (enhancements: string[]) => void;
+  initialQuery?: string;
+  onInitialQueryProcessed?: () => void;
 }
+
+type DetailedQueryType = 'duplicate-invoice' | 'workflow' | 'sox-compliance' | 'vendor-spend' | 'uncontrolled-risks' | 'control-effectiveness' | 'generic';
+
+const classifyDetailedQuery = (msg: string): DetailedQueryType => {
+  const lower = msg.toLowerCase();
+  // Workflow
+  if (lower.includes('workflow') || lower.includes('build a') || lower.includes('build me') || lower.includes('create a') || lower.includes('design a')) {
+    return 'workflow';
+  }
+  // Duplicate invoice
+  if ((lower.includes('duplicate') && lower.includes('invoice')) || (lower.includes('duplicate') && lower.includes('detect'))) {
+    return 'duplicate-invoice';
+  }
+  // SOX compliance
+  if (lower.includes('sox') || (lower.includes('compliance') && (lower.includes('status') || lower.includes('audit') || lower.includes('report') || lower.includes('progress')))) {
+    return 'sox-compliance';
+  }
+  // Vendor spend
+  if (lower.includes('vendor spend') || lower.includes('vendor analysis') || lower.includes('top vendor') || lower.includes('vendor concentration') || lower.includes('spend analysis')) {
+    return 'vendor-spend';
+  }
+  // Uncontrolled risks
+  if (lower.includes('uncontrolled risk') || lower.includes('risks without control') || lower.includes('no controls') || lower.includes('zero controls') || lower.includes('unmapped risk')) {
+    return 'uncontrolled-risks';
+  }
+  // Control effectiveness
+  if (lower.includes('control effectiveness') || lower.includes('ineffective control') || lower.includes('control performance') || lower.includes('effectiveness rate')) {
+    return 'control-effectiveness';
+  }
+  return 'generic';
+};
+
+const DETAILED_QUERY_CONFIG: Record<Exclude<DetailedQueryType, 'duplicate-invoice' | 'workflow'>, {
+  thinking: string[];
+  responseText: string;
+  insightsText: string;
+  kpis: { label: string; value: string; color: string }[];
+  followUps: string[];
+}> = {
+  'sox-compliance': {
+    thinking: [
+      'Analyzing SOX compliance scope...',
+      'Querying control testing results...',
+      'Evaluating deficiency classifications...',
+      'Cross-referencing PCAOB standards...',
+      'Compiling compliance dashboard...',
+    ],
+    responseText: "Here's your current SOX audit status. The assessment is 58% complete with 14 of 24 controls tested so far. 2 deficiencies have been identified that require remediation before the reporting deadline.",
+    insightsText: "**Key Insights:** 2 material weaknesses identified in IT General Controls (ITGC-003, ITGC-007). Revenue recognition controls (SOX-RC-01) passed with no exceptions. Segregation of duties testing is pending for 4 remaining controls. Recommend escalating ITGC remediation to meet Q2 deadline.",
+    kpis: [
+      { label: 'Controls Tested', value: '14/24', color: 'text-blue-600' },
+      { label: 'Completion', value: '58%', color: 'text-primary' },
+      { label: 'Deficiencies', value: '2', color: 'text-red-600' },
+      { label: 'On Track', value: 'At Risk', color: 'text-orange-600' },
+    ],
+    followUps: [
+      'Show details on the 2 deficiencies found',
+      'Which controls are still pending testing?',
+      'Generate a SOX status report for the audit committee',
+      'What is the remediation timeline for ITGC issues?',
+      'Compare progress against last year\'s SOX timeline',
+    ],
+  },
+  'vendor-spend': {
+    thinking: [
+      'Querying vendor master data...',
+      'Aggregating spend by vendor...',
+      'Calculating concentration risk metrics...',
+      'Identifying single-source dependencies...',
+      'Generating vendor analysis...',
+    ],
+    responseText: "I've analyzed vendor spend across all business units. Your top 5 vendors account for 67% of total procurement spend, indicating moderate concentration risk. Here's the breakdown:",
+    insightsText: "**Key Insights:** Acme Corp ($4.2M, 23% of spend) is the largest vendor with no secondary source. 3 vendors have contracts expiring within 60 days. Vendor VND-0042 (TechServ Ltd) shows a 340% spend increase YoY — flagged for review. Recommend diversifying supply chain for critical categories.",
+    kpis: [
+      { label: 'Total Spend', value: '$18.4M', color: 'text-text' },
+      { label: 'Top 5 Share', value: '67%', color: 'text-orange-600' },
+      { label: 'Active Vendors', value: '892', color: 'text-blue-600' },
+      { label: 'High Risk', value: '3', color: 'text-red-600' },
+    ],
+    followUps: [
+      'Show the full vendor concentration breakdown',
+      'Which vendors have contracts expiring soon?',
+      'Flag vendors with unusual spend increases',
+      'Build a vendor risk monitoring workflow',
+      'Compare vendor spend against budget allocations',
+    ],
+  },
+  'uncontrolled-risks': {
+    thinking: [
+      'Scanning risk register...',
+      'Cross-referencing control mappings...',
+      'Identifying gaps in coverage...',
+      'Evaluating residual risk exposure...',
+      'Compiling uncontrolled risk report...',
+    ],
+    responseText: "I've identified 3 risks with zero controls mapped: RSK-004 (Unauthorized vendor payments), RSK-007 (Data exfiltration via API), and RSK-009 (Segregation of duties bypass). These represent your highest exposure areas.",
+    insightsText: "**Key Insights:** RSK-004 has been uncontrolled for 120+ days and is rated Critical severity. RSK-007 was added last quarter after a penetration test finding. RSK-009 was previously controlled by CTR-011 which was retired in Jan 2026. Recommend immediate control mapping for all three — combined inherent risk exposure is $2.1M.",
+    kpis: [
+      { label: 'Uncontrolled', value: '3', color: 'text-red-600' },
+      { label: 'Critical', value: '1', color: 'text-red-600' },
+      { label: 'Exposure', value: '$2.1M', color: 'text-orange-600' },
+      { label: 'Avg Days Open', value: '87', color: 'text-orange-600' },
+    ],
+    followUps: [
+      'Suggest controls for RSK-004',
+      'Show the full risk register with control gaps',
+      'What controls were previously mapped to these risks?',
+      'Escalate uncontrolled risks to the risk committee',
+      'Build an automated control gap monitoring workflow',
+    ],
+  },
+  'control-effectiveness': {
+    thinking: [
+      'Pulling control testing results...',
+      'Computing effectiveness scores...',
+      'Identifying underperforming controls...',
+      'Analyzing failure patterns...',
+      'Generating effectiveness report...',
+    ],
+    responseText: "Control effectiveness analysis complete. Your overall effectiveness rate is 79% across 42 active controls. CTR-004 (Three-way match verification) is rated Ineffective with a 34% pass rate in the last testing cycle.",
+    insightsText: "**Key Insights:** CTR-004 failed 19 of 29 test samples — root cause is manual override by AP clerks. CTR-012 (Access review) dropped from 95% to 71% effectiveness this quarter. 6 controls are rated Needs Improvement. Top performing: CTR-001 (automated bank reconciliation) at 99% effectiveness. Recommend automating CTR-004 to eliminate manual bypass.",
+    kpis: [
+      { label: 'Overall Rate', value: '79%', color: 'text-blue-600' },
+      { label: 'Ineffective', value: '1', color: 'text-red-600' },
+      { label: 'Needs Improvement', value: '6', color: 'text-orange-600' },
+      { label: 'Effective', value: '35', color: 'text-green-600' },
+    ],
+    followUps: [
+      'Show details on CTR-004 failures',
+      'What is causing the decline in CTR-012?',
+      'Recommend automation options for manual controls',
+      'Compare effectiveness rates quarter over quarter',
+      'Generate a control effectiveness report for management',
+    ],
+  },
+  'generic': {
+    thinking: [
+      'Analyzing query...',
+      'Identifying relevant data sources...',
+      'Querying SAP ERP — AP Module...',
+      'Processing 1.2M records...',
+      'Generating results...',
+    ],
+    responseText: "I found the relevant data from your connected sources. Here's a summary:",
+    insightsText: "**Key Insights:** 2 risks (RSK-004, RSK-007) have zero controls mapped — highest exposure. RSK-008 (SOD violation) has controls but requires immediate attention due to critical severity. Recommend prioritizing control mapping for uncontrolled risks and scheduling a focused review of AP segregation of duties.",
+    kpis: [
+      { label: 'Records Scanned', value: '1.2M', color: 'text-text' },
+      { label: 'Risks Found', value: '5', color: 'text-orange-600' },
+      { label: 'Critical', value: '2', color: 'text-red-600' },
+      { label: 'Uncontrolled', value: '2', color: 'text-red-600' },
+    ],
+    followUps: [
+      'Show me the trend over the last 6 months',
+      'Which controls can mitigate these risks?',
+      'Generate a compliance report from these results',
+      'Build a monitoring workflow for these risks',
+      'Compare this against last quarter\'s assessment',
+    ],
+  },
+};
 
 const QUICK_ACTIONS = [
   { icon: Workflow, label: 'Build a workflow', color: 'from-purple-500 to-violet-600' },
@@ -289,13 +451,14 @@ const COMPONENT_LOADING_MESSAGES = [
   { type: 'result' as const, title: 'Results', text: 'Found 8 potential duplicate invoices totaling $616,650. Highest match: INV-2026-4521 (96% match to INV-2026-3102, Acme Corp, $45,200).' },
 ];
 
-export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowBuildStage, setWorkflowUiEnhancements }: ChatViewProps) {
+export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowBuildStage, setWorkflowUiEnhancements, initialQuery, onInitialQueryProcessed }: ChatViewProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [thinkingSteps, setThinkingSteps] = useState<string[]>([]);
   const [thinkingExpanded, setThinkingExpanded] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const processingRef = useRef(false);
   // Clarification mode state (query)
   const [clarificationMode, setClarificationMode] = useState(false);
   const [clarificationStep, setClarificationStep] = useState(0);
@@ -334,6 +497,16 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     };
   }, []);
 
+  // Support for "Ask AI about risk" context — auto-send initialQuery when it appears
+  useEffect(() => {
+    if (initialQuery) {
+      setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'user', text: initialQuery, timestamp: new Date() }]);
+      simulateResponse(initialQuery);
+      onInitialQueryProcessed?.();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuery]);
+
   const isDuplicateInvoiceQuery = (msg: string): boolean => {
     const lower = msg.toLowerCase();
     return (lower.includes('duplicate') && lower.includes('invoice')) ||
@@ -369,6 +542,9 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
   };
 
   const handleClarificationOptionClick = (option: string) => {
+    if (processingRef.current) return;
+    processingRef.current = true;
+    setTimeout(() => { processingRef.current = false; }, 1500);
     clearTimers();
 
     // Add user's selection as message
@@ -402,6 +578,25 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
       setClarificationMode(false);
       setLoadedComponents(new Set());
 
+      // Clarification summary
+      schedule(() => {
+        setMessages(prev => [...prev, {
+          id: `msg-clarification-summary`,
+          role: 'assistant',
+          text: `**Configuration Summary**\n\n` +
+            `Date Range: Full FY26\n` +
+            `Tolerance: +/- 5%\n` +
+            `Vendor Scope: All vendors\n` +
+            `Match Logic: Fuzzy match all fields\n\n` +
+            `**Assumptions:**\n` +
+            `- Excluding voided invoices\n` +
+            `- Currency conversion at booking rate\n` +
+            `- Looking back 12 months for duplicates\n` +
+            `- Results sorted by match score (descending)`,
+          timestamp: new Date(),
+        }]);
+      }, 300);
+
       schedule(() => {
         setMessages(prev => [...prev, {
           id: `msg-analyzing`,
@@ -409,7 +604,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           text: "All parameters confirmed. Running duplicate invoice analysis now...",
           timestamp: new Date(),
         }]);
-      }, 600);
+      }, 900);
 
       // Progressive component loading
       COMPONENT_LOADING_MESSAGES.forEach((comp, i) => {
@@ -423,11 +618,11 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
             isComponentResult: true,
             componentType: comp.type,
           }]);
-        }, 1400 + i * 800);
+        }, 1700 + i * 800);
       });
 
       // Final answer
-      const finalDelay = 1400 + COMPONENT_LOADING_MESSAGES.length * 800 + 600;
+      const finalDelay = 1700 + COMPONENT_LOADING_MESSAGES.length * 800 + 600;
       schedule(() => {
         const shuffled = [...QUERY_FOLLOWUPS].sort(() => Math.random() - 0.5);
         setMessages(prev => [...prev, {
@@ -484,6 +679,9 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
   };
 
   const handleWorkflowClarificationClick = (option: string) => {
+    if (processingRef.current) return;
+    processingRef.current = true;
+    setTimeout(() => { processingRef.current = false; }, 1500);
     clearTimers();
 
     // Add user's selection as message
@@ -518,6 +716,22 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
       setWorkflowClarificationMode(false);
       if (setWorkflowBuildStage) setWorkflowBuildStage(5);
 
+      // Workflow clarification summary with all 5 steps + assumptions
+      schedule(() => {
+        const summaryLines = WORKFLOW_CLARIFICATION_STEPS.map((step, i) => {
+          const assumptions = WORKFLOW_ASSUMPTIONS[i + 1] || [];
+          return `**Step ${i + 1} - ${step.category}:** ${step.options[0]}\n` +
+            (assumptions.length > 0 ? assumptions.map(a => `  - ${a}`).join('\n') : '');
+        }).join('\n\n');
+
+        setMessages(prev => [...prev, {
+          id: `msg-wf-clarification-summary`,
+          role: 'assistant',
+          text: `**Workflow Configuration Summary**\n\n${summaryLines}`,
+          timestamp: new Date(),
+        }]);
+      }, 200);
+
       // 1. Canvas expanded message
       schedule(() => {
         setMessages(prev => [...prev, {
@@ -526,7 +740,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           text: "Canvas expanded with your AI-recommended output layout. Here are some suggested UI improvements:",
           timestamp: new Date(),
         }]);
-      }, 400);
+      }, 700);
 
       // 2. Recommended UI changes
       schedule(() => {
@@ -537,7 +751,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           timestamp: new Date(),
           richType: 'ui-recommendations',
         }]);
-      }, 900);
+      }, 1200);
     }
   };
 
@@ -550,22 +764,23 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
       return;
     }
 
-    const mode = classifyQuery(userMsg);
+    const detailedType = classifyDetailedQuery(userMsg);
 
     // Workflow queries → 5-stage build clarification
-    if (mode === 'workflow') {
+    if (detailedType === 'workflow') {
       startWorkflowBuildFlow();
       return;
     }
 
     // Duplicate invoice query → query clarification flow
-    if (isDuplicateInvoiceQuery(userMsg)) {
+    if (detailedType === 'duplicate-invoice') {
       startClarificationFlow();
       return;
     }
 
-    // Query mode — thinking steps → result
-    const thinkingList = DEMO_THINKING_QUERY;
+    // All other query types — thinking steps → result with type-specific content
+    const config = DETAILED_QUERY_CONFIG[detailedType];
+    const thinkingList = config.thinking;
 
     setIsTyping(true);
     setThinkingSteps([]);
@@ -585,7 +800,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
       setMessages(prev => [...prev, {
         id: `msg-${Date.now()}`,
         role: 'assistant',
-        text: "I found the relevant data from your connected sources. Here's a summary:",
+        text: config.responseText,
         hasArtifact: true,
         artifactType: 'query',
         timestamp: new Date(),
@@ -598,32 +813,33 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
       setActiveArtifactTab('result');
     }, totalThinkingTime);
 
-    // 2. Summary KPI cards in chat
+    // 2. Summary KPI cards in chat (type-specific)
     schedule(() => {
       setMessages(prev => [...prev, {
-        id: `msg-summary-kpi`,
+        id: `msg-summary-kpi-${Date.now()}`,
         role: 'assistant',
         text: '',
         timestamp: new Date(),
         richType: 'summary-kpi',
+        richData: { kpis: config.kpis },
       }]);
     }, totalThinkingTime + 500);
 
-    // 3. Textual summary insights
+    // 3. Textual summary insights (type-specific)
     schedule(() => {
       setMessages(prev => [...prev, {
-        id: `msg-insights`,
+        id: `msg-insights-${Date.now()}`,
         role: 'assistant',
-        text: "**Key Insights:** 2 risks (RSK-004, RSK-007) have zero controls mapped — highest exposure. RSK-008 (SOD violation) has controls but requires immediate attention due to critical severity. Recommend prioritizing control mapping for uncontrolled risks and scheduling a focused review of AP segregation of duties.",
+        text: config.insightsText,
         timestamp: new Date(),
       }]);
     }, totalThinkingTime + 900);
 
-    // 4. Threshold control
+    // 4. Threshold control with type-specific follow-ups
     schedule(() => {
-      const shuffled = [...QUERY_FOLLOWUPS].sort(() => Math.random() - 0.5);
+      const shuffled = [...config.followUps].sort(() => Math.random() - 0.5);
       setMessages(prev => [...prev, {
-        id: `msg-threshold`,
+        id: `msg-threshold-${Date.now()}`,
         role: 'assistant',
         text: '',
         timestamp: new Date(),
@@ -646,8 +862,11 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
   };
 
   const handleFollowUpClick = (question: string) => {
-    setInput(question);
-    textareaRef.current?.focus();
+    if (processingRef.current) return;
+    processingRef.current = true;
+    setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'user', text: question, timestamp: new Date() }]);
+    simulateResponse(question);
+    setTimeout(() => { processingRef.current = false; }, 2000);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -692,7 +911,28 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           </div>
           <div className="overflow-y-auto flex-1" style={{ height: 'calc(100% - 110px)' }}>
             {CHAT_HISTORY.map(chat => (
-              <button key={chat.id} className="w-full text-left px-4 py-3 border-b border-border-light hover:bg-primary-xlight/50 transition-colors group cursor-pointer">
+              <button
+                key={chat.id}
+                className="w-full text-left px-4 py-3 border-b border-border-light hover:bg-primary-xlight/50 transition-colors group cursor-pointer"
+                onClick={() => {
+                  const convo = CHAT_CONVERSATIONS[chat.id];
+                  if (convo) {
+                    const msgs: ChatMessage[] = convo.map((m, idx) => ({
+                      id: `history-${chat.id}-${idx}`,
+                      role: m.role,
+                      text: m.text,
+                      timestamp: new Date(),
+                    }));
+                    setMessages(msgs);
+                    // Reset any active flows
+                    setClarificationMode(false);
+                    setWorkflowClarificationMode(false);
+                    setIsTyping(false);
+                    setThinkingSteps([]);
+                    clearTimers();
+                  }
+                }}
+              >
                 <div className="flex items-start gap-2.5">
                   <div className="w-6 h-6 rounded-md bg-primary/5 flex items-center justify-center shrink-0 mt-0.5">
                     <MessageSquare size={12} className="text-primary/60" />
@@ -829,7 +1069,11 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 + i * 0.08 }}
-                    onClick={() => { setInput(action.label); textareaRef.current?.focus(); }}
+                    onClick={() => {
+                      const text = action.label;
+                      setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'user', text, timestamp: new Date() }]);
+                      simulateResponse(text);
+                    }}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-border-light bg-white hover:border-primary/30 hover:shadow-sm transition-all text-[13px] text-text-secondary hover:text-text cursor-pointer"
                   >
                     <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${action.color} flex items-center justify-center`}>
@@ -869,7 +1113,11 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                       >
                         <div
                           className="p-4 text-left cursor-pointer group rounded-2xl hover:shadow-sm transition-shadow"
-                          onClick={() => { setInput(`Build a ${rw.label.toLowerCase()}`); textareaRef.current?.focus(); }}
+                          onClick={() => {
+                            const text = `Build a ${rw.label.toLowerCase()}`;
+                            setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'user', text, timestamp: new Date() }]);
+                            simulateResponse(text);
+                          }}
                         >
                           <div className={`p-2 rounded-lg ${rw.color} w-fit mb-3`}>
                             <rw.icon size={15} />
@@ -967,12 +1215,12 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                     {/* Rich inline components */}
                     {msg.richType === 'summary-kpi' ? (
                       <div className="ml-7 grid grid-cols-4 gap-2">
-                        {[
+                        {((msg.richData?.kpis as { label: string; value: string; color: string }[] | undefined) || [
                           { label: 'Records Scanned', value: '1.2M', color: 'text-text' },
                           { label: 'Risks Found', value: '5', color: 'text-orange-600' },
                           { label: 'Critical', value: '2', color: 'text-red-600' },
                           { label: 'Uncontrolled', value: '2', color: 'text-red-600' },
-                        ].map((kpi, ki) => (
+                        ]).map((kpi, ki) => (
                           <motion.div key={kpi.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: ki * 0.1 }}
                             className="glass-card rounded-xl p-3 text-center"
                           >

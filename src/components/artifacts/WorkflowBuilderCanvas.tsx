@@ -4,8 +4,9 @@ import {
   X, CheckCircle, Play, Save, History, Undo,
   Database, ArrowRight, LayoutTemplate,
   Sparkles, Zap, ChevronDown, Monitor, Plus,
-  Check, Target, Cpu
+  Check, Target, Cpu, Lightbulb, AlertTriangle
 } from 'lucide-react';
+import { WORKFLOW_CLARIFICATION_STEPS, WORKFLOW_ASSUMPTIONS } from '../../data/mockData';
 import { NoiseButton } from '../shared/NoiseButton';
 
 interface Props {
@@ -400,6 +401,51 @@ export default function WorkflowBuilderCanvas({ onClose, buildStage = 5, uiEnhan
                     </div>
                   </div>
                 )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Clarification & Assumptions Log */}
+          {buildStage > 0 && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+              <div className="mt-1">
+                <div className="flex items-center gap-2 mb-3">
+                  <Lightbulb size={14} className="text-primary" />
+                  <span className="text-[12px] font-semibold text-text">Clarifications & Assumptions</span>
+                </div>
+                <div className="space-y-2">
+                  {Array.from({ length: Math.min(buildStage, 5) }, (_, i) => {
+                    const step = WORKFLOW_CLARIFICATION_STEPS[i];
+                    const assumptions = WORKFLOW_ASSUMPTIONS[i + 1] || [];
+                    return (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="bg-surface-2 rounded-xl p-3 border border-border-light"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-bold text-primary uppercase tracking-wider">{step?.category}</span>
+                          <span className="text-[9px] text-text-muted">Step {i + 1}</span>
+                        </div>
+                        <div className="text-[11px] text-text font-medium mb-2 flex items-center gap-1">
+                          <CheckCircle size={10} className="text-green-500 shrink-0" /> {step?.options[0]}
+                        </div>
+                        {assumptions.length > 0 && (
+                          <div className="pl-3 border-l-2 border-amber-300">
+                            <div className="text-[9px] font-bold text-amber-600 uppercase tracking-wider mb-1 flex items-center gap-1">
+                              <AlertTriangle size={9} /> Assumptions
+                            </div>
+                            {assumptions.map((a, j) => (
+                              <div key={j} className="text-[10px] text-text-muted leading-relaxed">&bull; {a}</div>
+                            ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </div>
             </motion.div>
           )}
