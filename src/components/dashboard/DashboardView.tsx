@@ -555,34 +555,6 @@ function DashboardSkeleton() {
   );
 }
 
-// ─── KPI Card ────────────────────────────────────────────────────────────────
-
-function KpiCard({ title, value, change, trend, icon: Icon, color, index }: KpiDef & { index: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 + index * 0.05 }}
-    >
-      <div className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300 group cursor-default">
-        <div className="flex items-start justify-between mb-3">
-          <div className={`p-2 rounded-lg ${color} group-hover:scale-110 transition-transform duration-300`}>
-            <Icon size={16} />
-          </div>
-        </div>
-        <div className="text-2xl font-bold text-text">{value}</div>
-        <div className="flex items-center justify-between mt-1">
-          <div className="text-[11px] text-text-muted uppercase tracking-wider">{title}</div>
-          <div className={`flex items-center gap-0.5 text-[11px] font-semibold ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-            {trend === 'up' ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-            {change}
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 // ─── Donut Chart ─────────────────────────────────────────────────────────────
 
 function DonutChart({ title, segments, centerLabel, onExpand }: { title: string; segments: DonutSegment[]; centerLabel?: string; onExpand?: () => void }) {
@@ -903,11 +875,57 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
             {/* AI Daily Digest */}
             <AlertsPanel dashboardId={activeId} />
 
-            {/* KPIs */}
-            <div className="grid grid-cols-4 gap-4 mb-6">
-              {dashboard.kpis.map((kpi, i) => (
-                <KpiCard key={kpi.title} {...kpi} index={i} />
-              ))}
+            {/* KPIs — Bento Grid */}
+            <div className="grid grid-cols-12 gap-3 mb-6">
+              {dashboard.kpis.map((kpi, i) => {
+                const colSpan = i === 0 ? 'col-span-5' : i === 1 ? 'col-span-3' : 'col-span-4';
+                const isDark = i === 0 || i === 1;
+                const Icon = kpi.icon;
+                return (
+                  <motion.div
+                    key={kpi.title}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 + i * 0.05 }}
+                    className={`${colSpan} rounded-3xl p-5 cursor-default transition-all duration-300 hover:scale-[1.005]`}
+                    style={{
+                      background: isDark
+                        ? 'linear-gradient(145deg, #1e1230 0%, #160d24 100%)'
+                        : 'linear-gradient(145deg, #f0e6fb 0%, #e8daf5 100%)',
+                      border: `1px solid rgba(106,18,205,${isDark ? '0.12' : '0.1'})`,
+                    }}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`p-1.5 rounded-lg ${isDark ? 'bg-white/10' : ''}`}>
+                        <Icon size={13} className={isDark ? 'text-purple-400' : 'text-primary/60'} />
+                      </div>
+                      <span className={`text-[11px] font-medium ${isDark ? 'text-white/40' : 'text-primary/50'}`}>{kpi.title}</span>
+                    </div>
+                    <div className={`text-[26px] font-extrabold leading-none tracking-tight ${isDark ? 'text-white' : 'text-primary'}`}>{kpi.value}</div>
+                    <div className={`flex items-center gap-1 mt-1.5 text-[11px] font-semibold ${kpi.trend === 'up' ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {kpi.trend === 'up' ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                      {kpi.change}
+                    </div>
+                    {/* Mini chart accent for first card */}
+                    {i === 0 && (
+                      <div className="flex items-end gap-1 mt-3 h-6">
+                        {[40, 55, 48, 62, 58, 70, 65, 80].map((h, j) => (
+                          <motion.div key={j} initial={{ height: 0 }} animate={{ height: `${h}%` }} transition={{ delay: 0.3 + j * 0.04, duration: 0.4 }}
+                            className="flex-1 rounded-sm" style={{ background: j >= 6 ? '#c084fc' : 'rgba(192,132,252,0.2)' }} />
+                        ))}
+                      </div>
+                    )}
+                    {/* Dot pattern for accent cards */}
+                    {i === 2 && (
+                      <div className="flex items-center gap-1 mt-3">
+                        {Array.from({ length: 8 }).map((_, j) => (
+                          <div key={j} className={`w-1.5 h-1.5 rounded-full ${j < 6 ? 'bg-primary/30' : 'bg-primary/10'}`} />
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
             </div>
 
             {/* Charts row */}

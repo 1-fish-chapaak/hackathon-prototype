@@ -5,11 +5,12 @@ import {
   AlertTriangle, Shield, CheckCircle2, Clock, Zap, Activity,
   ChevronDown, Lightbulb, DollarSign, Users, Calendar,
   FileWarning, ShieldAlert, Target, Eye, Ban, Sparkles,
-  ChevronRight, ExternalLink
+  ChevronRight, ExternalLink, Settings2
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
 import Orb from '../shared/Orb';
 import FloatingLines from '../shared/FloatingLines';
+import { useToast } from '../shared/Toast';
 
 interface Props {
   setView: (v: View) => void;
@@ -39,10 +40,26 @@ function MiniDonut({ data, colors, size = 64 }: { data: number[]; colors: string
 // MiniTrend replaced by inline bento chart components
 
 export default function HomeView({ setView }: Props) {
+  const { addToast } = useToast();
   const [dateRange, setDateRange] = useState('This quarter');
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
   const [showProTip, setShowProTip] = useState(false);
   const [attentionExpanded, setAttentionExpanded] = useState(true);
+  const [showCustomize, setShowCustomize] = useState(false);
+  const [kpiPrefs, setKpiPrefs] = useState({
+    compliance: true,
+    moneyAtRisk: true,
+    exceptions: true,
+    savings: true,
+    deadline: true,
+    controlsTested: false,
+    teamUtilization: false,
+    workflowRuns: false,
+  });
+
+  const togglePref = (key: string) => {
+    setKpiPrefs(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
+  };
 
   useEffect(() => {
     if (!dateDropdownOpen) return;
@@ -50,6 +67,17 @@ export default function HomeView({ setView }: Props) {
     document.addEventListener('click', close);
     return () => document.removeEventListener('click', close);
   }, [dateDropdownOpen]);
+
+  useEffect(() => {
+    if (!showCustomize) return;
+    const close = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('[data-customize-panel]')) {
+        setShowCustomize(false);
+      }
+    };
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [showCustomize]);
 
   useEffect(() => {
     const t = setTimeout(() => setShowProTip(true), 2500);
@@ -82,6 +110,49 @@ export default function HomeView({ setView }: Props) {
               <button onClick={() => setView('chat')} className="btn-primary flex items-center gap-2 px-6 py-2.5 rounded-xl text-[13px] shadow-lg shadow-primary/20">
                 <MessageSquare size={14} /> Ask AI Copilot
               </button>
+              <div className="relative" data-customize-panel>
+                <button onClick={(e) => { e.stopPropagation(); setShowCustomize(p => !p); }} className="p-2.5 rounded-xl border border-border/60 bg-white/60 backdrop-blur text-text-muted hover:text-primary hover:border-primary/20 transition-all cursor-pointer">
+                  <Settings2 size={14} />
+                </button>
+                <AnimatePresence>
+                  {showCustomize && (
+                    <motion.div initial={{ opacity: 0, y: -4, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.98 }} transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-1 bg-white/90 backdrop-blur-xl border border-border-light rounded-xl shadow-lg overflow-hidden z-20 w-[260px]"
+                      onClick={(e) => e.stopPropagation()}>
+                      <div className="px-4 pt-3.5 pb-2 border-b border-border-light/60">
+                        <div className="text-[13px] font-semibold text-text">Customize Dashboard</div>
+                        <div className="text-[10px] text-text-muted mt-0.5">Toggle KPI cards on the homepage</div>
+                      </div>
+                      <div className="px-4 py-2.5 space-y-1.5 max-h-[260px] overflow-y-auto">
+                        {([
+                          { key: 'compliance', label: 'Compliance Score' },
+                          { key: 'moneyAtRisk', label: 'Money at Risk' },
+                          { key: 'exceptions', label: 'Open Exceptions' },
+                          { key: 'savings', label: 'Automation Savings' },
+                          { key: 'deadline', label: 'SOX Deadline' },
+                          { key: 'controlsTested', label: 'Controls Tested' },
+                          { key: 'teamUtilization', label: 'Team Utilization' },
+                          { key: 'workflowRuns', label: 'Workflow Runs' },
+                        ] as const).map(item => (
+                          <button key={item.key} onClick={() => togglePref(item.key)}
+                            className="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-surface-2/60 transition-colors cursor-pointer">
+                            <span className="text-[12px] text-text-secondary">{item.label}</span>
+                            <div className={`w-8 h-[18px] rounded-full relative transition-colors duration-200 ${kpiPrefs[item.key] ? 'bg-primary' : 'bg-gray-200'}`}>
+                              <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform duration-200 ${kpiPrefs[item.key] ? 'left-[16px]' : 'left-[2px]'}`} />
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="px-4 py-3 border-t border-border-light/60">
+                        <button onClick={() => { setShowCustomize(false); addToast({ message: 'Dashboard layout saved successfully', type: 'success' }); }}
+                          className="w-full px-3 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
+                          Save Layout
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               <div className="relative">
                 <button onClick={(e) => { e.stopPropagation(); setDateDropdownOpen(p => !p); }} className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-white/80 backdrop-blur-sm text-[12px] text-text-secondary hover:border-primary/30 transition-all cursor-pointer">
                   {dateRange}
