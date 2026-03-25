@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   AlertTriangle, Shield, Activity, TrendingUp, TrendingDown,
   Plus, Settings, Maximize2, FileText, DollarSign,
-  CheckCircle2, XCircle, Clock, Zap, Sparkles,
-  ShoppingCart, CreditCard, BarChart3, Scale,
+  XCircle, Clock, Sparkles,
+  ShoppingCart, CreditCard, BarChart3,
   Package, Receipt, Handshake, ShieldCheck
 } from 'lucide-react';
 import Orb from '../shared/Orb';

@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   FileText, Shield, AlertTriangle, CheckCircle2, BarChart3,
   TrendingUp, Download, Share2, ArrowRight, ArrowLeft, ChevronDown,
-  Sparkles, Eye, Clock, Tag, Settings, Palette, Type,
-  Image, Layout, Plus, X, Edit3, BookOpen
+  Sparkles, Eye, Settings, Palette, Type,
+  Image, Layout, X, Edit3, BookOpen
 } from 'lucide-react';
 import { REPORT_TEMPLATES, GENERATED_REPORTS } from '../../data/mockData';
 import { StatusBadge } from '../shared/StatusBadge';
@@ -451,7 +451,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                   <FileText size={14} className="text-primary" />
                   <div>
                     <span className="text-text font-medium hover:text-primary transition-colors">{String(item.name)}</span>
-                    <div className="text-[10px] text-text-muted">2 queries · {item.pages} pages</div>
+                    <div className="text-[10px] text-text-muted">2 queries · {String(item.pages)} pages</div>
                   </div>
                 </div>
               )},

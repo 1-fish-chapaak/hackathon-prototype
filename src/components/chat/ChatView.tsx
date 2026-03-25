@@ -50,13 +50,7 @@ const QUICK_ACTIONS = [
   { icon: Search, label: 'Search risk register', color: 'from-orange-500 to-amber-500' },
 ];
 
-const DEMO_THINKING_WORKFLOW = [
-  'Understanding workflow requirements...',
-  'Analyzing business process context...',
-  'Designing workflow steps...',
-  'Defining inputs & outputs...',
-  'Building workflow canvas...',
-];
+// DEMO_THINKING_WORKFLOW removed — workflow now uses clarification flow
 
 const DEMO_THINKING_QUERY = [
   'Analyzing query...',
@@ -66,13 +60,7 @@ const DEMO_THINKING_QUERY = [
   'Generating results...',
 ];
 
-const WORKFLOW_FOLLOWUPS = [
-  'Add a scheduled trigger to run this daily',
-  'Set up email alerts for high-severity flags',
-  'Add a pre-processing step for data validation',
-  'Create a dashboard widget for this workflow',
-  'Export this workflow as a reusable template',
-];
+// WORKFLOW_FOLLOWUPS removed — workflow now uses UI recommendations flow
 
 const QUERY_FOLLOWUPS = [
   'Show me the trend over the last 6 months',

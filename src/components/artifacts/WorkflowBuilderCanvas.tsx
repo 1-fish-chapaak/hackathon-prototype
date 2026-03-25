@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   X, CheckCircle, Play, Save, History, Undo,
   Database, ArrowRight, LayoutTemplate,
-  Sparkles, Zap, ChevronDown, Monitor, Plus, Lightbulb,
-  AlertTriangle, Shield, FileText, Check, Target, Cpu
+  Sparkles, Zap, ChevronDown, Monitor, Plus,
+  Check, Target, Cpu
 } from 'lucide-react';
 import { NoiseButton } from '../shared/NoiseButton';
 
@@ -30,12 +30,6 @@ const DEMO_STEPS = [
   'Fuzzy match against historical records',
   'Score duplicate probability',
   'Flag & notify AP team',
-];
-
-const AI_SUGGESTED_STEPS = [
-  { label: 'Add approval gate before notification', desc: 'Route high-risk duplicates for manager review', icon: Shield },
-  { label: 'Archive processed invoices', desc: 'Move flagged records to audit log for compliance', icon: FileText },
-  { label: 'Cross-vendor duplicate check', desc: 'Detect same invoice across different vendors', icon: AlertTriangle },
 ];
 
 const DEMO_INPUTS = [
