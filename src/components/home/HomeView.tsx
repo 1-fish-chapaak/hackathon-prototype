@@ -36,32 +36,7 @@ function MiniDonut({ data, colors, size = 64 }: { data: number[]; colors: string
   );
 }
 
-function MiniTrend({ data, color, width = 80, height = 32 }: { data: number[]; color: string; width?: number; height?: number }) {
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const pts = data.map((v, i) => ({
-    x: (i / (data.length - 1)) * width,
-    y: height - 3 - ((v - min) / (max - min || 1)) * (height - 6),
-  }));
-  const polyPoints = pts.map(p => `${p.x},${p.y}`).join(' ');
-  const fillPoints = `0,${height} ${polyPoints} ${width},${height}`;
-  const last = pts[pts.length - 1];
-  const id = `trend-${color.replace('#', '')}`;
-  return (
-    <svg width={width} height={height} className="shrink-0">
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.2" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon fill={`url(#${id})`} points={fillPoints} />
-      <polyline fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={polyPoints} />
-      <circle cx={last.x} cy={last.y} r="2.5" fill={color} />
-      <circle cx={last.x} cy={last.y} r="5" fill={color} opacity="0.15" />
-    </svg>
-  );
-}
+// MiniTrend replaced by inline bento chart components
 
 export default function HomeView({ setView }: Props) {
   const [dateRange, setDateRange] = useState('This quarter');
@@ -130,32 +105,120 @@ export default function HomeView({ setView }: Props) {
       <div className="max-w-6xl mx-auto px-10 py-8 relative">
         <Orb hoverIntensity={0.05} rotateOnHover hue={275} opacity={0.04} />
 
-        {/* ─── ROW 1: Financial Impact KPIs (what CFO cares about) ─── */}
-        <div className="grid grid-cols-4 gap-5 mb-7">
-          {[
-            { label: 'Money at Risk', value: '₹6.16L', desc: 'Flagged duplicate payments', icon: DollarSign, color: 'text-red-600 bg-red-50', trend: '-₹2.1L', up: true, trendColor: 'text-green-600', sparkData: [8.2, 7.5, 6.8, 7.1, 6.5, 6.16], sparkColor: '#16a34a', accent: '#dc2626', accentBg: 'rgba(220,38,38,0.03)', onClick: () => setView('chat') },
-            { label: 'Open Exceptions', value: '7', desc: '3 unassigned, 4 in progress', icon: FileWarning, color: 'text-orange-600 bg-orange-50', trend: '+2', up: false, trendColor: 'text-red-600', sparkData: [3, 4, 5, 4, 5, 7], sparkColor: '#dc2626', accent: '#ea580c', accentBg: 'rgba(234,88,12,0.03)', onClick: () => setView('reports') },
-            { label: 'Compliance Score', value: '94.2%', desc: 'Across all business processes', icon: Shield, color: 'text-green-600 bg-green-50', trend: '+1.4%', up: true, trendColor: 'text-green-600', sparkData: [89, 90, 91, 92, 93, 94.2], sparkColor: '#16a34a', accent: '#16a34a', accentBg: 'rgba(22,163,74,0.03)', onClick: () => setView('dashboards') },
-            { label: 'Automation Savings', value: '₹24L', desc: 'Cost avoided via workflows YTD', icon: Zap, color: 'text-primary bg-primary-xlight', trend: '+₹8L', up: true, trendColor: 'text-green-600', sparkData: [4, 8, 12, 16, 20, 24], sparkColor: '#6a12cd', accent: '#6a12cd', accentBg: 'rgba(106,18,205,0.03)', onClick: () => setView('workflow-templates') },
-          ].map((kpi, i) => (
-            <motion.div key={kpi.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.06 }}
-              onClick={kpi.onClick}
-              className="card-kpi card-nav rounded-2xl p-5 group"
-              style={{ '--accent': kpi.accent, '--accent-bg': kpi.accentBg } as React.CSSProperties}>
-              <div className="relative flex items-start justify-between mb-2">
-                <div className={`p-2 rounded-lg ${kpi.color} group-hover:scale-110 transition-transform duration-300`}>
-                  <kpi.icon size={16} />
-                </div>
-                <MiniTrend data={kpi.sparkData} color={kpi.sparkColor} />
+        {/* ─── ROW 1: Premium Bento Grid ─── */}
+        <div className="grid grid-cols-12 gap-3 mb-7">
+          {/* ── Large: Compliance trend chart (spans 5 cols, 2 rows) ── */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+            onClick={() => setView('dashboards')}
+            className="col-span-5 row-span-2 rounded-3xl p-6 cursor-pointer group relative overflow-hidden transition-all duration-300 hover:scale-[1.01]"
+            style={{ background: 'linear-gradient(145deg, #1a0f2e 0%, #13091f 100%)', border: '1px solid rgba(106,18,205,0.15)' }}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[12px] text-white/40 font-medium tracking-wide">FY26</span>
+              <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-semibold">
+                <TrendingUp size={10} /> +12.4%
               </div>
-              <div className="relative text-[26px] font-extrabold font-mono text-text leading-none tracking-tight mb-1">{kpi.value}</div>
-              <div className="relative text-[11px] text-text-muted leading-relaxed mb-1">{kpi.desc}</div>
-              <div className={`relative flex items-center gap-0.5 text-[11px] font-semibold ${kpi.trendColor}`}>
-                {kpi.up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-                {kpi.trend} vs last quarter
-              </div>
-            </motion.div>
-          ))}
+            </div>
+            <div className="text-[42px] font-extrabold text-white leading-none tracking-tighter mb-2">94.2%</div>
+            <p className="text-[12px] text-white/35 leading-relaxed mb-5">Compliance score driven by automated controls and continuous monitoring across 4 business processes.</p>
+            {/* Area chart */}
+            <svg width="100%" height="120" viewBox="0 0 400 120" preserveAspectRatio="none" className="opacity-80">
+              <defs>
+                <linearGradient id="bento-area" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#c084fc" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="#c084fc" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <polygon fill="url(#bento-area)" points="0,120 0,100 30,95 60,90 90,88 120,80 150,82 180,70 210,65 240,55 270,48 300,42 330,35 360,28 400,18 400,120" />
+              <polyline fill="none" stroke="#c084fc" strokeWidth="2.5" strokeLinecap="round" points="0,100 30,95 60,90 90,88 120,80 150,82 180,70 210,65 240,55 270,48 300,42 330,35 360,28 400,18" />
+              <circle cx="400" cy="18" r="4" fill="#c084fc" />
+              <circle cx="400" cy="18" r="8" fill="#c084fc" opacity="0.2" />
+              {/* Grid lines */}
+              {[30, 55, 80, 105].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="rgba(255,255,255,0.05)" strokeDasharray="4 6" />)}
+            </svg>
+            {/* Vertical cursor line */}
+            <div className="absolute bottom-6 right-[60px] w-px h-[100px] bg-white/10" />
+            <div className="absolute bottom-[106px] right-[56px] w-2 h-2 rounded-full bg-white border-2 border-[#1a0f2e]" />
+          </motion.div>
+
+          {/* ── Money at Risk (dark card) ── */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
+            onClick={() => setView('chat')}
+            className="col-span-4 rounded-3xl p-5 cursor-pointer group relative overflow-hidden transition-all duration-300 hover:scale-[1.01]"
+            style={{ background: 'linear-gradient(145deg, #1e1230 0%, #160d24 100%)', border: '1px solid rgba(106,18,205,0.12)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1.5 rounded-lg bg-red-500/15"><DollarSign size={13} className="text-red-400" /></div>
+              <span className="text-[11px] text-white/40 font-medium">Money at Risk</span>
+            </div>
+            <div className="text-[28px] font-extrabold text-white leading-none tracking-tight mb-1">₹6.16L</div>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-0.5"><TrendingDown size={10} /> -₹2.1L</span>
+              <span className="text-[10px] text-white/25">vs last quarter</span>
+            </div>
+            {/* Mini bar chart */}
+            <div className="flex items-end gap-1.5 mt-4 h-8">
+              {[65, 55, 48, 52, 42, 38].map((h, i) => (
+                <motion.div key={i} initial={{ height: 0 }} animate={{ height: `${h}%` }} transition={{ delay: 0.3 + i * 0.05, duration: 0.5 }}
+                  className="flex-1 rounded-sm" style={{ background: i === 5 ? '#c084fc' : 'rgba(192,132,252,0.2)' }} />
+              ))}
+            </div>
+          </motion.div>
+
+          {/* ── Audit Days Left (accent card) ── */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
+            onClick={() => setView('audit-planning')}
+            className="col-span-3 rounded-3xl p-5 cursor-pointer group transition-all duration-300 hover:scale-[1.01]"
+            style={{ background: 'linear-gradient(145deg, #f0e6fb 0%, #e8daf5 100%)', border: '1px solid rgba(106,18,205,0.1)' }}>
+            <div className="flex items-center gap-2 mb-2">
+              <Clock size={13} className="text-primary/60" />
+              <span className="text-[11px] text-primary/50 font-medium">SOX Deadline</span>
+            </div>
+            <div className="text-[36px] font-extrabold text-primary leading-none tracking-tighter">6</div>
+            <div className="text-[12px] text-primary/60 font-medium mt-0.5">Days remaining</div>
+            {/* Dot grid pattern */}
+            <div className="grid grid-cols-6 gap-1 mt-4">
+              {Array.from({ length: 30 }).map((_, i) => (
+                <div key={i} className={`w-2 h-2 rounded-full ${i < 24 ? 'bg-primary/30' : 'bg-primary/8'}`} />
+              ))}
+            </div>
+          </motion.div>
+
+          {/* ── Open Exceptions (dark card) ── */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+            onClick={() => setView('reports')}
+            className="col-span-4 rounded-3xl p-5 cursor-pointer group relative overflow-hidden transition-all duration-300 hover:scale-[1.01]"
+            style={{ background: 'linear-gradient(145deg, #1e1230 0%, #160d24 100%)', border: '1px solid rgba(106,18,205,0.12)' }}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 rounded-lg bg-orange-500/15"><FileWarning size={13} className="text-orange-400" /></div>
+              <span className="text-[11px] text-white/40 font-medium">Open Exceptions</span>
+              <span className="ml-auto text-[10px] text-white/25 bg-white/5 px-2 py-0.5 rounded-full">This week</span>
+            </div>
+            <div className="text-[28px] font-extrabold text-white leading-none tracking-tight">7</div>
+            <div className="text-[11px] text-white/30 mt-1">3 unassigned, 4 in progress</div>
+            <div className="flex items-center gap-1 mt-1">
+              <span className="text-[11px] text-red-400 font-semibold flex items-center gap-0.5"><TrendingUp size={10} /> +2</span>
+              <span className="text-[10px] text-white/25">this week</span>
+            </div>
+          </motion.div>
+
+          {/* ── Automation Savings (accent card) ── */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}
+            onClick={() => setView('workflow-templates')}
+            className="col-span-3 rounded-3xl p-5 cursor-pointer group transition-all duration-300 hover:scale-[1.01] relative overflow-hidden"
+            style={{ background: 'linear-gradient(145deg, #f0e6fb 0%, #e8daf5 100%)', border: '1px solid rgba(106,18,205,0.1)' }}>
+            <div className="flex items-center gap-2 mb-2">
+              <Zap size={13} className="text-primary/60" />
+              <span className="text-[11px] text-primary/50 font-medium">Savings YTD</span>
+            </div>
+            <div className="text-[32px] font-extrabold text-primary leading-none tracking-tighter">₹24L</div>
+            <div className="text-[11px] text-primary/50 mt-1">Cost avoided via AI workflows</div>
+            {/* Bar chart */}
+            <div className="flex items-end gap-1 mt-3 h-10">
+              {[20, 35, 45, 55, 70, 80, 90, 100].map((h, i) => (
+                <motion.div key={i} initial={{ height: 0 }} animate={{ height: `${h}%` }} transition={{ delay: 0.4 + i * 0.04, duration: 0.4 }}
+                  className="flex-1 rounded-sm" style={{ background: i >= 6 ? '#6a12cd' : 'rgba(106,18,205,0.2)' }} />
+              ))}
+            </div>
+          </motion.div>
         </div>
 
         {/* ─── ROW 2: Needs Your Attention (actionable items) ─── */}
