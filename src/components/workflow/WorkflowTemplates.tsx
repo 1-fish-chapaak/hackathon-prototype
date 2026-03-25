@@ -79,9 +79,9 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew }: Prop
     setBulkRunning(true);
     addToast(`Running ${selectedWfs.size} workflows...`, 'success');
     setTimeout(() => {
-      addToast('All workflows completed successfully', 'success');
+      addToast({ message: 'All workflows completed successfully', type: 'success' });
       setTimeout(() => {
-        addToast('Consolidated report generated — view in Reports', 'success');
+        addToast({ message: 'Consolidated report generated — view in Reports', type: 'success' });
         setBulkRunning(false);
         setBulkMode(false);
         setSelectedWfs(new Set());

@@ -73,7 +73,7 @@ export default function AuditExecution({ onAskAboutControl }: Props) {
                 {eng.start} — {eng.end} · Owner: {eng.owner}
               </p>
             </div>
-            <button onClick={() => addToast('Running control tests for selected engagement...', 'success')} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
+            <button onClick={() => addToast({ message: 'Running control tests for selected engagement...', type: 'success' })} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
               <Play size={14} />
               Run Tests
             </button>
@@ -173,7 +173,7 @@ export default function AuditExecution({ onAskAboutControl }: Props) {
               )},
               { key: 'actions', label: '', width: '60px', sortable: false, align: 'right', render: (item) => (
                 <button
-                  onClick={(e) => { e.stopPropagation(); addToast('Opening AI analysis...', 'info'); onAskAboutControl(String(item.id)); }}
+                  onClick={(e) => { e.stopPropagation(); addToast({ message: 'Opening AI analysis...', type: 'info' }); onAskAboutControl(String(item.id)); }}
                   className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1 text-[11px] text-primary font-medium hover:underline transition-all cursor-pointer"
                 >
                   <MessageSquare size={11} />

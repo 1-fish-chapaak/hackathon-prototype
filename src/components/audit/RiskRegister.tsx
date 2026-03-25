@@ -51,11 +51,11 @@ export default function RiskRegister({ onAskAboutRisk, onRunWorkflow }: Props) {
             <p className="text-sm text-text-secondary mt-1">{RISKS.length} risks across {BUSINESS_PROCESSES.length} business processes</p>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => addToast('Risk register exported as CSV', 'success')} className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white transition-colors cursor-pointer">
+            <button onClick={() => addToast({ message: 'Risk register exported as CSV', type: 'success' })} className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white transition-colors cursor-pointer">
               <Download size={14} />
               Export
             </button>
-            <button onClick={() => addToast('New risk template created — complete the details to save', 'info')} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
+            <button onClick={() => addToast({ message: 'New risk template created — complete the details to save', type: 'info' })} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
               <Plus size={14} />
               Add Risk
             </button>

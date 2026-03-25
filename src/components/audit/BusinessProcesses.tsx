@@ -497,9 +497,9 @@ function BPDetailView({ bp, onBack }: {
     const count = selectedWorkflows.size;
     addToast(`Running ${count} workflows...`, 'info');
     setTimeout(() => {
-      addToast('All workflows completed. Generating report...', 'success');
+      addToast({ message: 'All workflows completed. Generating report...', type: 'success' });
       setTimeout(() => {
-        addToast('Report generated — view in Reports', 'success');
+        addToast({ message: 'Report generated — view in Reports', type: 'success' });
         setBulkMode(false);
         setSelectedWorkflows(new Set());
       }, 1000);
@@ -673,7 +673,7 @@ function BPDetailView({ bp, onBack }: {
                   <strong>{bp.abbr}</strong> has <strong>{bpRisks.filter(r => r.ctls === 0).length} risks</strong> with no controls mapped.
                   Coverage is at <strong>{bp.coverage}%</strong> — below the 80% benchmark. Consider prioritizing {bp.abbr} risk mitigation.
                 </p>
-                <button onClick={() => addToast('Loading AI recommendations...', 'info')} className="mt-3 text-[11px] text-primary font-semibold flex items-center gap-1 hover:underline">
+                <button onClick={() => addToast({ message: 'Loading AI recommendations...', type: 'info' })} className="mt-3 text-[11px] text-primary font-semibold flex items-center gap-1 hover:underline">
                   View recommendations <ChevronRight size={10} />
                 </button>
               </div>
@@ -994,7 +994,7 @@ function BPDetailView({ bp, onBack }: {
                   </div>
                   {!bulkMode && (
                     <div className="flex gap-2">
-                      <button onClick={() => addToast('Initializing workflow run...', 'success')} className="flex items-center gap-1 px-3 py-1.5 bg-primary-light text-primary rounded-lg text-[11px] font-semibold hover:bg-primary/15">
+                      <button onClick={() => addToast({ message: 'Initializing workflow run...', type: 'success' })} className="flex items-center gap-1 px-3 py-1.5 bg-primary-light text-primary rounded-lg text-[11px] font-semibold hover:bg-primary/15">
                         <Play size={10} />
                         Run Now
                       </button>

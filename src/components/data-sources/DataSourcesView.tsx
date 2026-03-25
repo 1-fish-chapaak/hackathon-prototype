@@ -34,11 +34,11 @@ export default function DataSourcesView() {
             <p className="text-sm text-text-secondary mt-1">Manage connected databases, files, and integrations</p>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => addToast('File upload dialog opened', 'info')} className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white transition-colors cursor-pointer">
+            <button onClick={() => addToast({ message: 'File upload dialog opened', type: 'info' })} className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white transition-colors cursor-pointer">
               <Upload size={14} />
               Upload File
             </button>
-            <button onClick={() => addToast('New data source wizard starting...', 'info')} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
+            <button onClick={() => addToast({ message: 'New data source wizard starting...', type: 'info' })} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
               <Plus size={14} />
               Connect Source
             </button>
@@ -104,15 +104,15 @@ export default function DataSourcesView() {
                   </div>
                   <div className="flex items-center gap-2">
                     {isConnected && (
-                      <button onClick={() => addToast('Syncing data source...', 'success')} className="p-2 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-colors cursor-pointer" title="Refresh">
+                      <button onClick={() => addToast({ message: 'Syncing data source...', type: 'success' })} className="p-2 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-colors cursor-pointer" title="Refresh">
                         <RefreshCw size={14} />
                       </button>
                     )}
-                    <button onClick={() => addToast('Data source settings opened', 'info')} className="p-2 text-text-muted hover:text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer" title="Settings">
+                    <button onClick={() => addToast({ message: 'Data source settings opened', type: 'info' })} className="p-2 text-text-muted hover:text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer" title="Settings">
                       <Settings size={14} />
                     </button>
                     {!isConnected && (
-                      <button onClick={() => addToast('Attempting to reconnect...', 'info')} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
+                      <button onClick={() => addToast({ message: 'Attempting to reconnect...', type: 'info' })} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
                         <Link2 size={12} />
                         Reconnect
                       </button>

@@ -121,17 +121,17 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                   Report
                 </button>
               )}
-              <button onClick={() => addToast('Workflow configuration panel opening...', 'info')} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 transition-colors cursor-pointer">
+              <button onClick={() => addToast({ message: 'Workflow configuration panel opening...', type: 'info' })} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 transition-colors cursor-pointer">
                 <Settings size={13} />
                 Configure
               </button>
               <button
                 onClick={() => {
                   setRunning(true);
-                  addToast('Workflow execution started...', 'success');
+                  addToast({ message: 'Workflow execution started...', type: 'success' });
                   setTimeout(() => {
                     setRunning(false);
-                    addToast('Workflow completed — 2 new flags raised', 'success');
+                    addToast({ message: 'Workflow completed — 2 new flags raised', type: 'success' });
                   }, 2500);
                 }}
                 disabled={running}

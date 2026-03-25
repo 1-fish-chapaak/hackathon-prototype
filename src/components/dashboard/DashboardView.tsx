@@ -674,11 +674,11 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                     Share
                   </button>
                 )}
-                <button onClick={() => addToast('Dashboard customization panel opening...', 'info')} className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white transition-colors cursor-pointer">
+                <button onClick={() => addToast({ message: 'Dashboard customization panel opening...', type: 'info' })} className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white transition-colors cursor-pointer">
                   <Settings size={14} />
                   Customize
                 </button>
-                <button onClick={() => addToast('Widget picker opening...', 'info')} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
+                <button onClick={() => addToast({ message: 'Widget picker opening...', type: 'info' })} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
                   <Plus size={14} />
                   Add Widget
                 </button>
@@ -737,7 +737,7 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                   title={dashboard.donut.title}
                   segments={dashboard.donut.segments}
                   centerLabel={dashboard.donut.centerLabel}
-                  onExpand={() => addToast('Chart expanded to fullscreen', 'info')}
+                  onExpand={() => addToast({ message: 'Chart expanded to fullscreen', type: 'info' })}
                 />
               )}
               {dashboard.bars && (
@@ -745,14 +745,14 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                   title={dashboard.bars.title}
                   data={dashboard.bars.data}
                   color={dashboard.bars.color}
-                  onExpand={() => addToast('Chart expanded to fullscreen', 'info')}
+                  onExpand={() => addToast({ message: 'Chart expanded to fullscreen', type: 'info' })}
                 />
               )}
               {dashboard.progress && (
                 <ProgressChart
                   title={dashboard.progress.title}
                   data={dashboard.progress.data}
-                  onExpand={() => addToast('Chart expanded to fullscreen', 'info')}
+                  onExpand={() => addToast({ message: 'Chart expanded to fullscreen', type: 'info' })}
                 />
               )}
             </motion.div>
