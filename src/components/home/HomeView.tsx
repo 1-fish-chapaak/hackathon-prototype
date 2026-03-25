@@ -366,6 +366,38 @@ export default function HomeView({ setView }: Props) {
           ))}
         </motion.div>
 
+        {/* ─── Pending Workflow Runs ─── */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.78 }} className="mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[12.5px] font-semibold text-text flex items-center gap-2"><Clock size={12} className="text-orange-500" /> Pending Workflow Runs</span>
+            <button onClick={() => setView('workflow-templates')} className="text-[10px] text-primary font-medium hover:underline cursor-pointer">View all →</button>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { name: 'SOD Violation Detector', time: 'Scheduled — Today 6 PM', type: 'Compliance', status: 'queued' as const, color: '#7c3aed' },
+              { name: 'Three-Way PO Match', time: 'Scheduled — Tomorrow 6 AM', type: 'Reconciliation', status: 'queued' as const, color: '#0284c7' },
+              { name: 'Contract Expiry Alert', time: 'Scheduled — Mar 28', type: 'Monitoring', status: 'pending-data' as const, color: '#059669' },
+            ].map((w, i) => (
+              <motion.div key={w.name} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 + i * 0.04 }}
+                onClick={() => setView('workflow-templates')}
+                className="p-3.5 rounded-xl cursor-pointer group hover:shadow-md transition-all"
+                style={{ background: 'rgba(255,255,255,0.5)', backdropFilter: 'blur(16px)', border: '1px solid rgba(232,226,245,0.35)', boxShadow: '0 1px 8px rgba(106,18,205,0.02)' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: w.color }} />
+                  <span className="text-[12px] font-semibold text-text group-hover:text-primary transition-colors truncate">{w.name}</span>
+                </div>
+                <div className="text-[10px] text-text-muted mb-1.5">{w.time}</div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-bold text-text-muted bg-surface-2 px-1.5 py-0.5 rounded-full">{w.type}</span>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${w.status === 'queued' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
+                    {w.status === 'queued' ? 'Queued' : 'Waiting for data'}
+                  </span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
         {/* ─── Activity — lightweight ─── */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
           <div className="flex items-center justify-between mb-2">

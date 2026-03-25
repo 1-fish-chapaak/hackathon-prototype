@@ -3,11 +3,13 @@ import { motion } from 'motion/react';
 import {
   ArrowLeft, Play, Settings, Activity,
   CheckCircle2, Sparkles, TrendingUp,
-  Download, AlertTriangle
+  Download, AlertTriangle, Calendar,
+  SlidersHorizontal, Database, Bell
 } from 'lucide-react';
 import { WORKFLOWS } from '../../data/mockData';
 import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
+import WorkflowOutputPreview from './WorkflowOutputPreview';
 
 interface Props {
   workflowId: string;
@@ -53,9 +55,11 @@ function MiniTrend({ data, color }: { data: number[]; color: string }) {
   );
 }
 
+type TabId = 'overview' | 'variables' | 'runs' | 'config' | 'output';
+
 export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, onGenerateReport }: Props) {
   const wf = WORKFLOWS.find(w => w.id === workflowId);
-  const [tab, setTab] = useState<'overview' | 'runs' | 'variables'>('overview');
+  const [tab, setTab] = useState<TabId>('overview');
   const { addToast } = useToast();
   const [running, setRunning] = useState(false);
   const [version, setVersion] = useState('v3');
@@ -175,15 +179,17 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
 
         {/* Tabs */}
         <div className="flex gap-0 border-b border-border mb-6">
-          {[
-            { id: 'overview' as const, label: 'Execution Plan' },
-            { id: 'variables' as const, label: 'Variables', count: VARIABLES.length },
-            { id: 'runs' as const, label: 'Run History', count: RUN_HISTORY.length },
-          ].map(t => (
+          {([
+            { id: 'overview' as TabId, label: 'Execution Plan' },
+            { id: 'variables' as TabId, label: 'Variables', count: VARIABLES.length },
+            { id: 'runs' as TabId, label: 'Run History', count: RUN_HISTORY.length },
+            { id: 'config' as TabId, label: 'Configuration' },
+            { id: 'output' as TabId, label: 'Output Preview' },
+          ]).map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+              className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors cursor-pointer ${
                 tab === t.id ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text-secondary'
               }`}
             >
@@ -249,40 +255,62 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
 
         {/* Variables Tab */}
         {tab === 'variables' && (
-          <div className="grid grid-cols-3 gap-4">
-            {VARIABLES.map((v, i) => {
-              const statusColor = v.status === 'ok' ? '#16a34a' : v.status === 'warn' ? '#d97706' : '#dc2626';
-              return (
-                <motion.div
-                  key={v.name}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="bg-white rounded-xl border border-border-light p-5 hover:shadow-md hover:border-primary/20 cursor-default transition-all"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">{v.name}</span>
-                    <div className="w-2 h-2 rounded-full mt-1" style={{ background: statusColor, boxShadow: `0 0 6px ${statusColor}40` }} />
-                  </div>
-                  <div className="flex items-baseline gap-1 mb-1.5">
-                    <span className="text-2xl font-bold font-mono text-text">{v.value}</span>
-                    {v.unit && <span className="text-sm font-mono text-text-muted">{v.unit}</span>}
-                    <span className={`ml-2 text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded ${
-                      v.delta.startsWith('+') && v.status === 'ok' ? 'bg-green-50 text-green-600' :
-                      v.delta.startsWith('-') && v.name.includes('Time') ? 'bg-green-50 text-green-600' :
-                      v.delta.startsWith('-') && v.name.includes('False') ? 'bg-green-50 text-green-600' :
-                      v.status === 'warn' ? 'bg-amber-50 text-amber-600' :
-                      'bg-green-50 text-green-600'
-                    }`}>{v.delta}</span>
-                  </div>
-                  <div className="text-[10px] text-text-muted mb-2">Threshold: <span className="font-semibold">{v.threshold}</span></div>
-                  <div className="h-1 bg-surface-3 rounded-full overflow-hidden mb-3">
-                    <div className="h-full rounded-full" style={{ width: `${Math.min(v.pct, 100)}%`, background: statusColor }} />
-                  </div>
-                  <MiniTrend data={v.trend} color={statusColor} />
-                </motion.div>
-              );
-            })}
+          <div>
+            {/* Historical Performance */}
+            <div className="rounded-2xl border border-border-light p-5 mb-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
+              <h4 className="text-[12px] font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><TrendingUp size={13} className="text-primary" /> Impact Score Trend — Last 30 Days</h4>
+              <svg width="100%" height="120" viewBox="0 0 400 120" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6a12cd" stopOpacity="0.15" />
+                    <stop offset="100%" stopColor="#6a12cd" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+                <polygon fill="url(#trend-fill)" points="0,120 0,90 20,85 40,88 60,80 80,75 100,78 120,70 140,72 160,65 180,60 200,58 220,55 240,50 260,48 280,45 300,40 320,38 340,35 360,30 380,25 400,20 400,120" />
+                <polyline fill="none" stroke="#6a12cd" strokeWidth="2" strokeLinecap="round" points="0,90 20,85 40,88 60,80 80,75 100,78 120,70 140,72 160,65 180,60 200,58 220,55 240,50 260,48 280,45 300,40 320,38 340,35 360,30 380,25 400,20" />
+              </svg>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[10px] text-text-muted">Feb 20</span>
+                <span className="text-[11px] font-bold text-primary">Score: 95 ↑</span>
+                <span className="text-[10px] text-text-muted">Mar 20</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              {VARIABLES.map((v, i) => {
+                const statusColor = v.status === 'ok' ? '#16a34a' : v.status === 'warn' ? '#d97706' : '#dc2626';
+                return (
+                  <motion.div
+                    key={v.name}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="bg-white rounded-xl border border-border-light p-5 hover:shadow-md hover:border-primary/20 cursor-default transition-all"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">{v.name}</span>
+                      <div className="w-2 h-2 rounded-full mt-1" style={{ background: statusColor, boxShadow: `0 0 6px ${statusColor}40` }} />
+                    </div>
+                    <div className="flex items-baseline gap-1 mb-1.5">
+                      <span className="text-2xl font-bold font-mono text-text">{v.value}</span>
+                      {v.unit && <span className="text-sm font-mono text-text-muted">{v.unit}</span>}
+                      <span className={`ml-2 text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded ${
+                        v.delta.startsWith('+') && v.status === 'ok' ? 'bg-green-50 text-green-600' :
+                        v.delta.startsWith('-') && v.name.includes('Time') ? 'bg-green-50 text-green-600' :
+                        v.delta.startsWith('-') && v.name.includes('False') ? 'bg-green-50 text-green-600' :
+                        v.status === 'warn' ? 'bg-amber-50 text-amber-600' :
+                        'bg-green-50 text-green-600'
+                      }`}>{v.delta}</span>
+                    </div>
+                    <div className="text-[10px] text-text-muted mb-2">Threshold: <span className="font-semibold">{v.threshold}</span></div>
+                    <div className="h-1 bg-surface-3 rounded-full overflow-hidden mb-3">
+                      <div className="h-full rounded-full" style={{ width: `${Math.min(v.pct, 100)}%`, background: statusColor }} />
+                    </div>
+                    <MiniTrend data={v.trend} color={statusColor} />
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -314,6 +342,115 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
               </motion.div>
             ))}
           </div>
+        )}
+
+        {/* Configuration Tab */}
+        {tab === 'config' && (
+          <div className="space-y-5">
+            {/* Schedule */}
+            <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
+              <h4 className="text-[12px] font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><Calendar size={13} className="text-primary" /> Schedule & Triggers</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[11px] font-semibold text-text block mb-1">Frequency</label>
+                  <div className="flex gap-1.5">
+                    {['Hourly', 'Daily', 'Weekly', 'Monthly'].map(f => (
+                      <button key={f} className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${f === 'Daily' ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-surface-3'}`}>{f}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-text block mb-1">Run Time</label>
+                  <input value="06:00 AM" readOnly className="w-full px-3 py-2 rounded-lg border border-border-light text-[12px] bg-white text-text" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-text block mb-1">Trigger On</label>
+                  <div className="flex gap-1.5">
+                    {['Schedule', 'Data Change', 'Manual'].map(t => (
+                      <button key={t} className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${t === 'Schedule' ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-surface-3'}`}>{t}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-text block mb-1">Retry on Failure</label>
+                  <div className="flex gap-1.5">
+                    {['Off', '1x', '3x', '5x'].map(r => (
+                      <button key={r} className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${r === '3x' ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-surface-3'}`}>{r}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Thresholds & Rules */}
+            <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
+              <h4 className="text-[12px] font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><SlidersHorizontal size={13} className="text-primary" /> Thresholds & Rules</h4>
+              <div className="space-y-3">
+                {[
+                  { label: 'Match Tolerance', value: '5%', desc: 'Fuzzy match threshold for duplicate detection' },
+                  { label: 'Amount Threshold', value: '₹10,000', desc: 'Minimum transaction value to scan' },
+                  { label: 'Lookback Period', value: '12 months', desc: 'Historical window for comparison' },
+                  { label: 'Max Results', value: '100', desc: 'Maximum flags per run' },
+                ].map(rule => (
+                  <div key={rule.label} className="flex items-center justify-between p-3 rounded-xl bg-surface-2/50 border border-border-light/50">
+                    <div>
+                      <div className="text-[12px] font-medium text-text">{rule.label}</div>
+                      <div className="text-[10px] text-text-muted">{rule.desc}</div>
+                    </div>
+                    <input value={rule.value} readOnly className="w-24 text-right px-2 py-1.5 rounded-lg border border-border-light text-[12px] font-mono text-primary bg-white" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Data Sources */}
+            <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
+              <h4 className="text-[12px] font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><Database size={13} className="text-primary" /> Connected Sources</h4>
+              <div className="space-y-2">
+                {[
+                  { name: 'SAP ERP — AP Module', type: 'SQL', status: 'connected', records: '1.2M' },
+                  { name: 'Vendor Master Data', type: 'CSV', status: 'connected', records: '892' },
+                  { name: 'Invoice Archive 2026', type: 'PDF', status: 'connected', records: '4,521' },
+                ].map(ds => (
+                  <div key={ds.name} className="flex items-center justify-between p-3 rounded-xl bg-surface-2/50 border border-border-light/50">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                      <div>
+                        <div className="text-[12px] font-medium text-text">{ds.name}</div>
+                        <div className="text-[10px] text-text-muted">{ds.type} · {ds.records} records</div>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">{ds.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Notification settings */}
+            <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
+              <h4 className="text-[12px] font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><Bell size={13} className="text-primary" /> Notifications</h4>
+              <div className="space-y-2.5">
+                {[
+                  { label: 'Email on completion', enabled: true },
+                  { label: 'Slack alert on critical flags', enabled: true },
+                  { label: 'Dashboard auto-refresh', enabled: false },
+                  { label: 'Weekly summary digest', enabled: true },
+                ].map(n => (
+                  <div key={n.label} className="flex items-center justify-between py-2">
+                    <span className="text-[12px] text-text">{n.label}</span>
+                    <div className={`w-9 h-5 rounded-full cursor-pointer transition-colors ${n.enabled ? 'bg-primary' : 'bg-surface-3'}`}>
+                      <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform mt-0.5 ${n.enabled ? 'translate-x-4.5 ml-0.5' : 'translate-x-0.5'}`} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Output Preview Tab */}
+        {tab === 'output' && (
+          <WorkflowOutputPreview workflowId={workflowId} workflowType={wf.type} workflowName={wf.name} />
         )}
       </div>
     </div>
