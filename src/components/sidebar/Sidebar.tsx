@@ -109,7 +109,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
     <motion.div
       animate={{ width: isExpanded ? 240 : 64 }}
       transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-      className="h-full bg-[#1a0a2e] flex flex-col shrink-0 overflow-hidden z-50"
+      className="h-full bg-gradient-to-b from-[#1e0c35] via-[#1a0a2e] to-[#140820] noise-texture flex flex-col shrink-0 overflow-hidden z-50"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >

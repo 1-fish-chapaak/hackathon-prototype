@@ -36,15 +36,29 @@ function MiniDonut({ data, colors, size = 64 }: { data: number[]; colors: string
   );
 }
 
-function MiniTrend({ data, color, width = 72, height = 28 }: { data: number[]; color: string; width?: number; height?: number }) {
+function MiniTrend({ data, color, width = 80, height = 32 }: { data: number[]; color: string; width?: number; height?: number }) {
   const max = Math.max(...data);
   const min = Math.min(...data);
-  const points = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / (max - min || 1)) * height}`).join(' ');
-  const fillPoints = `0,${height} ${points} ${width},${height}`;
+  const pts = data.map((v, i) => ({
+    x: (i / (data.length - 1)) * width,
+    y: height - 3 - ((v - min) / (max - min || 1)) * (height - 6),
+  }));
+  const polyPoints = pts.map(p => `${p.x},${p.y}`).join(' ');
+  const fillPoints = `0,${height} ${polyPoints} ${width},${height}`;
+  const last = pts[pts.length - 1];
+  const id = `trend-${color.replace('#', '')}`;
   return (
-    <svg width={width} height={height}>
-      <polygon fill={`${color}15`} points={fillPoints} />
-      <polyline fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
+    <svg width={width} height={height} className="shrink-0">
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon fill={`url(#${id})`} points={fillPoints} />
+      <polyline fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={polyPoints} />
+      <circle cx={last.x} cy={last.y} r="2.5" fill={color} />
+      <circle cx={last.x} cy={last.y} r="5" fill={color} opacity="0.15" />
     </svg>
   );
 }
@@ -68,17 +82,18 @@ export default function HomeView({ setView }: Props) {
   }, []);
 
   return (
-    <div className="h-full overflow-y-auto bg-white relative">
-      {/* Hero banner — compact, action-oriented */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-[#faf5ff] via-white to-[#f0e6fb]">
-        <FloatingLines enabledWaves={['top', 'middle']} lineCount={4} lineDistance={6} bendRadius={4} bendStrength={-0.3} interactive={true} parallax={true} color="#6a12cd" opacity={0.05} />
-        <div className="relative max-w-6xl mx-auto px-8 py-8">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex items-end justify-between">
+    <div className="h-full overflow-y-auto relative" style={{ background: 'linear-gradient(180deg, #f8f5ff 0%, #fafafa 300px)' }}>
+      {/* Hero banner — premium, breathing space */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#f3ecff] via-[#faf8ff] to-[#eee8f9]" />
+        <FloatingLines enabledWaves={['top', 'middle']} lineCount={4} lineDistance={6} bendRadius={4} bendStrength={-0.3} interactive={true} parallax={true} color="#6a12cd" opacity={0.04} />
+        <div className="relative max-w-6xl mx-auto px-10 pt-10 pb-8">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} className="flex items-end justify-between">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight mb-0.5">
+              <h1 className="text-[28px] font-extrabold tracking-tight mb-1">
                 <span className="ai-gradient-text">Good morning, Auditor</span>
               </h1>
-              <p className="text-[14px] text-text-secondary">Here&apos;s your FY26 audit landscape at a glance</p>
+              <p className="text-[14px] text-text-secondary leading-relaxed">Here&apos;s your FY26 audit landscape at a glance</p>
               <AnimatePresence>
                 {showProTip && (
                   <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-2 flex items-center gap-2 text-[11px] text-text-muted">
@@ -89,7 +104,7 @@ export default function HomeView({ setView }: Props) {
               </AnimatePresence>
             </div>
             <div className="flex items-center gap-2.5">
-              <button onClick={() => setView('chat')} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary text-white rounded-xl text-[13px] font-semibold shadow-lg shadow-primary/20 transition-all cursor-pointer">
+              <button onClick={() => setView('chat')} className="btn-primary flex items-center gap-2 px-6 py-2.5 rounded-xl text-[13px] shadow-lg shadow-primary/20">
                 <MessageSquare size={14} /> Ask AI Copilot
               </button>
               <div className="relative">
@@ -112,11 +127,11 @@ export default function HomeView({ setView }: Props) {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-8 py-8 relative">
+      <div className="max-w-6xl mx-auto px-10 py-8 relative">
         <Orb hoverIntensity={0.05} rotateOnHover hue={275} opacity={0.04} />
 
         {/* ─── ROW 1: Financial Impact KPIs (what CFO cares about) ─── */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-4 gap-5 mb-7">
           {[
             { label: 'Money at Risk', value: '₹6.16L', desc: 'Flagged duplicate payments', icon: DollarSign, color: 'text-red-600 bg-red-50', trend: '-₹2.1L', up: true, trendColor: 'text-green-600', sparkData: [8.2, 7.5, 6.8, 7.1, 6.5, 6.16], sparkColor: '#16a34a', accent: '#dc2626', accentBg: 'rgba(220,38,38,0.03)', onClick: () => setView('chat') },
             { label: 'Open Exceptions', value: '7', desc: '3 unassigned, 4 in progress', icon: FileWarning, color: 'text-orange-600 bg-orange-50', trend: '+2', up: false, trendColor: 'text-red-600', sparkData: [3, 4, 5, 4, 5, 7], sparkColor: '#dc2626', accent: '#ea580c', accentBg: 'rgba(234,88,12,0.03)', onClick: () => setView('reports') },
@@ -133,8 +148,8 @@ export default function HomeView({ setView }: Props) {
                 </div>
                 <MiniTrend data={kpi.sparkData} color={kpi.sparkColor} />
               </div>
-              <div className="relative text-2xl font-bold font-mono text-text leading-none mb-0.5">{kpi.value}</div>
-              <div className="relative text-[11px] text-text-muted mb-1">{kpi.desc}</div>
+              <div className="relative text-[26px] font-extrabold font-mono text-text leading-none tracking-tight mb-1">{kpi.value}</div>
+              <div className="relative text-[11px] text-text-muted leading-relaxed mb-1">{kpi.desc}</div>
               <div className={`relative flex items-center gap-0.5 text-[11px] font-semibold ${kpi.trendColor}`}>
                 {kpi.up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
                 {kpi.trend} vs last quarter
@@ -144,7 +159,7 @@ export default function HomeView({ setView }: Props) {
         </div>
 
         {/* ─── ROW 2: Needs Your Attention (actionable items) ─── */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="glass-card rounded-2xl mb-6 overflow-hidden">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="glass-card rounded-2xl mb-7 overflow-hidden">
           <button onClick={() => setAttentionExpanded(p => !p)} className="w-full flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-surface-2/50 transition-colors">
             <div className="flex items-center gap-2.5">
               <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
@@ -186,7 +201,7 @@ export default function HomeView({ setView }: Props) {
         </motion.div>
 
         {/* ─── ROW 3: Audit Progress + Risk Heatmap side by side ─── */}
-        <div className="grid grid-cols-5 gap-5 mb-6">
+        <div className="grid grid-cols-5 gap-5 mb-7">
           {/* Audit completion by process — 3 cols */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
             className="col-span-3 card-content rounded-2xl p-5">
@@ -290,7 +305,7 @@ export default function HomeView({ setView }: Props) {
         </div>
 
         {/* ─── ROW 4: AI Insights + Upcoming Deadlines ─── */}
-        <div className="grid grid-cols-2 gap-5 mb-6">
+        <div className="grid grid-cols-2 gap-5 mb-7">
           {/* AI Insights */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65 }}
             className="card-content rounded-2xl p-5">
