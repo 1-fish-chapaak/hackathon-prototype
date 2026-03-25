@@ -260,31 +260,65 @@ body {
 
 /* ─── Glassmorphism (Apple Theme) ─── */
 .glass-card {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid rgba(232, 226, 245, 0.5);
+  box-shadow:
+    0 1px 2px rgba(106, 18, 205, 0.02),
+    0 4px 16px rgba(106, 18, 205, 0.03),
+    0 8px 32px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card:hover {
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.03);
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(106, 18, 205, 0.12);
+  box-shadow:
+    0 2px 4px rgba(106, 18, 205, 0.04),
+    0 8px 24px rgba(106, 18, 205, 0.06),
+    0 16px 48px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
   transform: translateY(-1px);
 }
 
 .glass-card-strong {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(24px) saturate(200%);
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(32px) saturate(220%);
+  -webkit-backdrop-filter: blur(32px) saturate(220%);
+  border: 1px solid rgba(232, 226, 245, 0.6);
+  box-shadow:
+    0 4px 20px rgba(106, 18, 205, 0.04),
+    0 12px 48px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .glass-surface {
-  background: rgba(248, 249, 252, 0.8);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(248, 249, 252, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(241, 237, 249, 0.5);
+}
+
+/* ─── Elevated Card (no glass, solid with rich shadow) ─── */
+.elevated-card {
+  background: white;
+  border: 1px solid rgba(232, 226, 245, 0.4);
+  box-shadow:
+    0 1px 2px rgba(106, 18, 205, 0.02),
+    0 4px 12px rgba(106, 18, 205, 0.03),
+    0 12px 36px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.elevated-card:hover {
+  border-color: rgba(106, 18, 205, 0.1);
+  box-shadow:
+    0 2px 4px rgba(106, 18, 205, 0.04),
+    0 8px 24px rgba(106, 18, 205, 0.05),
+    0 20px 60px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
 }
 
 /* ─── Liquid Fill Animation ─── */
