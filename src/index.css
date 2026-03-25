@@ -321,6 +321,129 @@ body {
   transform: translateY(-1px);
 }
 
+/* ─── Card Variants ─── */
+
+/* KPI card: top-accent border, subtle inner gradient */
+.card-kpi {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.65) 100%);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid rgba(232, 226, 245, 0.45);
+  border-top: 3px solid var(--accent, #6a12cd);
+  box-shadow:
+    0 1px 2px rgba(106, 18, 205, 0.02),
+    0 4px 16px rgba(106, 18, 205, 0.03),
+    0 8px 32px rgba(0, 0, 0, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-kpi::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  background: linear-gradient(180deg, var(--accent-bg, rgba(106,18,205,0.02)) 0%, transparent 100%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.card-kpi:hover {
+  border-color: rgba(106, 18, 205, 0.15);
+  border-top-color: var(--accent, #6a12cd);
+  box-shadow:
+    0 2px 4px rgba(106, 18, 205, 0.04),
+    0 8px 24px rgba(106, 18, 205, 0.06),
+    0 16px 48px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transform: translateY(-2px);
+}
+
+/* Content card: subtle inner corner gradient */
+.card-content {
+  background: linear-gradient(135deg, rgba(106,18,205,0.015) 0%, rgba(255,255,255,0.7) 30%, rgba(255,255,255,0.65) 100%);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid rgba(232, 226, 245, 0.45);
+  box-shadow:
+    0 1px 2px rgba(106, 18, 205, 0.02),
+    0 4px 16px rgba(106, 18, 205, 0.03),
+    0 8px 32px rgba(0, 0, 0, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-content:hover {
+  background: linear-gradient(135deg, rgba(106,18,205,0.025) 0%, rgba(255,255,255,0.8) 30%, rgba(255,255,255,0.75) 100%);
+  border-color: rgba(106, 18, 205, 0.12);
+  box-shadow:
+    0 2px 4px rgba(106, 18, 205, 0.04),
+    0 8px 24px rgba(106, 18, 205, 0.06),
+    0 16px 48px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transform: translateY(-1px);
+}
+
+/* Alert/attention card: left glow accent */
+.card-alert-critical {
+  box-shadow: -3px 0 12px -2px rgba(220, 38, 38, 0.12), 0 2px 8px rgba(0,0,0,0.02);
+}
+.card-alert-high {
+  box-shadow: -3px 0 12px -2px rgba(234, 88, 12, 0.12), 0 2px 8px rgba(0,0,0,0.02);
+}
+.card-alert-medium {
+  box-shadow: -3px 0 12px -2px rgba(217, 119, 6, 0.1), 0 2px 8px rgba(0,0,0,0.02);
+}
+
+/* Feed item: no card frame, just hover row */
+.feed-item {
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.feed-item:hover {
+  background: rgba(250, 245, 255, 0.5);
+  border-color: rgba(232, 226, 245, 0.3);
+  box-shadow: 0 2px 8px rgba(106, 18, 205, 0.04);
+}
+
+/* Navigable card: shows arrow hint on hover */
+.card-nav {
+  position: relative;
+  cursor: pointer;
+}
+
+.card-nav::after {
+  content: '→';
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-size: 12px;
+  color: #6a12cd;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: all 0.2s ease;
+}
+
+.card-nav:hover::after {
+  opacity: 0.6;
+  transform: translateX(0);
+}
+
+/* Status-aware breathing dot */
+@keyframes status-breathe {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.dot-breathe {
+  animation: status-breathe 2s ease-in-out infinite;
+}
+
 /* ─── Liquid Fill Animation ─── */
 @keyframes liquid-wave {
   0%, 100% { transform: translateX(0); }

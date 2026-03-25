@@ -118,23 +118,24 @@ export default function HomeView({ setView }: Props) {
         {/* ─── ROW 1: Financial Impact KPIs (what CFO cares about) ─── */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           {[
-            { label: 'Money at Risk', value: '₹6.16L', desc: 'Flagged duplicate payments', icon: DollarSign, color: 'text-red-600 bg-red-50', trend: '-₹2.1L', up: true, trendColor: 'text-green-600', sparkData: [8.2, 7.5, 6.8, 7.1, 6.5, 6.16], sparkColor: '#16a34a', onClick: () => setView('chat') },
-            { label: 'Open Exceptions', value: '7', desc: '3 unassigned, 4 in progress', icon: FileWarning, color: 'text-orange-600 bg-orange-50', trend: '+2', up: false, trendColor: 'text-red-600', sparkData: [3, 4, 5, 4, 5, 7], sparkColor: '#dc2626', onClick: () => setView('reports') },
-            { label: 'Compliance Score', value: '94.2%', desc: 'Across all business processes', icon: Shield, color: 'text-green-600 bg-green-50', trend: '+1.4%', up: true, trendColor: 'text-green-600', sparkData: [89, 90, 91, 92, 93, 94.2], sparkColor: '#16a34a', onClick: () => setView('dashboards') },
-            { label: 'Automation Savings', value: '₹24L', desc: 'Cost avoided via workflows YTD', icon: Zap, color: 'text-primary bg-primary-xlight', trend: '+₹8L', up: true, trendColor: 'text-green-600', sparkData: [4, 8, 12, 16, 20, 24], sparkColor: '#6a12cd', onClick: () => setView('workflow-templates') },
+            { label: 'Money at Risk', value: '₹6.16L', desc: 'Flagged duplicate payments', icon: DollarSign, color: 'text-red-600 bg-red-50', trend: '-₹2.1L', up: true, trendColor: 'text-green-600', sparkData: [8.2, 7.5, 6.8, 7.1, 6.5, 6.16], sparkColor: '#16a34a', accent: '#dc2626', accentBg: 'rgba(220,38,38,0.03)', onClick: () => setView('chat') },
+            { label: 'Open Exceptions', value: '7', desc: '3 unassigned, 4 in progress', icon: FileWarning, color: 'text-orange-600 bg-orange-50', trend: '+2', up: false, trendColor: 'text-red-600', sparkData: [3, 4, 5, 4, 5, 7], sparkColor: '#dc2626', accent: '#ea580c', accentBg: 'rgba(234,88,12,0.03)', onClick: () => setView('reports') },
+            { label: 'Compliance Score', value: '94.2%', desc: 'Across all business processes', icon: Shield, color: 'text-green-600 bg-green-50', trend: '+1.4%', up: true, trendColor: 'text-green-600', sparkData: [89, 90, 91, 92, 93, 94.2], sparkColor: '#16a34a', accent: '#16a34a', accentBg: 'rgba(22,163,74,0.03)', onClick: () => setView('dashboards') },
+            { label: 'Automation Savings', value: '₹24L', desc: 'Cost avoided via workflows YTD', icon: Zap, color: 'text-primary bg-primary-xlight', trend: '+₹8L', up: true, trendColor: 'text-green-600', sparkData: [4, 8, 12, 16, 20, 24], sparkColor: '#6a12cd', accent: '#6a12cd', accentBg: 'rgba(106,18,205,0.03)', onClick: () => setView('workflow-templates') },
           ].map((kpi, i) => (
             <motion.div key={kpi.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.06 }}
               onClick={kpi.onClick}
-              className="glass-card rounded-2xl p-5 cursor-pointer group hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300">
-              <div className="flex items-start justify-between mb-2">
+              className="card-kpi card-nav rounded-2xl p-5 group"
+              style={{ '--accent': kpi.accent, '--accent-bg': kpi.accentBg } as React.CSSProperties}>
+              <div className="relative flex items-start justify-between mb-2">
                 <div className={`p-2 rounded-lg ${kpi.color} group-hover:scale-110 transition-transform duration-300`}>
                   <kpi.icon size={16} />
                 </div>
                 <MiniTrend data={kpi.sparkData} color={kpi.sparkColor} />
               </div>
-              <div className="text-2xl font-bold font-mono text-text leading-none mb-0.5">{kpi.value}</div>
-              <div className="text-[11px] text-text-muted mb-1">{kpi.desc}</div>
-              <div className={`flex items-center gap-0.5 text-[11px] font-semibold ${kpi.trendColor}`}>
+              <div className="relative text-2xl font-bold font-mono text-text leading-none mb-0.5">{kpi.value}</div>
+              <div className="relative text-[11px] text-text-muted mb-1">{kpi.desc}</div>
+              <div className={`relative flex items-center gap-0.5 text-[11px] font-semibold ${kpi.trendColor}`}>
                 {kpi.up ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
                 {kpi.trend} vs last quarter
               </div>
@@ -164,7 +165,7 @@ export default function HomeView({ setView }: Props) {
                     { icon: Users, severity: 'medium', text: 'Tushar Goel over-allocated in April (120% capacity)', detail: 'Assigned to P2P SOX + IFC Assessment simultaneously', action: 'Rebalance', actionView: 'audit-planning' as View, color: 'text-amber-600 bg-amber-50 border-amber-200' },
                   ].map((item, i) => (
                     <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.04 }}
-                      className={`flex items-start gap-3 p-3 rounded-xl border ${item.color} hover:shadow-sm transition-all cursor-pointer group`}
+                      className={`flex items-start gap-3 p-3 rounded-xl border ${item.color} ${item.severity === 'critical' ? 'card-alert-critical' : item.severity === 'high' ? 'card-alert-high' : 'card-alert-medium'} hover:shadow-md transition-all cursor-pointer group`}
                       onClick={() => setView(item.actionView)}>
                       <div className={`p-1.5 rounded-lg shrink-0 ${item.color.split(' ').slice(0, 2).join(' ')}`}>
                         <item.icon size={14} />
@@ -188,7 +189,7 @@ export default function HomeView({ setView }: Props) {
         <div className="grid grid-cols-5 gap-5 mb-6">
           {/* Audit completion by process — 3 cols */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-            className="col-span-3 glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300">
+            className="col-span-3 card-content rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[13px] font-semibold text-text flex items-center gap-2">
                 <Target size={14} className="text-primary" /> FY26 Audit Progress by Process
@@ -243,7 +244,7 @@ export default function HomeView({ setView }: Props) {
 
           {/* Risk Exposure Summary — 2 cols */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
-            className="col-span-2 glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300">
+            className="col-span-2 card-content rounded-2xl p-5">
             <h3 className="text-[13px] font-semibold text-text mb-4 flex items-center gap-2">
               <AlertTriangle size={14} className="text-orange-500" /> Risk Exposure
             </h3>
@@ -292,7 +293,7 @@ export default function HomeView({ setView }: Props) {
         <div className="grid grid-cols-2 gap-5 mb-6">
           {/* AI Insights */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65 }}
-            className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300">
+            className="card-content rounded-2xl p-5">
             <h3 className="text-[13px] font-semibold text-text mb-3 flex items-center gap-2">
               <Sparkles size={14} className="text-primary" /> AI Insights
               <span className="text-[9px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">Updated 2h ago</span>
@@ -321,7 +322,7 @@ export default function HomeView({ setView }: Props) {
 
           {/* Upcoming Deadlines + Team Snapshot */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
-            className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300">
+            className="card-content rounded-2xl p-5">
             <h3 className="text-[13px] font-semibold text-text mb-3 flex items-center gap-2">
               <Calendar size={14} className="text-orange-500" /> Deadlines & Milestones
             </h3>
@@ -395,9 +396,9 @@ export default function HomeView({ setView }: Props) {
             ].map((w, i) => (
               <motion.div key={w.name} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.85 + i * 0.04 }}
                 onClick={() => setView('workflow-templates')}
-                className="glass-card rounded-2xl p-4 cursor-pointer group hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300">
+                className="glass-card card-nav rounded-2xl p-4 group">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 rounded-full" style={{ background: w.color }} />
+                  <div className="w-2 h-2 rounded-full dot-breathe" style={{ background: w.color }} />
                   <span className="text-[12px] font-semibold text-text group-hover:text-primary transition-colors truncate">{w.name}</span>
                 </div>
                 <div className="text-[10.5px] text-text-muted mb-2">{w.time}</div>
@@ -429,7 +430,7 @@ export default function HomeView({ setView }: Props) {
               { icon: Users, text: 'Sneha Desai signed off on Risk Assessment Review for FY26 plan', time: '1d ago', color: 'text-emerald-500' },
             ].map((a, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 + i * 0.04 }}
-                className="flex items-center gap-3 p-3 rounded-xl glass-card cursor-pointer hover:shadow-md hover:shadow-primary/5 hover:border-primary/15 active:scale-[0.995] transition-all duration-200">
+                className="flex items-center gap-3 p-3 rounded-xl feed-item cursor-pointer active:scale-[0.995]"
                 <a.icon size={14} className={a.color} />
                 <span className="text-[12px] text-text flex-1">{a.text}</span>
                 <span className="text-[10px] text-text-muted shrink-0">{a.time}</span>
