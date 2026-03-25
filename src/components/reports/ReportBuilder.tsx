@@ -1,0 +1,381 @@
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  ArrowLeft, FileText, BarChart3, Plus,
+  GripVertical, X, Eye, Download, Sparkles, AlertTriangle,
+  ClipboardCheck, PieChart, Type
+} from 'lucide-react';
+import { WORKFLOWS, EXCEPTION_DATA, ACTION_TAKEN_DATA } from '../../data/mockData';
+import { useToast } from '../shared/Toast';
+
+interface Props {
+  context: 'new' | 'action-report' | 'from-template' | null;
+  onBack: () => void;
+}
+
+interface ReportSection {
+  id: string;
+  type: 'workflow-output' | 'text' | 'chart' | 'exception-summary' | 'action-taken';
+  title: string;
+  content: string;
+}
+
+const AVAILABLE_BLOCKS = [
+  { type: 'workflow-output' as const, label: 'Workflow Output', icon: BarChart3, desc: 'Add results from a workflow run' },
+  { type: 'text' as const, label: 'Commentary', icon: Type, desc: 'Add text commentary section' },
+  { type: 'chart' as const, label: 'Chart / Visualization', icon: PieChart, desc: 'Add a chart block' },
+  { type: 'exception-summary' as const, label: 'Exception Summary', icon: AlertTriangle, desc: 'Summary of flagged exceptions' },
+  { type: 'action-taken' as const, label: 'Action Taken Summary', icon: ClipboardCheck, desc: 'Risk owner actions and resolutions' },
+];
+
+function getInitialSections(context: Props['context']): ReportSection[] {
+  if (context === 'action-report') {
+    return [
+      { id: 's-1', type: 'text', title: 'Executive Summary', content: 'This report summarizes exceptions identified by the Duplicate Invoice Detection workflow (Run #12) and actions taken by assigned risk owners.' },
+      { id: 's-2', type: 'exception-summary', title: 'Exception Overview', content: `${EXCEPTION_DATA.length} exceptions flagged` },
+      { id: 's-3', type: 'action-taken', title: 'Actions Taken', content: `${ACTION_TAKEN_DATA.length} actions recorded` },
+      { id: 's-4', type: 'chart', title: 'Status Breakdown', content: 'Exception resolution status distribution' },
+    ];
+  }
+  return [];
+}
+
+export default function ReportBuilder({ context, onBack }: Props) {
+  const { addToast } = useToast();
+  const [title, setTitle] = useState(context === 'action-report' ? 'Action Taken Report — Duplicate Invoice Detection' : 'Untitled Audit Report');
+  const [sections, setSections] = useState<ReportSection[]>(getInitialSections(context));
+  const [showPreview, setShowPreview] = useState(false);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [showWorkflowPicker, setShowWorkflowPicker] = useState(false);
+
+  const addSection = (type: ReportSection['type']) => {
+    if (type === 'workflow-output') {
+      setShowWorkflowPicker(true);
+      return;
+    }
+    const titles: Record<string, string> = {
+      text: 'Commentary',
+      chart: 'Chart / Visualization',
+      'exception-summary': 'Exception Summary',
+      'action-taken': 'Action Taken Summary',
+    };
+    setSections(prev => [...prev, {
+      id: `s-${Date.now()}`,
+      type,
+      title: titles[type] || 'New Section',
+      content: type === 'exception-summary' ? `${EXCEPTION_DATA.length} exceptions flagged` :
+               type === 'action-taken' ? `${ACTION_TAKEN_DATA.length} actions recorded` : '',
+    }]);
+  };
+
+  const addWorkflowSection = (wf: typeof WORKFLOWS[0]) => {
+    setSections(prev => [...prev, {
+      id: `s-${Date.now()}`,
+      type: 'workflow-output',
+      title: `${wf.name} — Output`,
+      content: `${wf.runs} runs · Last: ${wf.lastRun} · Type: ${wf.type}`,
+    }]);
+    setShowWorkflowPicker(false);
+  };
+
+  const removeSection = (id: string) => {
+    setSections(prev => prev.filter(s => s.id !== id));
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDrop = (e: React.DragEvent, toIndex: number) => {
+    e.preventDefault();
+    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+    setSections(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+    setDragOverIndex(null);
+  };
+
+  const handleGenerate = () => {
+    addToast({ type: 'success', message: 'PDF generated successfully!' });
+  };
+
+  const sectionIcon = (type: ReportSection['type']) => {
+    const icons = { 'workflow-output': BarChart3, text: Type, chart: PieChart, 'exception-summary': AlertTriangle, 'action-taken': ClipboardCheck };
+    const Icon = icons[type];
+    return <Icon size={14} />;
+  };
+
+  const sectionColor = (type: ReportSection['type']) => {
+    const colors = {
+      'workflow-output': 'bg-blue-50 text-blue-600',
+      text: 'bg-gray-50 text-gray-600',
+      chart: 'bg-purple-50 text-purple-600',
+      'exception-summary': 'bg-orange-50 text-orange-600',
+      'action-taken': 'bg-green-50 text-green-600',
+    };
+    return colors[type];
+  };
+
+  return (
+    <div className="flex h-full bg-surface-2 overflow-hidden">
+      {/* Left Sidebar — Available Blocks */}
+      <div className="w-[240px] border-r border-border-light bg-white flex flex-col shrink-0">
+        <div className="px-4 py-3 border-b border-border-light">
+          <h3 className="text-[12px] font-semibold text-text uppercase tracking-wider">Add Blocks</h3>
+        </div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+          {AVAILABLE_BLOCKS.map(block => (
+            <button
+              key={block.type}
+              onClick={() => addSection(block.type)}
+              className="w-full text-left p-3 rounded-xl border border-border-light hover:border-primary/30 hover:bg-primary-xlight/50 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className={`p-1 rounded-md ${sectionColor(block.type)}`}>
+                  <block.icon size={12} />
+                </div>
+                <span className="text-[11px] font-semibold text-text group-hover:text-primary transition-colors">{block.label}</span>
+              </div>
+              <p className="text-[10px] text-text-muted pl-7">{block.desc}</p>
+            </button>
+          ))}
+
+          <div className="pt-3 border-t border-border-light mt-3">
+            <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-2 px-1">Workflows</div>
+            {WORKFLOWS.slice(0, 5).map(wf => (
+              <button
+                key={wf.id}
+                onClick={() => addWorkflowSection(wf)}
+                className="w-full text-left px-3 py-2 rounded-lg text-[11px] hover:bg-primary-xlight transition-colors cursor-pointer"
+              >
+                <div className="font-medium text-text truncate">{wf.name}</div>
+                <div className="text-[9px] text-text-muted">{wf.type} · {wf.runs} runs</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Canvas */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Bar */}
+        <div className="h-12 border-b border-border-light bg-white flex items-center justify-between px-5 shrink-0">
+          <div className="flex items-center gap-3">
+            <button onClick={onBack} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+              <ArrowLeft size={16} className="text-text-muted" />
+            </button>
+            <div className="flex items-center gap-2">
+              <FileText size={16} className="text-primary" />
+              <input
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                className="text-[14px] font-semibold text-text bg-transparent border-none outline-none focus:underline focus:decoration-primary/30 w-[400px]"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowPreview(p => !p)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors cursor-pointer ${
+                showPreview ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-gray-50'
+              }`}
+            >
+              <Eye size={13} />
+              Preview
+            </button>
+            <button
+              onClick={handleGenerate}
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-primary to-primary-medium text-white rounded-xl text-[12px] font-semibold hover:from-primary-hover hover:to-primary transition-all cursor-pointer"
+            >
+              <Download size={13} />
+              Generate PDF
+            </button>
+          </div>
+        </div>
+
+        {/* Canvas Area */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-3xl mx-auto space-y-3">
+            {sections.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center py-20 text-center"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-primary/5 flex items-center justify-center mb-3">
+                  <Plus size={24} className="text-primary/40" />
+                </div>
+                <h4 className="text-[14px] font-semibold text-text mb-1">Start Building Your Report</h4>
+                <p className="text-[12px] text-text-muted max-w-[300px]">
+                  Add blocks from the left sidebar to compose your audit report. Drag to reorder.
+                </p>
+              </motion.div>
+            )}
+
+            <AnimatePresence>
+              {sections.map((section, index) => (
+                <motion.div
+                  key={section.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                >
+                <div
+                  className={`bg-white rounded-xl border shadow-sm transition-all ${
+                    dragOverIndex === index ? 'border-primary border-2' : 'border-border-light'
+                  }`}
+                  draggable
+                  onDragStart={e => handleDragStart(e, index)}
+                  onDragOver={e => handleDragOver(e, index)}
+                  onDrop={e => handleDrop(e, index)}
+                  onDragLeave={() => setDragOverIndex(null)}
+                >
+                  <div className="flex items-center gap-3 px-4 py-3 border-b border-border-light">
+                    <div className="cursor-grab active:cursor-grabbing text-text-muted/40 hover:text-text-muted transition-colors">
+                      <GripVertical size={14} />
+                    </div>
+                    <div className={`p-1.5 rounded-lg ${sectionColor(section.type)}`}>
+                      {sectionIcon(section.type)}
+                    </div>
+                    <input
+                      value={section.title}
+                      onChange={e => setSections(prev => prev.map(s => s.id === section.id ? { ...s, title: e.target.value } : s))}
+                      className="flex-1 text-[13px] font-semibold text-text bg-transparent border-none outline-none"
+                    />
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-text-muted bg-surface-2 px-2 py-0.5 rounded">
+                      {section.type.replace('-', ' ')}
+                    </span>
+                    <button onClick={() => removeSection(section.id)} className="p-1 hover:bg-red-50 hover:text-red-500 rounded text-text-muted transition-colors cursor-pointer">
+                      <X size={13} />
+                    </button>
+                  </div>
+
+                  <div className="px-4 py-3">
+                    {section.type === 'text' ? (
+                      <textarea
+                        value={section.content}
+                        onChange={e => setSections(prev => prev.map(s => s.id === section.id ? { ...s, content: e.target.value } : s))}
+                        placeholder="Add your commentary here..."
+                        className="w-full text-[12.5px] text-text-secondary leading-relaxed resize-none border-none outline-none bg-transparent min-h-[60px]"
+                      />
+                    ) : section.type === 'workflow-output' ? (
+                      <div className="flex items-center gap-3 p-3 bg-surface-2 rounded-lg">
+                        <BarChart3 size={16} className="text-blue-500" />
+                        <div>
+                          <div className="text-[12px] font-medium text-text">{section.title}</div>
+                          <div className="text-[10px] text-text-muted">{section.content}</div>
+                        </div>
+                      </div>
+                    ) : section.type === 'exception-summary' ? (
+                      <div className="space-y-2">
+                        <div className="flex gap-3">
+                          <div className="flex-1 p-2.5 bg-red-50 rounded-lg text-center">
+                            <div className="text-[16px] font-bold text-red-700">8</div>
+                            <div className="text-[9px] text-red-600 uppercase font-semibold">Flagged</div>
+                          </div>
+                          <div className="flex-1 p-2.5 bg-orange-50 rounded-lg text-center">
+                            <div className="text-[16px] font-bold text-orange-700">3</div>
+                            <div className="text-[9px] text-orange-600 uppercase font-semibold">Assigned</div>
+                          </div>
+                          <div className="flex-1 p-2.5 bg-green-50 rounded-lg text-center">
+                            <div className="text-[16px] font-bold text-green-700">1</div>
+                            <div className="text-[9px] text-green-600 uppercase font-semibold">Resolved</div>
+                          </div>
+                        </div>
+                        <div className="text-[11px] text-text-muted">Total flagged amount: $616,650</div>
+                      </div>
+                    ) : section.type === 'action-taken' ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[11px]">
+                          <thead>
+                            <tr className="bg-surface-2">
+                              <th className="text-left px-2 py-1.5 font-semibold text-text-secondary">Exception</th>
+                              <th className="text-left px-2 py-1.5 font-semibold text-text-secondary">Action By</th>
+                              <th className="text-left px-2 py-1.5 font-semibold text-text-secondary">Date</th>
+                              <th className="text-left px-2 py-1.5 font-semibold text-text-secondary">Resolution</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ACTION_TAKEN_DATA.map(a => (
+                              <tr key={a.exceptionId} className="border-t border-border-light">
+                                <td className="px-2 py-1.5 font-mono text-text-muted">{a.exceptionId}</td>
+                                <td className="px-2 py-1.5 text-text">{a.actionBy}</td>
+                                <td className="px-2 py-1.5 text-text-muted">{a.actionDate}</td>
+                                <td className="px-2 py-1.5 text-text">{a.resolution}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : section.type === 'chart' ? (
+                      <div className="flex items-center justify-center h-24 bg-surface-2 rounded-lg">
+                        <div className="flex items-end gap-1 h-14">
+                          {[40, 65, 25, 80, 55, 70].map((h, i) => (
+                            <div key={i} className="w-6 rounded-t" style={{ height: `${h}%`, background: `rgba(106,18,205,${0.15 + (h / 200)})` }} />
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+
+      {/* Workflow Picker Modal */}
+      <AnimatePresence>
+        {showWorkflowPicker && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            onClick={() => setShowWorkflowPicker(false)}
+          >
+            <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white rounded-2xl shadow-xl w-[400px] max-h-[60vh] overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="px-4 py-3 border-b border-border-light flex items-center justify-between">
+                <h4 className="text-[13px] font-semibold text-text">Add Workflow Output</h4>
+                <button onClick={() => setShowWorkflowPicker(false)} className="p-1 hover:bg-gray-100 rounded cursor-pointer">
+                  <X size={14} className="text-text-muted" />
+                </button>
+              </div>
+              <div className="overflow-y-auto max-h-[400px] p-2">
+                {WORKFLOWS.map(wf => (
+                  <button
+                    key={wf.id}
+                    onClick={() => addWorkflowSection(wf)}
+                    className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-primary-xlight transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={12} className="text-primary" />
+                      <span className="text-[12px] font-medium text-text">{wf.name}</span>
+                    </div>
+                    <div className="text-[10px] text-text-muted ml-5 mt-0.5">{wf.type} · {wf.runs} runs · Last: {wf.lastRun}</div>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
