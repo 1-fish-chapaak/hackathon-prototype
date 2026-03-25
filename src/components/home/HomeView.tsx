@@ -430,7 +430,7 @@ export default function HomeView({ setView }: Props) {
               { icon: Users, text: 'Sneha Desai signed off on Risk Assessment Review for FY26 plan', time: '1d ago', color: 'text-emerald-500' },
             ].map((a, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 + i * 0.04 }}
-                className="flex items-center gap-3 p-3 rounded-xl feed-item cursor-pointer active:scale-[0.995]"
+                className="flex items-center gap-3 p-3 rounded-xl feed-item cursor-pointer active:scale-[0.995]">
                 <a.icon size={14} className={a.color} />
                 <span className="text-[12px] text-text flex-1">{a.text}</span>
                 <span className="text-[10px] text-text-muted shrink-0">{a.time}</span>
