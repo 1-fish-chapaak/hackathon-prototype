@@ -12,7 +12,7 @@ import { TextShimmer } from '../shared/TextShimmer';
 import { AuditifyHelloEffect } from '../shared/HelloEffect';
 import BorderGlow from '../shared/BorderGlow';
 import FloatingLines from '../shared/FloatingLines';
-// AIPersona removed — Rive WebGL crashes in headless/some browsers
+import { Persona } from '../shared/Persona';
 import LiquidFillGraphic from './LiquidFillGraphic';
 import ComponentLoader from '../shared/ComponentLoader';
 
@@ -1393,10 +1393,9 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
                 <div className="max-w-[85%]">
                   <div className="flex items-start gap-3">
-                    <div className="shrink-0 mt-0.5">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shadow-sm ai-pulse-ring-infinite">
-                        <Sparkles size={14} className="text-white" />
-                      </div>
+                    {/* Rive Persona — halo variant in thinking state */}
+                    <div className="shrink-0 -mt-1 -ml-2">
+                      <Persona variant="halo" state="thinking" className="!w-14 !h-14" />
                     </div>
 
                     <div className="flex-1 min-w-0 pt-1">
