@@ -1,8 +1,8 @@
 import { motion } from 'motion/react';
 import {
   Download, FileText, Table2, Slack, Settings2,
-  CheckCircle2, XCircle, AlertTriangle, Shield,
-  ArrowRightLeft, Clock, Eye
+  CheckCircle2, XCircle, Shield,
+  ArrowRightLeft, Eye
 } from 'lucide-react';
 import { useToast } from '../shared/Toast';
 

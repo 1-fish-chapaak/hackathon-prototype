@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  MessageSquare, ArrowRight, TrendingUp, TrendingDown,
+  ArrowRight, TrendingUp, TrendingDown,
   AlertTriangle, Shield, CheckCircle2, Clock, Zap, Activity,
   ChevronDown, Lightbulb, DollarSign, Users, Calendar,
   FileWarning, ShieldAlert, Target, Eye, Ban, Sparkles,
