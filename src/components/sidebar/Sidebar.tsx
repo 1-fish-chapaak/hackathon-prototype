@@ -74,7 +74,7 @@ function Divider({ label, expanded }: { label?: string; expanded: boolean }) {
   if (!expanded || !label) return <div className="h-px bg-sidebar-border my-2 mx-3" />;
   return (
     <div className="px-3.5 pt-5 pb-1.5">
-      <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-sidebar-text-dim">{label}</span>
+      <span className="text-[10px] font-medium uppercase tracking-normal text-sidebar-text-dim">{label}</span>
     </div>
   );
 }
@@ -124,7 +124,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                 transition={{ duration: 0.15 }}
                 className="overflow-hidden"
               >
-                <div className="text-[14px] font-bold text-sidebar-accent leading-tight tracking-tight whitespace-nowrap">IRAME.AI</div>
+                <div className="text-[14px] font-bold text-sidebar-accent leading-tight tracking-normal whitespace-nowrap">IRAME.AI</div>
                 <div className="text-[12px] text-sidebar-text-dim font-medium whitespace-nowrap flex items-center gap-1">
                   Audit Intelligence
                   <ChevronDown size={8} className="text-sidebar-text-muted" />
