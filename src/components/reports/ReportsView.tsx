@@ -1632,7 +1632,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             <div className="p-4 grid grid-cols-3 gap-4">
               {SHARED_REPORTS.map((r, i) => (
                 <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                  className="glass-card rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all group cursor-pointer"
+                  className="glass-card rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all group"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="p-2 bg-primary/10 text-primary rounded-lg"><FileText size={16} /></div>
