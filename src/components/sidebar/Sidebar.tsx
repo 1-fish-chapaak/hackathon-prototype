@@ -73,7 +73,7 @@ function NavItem({ icon: Icon, label, active, expanded, onClick, badge }: {
 function Divider({ label, expanded }: { label?: string; expanded: boolean }) {
   if (!expanded || !label) return <div className="h-px bg-sidebar-border my-2 mx-3" />;
   return (
-    <div className="px-3.5 pt-5 pb-1.5">
+    <div className="px-3.5 pt-3 pb-1">
       <span className="text-[10px] font-medium uppercase tracking-normal text-sidebar-text-dim">{label}</span>
     </div>
   );
