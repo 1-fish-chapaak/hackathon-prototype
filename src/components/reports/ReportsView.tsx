@@ -4,7 +4,8 @@ import {
   FileText, Shield, AlertTriangle, CheckCircle2, BarChart3,
   TrendingUp, Download, Share2, ArrowRight, ArrowLeft, ChevronDown,
   Sparkles, Eye, Settings, Palette, Type,
-  Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2, Trash2
+  Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2, Trash2,
+  List, LayoutGrid
 } from 'lucide-react';
 import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/mockData';
 import { StatusBadge } from '../shared/StatusBadge';
@@ -1378,6 +1379,7 @@ function ReportView({ report, onBack, onShare }: {
 // ─── Main Reports View ───
 export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps = {}) {
   const [activeTab, setActiveTab] = useState<'templates' | 'my-reports' | 'shared-reports'>('my-reports');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [viewingReport, setViewingReport] = useState<typeof GENERATED_REPORTS[0] | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [previewingTemplate, setPreviewingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
@@ -1467,13 +1469,19 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
         </div>
 
         {/* My Reports */}
-        {activeTab === 'my-reports' && (
+        {activeTab === 'my-reports' && viewMode === 'list' && (
           <SmartTable
             data={GENERATED_REPORTS as unknown as Record<string, unknown>[]}
             keyField="id"
             searchPlaceholder="Search reports..."
             searchKeys={['name', 'generatedBy']}
             paginated={false}
+            headerExtra={
+              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+                <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="List view"><List size={15} /></button>
+                <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
+              </div>
+            }
             columns={[
               { key: 'name', label: 'Report', render: (item) => (
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => {
@@ -1521,14 +1529,64 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
           />
         )}
 
+        {activeTab === 'my-reports' && viewMode === 'grid' && (
+          <div className="bg-white rounded-xl border border-border-light overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border-light bg-surface-2/50">
+              <p className="text-[12px] text-text-muted">{GENERATED_REPORTS.length} reports</p>
+              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+                <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="List view"><List size={15} /></button>
+                <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
+              </div>
+            </div>
+            <div className="p-4 grid grid-cols-3 gap-4">
+              {GENERATED_REPORTS.map((r, i) => {
+                const approval = REPORT_APPROVAL[r.id] || 'Draft';
+                return (
+                  <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                    className="glass-card rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all group cursor-pointer"
+                    onClick={() => setViewingReport(r)}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="p-2 bg-primary/10 text-primary rounded-lg"><FileText size={16} /></div>
+                      <StatusBadge status={r.status} />
+                    </div>
+                    <div className="font-medium text-[13px] text-text mb-1 group-hover:text-primary transition-colors leading-snug">{r.name}</div>
+                    <div className="text-[11px] text-text-muted mb-3">{r.pages} pages · {r.generatedAt}</div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
+                          {r.generatedBy.split(' ').map(n => n[0]).join('')}
+                        </div>
+                        <span className="text-[11px] text-text-secondary">{r.generatedBy}</span>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${approvalColor(approval)}`}>{approval}</span>
+                    </div>
+                    <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border-light opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={13} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); onShare ? onShare(r.id) : addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={13} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="p-1 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={13} /></button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Shared Reports */}
-        {activeTab === 'shared-reports' && (
+        {activeTab === 'shared-reports' && viewMode === 'list' && (
           <SmartTable
             data={SHARED_REPORTS as unknown as Record<string, unknown>[]}
             keyField="id"
             searchPlaceholder="Search shared reports..."
             searchKeys={['name', 'sharedBy', 'sharedWith']}
             paginated={false}
+            headerExtra={
+              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+                <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="List view"><List size={15} /></button>
+                <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
+              </div>
+            }
             columns={[
               { key: 'name', label: 'Report', render: (item) => (
                 <div className="flex items-center gap-2">
@@ -1560,6 +1618,43 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
               )},
             ]}
           />
+        )}
+
+        {activeTab === 'shared-reports' && viewMode === 'grid' && (
+          <div className="bg-white rounded-xl border border-border-light overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border-light bg-surface-2/50">
+              <p className="text-[12px] text-text-muted">{SHARED_REPORTS.length} reports</p>
+              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+                <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="List view"><List size={15} /></button>
+                <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
+              </div>
+            </div>
+            <div className="p-4 grid grid-cols-3 gap-4">
+              {SHARED_REPORTS.map((r, i) => (
+                <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                  className="glass-card rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all group cursor-pointer"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="p-2 bg-primary/10 text-primary rounded-lg"><FileText size={16} /></div>
+                    <StatusBadge status={r.status} />
+                  </div>
+                  <div className="font-medium text-[13px] text-text mb-1 group-hover:text-primary transition-colors leading-snug">{r.name}</div>
+                  <div className="text-[11px] text-text-muted mb-3">{r.pages} pages · {r.sharedAt} · {r.sharedWith}</div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
+                      {r.sharedBy.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <span className="text-[11px] text-text-secondary">{r.sharedBy}</span>
+                  </div>
+                  <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border-light opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={13} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={13} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="p-1 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={13} /></button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Templates Grid */}
