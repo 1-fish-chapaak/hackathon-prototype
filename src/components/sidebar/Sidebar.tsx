@@ -26,7 +26,7 @@ function NavItem({ icon: Icon, label, active, expanded, onClick, badge }: {
       onClick={onClick}
       title={!expanded ? label : undefined}
       className={`
-        w-full flex items-center gap-2.5 rounded-md transition-colors duration-200 relative group cursor-pointer
+        w-full flex items-center gap-2.5 rounded-lg transition-colors duration-150 relative group cursor-pointer
         ${expanded ? 'px-3 py-2' : 'px-0 py-2.5 justify-center'}
         ${active
           ? 'bg-sidebar-surface-active text-sidebar-accent font-semibold'
@@ -34,8 +34,8 @@ function NavItem({ icon: Icon, label, active, expanded, onClick, badge }: {
         }
       `}
     >
-      {active && expanded && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-sidebar-accent rounded-r-full" />
+      {active && (
+        <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-sidebar-accent rounded-r-lg" />
       )}
       <Icon size={17} className="shrink-0" />
       <AnimatePresence>
@@ -59,15 +59,12 @@ function NavItem({ icon: Icon, label, active, expanded, onClick, badge }: {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.12 }}
-            className="ml-auto text-[10px] font-semibold bg-sidebar-surface text-sidebar-text-dim px-1.5 py-0.5 rounded-full tabular-nums"
+            className="ml-auto text-[10.5px] font-semibold bg-sidebar-accent text-brand-600 px-[7px] py-[2px] rounded-full tabular-nums"
           >
             {badge}
           </motion.span>
         )}
       </AnimatePresence>
-      {!expanded && active && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-sidebar-accent rounded-r-full" />
-      )}
     </button>
   );
 }
@@ -94,7 +91,7 @@ function SectionLabel({ label, expanded }: { label: string; expanded: boolean })
   if (!expanded) return <div className="h-px bg-sidebar-border my-2 mx-2" />;
   return (
     <div className="px-3 pt-4 pb-1">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-text-muted">{label}</span>
+      <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-sidebar-text-dim">{label}</span>
     </div>
   );
 }
@@ -112,15 +109,15 @@ function ExpandableSection({ icon: Icon, label, active, expanded, open, onToggle
         }}
         title={!expanded ? label : undefined}
         className={`
-          w-full flex items-center gap-2.5 rounded-md transition-colors duration-200 cursor-pointer relative
+          w-full flex items-center gap-2.5 rounded-lg transition-colors duration-150 cursor-pointer relative
           ${expanded ? 'px-3 py-2' : 'px-0 py-2.5 justify-center'}
           ${active
             ? 'bg-sidebar-surface-active text-sidebar-accent font-semibold'
             : 'text-sidebar-text-dim hover:bg-sidebar-surface-hover hover:text-sidebar-text'}
         `}
       >
-        {active && expanded && (
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-sidebar-accent rounded-r-full" />
+        {active && (
+          <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-sidebar-accent rounded-r-lg" />
         )}
         <Icon size={17} className="shrink-0" />
         <AnimatePresence>
@@ -137,9 +134,6 @@ function ExpandableSection({ icon: Icon, label, active, expanded, open, onToggle
             </motion.div>
           )}
         </AnimatePresence>
-        {!expanded && active && (
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-sidebar-accent rounded-r-full" />
-        )}
       </button>
       <AnimatePresence>
         {expanded && open && (
@@ -201,11 +195,11 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Brand */}
-      <div className={`border-b border-sidebar-border shrink-0 ${isExpanded ? 'px-4 py-4' : 'px-2 py-3'}`}>
+      {/* Brand — logo row per §5 Sidebar */}
+      <div className={`border-b border-sidebar-border shrink-0 ${isExpanded ? 'px-4 pt-[18px] pb-4' : 'px-2 py-3'}`}>
         <div className={`flex items-center ${isExpanded ? 'gap-3' : 'justify-center'}`}>
-          <div className="w-8 h-8 rounded-md bg-sidebar-surface-active flex items-center justify-center shrink-0">
-            <Sparkles size={15} className="text-sidebar-accent" />
+          <div className="w-[30px] h-[30px] rounded-lg bg-gradient-to-br from-brand-500 to-brand-400 flex items-center justify-center shrink-0" style={{ boxShadow: '0 2px 8px rgb(106 18 205 / 0.30)' }}>
+            <Sparkles size={14} className="text-white" />
           </div>
           <AnimatePresence>
             {isExpanded && (
@@ -216,8 +210,11 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
                 transition={{ duration: 0.15 }}
                 className="overflow-hidden"
               >
-                <div className="text-[14px] font-semibold text-sidebar-accent leading-tight tracking-tight whitespace-nowrap">IRAME.AI</div>
-                <div className="text-[10.5px] text-sidebar-text-muted whitespace-nowrap">Audit Intelligence</div>
+                <div className="text-[15px] font-bold text-sidebar-accent leading-tight tracking-tight whitespace-nowrap">IRAME.AI</div>
+                <div className="text-[10.5px] text-sidebar-text-dim font-medium whitespace-nowrap flex items-center gap-1">
+                  Audit Intelligence
+                  <ChevronDown size={10} className="text-sidebar-text-muted" />
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -233,10 +230,10 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
             exit={{ opacity: 0, height: 0 }}
             className="px-3 pt-3 pb-1"
           >
-            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-sidebar-surface text-sidebar-text-muted text-[12px] cursor-pointer hover:bg-sidebar-surface-hover hover:text-sidebar-text transition-colors">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sidebar-surface border border-sidebar-border text-sidebar-text-muted text-[12px] cursor-pointer hover:bg-sidebar-surface-hover hover:text-sidebar-text-dim transition-colors">
               <Command size={13} />
               <span className="flex-1">Search or ask IRA…</span>
-              <kbd className="text-[10px] bg-sidebar-surface-active px-1.5 py-0.5 rounded font-mono text-sidebar-text-dim">⌘K</kbd>
+              <kbd className="text-[10px] bg-sidebar-surface-hover px-1.5 py-0.5 rounded font-mono text-sidebar-text-dim">⌘K</kbd>
             </div>
           </motion.div>
         )}
@@ -362,14 +359,14 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="flex items-center gap-2.5 px-2 py-2 mb-2 rounded-md hover:bg-sidebar-surface-hover cursor-pointer transition-colors"
+              className="flex items-center gap-2.5 px-2.5 py-2.5 mb-2 rounded-lg bg-sidebar-surface border border-sidebar-border cursor-pointer hover:bg-sidebar-surface-hover transition-colors"
             >
-              <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center text-[11px] font-semibold text-white shrink-0">
+              <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center text-[11px] font-bold text-brand-600 shrink-0">
                 JD
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[12px] font-medium text-sidebar-text truncate">John Doe</div>
-                <div className="text-[10px] text-sidebar-text-muted truncate">Lead Auditor</div>
+                <div className="text-[13px] font-semibold text-sidebar-accent truncate">John Doe</div>
+                <div className="text-[11px] text-sidebar-text-dim truncate">Lead Auditor</div>
               </div>
               <span className="text-white/[0.45] text-[14px]">⋯</span>
             </motion.div>
