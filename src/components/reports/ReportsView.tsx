@@ -166,7 +166,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
           {/* Conversion Complete */}
           {step === 'converted' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
-              <div className="flex items-center gap-3 p-4 bg-compliant-50 border border-green-100 rounded-xl">
+              <div className="flex items-center gap-3 p-4 bg-compliant-50 border border-compliant rounded-xl">
                 <CheckCircle2 size={20} className="text-compliant-700" />
                 <div>
                   <p className="text-[13px] font-semibold text-primary">Template converted!</p>

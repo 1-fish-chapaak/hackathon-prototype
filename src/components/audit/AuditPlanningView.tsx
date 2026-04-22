@@ -313,7 +313,7 @@ function GanttChart({
   return (
     <div className="glass-card rounded-2xl overflow-hidden relative">
       {frozen && (
-        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2 py-1 bg-evidence-50/80 backdrop-blur-sm border border-blue-200 rounded-md">
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2 py-1 bg-evidence-50/80 backdrop-blur-sm border border-evidence rounded-md">
           <Lock size={10} className="text-evidence-700" />
           <span className="text-[9px] font-semibold text-evidence-700">Locked</span>
         </div>
@@ -566,7 +566,7 @@ function ResourcesTab() {
                         return (
                           <td key={mIdx} className="px-1 py-1.5">
                             <div className={`w-full h-8 rounded flex items-center justify-center text-[9px] font-bold ${
-                              hours > 100 ? 'bg-red-200 text-risk-700' :
+                              hours > 100 ? 'bg-risk-50 text-risk-700' :
                               hours > 60 ? 'bg-mitigated-50 text-mitigated-700' :
                               hours > 0 ? 'bg-compliant-50 text-compliant-700' :
                               'bg-surface-2 text-text-muted/30'
@@ -585,9 +585,9 @@ function ResourcesTab() {
           {/* Legend */}
           <div className="px-4 py-2.5 border-t border-border-light flex items-center gap-4">
             <span className="text-[9px] font-semibold text-text-muted uppercase tracking-wider">Legend:</span>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-compliant-50 border border-green-200" /><span className="text-[9px] text-text-muted">&lt; 40h (Available)</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-mitigated-50 border border-amber-200" /><span className="text-[9px] text-text-muted">40–80h (Loaded)</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-red-200 border border-red-300" /><span className="text-[9px] text-text-muted">&gt; 100h (Overloaded)</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-compliant-50 border border-compliant" /><span className="text-[9px] text-text-muted">&lt; 40h (Available)</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-mitigated-50 border border-mitigated" /><span className="text-[9px] text-text-muted">40–80h (Loaded)</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-risk-50 border border-red-300" /><span className="text-[9px] text-text-muted">&gt; 100h (Overloaded)</span></div>
           </div>
         </div>
       </div>
@@ -604,9 +604,9 @@ function RiskMatrixTab() {
       const score = l * i;
       gridColors[`${l}-${i}`] =
         score >= 15 ? 'bg-risk-50/80 border-risk' :
-        score >= 10 ? 'bg-high-50/80 border-orange-200' :
-        score >= 5 ? 'bg-mitigated-50/80 border-amber-200' :
-        'bg-compliant-50/80 border-green-200';
+        score >= 10 ? 'bg-high-50/80 border-high' :
+        score >= 5 ? 'bg-mitigated-50/80 border-mitigated' :
+        'bg-compliant-50/80 border-compliant';
     }
   }
 
@@ -670,9 +670,9 @@ function RiskMatrixTab() {
 
         {/* Legend */}
         <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border-light">
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-compliant-50 border border-green-200" /><span className="text-[9px] text-text-muted">Low (1-4)</span></div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-mitigated-50 border border-amber-200" /><span className="text-[9px] text-text-muted">Medium (5-9)</span></div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-high-50 border border-orange-200" /><span className="text-[9px] text-text-muted">High (10-14)</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-compliant-50 border border-compliant" /><span className="text-[9px] text-text-muted">Low (1-4)</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-mitigated-50 border border-mitigated" /><span className="text-[9px] text-text-muted">Medium (5-9)</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-high-50 border border-high" /><span className="text-[9px] text-text-muted">High (10-14)</span></div>
           <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-risk-50 border border-risk" /><span className="text-[9px] text-text-muted">Critical (15+)</span></div>
         </div>
       </div>
@@ -896,7 +896,7 @@ function EngagementDrawer({
 
           {/* Frozen banner */}
           {readOnly && (
-            <div className="flex items-center gap-2.5 p-3 bg-evidence-50 rounded-xl mb-5 border border-blue-200">
+            <div className="flex items-center gap-2.5 p-3 bg-evidence-50 rounded-xl mb-5 border border-evidence">
               <Lock size={14} className="text-evidence-700 shrink-0" />
               <span className="text-[12px] text-evidence-700 font-medium">Plan is frozen — fields are read-only.</span>
             </div>
@@ -1281,7 +1281,7 @@ export default function AuditPlanningView() {
               Add Engagement
             </button>
             {planFrozen ? (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-evidence-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-evidence-50 border border-evidence rounded-lg">
                 <Lock size={13} className="text-evidence-700" />
                 <span className="text-[12px] font-semibold text-evidence-700">Plan Frozen</span>
                 <span className="text-[10px] text-evidence-700">by Karan Mehta — Mar 1, 2026</span>

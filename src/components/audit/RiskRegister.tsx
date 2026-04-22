@@ -80,9 +80,9 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
           {Object.entries(severityCounts).map(([sev, count], i) => {
             const colors: Record<string, string> = {
               critical: 'border-risk bg-risk-50',
-              high: 'border-orange-200 bg-high-50',
-              medium: 'border-yellow-200 bg-mitigated-50',
-              low: 'border-green-200 bg-compliant-50',
+              high: 'border-high bg-high-50',
+              medium: 'border-mitigated bg-mitigated-50',
+              low: 'border-compliant bg-compliant-50',
             };
             const textColors: Record<string, string> = {
               critical: 'text-risk-700',
@@ -139,7 +139,7 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
                   {risk.bpId === 'p2p' && onRunWorkflow && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onRunWorkflow('wf-001'); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-compliant-50 hover:bg-compliant-50 text-compliant-700 text-[11px] font-semibold rounded-lg cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-compliant-50 hover:bg-compliant-50/80 text-compliant-700 text-[11px] font-semibold rounded-lg cursor-pointer"
                     >
                       <ArrowRight size={12} />
                       Run Workflow

@@ -140,7 +140,7 @@ function StatusBadge({ status }: { status: Status }) {
     'Open': { bg: 'bg-evidence-50 border-evidence', text: 'text-evidence-700', icon: <AlertOctagon size={10} /> },
     'In Remediation': { bg: 'bg-mitigated-50 border-mitigated', text: 'text-mitigated-700', icon: <Clock size={10} /> },
     'Overdue': { bg: 'bg-risk-50 border-risk', text: 'text-risk-700', icon: <AlertTriangle size={10} />, pulse: true },
-    'Closed': { bg: 'bg-compliant-50 border-green-200', text: 'text-compliant-700', icon: <CheckCircle2 size={10} /> },
+    'Closed': { bg: 'bg-compliant-50 border-compliant', text: 'text-compliant-700', icon: <CheckCircle2 size={10} /> },
   };
   const s = map[status];
   return (
@@ -351,11 +351,11 @@ export default function FindingsView() {
                             <ArrowUpRight size={10} />
                             View in Engagement
                           </button>
-                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200 bg-mitigated-50 text-mitigated-700 text-[10px] font-semibold hover:bg-mitigated-50 transition-all cursor-pointer">
+                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-mitigated bg-mitigated-50 text-mitigated-700 text-[10px] font-semibold hover:bg-mitigated-50/80 transition-all cursor-pointer">
                             <Bell size={10} />
                             Send Reminder
                           </button>
-                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-risk bg-risk-50 text-risk-700 text-[10px] font-semibold hover:bg-risk-50 transition-all cursor-pointer">
+                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-risk bg-risk-50 text-risk-700 text-[10px] font-semibold hover:bg-risk-50/80 transition-all cursor-pointer">
                             <AlertTriangle size={10} />
                             Escalate
                           </button>

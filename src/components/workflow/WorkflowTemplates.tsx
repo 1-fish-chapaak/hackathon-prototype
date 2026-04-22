@@ -477,7 +477,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                 {/* Insight - show on first two */}
                 {i < 2 && (
                   <div className={`mt-3 flex items-start gap-2 rounded-lg p-2.5 text-[11px] leading-relaxed ${
-                    i === 0 ? 'bg-compliant-50 border border-green-100 text-compliant-700' : 'bg-mitigated-50 border border-amber-100 text-mitigated-700'
+                    i === 0 ? 'bg-compliant-50 border border-compliant text-compliant-700' : 'bg-mitigated-50 border border-mitigated text-mitigated-700'
                   }`}>
                     <Sparkles size={12} className="shrink-0 mt-0.5" />
                     {i === 0 ? 'Detected 23% more duplicates after threshold adjustment. Recommend lowering fuzzy match tolerance from 85% to 80%.' :

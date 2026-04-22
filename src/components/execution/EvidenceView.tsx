@@ -89,10 +89,12 @@ const FILES: FileRow[] = [
 ];
 
 function FileIcon({ type }: { type: 'xlsx' | 'csv' | 'pdf' }) {
+  // File format is decorative, not semantic — use neutral draft/ink tones,
+  // reserve risk/compliant/etc. for actual status (the StatusBadge below).
   const config = {
-    xlsx: { icon: FileSpreadsheet, color: 'text-compliant-700', bg: 'bg-compliant-50' },
-    csv:  { icon: File,            color: 'text-evidence-700',  bg: 'bg-evidence-50' },
-    pdf:  { icon: FileText,        color: 'text-risk-700',      bg: 'bg-risk-50' },
+    xlsx: { icon: FileSpreadsheet, color: 'text-ink-700', bg: 'bg-paper-50' },
+    csv:  { icon: File,            color: 'text-ink-700', bg: 'bg-paper-50' },
+    pdf:  { icon: FileText,        color: 'text-ink-700', bg: 'bg-paper-50' },
   };
   const c = config[type];
   const Icon = c.icon;

@@ -88,7 +88,7 @@ function PlanTab() {
       </CollapsibleSection>
 
       {/* Assumptions Section */}
-      <div className="mt-4 p-3 bg-mitigated-50/50 border border-amber-200/50 rounded-xl">
+      <div className="mt-4 p-3 bg-mitigated-50/50 border border-mitigated/50 rounded-xl">
         <div className="flex items-center gap-1.5 mb-2">
           <AlertTriangle size={12} className="text-mitigated-700" />
           <span className="text-[11px] font-bold text-mitigated-700">Assumptions Made</span>
@@ -135,10 +135,10 @@ ORDER BY
     <div className="space-y-3 pt-4">
       <CollapsibleSection title="Generated SQL Query" icon={FileCode}>
         <div className="mt-3 relative">
-          <pre className="bg-gray-950 text-gray-200 rounded-lg p-4 text-[12px] font-mono overflow-x-auto leading-relaxed">
+          <pre className="bg-ink-900 text-paper-50 rounded-lg p-4 text-[12px] font-mono overflow-x-auto leading-relaxed">
             <code>{sql}</code>
           </pre>
-          <button className="absolute top-2 right-2 p-1.5 bg-gray-800 hover:bg-gray-700 text-ink-500 rounded-md transition-colors cursor-pointer">
+          <button className="absolute top-2 right-2 p-1.5 bg-ink-700 hover:bg-ink-600 text-paper-50 rounded-md transition-colors cursor-pointer">
             <Copy size={12} />
           </button>
         </div>

@@ -408,7 +408,7 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
                   const color = typeColors[item.type];
                   return (
                     <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                      className={`flex items-start gap-2.5 p-2.5 rounded-xl transition-colors ${item.type === 'alert' ? 'bg-orange-50/50 border border-orange-200/50' : 'hover:bg-surface-2'}`}>
+                      className={`flex items-start gap-2.5 p-2.5 rounded-xl transition-colors ${item.type === 'alert' ? 'bg-orange-50/50 border border-high/50' : 'hover:bg-surface-2'}`}>
                       <div className={`p-1.5 rounded-lg shrink-0 ${color}`}><Icon size={12} /></div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[12px] text-text leading-relaxed">{item.text}</div>

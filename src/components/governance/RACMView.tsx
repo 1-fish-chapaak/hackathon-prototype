@@ -177,8 +177,8 @@ function RiskHierarchy() {
                           }}
                           className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
                             control.linked
-                              ? 'bg-risk-50 text-risk-700 hover:bg-risk-50'
-                              : 'bg-compliant-50 text-compliant-700 hover:bg-compliant-50'
+                              ? 'bg-risk-50 text-risk-700 hover:bg-risk-50/80'
+                              : 'bg-compliant-50 text-compliant-700 hover:bg-compliant-50/80'
                           }`}
                         >
                           {control.linked ? <><Unlink size={10} /> Unlink</> : <><Link2 size={10} /> Link</>}
@@ -201,8 +201,8 @@ function RiskHierarchy() {
                                 onClick={() => addToast({ message: wf.linked ? `Unlinked ${wf.id}` : `Linked ${wf.id}`, type: 'info' })}
                                 className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-semibold transition-colors cursor-pointer ${
                                   wf.linked
-                                    ? 'bg-risk-50 text-risk-700 hover:bg-risk-50'
-                                    : 'bg-compliant-50 text-compliant-700 hover:bg-compliant-50'
+                                    ? 'bg-risk-50 text-risk-700 hover:bg-risk-50/80'
+                                    : 'bg-compliant-50 text-compliant-700 hover:bg-compliant-50/80'
                                 }`}
                               >
                                 {wf.linked ? <><Unlink size={9} /> Unlink</> : <><Link2 size={9} /> Link</>}

@@ -34,9 +34,10 @@ const TYPE_BADGES: Record<string, { label: string; color: string }> = {
 };
 
 const FORMAT_COLORS: Record<string, string> = {
-  CSV: 'bg-brand-50 text-brand-700 border-purple-200',
-  'PDF/CSV': 'bg-high-50 text-high-700 border-orange-200',
-  SQL: 'bg-evidence-50 text-evidence-700 border-blue-200',
+  // File formats are decorative — neutral draft tones, not GRC severity.
+  CSV: 'bg-paper-50 text-ink-700',
+  'PDF/CSV': 'bg-paper-50 text-ink-700',
+  SQL: 'bg-paper-50 text-ink-700',
 };
 
 const TYPE_COLOR_CLASSES: Record<WorkflowTypeId, {
@@ -44,22 +45,22 @@ const TYPE_COLOR_CLASSES: Record<WorkflowTypeId, {
   gradient: string; badgeBg: string; badgeText: string;
 }> = {
   reconciliation: {
-    accent: 'text-brand-700', accentBg: 'bg-brand-50', accentBorder: 'border-purple-200',
+    accent: 'text-brand-700', accentBg: 'bg-brand-50', accentBorder: 'border-brand-200',
     accentRing: 'ring-purple-300', gradient: 'from-purple-400 to-violet-500',
     badgeBg: 'bg-brand-50', badgeText: 'text-brand-700',
   },
   detection: {
-    accent: 'text-brand-700', accentBg: 'bg-brand-50', accentBorder: 'border-purple-200',
+    accent: 'text-brand-700', accentBg: 'bg-brand-50', accentBorder: 'border-brand-200',
     accentRing: 'ring-purple-300', gradient: 'from-purple-500 to-violet-500',
     badgeBg: 'bg-brand-50', badgeText: 'text-brand-700',
   },
   monitoring: {
-    accent: 'text-evidence-700', accentBg: 'bg-evidence-50', accentBorder: 'border-sky-200',
+    accent: 'text-evidence-700', accentBg: 'bg-evidence-50', accentBorder: 'border-evidence',
     accentRing: 'ring-sky-300', gradient: 'from-sky-400 to-blue-500',
     badgeBg: 'bg-evidence-50', badgeText: 'text-evidence-700',
   },
   compliance: {
-    accent: 'text-brand-700', accentBg: 'bg-brand-50', accentBorder: 'border-violet-200',
+    accent: 'text-brand-700', accentBg: 'bg-brand-50', accentBorder: 'border-brand-200',
     accentRing: 'ring-violet-300', gradient: 'from-violet-500 to-purple-500',
     badgeBg: 'bg-brand-50', badgeText: 'text-brand-700',
   },

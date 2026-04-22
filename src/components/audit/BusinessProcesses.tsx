@@ -168,10 +168,10 @@ function UploadSOPModal({ onClose }: { onClose: () => void }) {
 /* ─── SOP Flow Chart ─── */
 function SOPFlowChart({ steps }: { steps: typeof SOP_FLOWS[string] }) {
   const nodeStyles: Record<string, string> = {
-    start: 'bg-compliant-50 border-green-400 text-compliant-700',
+    start: 'bg-compliant-50 border-compliant text-compliant-700',
     process: 'bg-evidence-50 border-blue-300 text-evidence-700',
-    decision: 'bg-mitigated-50 border-amber-400 text-mitigated-700',
-    end: 'bg-risk-50 border-red-400 text-risk-700',
+    decision: 'bg-mitigated-50 border-mitigated text-mitigated-700',
+    end: 'bg-risk-50 border-risk text-risk-700',
   };
   const nodeShapes: Record<string, string> = {
     start: 'rounded-full px-4 py-2',
@@ -241,7 +241,7 @@ function SOPRelationshipMap({ sopId, bpId }: { sopId: string; bpId: string }) {
       <div className="flex flex-col gap-1.5 shrink-0 min-w-[130px]">
         <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">RACMs</div>
         {relatedRacms.length > 0 ? relatedRacms.map(r => (
-          <div key={r.id} className="px-2.5 py-1.5 bg-evidence-50 border border-blue-200 rounded-lg">
+          <div key={r.id} className="px-2.5 py-1.5 bg-evidence-50 border border-evidence rounded-lg">
             <div className="text-[10px] font-semibold text-evidence-700">{r.id}</div>
             <div className="text-[9px] text-evidence-700 truncate">{r.name}</div>
           </div>
@@ -252,7 +252,7 @@ function SOPRelationshipMap({ sopId, bpId }: { sopId: string; bpId: string }) {
       <div className="flex flex-col gap-1.5 shrink-0 min-w-[140px]">
         <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Risks</div>
         {relatedRisks.map(r => (
-          <div key={r.id} className="px-2.5 py-1.5 bg-high-50 border border-orange-200 rounded-lg">
+          <div key={r.id} className="px-2.5 py-1.5 bg-high-50 border border-high rounded-lg">
             <div className="text-[10px] font-semibold text-high-700">{r.id}</div>
             <div className="text-[9px] text-high-700 leading-tight truncate max-w-[130px]">{r.name.split(' ').slice(0, 4).join(' ')}...</div>
           </div>
@@ -263,7 +263,7 @@ function SOPRelationshipMap({ sopId, bpId }: { sopId: string; bpId: string }) {
       <div className="flex flex-col gap-1.5 shrink-0 min-w-[140px]">
         <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Controls</div>
         {relatedControls.map(c => (
-          <div key={c.id} className="px-2.5 py-1.5 bg-compliant-50 border border-green-200 rounded-lg">
+          <div key={c.id} className="px-2.5 py-1.5 bg-compliant-50 border border-compliant rounded-lg">
             <div className="text-[10px] font-semibold text-compliant-700">{c.id}</div>
             <div className="text-[9px] text-compliant-700 leading-tight truncate max-w-[130px]">{c.name}</div>
           </div>
@@ -899,7 +899,7 @@ function BPDetailView({ bp, onBack }: {
                   onClick={() => { setBulkMode(!bulkMode); setSelectedWorkflows(new Set()); }}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold transition-colors ${
                     bulkMode
-                      ? 'bg-high-50 text-high-700 hover:bg-orange-200'
+                      ? 'bg-high-50 text-high-700 hover:bg-high-50'
                       : 'border border-border text-text-secondary hover:bg-paper-50'
                   }`}
                 >

@@ -60,9 +60,9 @@ function DetectionOutput() {
           </div>
           <span className="text-[10px] text-text-muted">{r.date}</span>
           <div className="flex gap-1">
-            <button className="px-2 py-1 rounded-md text-[9px] font-semibold bg-compliant-50 text-compliant-700 hover:bg-compliant-50 transition-colors cursor-pointer">Approve</button>
-            <button className="px-2 py-1 rounded-md text-[9px] font-semibold bg-risk-50 text-risk-700 hover:bg-risk-50 transition-colors cursor-pointer">Block</button>
-            <button className="px-2 py-1 rounded-md text-[9px] font-semibold bg-mitigated-50 text-mitigated-700 hover:bg-mitigated-50 transition-colors cursor-pointer">Escalate</button>
+            <button className="px-2 py-1 rounded-md text-[9px] font-semibold bg-compliant-50 text-compliant-700 hover:bg-compliant-50/80 transition-colors cursor-pointer">Approve</button>
+            <button className="px-2 py-1 rounded-md text-[9px] font-semibold bg-risk-50 text-risk-700 hover:bg-risk-50/80 transition-colors cursor-pointer">Block</button>
+            <button className="px-2 py-1 rounded-md text-[9px] font-semibold bg-mitigated-50 text-mitigated-700 hover:bg-mitigated-50/80 transition-colors cursor-pointer">Escalate</button>
           </div>
         </motion.div>
       ))}
@@ -225,7 +225,7 @@ function ReconciliationOutput() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className={`grid grid-cols-[1fr_auto_1fr] gap-0 rounded-xl border overflow-hidden ${m.status === 'unmatched' ? 'border-risk' : m.status === 'variance' ? 'border-amber-200' : 'border-border-light'}`}
+            className={`grid grid-cols-[1fr_auto_1fr] gap-0 rounded-xl border overflow-hidden ${m.status === 'unmatched' ? 'border-risk' : m.status === 'variance' ? 'border-mitigated' : 'border-border-light'}`}
           >
             {/* PO Side */}
             <div className="p-3.5 bg-white">
