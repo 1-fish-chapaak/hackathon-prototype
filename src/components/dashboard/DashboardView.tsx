@@ -870,73 +870,156 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
             {/* AI Daily Digest */}
             <AlertsPanel dashboardId={activeId} />
 
-            {/* KPIs — Bento Grid */}
-            <div className="grid grid-cols-12 gap-3 mb-6">
-              {dashboard.kpis.map((kpi, i) => {
-                const colSpan = i === 0 ? 'col-span-5' : i === 1 ? 'col-span-3' : 'col-span-4';
-                const Icon = kpi.icon;
-                const trendColor = kpi.trend === 'up' ? (kpi.change.includes('-') ? 'text-emerald-600' : 'text-emerald-600') : 'text-red-500';
-                // Mini chart data per card position
-                const MINI_CHARTS: number[][] = [
-                  [35, 42, 38, 52, 48, 58, 55, 68, 62, 75, 70, 80],
-                  [60, 45, 55, 35, 50, 40, 48, 30, 42, 25, 35, 23],
-                  [1.2, 1.4, 1.3, 1.5, 1.4, 1.6, 1.5, 1.3, 1.2, 1.0, 0.9, 0.8],
-                  [88, 89, 87, 90, 91, 89, 92, 91, 93, 92, 94, 94.2],
-                ];
-                const chartData = MINI_CHARTS[i % 4];
-                const chartMax = Math.max(...chartData);
-                const chartMin = Math.min(...chartData);
-                return (
+            {/* KPIs — Colorful Bento Grid */}
+            {(() => {
+              const COMPLIANCE_DATA = [88, 89, 87, 90, 91, 89, 92, 91, 93, 92, 94, 94.2];
+              const compMax = Math.max(...COMPLIANCE_DATA);
+              const compMin = Math.min(...COMPLIANCE_DATA);
+              const RISK_BARS = [45, 52, 48, 55, 50, 60, 65];
+              const riskMax = Math.max(...RISK_BARS);
+              const SAVINGS_BARS = [8, 12, 10, 15, 18, 20, 24];
+              const savMax = Math.max(...SAVINGS_BARS);
+              return (
+                <div className="grid grid-cols-12 grid-rows-2 gap-3 mb-6" style={{ gridAutoRows: 'minmax(0, 1fr)' }}>
+                  {/* ── FY26 Compliance Score — spans left 5 cols, 2 rows ── */}
                   <motion.div
-                    key={kpi.title}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 + i * 0.05 }}
-                    className={`${colSpan} rounded-xl p-5 bg-canvas-elevated border border-canvas-border cursor-default transition-all duration-150 hover:border-paper-300`}
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                    className="col-span-5 row-span-2 rounded-2xl p-6 flex flex-col justify-between cursor-default border border-canvas-border bg-white relative overflow-hidden"
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className={`p-1.5 rounded-lg ${kpi.color}`}>
-                          <Icon size={13} />
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[12px] font-semibold text-brand-600">FY26</span>
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                          <TrendingUp size={11} />
+                          +12.4%
                         </div>
-                        <span className="text-[11px] font-medium text-text-muted">{kpi.title}</span>
                       </div>
-                      <div className={`flex items-center gap-1 text-[10px] font-semibold ${trendColor}`}>
-                        {kpi.trend === 'up' ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
-                        {kpi.change}
+                      <div className="text-[48px] font-extrabold leading-none tracking-tight text-text">94.2%</div>
+                      <p className="text-[13px] text-text-muted mt-2 leading-relaxed max-w-[280px]">
+                        Compliance score driven by automated controls and continuous monitoring across 4 business processes.
+                      </p>
+                    </div>
+                    {/* Purple area chart */}
+                    <svg width="100%" height="120" viewBox="0 0 240 120" preserveAspectRatio="none" className="mt-4">
+                      <defs>
+                        <linearGradient id="compFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#8838DE" stopOpacity="0.25" />
+                          <stop offset="100%" stopColor="#8838DE" stopOpacity="0.02" />
+                        </linearGradient>
+                      </defs>
+                      <polyline
+                        points={`0,120 ${COMPLIANCE_DATA.map((v, j) => `${j * (240 / (COMPLIANCE_DATA.length - 1))},${120 - ((v - compMin) / (compMax - compMin)) * 100}`).join(' ')} 240,120`}
+                        fill="url(#compFill)" stroke="none"
+                      />
+                      <polyline
+                        points={COMPLIANCE_DATA.map((v, j) => `${j * (240 / (COMPLIANCE_DATA.length - 1))},${120 - ((v - compMin) / (compMax - compMin)) * 100}`).join(' ')}
+                        fill="none" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                      />
+                    </svg>
+                  </motion.div>
+
+                  {/* ── Money at Risk — top middle ── */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                    className="col-span-4 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
+                    style={{ background: '#FFF9EB', borderColor: '#F5E6C0' }}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#F59E0B' }}>
+                          <DollarSign size={13} className="text-white" />
+                        </div>
+                        <span className="text-[12px] font-semibold" style={{ color: '#92400E' }}>Money at Risk</span>
+                      </div>
+                      <div className="text-[32px] font-extrabold leading-none tracking-tight" style={{ color: '#1C1917' }}>{'\u20B9'}6.16L</div>
+                      <div className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold text-red-600">
+                        <TrendingDown size={10} />
+                        -{'\u20B9'}2.1L <span className="text-text-muted font-normal">vs last quarter</span>
                       </div>
                     </div>
-                    <div className="text-[24px] font-bold leading-none tracking-tight text-text mb-3">{kpi.value}</div>
-                    {/* Mini sparkline — unique per card */}
-                    {i === 0 ? (
-                      <div className="flex items-end gap-[3px] h-8">
-                        {chartData.map((v, j) => (
-                          <motion.div key={j} initial={{ height: 0 }} animate={{ height: `${((v - chartMin) / (chartMax - chartMin)) * 100}%` }} transition={{ delay: 0.2 + j * 0.03, duration: 0.3 }}
-                            className="flex-1 rounded-sm min-h-[2px]" style={{ background: j >= chartData.length - 2 ? '#6a12cd' : 'rgba(106,18,205,0.15)' }} />
-                        ))}
-                      </div>
-                    ) : i === 1 ? (
-                      <svg width="100%" height="32" viewBox="0 0 120 32" preserveAspectRatio="none">
-                        <polyline points={chartData.map((v, j) => `${j * (120 / (chartData.length - 1))},${32 - ((v - chartMin) / (chartMax - chartMin)) * 28}`).join(' ')} fill="none" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        <polyline points={`0,32 ${chartData.map((v, j) => `${j * (120 / (chartData.length - 1))},${32 - ((v - chartMin) / (chartMax - chartMin)) * 28}`).join(' ')} 120,32`} fill="rgba(239,68,68,0.06)" stroke="none" />
-                      </svg>
-                    ) : i === 2 ? (
-                      <svg width="100%" height="32" viewBox="0 0 120 32" preserveAspectRatio="none">
-                        <polyline points={chartData.map((v, j) => `${j * (120 / (chartData.length - 1))},${32 - ((v - chartMin) / (chartMax - chartMin)) * 28}`).join(' ')} fill="none" stroke="#0891b2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        <polyline points={`0,32 ${chartData.map((v, j) => `${j * (120 / (chartData.length - 1))},${32 - ((v - chartMin) / (chartMax - chartMin)) * 28}`).join(' ')} 120,32`} fill="rgba(8,145,178,0.06)" stroke="none" />
-                      </svg>
-                    ) : (
-                      <div className="flex items-end gap-[3px] h-8">
-                        {chartData.map((v, j) => (
-                          <motion.div key={j} initial={{ height: 0 }} animate={{ height: `${((v - chartMin) / (chartMax - chartMin)) * 100}%` }} transition={{ delay: 0.2 + j * 0.03, duration: 0.3 }}
-                            className="flex-1 rounded-sm min-h-[2px]" style={{ background: j >= chartData.length - 2 ? '#16a34a' : 'rgba(22,163,74,0.15)' }} />
-                        ))}
-                      </div>
-                    )}
+                    {/* Mini bar chart */}
+                    <div className="flex items-end gap-1.5 h-7 mt-3">
+                      {RISK_BARS.map((v, j) => (
+                        <motion.div key={j} initial={{ height: 0 }} animate={{ height: `${(v / riskMax) * 100}%` }} transition={{ delay: 0.25 + j * 0.04, duration: 0.3 }}
+                          className="flex-1 rounded-sm min-h-[3px]" style={{ background: j >= RISK_BARS.length - 1 ? '#7C3AED' : 'rgba(124,58,237,0.2)' }} />
+                      ))}
+                    </div>
                   </motion.div>
-                );
-              })}
-            </div>
+
+                  {/* ── SOX Deadline — top right ── */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                    className="col-span-3 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
+                    style={{ background: '#F3EAFF', borderColor: '#DBC4F7' }}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#8838DE' }}>
+                          <Clock size={13} className="text-white" />
+                        </div>
+                        <span className="text-[12px] font-semibold text-brand-700">SOX Deadline</span>
+                      </div>
+                      <div className="text-[40px] font-extrabold leading-none tracking-tight text-brand-700">6</div>
+                      <div className="text-[13px] font-semibold text-brand-600 mt-1">Days remaining</div>
+                    </div>
+                    {/* Dot grid */}
+                    <div className="grid grid-cols-6 gap-1.5 mt-3">
+                      {Array.from({ length: 24 }).map((_, j) => (
+                        <div key={j} className="w-2 h-2 rounded-full" style={{ background: j < 18 ? '#A366F0' : 'rgba(163,102,240,0.2)' }} />
+                      ))}
+                    </div>
+                  </motion.div>
+
+                  {/* ── Open Exceptions — bottom middle ── */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+                    className="col-span-4 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
+                    style={{ background: '#FFF9EB', borderColor: '#F5E6C0' }}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#EF4444' }}>
+                          <AlertTriangle size={13} className="text-white" />
+                        </div>
+                        <span className="text-[12px] font-semibold" style={{ color: '#92400E' }}>Open Exceptions</span>
+                        <span className="ml-auto text-[10px] text-text-muted font-medium">This week</span>
+                      </div>
+                      <div className="text-[40px] font-extrabold leading-none tracking-tight" style={{ color: '#1C1917' }}>7</div>
+                      <div className="text-[12px] text-text-muted mt-1.5">3 unassigned, 4 in progress</div>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold text-red-600">
+                      <TrendingUp size={10} />
+                      +2 <span className="text-text-muted font-normal">this week</span>
+                    </div>
+                  </motion.div>
+
+                  {/* ── Savings YTD — bottom right ── */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                    className="col-span-3 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
+                    style={{ background: '#ECFDF5', borderColor: '#A7F3D0' }}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#16A34A' }}>
+                          <Activity size={13} className="text-white" />
+                        </div>
+                        <span className="text-[12px] font-semibold text-emerald-700">Savings YTD</span>
+                      </div>
+                      <div className="text-[36px] font-extrabold leading-none tracking-tight text-emerald-700">{'\u20B9'}24L</div>
+                      <div className="text-[12px] text-emerald-600/70 mt-1.5">Cost avoided via AI workflows</div>
+                    </div>
+                    {/* Green bar chart */}
+                    <div className="flex items-end gap-1.5 h-8 mt-2">
+                      {SAVINGS_BARS.map((v, j) => (
+                        <motion.div key={j} initial={{ height: 0 }} animate={{ height: `${(v / savMax) * 100}%` }} transition={{ delay: 0.35 + j * 0.04, duration: 0.3 }}
+                          className="flex-1 rounded-sm min-h-[3px]" style={{ background: j >= SAVINGS_BARS.length - 2 ? '#16A34A' : 'rgba(22,163,74,0.18)' }} />
+                      ))}
+                    </div>
+                  </motion.div>
+                </div>
+              );
+            })()}
 
             {/* Charts row */}
             <motion.div
