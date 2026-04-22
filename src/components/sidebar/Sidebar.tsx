@@ -166,25 +166,25 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -4, scale: 0.98 }}
               transition={{ duration: 0.12 }}
-              className="absolute left-3 right-3 top-full mt-1 bg-canvas-elevated border border-canvas-border rounded-lg shadow-lg z-50 overflow-hidden"
+              className="absolute left-3 right-3 top-full mt-1 bg-brand-900 border border-white/[0.1] rounded-lg shadow-lg z-50 overflow-hidden"
             >
               {/* Search */}
               <div className="p-2.5">
-                <div className="flex items-center gap-2 px-3 h-9 rounded-lg border border-canvas-border bg-canvas text-[13px] focus-within:border-brand-600 transition-colors">
-                  <SearchIcon size={14} className="text-ink-400 shrink-0" />
+                <div className="flex items-center gap-2 px-3 h-9 rounded-lg border border-white/[0.12] bg-white/[0.06] text-[13px] focus-within:border-brand-400 transition-colors">
+                  <SearchIcon size={14} className="text-white/[0.45] shrink-0" />
                   <input
                     type="text"
                     placeholder="Search Team"
                     value={teamSearch}
                     onChange={e => setTeamSearch(e.target.value)}
-                    className="flex-1 bg-transparent outline-none text-ink-800 placeholder:text-ink-300 text-[13px]"
+                    className="flex-1 bg-transparent outline-none text-white placeholder:text-white/[0.35] text-[13px]"
                     style={{ boxShadow: 'none' }}
                     autoFocus
                   />
                 </div>
               </div>
 
-              <div className="h-px bg-canvas-border" />
+              <div className="h-px bg-white/[0.08]" />
 
               {/* Team list */}
               <div className="py-1 max-h-[220px] overflow-y-auto">
@@ -192,15 +192,15 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                   <button
                     key={team.id}
                     onClick={() => { setActiveTeam(team.id); setTeamOpen(false); }}
-                    className="w-full flex items-center justify-between px-4 py-2.5 text-[13px] text-ink-800 hover:bg-brand-50 transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-[13px] text-white/[0.85] hover:bg-white/[0.08] transition-colors cursor-pointer"
                   >
                     <span style={{ fontWeight: activeTeam === team.id ? 600 : 400 }}>{team.name}</span>
                     {activeTeam === team.id ? (
-                      <div className="w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center">
+                      <div className="w-5 h-5 rounded-full bg-brand-400 flex items-center justify-center">
                         <Check size={11} className="text-white" />
                       </div>
                     ) : (
-                      <div className="w-5 h-5 rounded-full border border-ink-300" />
+                      <div className="w-5 h-5 rounded-full border border-white/[0.25]" />
                     )}
                   </button>
                 ))}
