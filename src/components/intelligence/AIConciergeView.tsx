@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import {
-  FileSearch, Table2,
+  FileSearch, Table2, Workflow,
   Search, Sparkles, Bot, Info,
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
@@ -45,11 +45,25 @@ const tools: Tool[] = [
     ],
     view: 'ai-concierge-table-extractor',
   },
+  {
+    id: 'workflow-builder',
+    icon: Workflow,
+    title: 'Workflow Builder',
+    description: 'Design a custom audit workflow from a prompt — upload data, map columns, run.',
+    tags: [
+      { label: 'Workflow', color: 'bg-violet-100 text-violet-700' },
+      { label: 'Audit', color: 'bg-indigo-100 text-indigo-700' },
+      { label: 'Builder', color: 'bg-fuchsia-100 text-fuchsia-700' },
+    ],
+    beta: true,
+    view: 'ai-concierge-workflow-builder',
+  },
 ];
 
 const iconGradients = [
   'from-rose-500 to-pink-600',
   'from-sky-500 to-indigo-600',
+  'from-violet-500 to-fuchsia-600',
 ];
 
 export default function AIConciergeView({ setView }: Props) {

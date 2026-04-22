@@ -30,6 +30,7 @@ export type View =
   | 'ai-concierge'
   | 'ai-concierge-forensics'
   | 'ai-concierge-table-extractor'
+  | 'ai-concierge-workflow-builder'
   | 'findings'
   // System
   | 'configuration'
