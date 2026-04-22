@@ -166,42 +166,53 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -4, scale: 0.98 }}
               transition={{ duration: 0.12 }}
-              className="absolute left-3 right-3 top-full mt-1 border border-white/[0.1] rounded-lg shadow-lg z-50 overflow-hidden"
-              style={{ background: '#371A58' }}
+              className="absolute left-3 right-3 top-full mt-1 rounded-xl shadow-2xl z-50 overflow-hidden"
+              style={{
+                background: 'linear-gradient(180deg, #1E0B3B 0%, #170330 100%)',
+                border: '1px solid rgba(163, 102, 240, 0.18)',
+                boxShadow: '0 8px 32px rgba(23, 3, 48, 0.6), 0 0 0 1px rgba(163, 102, 240, 0.08)',
+              }}
             >
               {/* Search */}
-              <div className="p-2.5">
-                <div className="flex items-center gap-2 px-3 h-9 rounded-lg border border-white/[0.12] bg-white/[0.06] text-[13px] focus-within:border-brand-400 transition-colors">
-                  <SearchIcon size={14} className="text-white/[0.45] shrink-0" />
+              <div className="p-3">
+                <div
+                  className="flex items-center gap-2.5 px-3.5 h-10 rounded-lg text-[13px] transition-colors"
+                  style={{
+                    border: '1.5px solid rgba(163, 102, 240, 0.45)',
+                    background: 'rgba(163, 102, 240, 0.06)',
+                    boxShadow: '0 0 12px rgba(163, 102, 240, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.03)',
+                  }}
+                >
+                  <SearchIcon size={15} className="text-brand-400/60 shrink-0" />
                   <input
                     type="text"
                     placeholder="Search Team"
                     value={teamSearch}
                     onChange={e => setTeamSearch(e.target.value)}
-                    className="flex-1 bg-transparent outline-none text-white placeholder:text-white/[0.35] text-[13px]"
+                    className="flex-1 bg-transparent outline-none text-white placeholder:text-white/40 text-[13px]"
                     style={{ boxShadow: 'none' }}
                     autoFocus
                   />
                 </div>
               </div>
 
-              <div className="h-px bg-white/[0.08]" />
+              <div className="h-px mx-3" style={{ background: 'linear-gradient(90deg, transparent, rgba(163, 102, 240, 0.2), transparent)' }} />
 
               {/* Team list */}
-              <div className="py-1 max-h-[220px] overflow-y-auto">
+              <div className="py-1.5 max-h-[220px] overflow-y-auto">
                 {filteredTeams.map(team => (
                   <button
                     key={team.id}
                     onClick={() => { setActiveTeam(team.id); setTeamOpen(false); }}
-                    className="w-full flex items-center justify-between px-4 py-2.5 text-[13px] text-white/[0.85] hover:bg-white/[0.08] transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-between px-4 py-3 text-[14px] text-white/90 hover:bg-white/[0.06] transition-colors cursor-pointer"
                   >
                     <span style={{ fontWeight: activeTeam === team.id ? 600 : 400 }}>{team.name}</span>
                     {activeTeam === team.id ? (
-                      <div className="w-5 h-5 rounded-full bg-brand-400 flex items-center justify-center">
-                        <Check size={11} className="text-white" />
+                      <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #A366F0, #8838DE)', boxShadow: '0 2px 8px rgba(163, 102, 240, 0.4)' }}>
+                        <Check size={12} className="text-white" strokeWidth={2.5} />
                       </div>
                     ) : (
-                      <div className="w-5 h-5 rounded-full border border-white/[0.25]" />
+                      <div className="w-[22px] h-[22px] rounded-full border-[1.5px] border-white/20" />
                     )}
                   </button>
                 ))}
