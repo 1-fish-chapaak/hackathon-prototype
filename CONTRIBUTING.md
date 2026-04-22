@@ -1,296 +1,280 @@
 # Collaborator Guide — hackathon-prototype
 
-This guide tells you everything you need to make changes, open a PR, and get
-them deployed. It's also written so you can paste the **Appendix** into a fresh
-Claude Code session and have it pick up the context immediately.
+Multiple pods (teams) work on this repo in parallel, each from their own
+Claude Code CLI session, pushing directly to `main`. The risks are NOT
+technical (this is a mocked-data demo) — the risks are **stepping on each
+other's design**, **building the same thing twice**, and **breaking the
+shared user flow**. The Claude preflight catches all three before you push.
+
+This guide is also designed to be pasted into a fresh Claude Code session —
+see the [Appendix](#appendix--paste-this-into-a-fresh-claude-code-session).
 
 ---
 
 ## 1. What this repo is
 
-- **Stack:** React + TypeScript + Vite (frontend-only, mocked data — no backend, no real API keys needed).
+- **Stack:** React 18 + TypeScript + Vite. Frontend-only, all data mocked in `src/data/mockData.ts`.
 - **Repo:** https://github.com/1-fish-chapaak/hackathon-prototype
-- **Branch model:** `main` is the deployable branch. Every push to `main` auto-deploys to Cloud Run.
 - **Live URL:** https://hackathon-demo-ujihgyhrpa-uc.a.run.app
-- **GCP project:** `gen-lang-client-0250661731` · region `us-central1` · service `hackathon-demo`
-- **Source repo (do not push to):** `1-fish-chapaak/auditify-copilot` (the upstream this was forked from). This repo is the demo/hackathon variant — keep changes here.
+- **Branch model:** **direct push to `main`**. Every push auto-deploys to Cloud Run in ~2 min.
+- **Don't touch:** the upstream `1-fish-chapaak/auditify-copilot`, and the production stack at `auditify.platform.irame.ai`.
 
 ---
 
 ## 2. One-time setup
 
-### 2.1 Tools you need
+### 2.1 Tools
 
 ```bash
-# macOS (Homebrew)
+# macOS
 brew install git gh node@22
 
-# verify
-git --version
-gh --version
-node --version   # >= 22
-npm --version
+# Claude Code CLI (required for the preflight review)
+npm install -g @anthropic-ai/claude-code
+claude --version
+
+# Auth Claude CLI to your account (one-time)
+claude          # opens browser to log in
 ```
 
-You do **not** need `gcloud` or `docker` locally — the pipeline handles all GCP/Docker work.
-
-### 2.2 Authenticate to GitHub
+### 2.2 GitHub access
 
 ```bash
-gh auth login                    # pick GitHub.com, HTTPS, login with browser
-gh auth status                   # confirm you're logged in
+gh auth login                    # GitHub.com → HTTPS → browser
+gh auth status                   # confirm
 ```
 
-You need **write access** to `1-fish-chapaak/hackathon-prototype`. Ask the repo owner to add you as a collaborator if `git push` is rejected.
+You need write access to `1-fish-chapaak/hackathon-prototype`. Ask the repo owner if `git push` is rejected.
 
-### 2.3 Clone
+### 2.3 Clone and bootstrap
 
 ```bash
 git clone https://github.com/1-fish-chapaak/hackathon-prototype.git
 cd hackathon-prototype
 npm install
+npm run setup-hooks         # ★ enables the Claude preflight on git push
 ```
+
+`setup-hooks` configures `core.hooksPath=.githooks` so the pre-push hook runs
+the preflight every time you `git push`. Run it once per clone.
 
 ### 2.4 Run locally
 
 ```bash
-npm run dev          # http://localhost:5173 (Vite default)
+npm run dev          # http://localhost:5173
 npm run build        # production build → dist/
-npm run lint         # eslint
+npm run lint
 ```
-
-The app uses mocked data from `src/data/mockData.ts` — there is nothing to configure.
 
 ---
 
-## 3. Day-to-day workflow
+## 3. The pod workflow
 
-### 3.1 Pick up latest
+### 3.1 The full loop
 
-```bash
-git checkout main
-git pull origin main
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  in your Claude CLI session, in the repo                         │
+└──────────────────────────────────────────────────────────────────┘
+            │
+            ▼
+   pull main, make changes, commit
+            │
+            ▼
+   git push                                 ←── pre-push hook fires
+            │
+            ▼
+   ┌────────────────────────────────────┐
+   │  CLAUDE PREFLIGHT REVIEW           │
+   │  · design conflicts vs main        │
+   │  · feature redundancy              │
+   │  · UX / flow gaps                  │
+   │  (~30-60s, advisory, never blocks) │
+   └────────────────────────────────────┘
+            │
+            ▼
+   push completes → GitHub
+            │
+            ▼
+   .github/workflows/deploy.yml runs
+            │
+            ▼
+   Cloud Run hackathon-demo updated   ~2 min total
+            │
+            ▼
+   https://hackathon-demo-ujihgyhrpa-uc.a.run.app
 ```
 
-### 3.2 Create a feature branch
+### 3.2 The preflight, in detail
 
-**Always branch off `main`.** Don't commit directly to `main` — open a PR so the Claude reviewer can run.
+When you `git push`, the hook runs `tools/preflight-review.sh`, which calls
+the Claude CLI with a prompt focused on **three axes only**:
+
+1. **Design conflicts** — new colors / typography / spacing / card patterns
+   that contradict the established bento + charcoal + purple-accent system.
+2. **Feature redundancy** — building something already in `src/`. Two views
+   for the same job, parallel mock-data shapes for the same entity, duplicate
+   component logic.
+3. **UX / flow gaps** — dead-end states, broken back button, "two screens
+   with the same name doing different things", CTAs that lead nowhere.
+
+**Explicitly NOT raised:** perf, scaling, type-nits, tests, "best practices",
+refactor suggestions, accessibility-unless-broken, security. This is a demo.
+
+The output appears directly in your terminal. The push **always proceeds**
+(advisory only). You and your Claude session decide whether to address the
+findings now, fix-forward in a follow-up commit, or ignore them.
+
+### 3.3 Skipping the preflight
+
+For a doc-only commit or an emergency fix:
+
+```bash
+SKIP_PREFLIGHT=1 git push
+```
+
+Or run it on demand without pushing:
+
+```bash
+npm run review:local
+```
+
+### 3.4 Daily commands
+
+```bash
+# pull latest
+git checkout main && git pull origin main
+
+# work locally — your Claude CLI does the editing
+# ... commits with `git commit -m "feat: ..."` ...
+
+# push (preflight runs automatically)
+git push
+```
+
+That's the whole flow. **No PRs, no branches, no waiting** — just commit + push.
+Pods that want extra eyes can still open a PR (see §4) and the same review
+runs there as a comment.
+
+### 3.5 Commit style
+
+Short imperative subject, optional body explaining *why* (not *what* — the diff
+shows what):
+
+```
+feat: add risk register inline filter chip
+fix: sidebar collapse no longer hides the Settings link
+chore: bump rive-app to 4.27.3
+docs: clarify preflight skip in CONTRIBUTING
+```
+
+Prefixes: `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`.
+
+---
+
+## 4. Optional: opening a PR
+
+You don't need to, but if you want a second opinion before merging:
 
 ```bash
 git checkout -b your-name/short-description
-# examples:
-#   git checkout -b alex/add-export-button
-#   git checkout -b sam/fix-sidebar-overflow
+# ... commits ...
+git push -u origin HEAD
+gh pr create --fill
 ```
 
-### 3.3 Make changes, commit
+The same Claude review runs as a PR comment via `.github/workflows/claude-review.yml`.
+Merging the PR to `main` triggers the deploy.
 
-```bash
-# stage specific files (avoid `git add .` so you don't sweep up junk)
-git add src/components/path/to/File.tsx
-
-# commit with a clear message: what + why (one line is fine for small changes)
-git commit -m "fix: sidebar overflow on narrow viewports
-
-The flex container was overflowing on <1024px because the icon column
-was set to fixed width instead of flex-shrink:0."
-```
-
-Commit style: short imperative subject (`fix:`, `feat:`, `chore:`, `docs:`, `refactor:`), optional body explaining *why* (not *what* — the diff shows what).
-
-### 3.4 Push and open a PR
-
-```bash
-git push -u origin HEAD            # first push of the branch
-# subsequent pushes: just `git push`
-
-gh pr create --fill                # opens browser to confirm
-# or scripted:
-gh pr create --title "fix: sidebar overflow" --body "Fixes overflow at <1024px viewport widths."
-```
-
-### 3.5 What happens after you open the PR
-
-Two automated checks run in parallel:
-
-| Check | When | What it does | Where to see it |
-| --- | --- | --- | --- |
-| **Claude PR Review** | PR opened, new commits, or `@claude` comment | Reads the diff, comments inline on issues that will break things | "Checks" tab on the PR + inline comments |
-| **Deploy to Cloud Run** | Only on push to `main` (i.e. after merge) | Builds Docker image, pushes to Artifact Registry, deploys to `hackathon-demo` | "Actions" tab + Cloud Run console |
-
-**To re-run the Claude review** on a PR (e.g. after addressing comments), drop a comment on the PR mentioning `@claude` and it'll re-review.
-
-### 3.6 Merge
-
-Once the Claude review is green-ish (it's advisory, not blocking) and a human collaborator approves:
-
-```bash
-gh pr merge --squash --delete-branch
-# or use the GitHub UI "Squash and merge"
-```
-
-The merge to `main` triggers the deploy workflow automatically — usually live in **~2 minutes**.
+You can re-run the review on a PR by commenting `@claude` in the PR thread.
 
 ---
 
-## 4. The pipeline in detail
+## 5. The pipeline files
 
-Two GitHub Actions workflows live in `.github/workflows/`:
+| File | Purpose | Triggers when |
+| --- | --- | --- |
+| `tools/preflight-review.sh` | Local Claude review (design / redundancy / UX) | You run `git push` (after `npm run setup-hooks`) — or `npm run review:local` |
+| `.githooks/pre-push` | Calls the preflight from git's hook system | Same |
+| `.github/workflows/deploy.yml` | Build Docker → push to Artifact Registry → deploy to Cloud Run | Push to `main` |
+| `.github/workflows/claude-review.yml` | Same focused review, posted as PR comment | PR opened / `@claude` comment |
+| `cloudbuild.yaml` | Manual `gcloud builds submit` config (not used by CI) | Only if you run it explicitly |
+| `Dockerfile` + `nginx.conf` | Multi-stage node:22-alpine → nginx:alpine on :8080 | Used by deploy and cloudbuild |
 
-### 4.1 `deploy.yml` — push to main → Cloud Run
+### 5.1 Auth model (FYI, you don't need to touch it)
 
-```
-push to main
-   │
-   ▼
-checkout
-   │
-   ▼
-google-github-actions/auth   ← keyless (Workload Identity Federation)
-   │
-   ▼
-docker build  ──►  docker push to Artifact Registry
-   │                 us-central1-docker.pkg.dev/<project>/cloud-run-source-deploy/hackathon-demo
-   ▼
-gcloud run deploy hackathon-demo
-   │
-   ▼
-new revision live at https://hackathon-demo-ujihgyhrpa-uc.a.run.app
-```
+GitHub Actions auths to GCP via **Workload Identity Federation** — no service
+account keys exist anywhere. Only repos under `1-fish-chapaak` can use the
+deploy SA `gh-actions-deploy@gen-lang-client-0250661731.iam.gserviceaccount.com`.
 
-**Auth model:** GitHub Actions exchanges its OIDC token with GCP via Workload Identity Federation. **No GCP service-account key is stored in GitHub.** Only repos under the `1-fish-chapaak` GitHub org/user can use it (enforced by attribute condition).
-
-You should not need to touch anything in `deploy.yml` for normal feature work.
-
-### 4.2 `claude-review.yml` — Claude reviews your PR
-
-Uses the official `anthropics/claude-code-action`. Authenticates with the `CLAUDE_CODE_OAUTH_TOKEN` repo secret (already configured). The reviewer prompt focuses on **what will break** — regressions, type errors, broken UI flows, missed edge cases.
-
-To customize the review prompt, edit the `prompt:` block in `.github/workflows/claude-review.yml` and open a PR.
-
-### 4.3 `cloudbuild.yaml` (optional, for local use)
-
-Lives at the repo root. Lets you trigger a build manually from your laptop:
-
-```bash
-# requires gcloud installed and authenticated to gen-lang-client-0250661731
-gcloud builds submit --config=cloudbuild.yaml \
-  --substitutions=SHORT_SHA=$(git rev-parse --short HEAD) \
-  --region=us-central1
-```
-
-The pipeline does **not** use this file — it's only for ad-hoc builds.
+The Claude PR reviewer auths via the `CLAUDE_CODE_OAUTH_TOKEN` repo secret.
 
 ---
 
-## 5. Verifying / debugging deploys
-
-### 5.1 Watch a deploy in progress
+## 6. Verifying / debugging
 
 ```bash
+# what's the latest deploy doing?
+gh run list --repo 1-fish-chapaak/hackathon-prototype --limit 5
 gh run watch --repo 1-fish-chapaak/hackathon-prototype
-# or list recent runs:
-gh run list --repo 1-fish-chapaak/hackathon-prototype --limit 10
-```
 
-### 5.2 Confirm the live revision
+# is the live site up?
+curl -sS -o /dev/null -w "HTTP %{http_code}\n" https://hackathon-demo-ujihgyhrpa-uc.a.run.app/
 
-```bash
-# requires gcloud + access to the GCP project
+# (requires gcloud) what revision is live?
 gcloud run services describe hackathon-demo \
   --region us-central1 --project gen-lang-client-0250661731 \
-  --format="value(status.url,status.latestReadyRevisionName,spec.template.spec.containers[0].image)"
+  --format="value(status.latestReadyRevisionName,spec.template.spec.containers[0].image)"
 ```
 
-Or just:
+Roll back via Cloud Run revisions:
 
 ```bash
-curl -sS -o /dev/null -w "HTTP %{http_code}\n" https://hackathon-demo-ujihgyhrpa-uc.a.run.app/
-```
-
-### 5.3 View Cloud Run logs
-
-```bash
-gcloud run services logs read hackathon-demo \
-  --region us-central1 --project gen-lang-client-0250661731 --limit 100
-```
-
-Or in the console: https://console.cloud.google.com/run/detail/us-central1/hackathon-demo/logs?project=gen-lang-client-0250661731
-
-### 5.4 Rolling back
-
-Cloud Run keeps every revision. To roll back:
-
-```bash
-# list revisions
-gcloud run revisions list --service=hackathon-demo \
-  --region=us-central1 --project=gen-lang-client-0250661731
-
-# point 100% traffic at a previous revision
+gcloud run revisions list --service=hackathon-demo --region=us-central1 --project=gen-lang-client-0250661731
 gcloud run services update-traffic hackathon-demo \
   --to-revisions=hackathon-demo-00001-xyz=100 \
   --region=us-central1 --project=gen-lang-client-0250661731
 ```
 
-(Replace `hackathon-demo-00001-xyz` with the revision name from the list.)
-
 ---
 
-## 6. Common gotchas
+## 7. Common gotchas
 
-- **Don't push directly to `main`.** It deploys immediately and skips Claude review. If you do this by accident, fix forward with another PR.
-- **Don't commit `node_modules/`, `dist/`, or `.serena/`.** All are in `.gitignore`. Use `git status` before committing.
-- **Don't add real API keys.** This is a mocked-data demo. If you find yourself wanting `process.env.SOMETHING_KEY`, talk to the team first — secrets handling isn't set up.
-- **The deploy SA can't push to other GCP services.** It only has `run.admin` + `artifactregistry.writer` + `iam.serviceAccountUser` + `logging.logWriter` + `storage.admin` on this project. Don't try to use it for anything else.
-- **Claude review is advisory, not blocking.** A failing/critical review doesn't block merge — you and a human reviewer decide.
-- **`origin` points to this repo.** If you're working from a clone of the upstream `auditify-copilot`, add `hackathon` as a separate remote (`git remote add hackathon https://github.com/1-fish-chapaak/hackathon-prototype.git`) — don't push experimental work to the upstream by accident.
-
----
-
-## 7. Asking for help from Claude
-
-If you've installed Claude Code (`npm install -g @anthropic-ai/claude-code`), you can `cd` into the repo and ask it for help on any task. The appendix below is a self-contained briefing — paste it as your first message in a fresh Claude session and it'll have the full context.
+- **You skipped `npm run setup-hooks`.** No preflight ran on your push. Re-run it once per clone.
+- **Don't commit `node_modules/`, `dist/`, or `.serena/`.** All in `.gitignore`. Use `git add <specific files>`, not `git add .`.
+- **Don't add real API keys.** Mocked-data demo only. No `.env`, no secrets.
+- **The deploy auto-fires on every main push, including doc-only changes.** That's fine (Docker build is fast and cached) but be aware.
+- **Two pods edit the same file → real git merge conflict.** Resolve locally with `git pull --rebase`, then `git push` again (preflight will re-run on the merged result).
+- **Preflight told you about a conflict — what now?** Talk to the other pod in your team channel before fixing forward. The whole point of the review is to surface coordination issues you'd otherwise discover at demo time.
 
 ---
 
 ## Appendix — paste this into a fresh Claude Code session
 
-> I'm working on the hackathon-prototype repo. Here's the context you need:
+> I'm working on the **hackathon-prototype** repo (cloned locally, you're already in it).
 >
-> **Repo:** https://github.com/1-fish-chapaak/hackathon-prototype (cloned locally; you're already in it).
-> **Stack:** React 18 + TypeScript + Vite. Frontend-only. All data is mocked in `src/data/mockData.ts` — no backend, no real API calls.
-> **Local dev:** `npm run dev` (port 5173). Build: `npm run build`. Lint: `npm run lint`.
+> **Stack:** React 18 + TypeScript + Vite. Frontend-only. All data mocked in `src/data/mockData.ts` — no backend, no real API calls, no secrets.
 >
-> **CI/CD:**
-> - Every push to `main` triggers `.github/workflows/deploy.yml`, which builds the Docker image, pushes it to Artifact Registry, and deploys to Cloud Run service `hackathon-demo` in GCP project `gen-lang-client-0250661731` (us-central1). Live URL: https://hackathon-demo-ujihgyhrpa-uc.a.run.app
-> - Every PR triggers `.github/workflows/claude-review.yml`, which runs `anthropics/claude-code-action` to review the diff. You can re-trigger it by commenting `@claude` on the PR.
-> - Auth from GitHub Actions to GCP is via Workload Identity Federation — no service-account keys stored anywhere.
+> **Pod workflow:** multiple teams push directly to `main` from their Claude CLI sessions. No PRs required. Every push to `main` auto-deploys to Cloud Run in ~2 min.
 >
-> **Branch rules:**
-> - Branch off `main`, never commit directly to `main`. Open a PR.
-> - Use `git add <specific files>` rather than `git add .`. Don't commit `node_modules/`, `dist/`, or `.serena/`.
-> - Conventional commit prefixes: `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`. Subject is imperative; optional body explains *why*.
+> - Repo: https://github.com/1-fish-chapaak/hackathon-prototype
+> - Live URL: https://hackathon-demo-ujihgyhrpa-uc.a.run.app
+> - GCP project: `gen-lang-client-0250661731` · region `us-central1` · service `hackathon-demo`
 >
-> **Don't:**
-> - Push to `main` directly (skips review and instantly deploys).
-> - Add real API keys or secrets — the app is mocked-data only.
-> - Touch the upstream repo (`1-fish-chapaak/auditify-copilot`) — this repo is the hackathon fork.
-> - Touch the production stack at `auditify.platform.irame.ai` — that's a different deployment entirely.
+> **Pre-push preflight (already enabled if `npm run setup-hooks` was run):** when you `git push`, `tools/preflight-review.sh` runs and shows a Claude review focused on **design conflicts**, **feature redundancy**, and **UX/flow gaps** vs `origin/main`. It's advisory and never blocks. Skip with `SKIP_PREFLIGHT=1 git push`. Run on demand with `npm run review:local`.
 >
-> Help me with the task below. Use the existing components and mocked data shape; follow the project's existing patterns. Run `npm run lint` and `npm run build` before claiming the task is done.
+> **Review priorities (mirror these in your own thinking before pushing):**
+> 1. Design conflicts — does this contradict the existing bento / charcoal / purple-accent design system? Different colors/typography/spacing/shapes from what's already in `src/components/`?
+> 2. Feature redundancy — does this duplicate something already in `src/`? Same view, same data shape, parallel navigation path?
+> 3. UX / flow gaps — can the user enter this state and not exit? Does navigation contradict the existing app pattern? Dead-end CTAs?
 >
-> **My task:** <describe what you want to do here>
-
----
-
-## Where the pipeline files live
-
-- `.github/workflows/deploy.yml` — Cloud Run deploy
-- `.github/workflows/claude-review.yml` — Claude PR reviewer
-- `cloudbuild.yaml` — manual `gcloud builds submit` config (not used by CI)
-- `Dockerfile` — multi-stage build (node:22-alpine → nginx:alpine on port 8080)
-- `nginx.conf` — SPA routing config
-
-If something breaks, start by reading the failing GitHub Actions log
-(`gh run view --log-failed --repo 1-fish-chapaak/hackathon-prototype <run-id>`)
-before changing config.
+> **Explicitly DO NOT optimize for:** performance, bundle size, test coverage, type strictness, error handling, refactoring, accessibility-unless-broken, security. This is a throwaway demo.
+>
+> **Conventions:**
+> - Branch off `main` if you want a PR; otherwise commit directly to `main` and push.
+> - `git add <specific files>`, not `git add .`. Don't commit `node_modules/`, `dist/`, `.serena/`.
+> - Conventional commit prefixes: `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`. Imperative subject, optional body explaining *why*.
+> - Run `npm run lint` and `npm run build` before pushing.
+> - Read `CONTRIBUTING.md` for the full workflow.
+>
+> **My task:** <describe what you want to do>
