@@ -113,7 +113,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
       <div className={`border-b border-sidebar-border shrink-0 ${isExpanded ? 'px-4 pt-[18px] pb-4' : 'px-2 py-3'}`}>
         <div className={`flex items-center ${isExpanded ? 'gap-3' : 'justify-center'}`}>
           <div className="w-[30px] h-[30px] rounded-lg bg-gradient-to-br from-brand-500 to-brand-400 flex items-center justify-center shrink-0" style={{ boxShadow: '0 2px 8px rgb(106 18 205 / 0.30)' }}>
-            <Sparkles size={14} className="text-white" />
+            <Sparkles size={12} className="text-white" />
           </div>
           <AnimatePresence>
             {isExpanded && (
@@ -124,10 +124,10 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                 transition={{ duration: 0.15 }}
                 className="overflow-hidden"
               >
-                <div className="text-[15px] font-bold text-sidebar-accent leading-tight tracking-tight whitespace-nowrap">IRAME.AI</div>
-                <div className="text-[10.5px] text-sidebar-text-dim font-medium whitespace-nowrap flex items-center gap-1">
+                <div className="text-[14px] font-bold text-sidebar-accent leading-tight tracking-tight whitespace-nowrap">IRAME.AI</div>
+                <div className="text-[12px] text-sidebar-text-dim font-medium whitespace-nowrap flex items-center gap-1">
                   Audit Intelligence
-                  <ChevronDown size={10} className="text-sidebar-text-muted" />
+                  <ChevronDown size={8} className="text-sidebar-text-muted" />
                 </div>
               </motion.div>
             )}
