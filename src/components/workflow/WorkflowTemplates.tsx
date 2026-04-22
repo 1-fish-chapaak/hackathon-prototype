@@ -307,7 +307,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                           <div className={`text-[12px] font-semibold truncate ${isSelected ? 'text-primary' : 'text-text'}`}>{wf.name}</div>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-[9px] text-text-muted">{wf.type}</span>
-                            <span className={`text-[9px] font-bold ${wf.status === 'active' ? 'text-green-600' : 'text-gray-400'}`}>●</span>
+                            <span className={`text-[9px] font-bold ${wf.status === 'active' ? 'text-compliant-700' : 'text-ink-500'}`}>●</span>
                             <span className="text-[9px] text-text-muted">{wf.runs} runs</span>
                           </div>
                         </div>
@@ -468,7 +468,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); addToast({ message: `"${wf.name}" deleted`, type: 'info' }); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ml-auto"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ml-auto"
                   >
                     <Trash2 size={11} /> Delete
                   </button>
@@ -477,7 +477,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                 {/* Insight - show on first two */}
                 {i < 2 && (
                   <div className={`mt-3 flex items-start gap-2 rounded-lg p-2.5 text-[11px] leading-relaxed ${
-                    i === 0 ? 'bg-green-50 border border-green-100 text-green-700' : 'bg-amber-50 border border-amber-100 text-amber-700'
+                    i === 0 ? 'bg-compliant-50 border border-green-100 text-compliant-700' : 'bg-mitigated-50 border border-amber-100 text-mitigated-700'
                   }`}>
                     <Sparkles size={12} className="shrink-0 mt-0.5" />
                     {i === 0 ? 'Detected 23% more duplicates after threshold adjustment. Recommend lowering fuzzy match tolerance from 85% to 80%.' :

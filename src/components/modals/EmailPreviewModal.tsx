@@ -32,7 +32,7 @@ export default function EmailPreviewModal({ recipientName, onClose }: Props) {
         {/* Header */}
         <div className="px-5 py-4 border-b border-border-light flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
+            <div className="p-2 bg-evidence-50 text-evidence-700 rounded-xl">
               <Mail size={16} />
             </div>
             <div>
@@ -40,7 +40,7 @@ export default function EmailPreviewModal({ recipientName, onClose }: Props) {
               <p className="text-[11px] text-text-muted">Notification sent to risk owner</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+          <button onClick={onClose} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer">
             <X size={16} className="text-text-muted" />
           </button>
         </div>

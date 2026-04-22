@@ -26,11 +26,11 @@ const ICON_MAP: Record<string, React.ElementType> = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  Compliance: 'text-blue-600 bg-blue-50',
-  Risk: 'text-orange-600 bg-orange-50',
-  Controls: 'text-purple-600 bg-purple-50',
-  Analytics: 'text-violet-600 bg-violet-50',
-  Audit: 'text-red-600 bg-red-50',
+  Compliance: 'text-evidence-700 bg-evidence-50',
+  Risk: 'text-high-700 bg-high-50',
+  Controls: 'text-brand-700 bg-brand-50',
+  Analytics: 'text-brand-700 bg-brand-50',
+  Audit: 'text-risk-700 bg-risk-50',
   Executive: 'text-indigo-600 bg-indigo-50',
 };
 
@@ -97,7 +97,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
               <p className="text-[11px] text-text-muted">Convert a document into a report template</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
+          <button onClick={onClose} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
@@ -128,7 +128,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
                   <p className="text-[13px] font-semibold text-text">SOX_Report_Template.docx</p>
                   <p className="text-[11px] text-text-muted">2.4 MB</p>
                 </div>
-                <CheckCircle2 size={18} className="text-green-500" />
+                <CheckCircle2 size={18} className="text-compliant-700" />
               </div>
               <button
                 onClick={() => setStep('converting')}
@@ -166,8 +166,8 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
           {/* Conversion Complete */}
           {step === 'converted' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
-              <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-100 rounded-xl">
-                <CheckCircle2 size={20} className="text-green-500" />
+              <div className="flex items-center gap-3 p-4 bg-compliant-50 border border-green-100 rounded-xl">
+                <CheckCircle2 size={20} className="text-compliant-700" />
                 <div>
                   <p className="text-[13px] font-semibold text-primary">Template converted!</p>
                   <p className="text-[11px] text-primary/70">6 sections detected</p>
@@ -206,7 +206,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
 
         {step === 'converted' && (
           <div className="px-6 py-4 border-t border-border-light flex justify-end gap-2 shrink-0">
-            <button onClick={onClose} className="px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">Cancel</button>
+            <button onClick={onClose} className="px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-paper-50 rounded-lg transition-colors cursor-pointer">Cancel</button>
             <button
               onClick={() => { addToast({ type: 'success', message: `"${templateName}" saved to template library!` }); onClose(); }}
               className="px-5 py-2 bg-primary text-white rounded-xl text-[12px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer"
@@ -224,7 +224,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
 function TemplatePreviewModal({ template, onClose, onEdit }: { template: typeof REPORT_TEMPLATES[0]; onClose: () => void; onEdit: () => void }) {
   const { addToast } = useToast();
   const Icon = ICON_MAP[template.icon] || FileText;
-  const color = CATEGORY_COLORS[template.category] || 'text-gray-600 bg-gray-50';
+  const color = CATEGORY_COLORS[template.category] || 'text-ink-500 bg-paper-50';
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
@@ -245,7 +245,7 @@ function TemplatePreviewModal({ template, onClose, onEdit }: { template: typeof 
               <p className="text-[11px] text-text-muted">{template.category} template</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
+          <button onClick={onClose} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
@@ -316,7 +316,7 @@ function ApplyTemplateDropdown({ onSelect, onClose }: { onSelect: (template: typ
               onClick={() => { onSelect(rt); onClose(); }}
               className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-primary-xlight transition-colors cursor-pointer flex items-center gap-2.5"
             >
-              <div className={`p-1.5 rounded-md ${CATEGORY_COLORS[rt.category] || 'text-gray-600 bg-gray-50'}`}>
+              <div className={`p-1.5 rounded-md ${CATEGORY_COLORS[rt.category] || 'text-ink-500 bg-paper-50'}`}>
                 <Icon size={12} />
               </div>
               <div className="flex-1 min-w-0">
@@ -358,7 +358,7 @@ function TemplateEditor({ template, onClose }: { template: typeof REPORT_TEMPLAT
               <p className="text-[11px] text-text-muted">{template.name}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
+          <button onClick={onClose} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
@@ -427,7 +427,7 @@ function TemplateEditor({ template, onClose }: { template: typeof REPORT_TEMPLAT
         </div>
 
         <div className="px-6 py-4 border-t border-border-light flex justify-end gap-2 shrink-0">
-          <button onClick={onClose} className="px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-paper-50 rounded-lg transition-colors cursor-pointer">Cancel</button>
           <button onClick={() => { addToast({ type: 'success', message: 'Template saved!' }); onClose(); }} className="px-5 py-2 bg-primary text-white rounded-xl text-[12px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer">Save Template</button>
         </div>
       </motion.div>
@@ -453,7 +453,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
       { id: 'CTR-009', name: 'SOD Rule Enforcement', process: 'ALL', type: 'Preventive', freq: 'Continuous', owner: 'GRC Module', result: 'Effective', exceptions: 4 },
       { id: 'CTR-010', name: 'Intercompany Elimination', process: 'R2R', type: 'Detective', freq: 'Quarterly', owner: 'Karan Mehta', result: 'Effective', exceptions: 0 },
     ];
-    const resultColor = (r: string) => r === 'Effective' ? 'text-emerald-700 bg-emerald-50' : r === 'Deficient' ? 'text-red-700 bg-red-50' : 'text-amber-700 bg-amber-50';
+    const resultColor = (r: string) => r === 'Effective' ? 'text-compliant-700 bg-compliant-50' : r === 'Deficient' ? 'text-risk-700 bg-risk-50' : 'text-mitigated-700 bg-mitigated-50';
     return (
       <div className="space-y-5">
         {/* Section nav */}
@@ -478,7 +478,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
           <div className="overflow-x-auto">
             <table className="w-full text-[11px]">
               <thead>
-                <tr className="bg-gray-50 border-b border-border-light">
+                <tr className="bg-paper-50 border-b border-border-light">
                   {['Control ID', 'Control Name', 'Process', 'Type', 'Frequency', 'Owner', 'Result', 'Exceptions'].map(h => (
                     <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercase tracking-wider">{h}</th>
                   ))}
@@ -486,28 +486,28 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
               </thead>
               <tbody>
                 {controls.map((c, i) => (
-                  <tr key={c.id} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
+                  <tr key={c.id} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-paper-50/40'}`}>
                     <td className="px-4 py-2.5 font-mono font-semibold text-primary">{c.id}</td>
                     <td className="px-4 py-2.5 font-medium text-text">{c.name}</td>
                     <td className="px-4 py-2.5 text-text-secondary">{c.process}</td>
-                    <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${c.type === 'Preventive' ? 'text-blue-700 bg-blue-50' : 'text-violet-700 bg-violet-50'}`}>{c.type}</span></td>
+                    <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${c.type === 'Preventive' ? 'text-evidence-700 bg-evidence-50' : 'text-brand-700 bg-brand-50'}`}>{c.type}</span></td>
                     <td className="px-4 py-2.5 text-text-secondary">{c.freq}</td>
                     <td className="px-4 py-2.5 text-text-secondary">{c.owner}</td>
                     <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${resultColor(c.result)}`}>{c.result}</span></td>
-                    <td className="px-4 py-2.5 text-center font-semibold">{c.exceptions > 0 ? <span className="text-red-600">{c.exceptions}</span> : <span className="text-text-muted">—</span>}</td>
+                    <td className="px-4 py-2.5 text-center font-semibold">{c.exceptions > 0 ? <span className="text-risk-700">{c.exceptions}</span> : <span className="text-text-muted">—</span>}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div className="px-5 py-3 border-t border-border-light bg-gray-50/50 flex items-center justify-between text-[10px] text-text-muted">
+          <div className="px-5 py-3 border-t border-border-light bg-paper-50/50 flex items-center justify-between text-[10px] text-text-muted">
             <span>Showing {controls.length} of 54 tested controls</span>
             <span>8 Effective · 2 Deficient · 0 Pending</span>
           </div>
         </div>
         {/* Deficiency Detail */}
         <div className="bg-white rounded-xl border border-border-light p-5">
-          <h3 className="text-[13px] font-bold text-text mb-3 flex items-center gap-2"><AlertTriangle size={14} className="text-red-500" /> Deficiency Analysis</h3>
+          <h3 className="text-[13px] font-bold text-text mb-3 flex items-center gap-2"><AlertTriangle size={14} className="text-risk-700" /> Deficiency Analysis</h3>
           <div className="grid grid-cols-2 gap-4">
             {[
               { id: 'DEF-001', control: 'CTR-003', title: 'Vendor Master Change — Missing Dual Approval', severity: 'Significant', status: 'In Remediation', due: 'Mar 31, 2026', owner: 'Deepak Bansal', desc: '7 vendor master changes processed without dual-approval. Includes 3 bank account modifications.' },
@@ -515,9 +515,9 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
             ].map(d => (
               <div key={d.id} className="rounded-xl border border-border-light p-4 hover:shadow-sm transition-shadow">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-md bg-red-500">{d.id}</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${d.severity === 'Material Weakness' ? 'text-red-700 bg-red-50' : 'text-orange-700 bg-orange-50'}`}>{d.severity}</span>
-                  <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">{d.status}</span>
+                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-md bg-risk-500">{d.id}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${d.severity === 'Material Weakness' ? 'text-risk-700 bg-risk-50' : 'text-high-700 bg-high-50'}`}>{d.severity}</span>
+                  <span className="text-[10px] font-semibold text-evidence-700 bg-evidence-50 px-2 py-0.5 rounded-full">{d.status}</span>
                 </div>
                 <h4 className="text-[12px] font-semibold text-text mb-1">{d.title}</h4>
                 <p className="text-[11px] text-text-secondary leading-relaxed mb-2">{d.desc}</p>
@@ -547,7 +547,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
     ];
     const riskColor = (l: number, i: number) => {
       const score = l * i;
-      if (score >= 12) return 'bg-red-500';
+      if (score >= 12) return 'bg-risk-500';
       if (score >= 8) return 'bg-orange-400';
       if (score >= 4) return 'bg-amber-300';
       return 'bg-emerald-300';
@@ -584,7 +584,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
             <div className="w-48">
               <div className="text-[10px] font-semibold text-text mb-2">Legend</div>
               <div className="space-y-1.5">
-                {[{ c: 'bg-red-500', l: 'Critical (12-25)' }, { c: 'bg-orange-400', l: 'High (8-11)' }, { c: 'bg-amber-300', l: 'Medium (4-7)' }, { c: 'bg-emerald-300', l: 'Low (1-3)' }].map(item => (
+                {[{ c: 'bg-risk-500', l: 'Critical (12-25)' }, { c: 'bg-orange-400', l: 'High (8-11)' }, { c: 'bg-amber-300', l: 'Medium (4-7)' }, { c: 'bg-emerald-300', l: 'Low (1-3)' }].map(item => (
                   <div key={item.l} className="flex items-center gap-2 text-[10px] text-text-secondary"><div className={`w-3 h-3 rounded ${item.c}`} /> {item.l}</div>
                 ))}
               </div>
@@ -594,11 +594,11 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         {/* Risk Register */}
         <div className="bg-white rounded-xl border border-border-light overflow-hidden">
           <div className="px-5 py-3 border-b border-border-light">
-            <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-orange-500" /> Risk Register</h3>
+            <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-high-700" /> Risk Register</h3>
           </div>
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="bg-gray-50 border-b border-border-light">
+              <tr className="bg-paper-50 border-b border-border-light">
                 {['Risk ID', 'Description', 'Process', 'L', 'I', 'Score', 'Controls', 'Status'].map(h => (
                   <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercase tracking-wider">{h}</th>
                 ))}
@@ -606,7 +606,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
             </thead>
             <tbody>
               {risks.map((r, i) => (
-                <tr key={r.id} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
+                <tr key={r.id} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-paper-50/40'}`}>
                   <td className="px-4 py-2.5 font-mono font-semibold text-primary">{r.id}</td>
                   <td className="px-4 py-2.5 font-medium text-text">{r.name}</td>
                   <td className="px-4 py-2.5 text-text-secondary">{r.process}</td>
@@ -614,7 +614,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
                   <td className="px-4 py-2.5 text-center">{r.impact}</td>
                   <td className="px-4 py-2.5 text-center"><span className={`inline-flex w-6 h-6 items-center justify-center rounded-md text-[10px] font-bold text-white ${riskColor(r.likelihood, r.impact)}`}>{r.likelihood * r.impact}</span></td>
                   <td className="px-4 py-2.5 text-center font-semibold">{r.controls}</td>
-                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${r.status === 'Mitigated' ? 'text-emerald-700 bg-emerald-50' : r.status === 'Partial' ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50'}`}>{r.status}</span></td>
+                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${r.status === 'Mitigated' ? 'text-compliant-700 bg-compliant-50' : r.status === 'Partial' ? 'text-mitigated-700 bg-mitigated-50' : 'text-risk-700 bg-risk-50'}`}>{r.status}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -649,7 +649,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
               <div className="text-[28px] font-bold text-text leading-none">{p.rate}%</div>
               <div className="text-[10px] text-text-muted mt-1 mb-3">Effectiveness Rate</div>
               {/* Progress bar */}
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
+              <div className="h-2 bg-paper-50 rounded-full overflow-hidden mb-2">
                 <motion.div initial={{ width: 0 }} animate={{ width: `${(p.tested / p.total) * 100}%` }} transition={{ delay: 0.3, duration: 0.6 }} className="h-full rounded-full bg-primary" />
               </div>
               <div className="flex justify-between text-[9px] text-text-muted">
@@ -662,11 +662,11 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         {/* Gap Analysis Table */}
         <div className="bg-white rounded-xl border border-border-light overflow-hidden">
           <div className="px-5 py-3 border-b border-border-light">
-            <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-orange-500" /> Gap Analysis — Untested Controls</h3>
+            <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-high-700" /> Gap Analysis — Untested Controls</h3>
           </div>
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="bg-gray-50 border-b border-border-light">
+              <tr className="bg-paper-50 border-b border-border-light">
                 {['Process', 'Untested', 'Deadline', 'Priority', 'Assigned To'].map(h => (
                   <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercase tracking-wider">{h}</th>
                 ))}
@@ -679,11 +679,11 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
                 { process: 'R2R', untested: 5, deadline: 'Mar 31', priority: 'Medium', assignee: 'Karan Mehta' },
                 { process: 'S2C', untested: 11, deadline: 'Jun 30', priority: 'Medium', assignee: 'Rohan Patel' },
               ].map((g, i) => (
-                <tr key={g.process} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
+                <tr key={g.process} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-paper-50/40'}`}>
                   <td className="px-4 py-2.5 font-semibold text-text">{g.process}</td>
-                  <td className="px-4 py-2.5 font-bold text-red-600">{g.untested}</td>
+                  <td className="px-4 py-2.5 font-bold text-risk-700">{g.untested}</td>
                   <td className="px-4 py-2.5 text-text-secondary">{g.deadline}</td>
-                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${g.priority === 'High' ? 'text-red-700 bg-red-50' : 'text-amber-700 bg-amber-50'}`}>{g.priority}</span></td>
+                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${g.priority === 'High' ? 'text-risk-700 bg-risk-50' : 'text-mitigated-700 bg-mitigated-50'}`}>{g.priority}</span></td>
                   <td className="px-4 py-2.5 text-text-secondary">{g.assignee}</td>
                 </tr>
               ))}
@@ -729,7 +729,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
             <div key={w.name} className="bg-white rounded-xl border border-border-light p-4 hover:shadow-md hover:shadow-primary/5 transition-all">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-[12px] font-semibold text-text">{w.name}</h4>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">{w.accuracy}% accuracy</span>
+                <span className="text-[10px] font-bold text-compliant-700 bg-compliant-50 px-2 py-0.5 rounded-full">{w.accuracy}% accuracy</span>
               </div>
               <div className="flex items-end gap-4 mb-3">
                 <div>
@@ -737,7 +737,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
                   <div className="text-[9px] text-text-muted uppercase">Runs</div>
                 </div>
                 <div>
-                  <div className="text-[20px] font-bold text-emerald-600">{w.savings}</div>
+                  <div className="text-[20px] font-bold text-compliant-700">{w.savings}</div>
                   <div className="text-[9px] text-text-muted uppercase">Saved</div>
                 </div>
                 <div className="flex-1">
@@ -753,11 +753,11 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         {/* Exception Breakdown */}
         <div className="bg-white rounded-xl border border-border-light overflow-hidden">
           <div className="px-5 py-3 border-b border-border-light">
-            <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-orange-500" /> Exception Breakdown</h3>
+            <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-high-700" /> Exception Breakdown</h3>
           </div>
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="bg-gray-50 border-b border-border-light">
+              <tr className="bg-paper-50 border-b border-border-light">
                 {['Exception', 'Workflow', 'Type', 'Resolution', 'Time', 'Status'].map(h => (
                   <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercase tracking-wider">{h}</th>
                 ))}
@@ -771,13 +771,13 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
                 { id: 'EXC-004', workflow: 'SOD Detector', type: 'Critical SOD', resolution: 'Under review', time: '—', status: 'Open' },
                 { id: 'EXC-005', workflow: 'Duplicate Detector', type: 'Cross-vendor match', resolution: 'Auto-resolved', time: '0.3h', status: 'Closed' },
               ].map((e, i) => (
-                <tr key={e.id} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
+                <tr key={e.id} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-paper-50/40'}`}>
                   <td className="px-4 py-2.5 font-mono font-semibold text-primary">{e.id}</td>
                   <td className="px-4 py-2.5 text-text">{e.workflow}</td>
                   <td className="px-4 py-2.5 text-text-secondary">{e.type}</td>
                   <td className="px-4 py-2.5 text-text-secondary">{e.resolution}</td>
                   <td className="px-4 py-2.5 text-text-secondary">{e.time}</td>
-                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${e.status === 'Closed' ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'}`}>{e.status}</span></td>
+                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${e.status === 'Closed' ? 'text-compliant-700 bg-compliant-50' : 'text-mitigated-700 bg-mitigated-50'}`}>{e.status}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -802,13 +802,13 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Compliance Score', value: '94.2%', delta: '+2.4%', sub: 'vs prior quarter', color: 'text-primary' },
-            { label: 'Controls Effective', value: '48/54', delta: '89%', sub: 'effectiveness rate', color: 'text-emerald-600' },
-            { label: 'Audit Progress', value: '58%', delta: 'On track', sub: '54 of 87 controls tested', color: 'text-blue-600' },
+            { label: 'Controls Effective', value: '48/54', delta: '89%', sub: 'effectiveness rate', color: 'text-compliant-700' },
+            { label: 'Audit Progress', value: '58%', delta: 'On track', sub: '54 of 87 controls tested', color: 'text-evidence-700' },
           ].map(m => (
             <div key={m.label} className="bg-white rounded-xl border border-border-light p-5 text-center">
               <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-2">{m.label}</div>
               <div className={`text-[32px] font-bold leading-none ${m.color}`}>{m.value}</div>
-              <div className="text-[11px] font-semibold text-emerald-600 mt-1">{m.delta}</div>
+              <div className="text-[11px] font-semibold text-compliant-700 mt-1">{m.delta}</div>
               <div className="text-[10px] text-text-muted">{m.sub}</div>
             </div>
           ))}
@@ -825,12 +825,12 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
             ].map(p => (
               <div key={p.name} className="flex items-center gap-4">
                 <div className="w-48 text-[11px] font-medium text-text">{p.name}</div>
-                <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                <div className="flex-1 h-3 bg-paper-50 rounded-full overflow-hidden">
                   <motion.div initial={{ width: 0 }} animate={{ width: `${p.progress}%` }} transition={{ delay: 0.2, duration: 0.6 }} className="h-full rounded-full bg-primary" />
                 </div>
                 <span className="text-[11px] font-bold text-text w-10 text-right">{p.progress}%</span>
                 <span className="text-[10px] text-text-muted w-12">{p.controls}</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.risk === 'High' ? 'text-red-700 bg-red-50' : p.risk === 'Medium' ? 'text-amber-700 bg-amber-50' : 'text-emerald-700 bg-emerald-50'}`}>{p.risk}</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.risk === 'High' ? 'text-risk-700 bg-risk-50' : p.risk === 'Medium' ? 'text-mitigated-700 bg-mitigated-50' : 'text-compliant-700 bg-compliant-50'}`}>{p.risk}</span>
               </div>
             ))}
           </div>
@@ -866,7 +866,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         return (
           <div key={s.name} className="bg-white rounded-xl border border-border-light p-5">
             <h3 className="text-[13px] font-bold text-text mb-2 flex items-center gap-2"><SIcon size={14} className="text-primary" /> {s.name}</h3>
-            <div className="h-16 bg-gray-50 rounded-lg flex items-center justify-center text-[11px] text-text-muted border border-dashed border-border-light">
+            <div className="h-16 bg-paper-50 rounded-lg flex items-center justify-center text-[11px] text-text-muted border border-dashed border-border-light">
               Section content generated from {report.name} data
             </div>
           </div>
@@ -896,11 +896,11 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[11px] font-bold text-white px-2.5 py-1 rounded-md" style={{ background: accentColor }}>{query.id}</span>
-            <span className={`flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${query.status === 'Completed' ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'}`}>
-              <div className={`w-1.5 h-1.5 rounded-full ${query.status === 'Completed' ? 'bg-emerald-500' : 'bg-amber-500'}`} /> {query.status}
+            <span className={`flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${query.status === 'Completed' ? 'text-compliant-700 bg-compliant-50' : 'text-mitigated-700 bg-mitigated-50'}`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${query.status === 'Completed' ? 'bg-compliant-500' : 'bg-mitigated-500'}`} /> {query.status}
             </span>
-            <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full flex items-center gap-1"><TrendingUp size={9} /> {query.risk}</span>
-            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${query.severity === 'Critical' ? 'text-red-700 bg-red-50' : 'text-orange-700 bg-orange-50'}`}>{query.severity}</span>
+            <span className="text-[11px] font-semibold text-evidence-700 bg-evidence-50 px-2.5 py-1 rounded-full flex items-center gap-1"><TrendingUp size={9} /> {query.risk}</span>
+            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${query.severity === 'Critical' ? 'text-risk-700 bg-risk-50' : 'text-high-700 bg-high-50'}`}>{query.severity}</span>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-text-muted shrink-0">
             <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">{query.addedBy.split(' ').map(n => n[0]).join('')}</div>
@@ -967,7 +967,7 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
                 </div>
                 <div>
                   <h4 className="text-[13px] font-bold text-text mb-2.5 flex items-center gap-1.5">
-                    <Eye size={12} className="text-blue-500" /> Observations
+                    <Eye size={12} className="text-evidence-700" /> Observations
                   </h4>
                   <ul className="space-y-2">
                     {query.observations.map((o, i) => (
@@ -1018,9 +1018,9 @@ function ReportView({ report, onBack, onShare }: {
       addedBy: report.generatedBy,
       kpis: [
         { label: 'Flagged By AI', value: '140', color: 'text-primary' },
-        { label: 'Manually Flagged', value: '1', color: 'text-orange-600' },
-        { label: 'Resolved', value: '3', color: 'text-emerald-600' },
-        { label: 'Pending', value: '136', color: 'text-red-600' },
+        { label: 'Manually Flagged', value: '1', color: 'text-high-700' },
+        { label: 'Resolved', value: '3', color: 'text-compliant-700' },
+        { label: 'Pending', value: '136', color: 'text-risk-700' },
       ],
       summary: 'The workflow identified 140 duplicate invoice entries across vendors, each grouped into case IDs. Duplicates represent ~95.6M in invoice value, with some cases exceeding 24.2M for a single vendor-date-amount combination.',
       findings: [
@@ -1043,9 +1043,9 @@ function ReportView({ report, onBack, onShare }: {
       addedBy: 'AI Copilot',
       kpis: [
         { label: 'Changes Found', value: '47', color: 'text-primary' },
-        { label: 'Unauthorized', value: '12', color: 'text-red-600' },
-        { label: 'Verified', value: '35', color: 'text-emerald-600' },
-        { label: 'Pending', value: '8', color: 'text-orange-600' },
+        { label: 'Unauthorized', value: '12', color: 'text-risk-700' },
+        { label: 'Verified', value: '35', color: 'text-compliant-700' },
+        { label: 'Pending', value: '8', color: 'text-high-700' },
       ],
       summary: 'Vendor master data analysis revealed 47 changes in 90 days. 12 lacked dual-approval — 8 involved bank account modifications (highest fraud risk category).',
       findings: [
@@ -1070,9 +1070,9 @@ function ReportView({ report, onBack, onShare }: {
         addedBy: report.generatedBy,
         kpis: [
           { label: 'Total Risks', value: '12', color: 'text-primary' },
-          { label: 'Critical', value: '2', color: 'text-red-600' },
-          { label: 'High', value: '5', color: 'text-orange-600' },
-          { label: 'Mitigated', value: '5', color: 'text-emerald-600' },
+          { label: 'Critical', value: '2', color: 'text-risk-700' },
+          { label: 'High', value: '5', color: 'text-high-700' },
+          { label: 'Mitigated', value: '5', color: 'text-compliant-700' },
         ],
         summary: 'Enterprise risk assessment identified 12 risks across 4 business processes. 2 critical risks (RSK-004 Fictitious vendors, RSK-007 Malware via portals) remain uncontrolled with zero mapped controls. Estimated uncontrolled exposure: 18L.',
         findings: [
@@ -1094,9 +1094,9 @@ function ReportView({ report, onBack, onShare }: {
         addedBy: 'AI Copilot',
         kpis: [
           { label: 'Strategies Reviewed', value: '18', color: 'text-primary' },
-          { label: 'Effective', value: '10', color: 'text-emerald-600' },
-          { label: 'Partial', value: '5', color: 'text-amber-600' },
-          { label: 'Ineffective', value: '3', color: 'text-red-600' },
+          { label: 'Effective', value: '10', color: 'text-compliant-700' },
+          { label: 'Partial', value: '5', color: 'text-mitigated-700' },
+          { label: 'Ineffective', value: '3', color: 'text-risk-700' },
         ],
         summary: '18 mitigation strategies reviewed. 3 classified as ineffective — all relate to manual detective controls in P2P that fail under high-volume processing (>500 transactions/day).',
         findings: [
@@ -1118,9 +1118,9 @@ function ReportView({ report, onBack, onShare }: {
         addedBy: report.generatedBy,
         kpis: [
           { label: 'Controls Tested', value: '54', color: 'text-primary' },
-          { label: 'Effective', value: '48', color: 'text-emerald-600' },
-          { label: 'Deficient', value: '4', color: 'text-red-600' },
-          { label: 'Pending Test', value: '33', color: 'text-amber-600' },
+          { label: 'Effective', value: '48', color: 'text-compliant-700' },
+          { label: 'Deficient', value: '4', color: 'text-risk-700' },
+          { label: 'Pending Test', value: '33', color: 'text-mitigated-700' },
         ],
         summary: 'Control effectiveness assessment across all business processes. 89% of tested controls rated effective. 2 material weaknesses identified in P2P journal entry approval and R2R reconciliation process.',
         findings: [
@@ -1144,9 +1144,9 @@ function ReportView({ report, onBack, onShare }: {
         addedBy: 'AI Copilot',
         kpis: [
           { label: 'Total Runs', value: '115', color: 'text-primary' },
-          { label: 'Accuracy', value: '94.2%', color: 'text-emerald-600' },
-          { label: 'Exceptions', value: '23', color: 'text-orange-600' },
-          { label: 'Avg Runtime', value: '1.8d', color: 'text-blue-600' },
+          { label: 'Accuracy', value: '94.2%', color: 'text-compliant-700' },
+          { label: 'Exceptions', value: '23', color: 'text-high-700' },
+          { label: 'Avg Runtime', value: '1.8d', color: 'text-evidence-700' },
         ],
         summary: '8 active AI workflows processed 115 runs this quarter. Duplicate Invoice Detector leads with 45 runs and 96% precision. Processing time improved 14% after model retrain. Vendor Master Monitor caught 2 critical unauthorized changes.',
         findings: [
@@ -1168,9 +1168,9 @@ function ReportView({ report, onBack, onShare }: {
         addedBy: report.generatedBy,
         kpis: [
           { label: 'Exceptions', value: '23', color: 'text-primary' },
-          { label: 'Auto-Resolved', value: '8', color: 'text-emerald-600' },
-          { label: 'Manual Review', value: '12', color: 'text-amber-600' },
-          { label: 'Escalated', value: '3', color: 'text-red-600' },
+          { label: 'Auto-Resolved', value: '8', color: 'text-compliant-700' },
+          { label: 'Manual Review', value: '12', color: 'text-mitigated-700' },
+          { label: 'Escalated', value: '3', color: 'text-risk-700' },
         ],
         summary: '23 exceptions flagged this quarter. AI auto-resolved 35% without human intervention. 3 escalated to senior audit — all related to vendor bank account modifications exceeding risk threshold.',
         findings: [
@@ -1192,9 +1192,9 @@ function ReportView({ report, onBack, onShare }: {
         addedBy: report.generatedBy,
         kpis: [
           { label: 'Compliance', value: '94.2%', color: 'text-primary' },
-          { label: 'Material Weakness', value: '2', color: 'text-red-600' },
-          { label: 'Cost Saved', value: '24L', color: 'text-emerald-600' },
-          { label: 'Exposure', value: '18L', color: 'text-orange-600' },
+          { label: 'Material Weakness', value: '2', color: 'text-risk-700' },
+          { label: 'Cost Saved', value: '24L', color: 'text-compliant-700' },
+          { label: 'Exposure', value: '18L', color: 'text-high-700' },
         ],
         summary: 'Enterprise GRC posture is strong at 94.2% compliance with improving trajectory. Two material weaknesses require board attention. AI-powered workflows saved 24L YTD through automated detection and prevention.',
         findings: [
@@ -1215,28 +1215,28 @@ function ReportView({ report, onBack, onShare }: {
 
   const TEMPLATE_STATS: Record<string, { label: string; value: string; icon: React.ElementType; color: string }[]> = {
     'rt-002': [
-      { label: 'Total Risks', value: '12', icon: AlertTriangle, color: 'text-orange-600 bg-orange-50' },
-      { label: 'Uncontrolled', value: '2', icon: Shield, color: 'text-red-600 bg-red-50' },
-      { label: 'Mitigated', value: '5', icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
-      { label: 'Exposure', value: '18L', icon: TrendingUp, color: 'text-blue-600 bg-blue-50' },
+      { label: 'Total Risks', value: '12', icon: AlertTriangle, color: 'text-high-700 bg-high-50' },
+      { label: 'Uncontrolled', value: '2', icon: Shield, color: 'text-risk-700 bg-risk-50' },
+      { label: 'Mitigated', value: '5', icon: CheckCircle2, color: 'text-compliant-700 bg-compliant-50' },
+      { label: 'Exposure', value: '18L', icon: TrendingUp, color: 'text-evidence-700 bg-evidence-50' },
     ],
     'rt-003': [
-      { label: 'Controls Tested', value: '54', icon: Shield, color: 'text-blue-600 bg-blue-50' },
-      { label: 'Effective', value: '48', icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
-      { label: 'Deficient', value: '4', icon: AlertTriangle, color: 'text-red-600 bg-red-50' },
-      { label: 'Effectiveness Rate', value: '89%', icon: TrendingUp, color: 'text-purple-600 bg-purple-50' },
+      { label: 'Controls Tested', value: '54', icon: Shield, color: 'text-evidence-700 bg-evidence-50' },
+      { label: 'Effective', value: '48', icon: CheckCircle2, color: 'text-compliant-700 bg-compliant-50' },
+      { label: 'Deficient', value: '4', icon: AlertTriangle, color: 'text-risk-700 bg-risk-50' },
+      { label: 'Effectiveness Rate', value: '89%', icon: TrendingUp, color: 'text-brand-700 bg-brand-50' },
     ],
     'rt-004': [
-      { label: 'Workflow Runs', value: '115', icon: TrendingUp, color: 'text-blue-600 bg-blue-50' },
-      { label: 'Accuracy', value: '94.2%', icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
-      { label: 'Exceptions', value: '23', icon: AlertTriangle, color: 'text-orange-600 bg-orange-50' },
-      { label: 'Cost Saved', value: '24L', icon: Shield, color: 'text-purple-600 bg-purple-50' },
+      { label: 'Workflow Runs', value: '115', icon: TrendingUp, color: 'text-evidence-700 bg-evidence-50' },
+      { label: 'Accuracy', value: '94.2%', icon: CheckCircle2, color: 'text-compliant-700 bg-compliant-50' },
+      { label: 'Exceptions', value: '23', icon: AlertTriangle, color: 'text-high-700 bg-high-50' },
+      { label: 'Cost Saved', value: '24L', icon: Shield, color: 'text-brand-700 bg-brand-50' },
     ],
     'rt-006': [
-      { label: 'Compliance Score', value: '94.2%', icon: Shield, color: 'text-purple-600 bg-purple-50' },
-      { label: 'Material Weakness', value: '2', icon: AlertTriangle, color: 'text-red-600 bg-red-50' },
-      { label: 'Cost Saved', value: '24L', icon: TrendingUp, color: 'text-emerald-600 bg-emerald-50' },
-      { label: 'Risk Exposure', value: '18L', icon: FileText, color: 'text-orange-600 bg-orange-50' },
+      { label: 'Compliance Score', value: '94.2%', icon: Shield, color: 'text-brand-700 bg-brand-50' },
+      { label: 'Material Weakness', value: '2', icon: AlertTriangle, color: 'text-risk-700 bg-risk-50' },
+      { label: 'Cost Saved', value: '24L', icon: TrendingUp, color: 'text-compliant-700 bg-compliant-50' },
+      { label: 'Risk Exposure', value: '18L', icon: FileText, color: 'text-high-700 bg-high-50' },
     ],
   };
 
@@ -1247,10 +1247,10 @@ function ReportView({ report, onBack, onShare }: {
   const activeStats = appliedTemplate && TEMPLATE_STATS[appliedTemplate.id]
     ? TEMPLATE_STATS[appliedTemplate.id]
     : [
-        { label: 'Total Exceptions', value: '187', icon: AlertTriangle, color: 'text-orange-600 bg-orange-50' },
-        { label: 'Resolved', value: '38', icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
-        { label: 'Critical Items', value: '12', icon: Shield, color: 'text-red-600 bg-red-50' },
-        { label: 'Compliance Score', value: '78%', icon: TrendingUp, color: 'text-blue-600 bg-blue-50' },
+        { label: 'Total Exceptions', value: '187', icon: AlertTriangle, color: 'text-high-700 bg-high-50' },
+        { label: 'Resolved', value: '38', icon: CheckCircle2, color: 'text-compliant-700 bg-compliant-50' },
+        { label: 'Critical Items', value: '12', icon: Shield, color: 'text-risk-700 bg-risk-50' },
+        { label: 'Compliance Score', value: '78%', icon: TrendingUp, color: 'text-evidence-700 bg-evidence-50' },
       ];
 
   return (
@@ -1396,9 +1396,9 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
   };
 
   const approvalColor = (status: string) => {
-    if (status === 'Approved') return 'text-emerald-700 bg-emerald-50';
-    if (status === 'Pending Approval') return 'text-amber-700 bg-amber-50';
-    return 'text-gray-600 bg-gray-100';
+    if (status === 'Approved') return 'text-compliant-700 bg-compliant-50';
+    if (status === 'Pending Approval') return 'text-mitigated-700 bg-mitigated-50';
+    return 'text-ink-500 bg-paper-50';
   };
 
   if (viewingReport) {
@@ -1443,7 +1443,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             <span className="flex items-center gap-2">
               <BookOpen size={14} />
               My Reports
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'my-reports' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{GENERATED_REPORTS.length}</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'my-reports' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{GENERATED_REPORTS.length}</span>
             </span>
           </button>
           <button
@@ -1453,7 +1453,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             <span className="flex items-center gap-2">
               <Share2 size={14} />
               Shared Reports
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'shared-reports' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{SHARED_REPORTS.length}</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'shared-reports' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{SHARED_REPORTS.length}</span>
             </span>
           </button>
           <button
@@ -1463,7 +1463,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             <span className="flex items-center gap-2">
               <FileText size={14} />
               Templates
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'templates' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{REPORT_TEMPLATES.length}</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'templates' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{REPORT_TEMPLATES.length}</span>
             </span>
           </button>
         </div>
@@ -1477,7 +1477,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             searchKeys={['name', 'generatedBy']}
             paginated={false}
             headerExtra={
-              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+              <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-lg">
                 <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="List view"><List size={15} /></button>
                 <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
               </div>
@@ -1522,7 +1522,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                 <div className="flex items-center justify-end gap-1">
                   <button onClick={() => addToast({ type: 'success', message: `Downloading ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={14} /></button>
                   <button onClick={() => onShare ? onShare(String(item.id)) : addToast({ type: 'info', message: `Sharing ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={14} /></button>
-                  <button onClick={() => addToast({ type: 'success', message: `${item.name} deleted.` })} className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
+                  <button onClick={() => addToast({ type: 'success', message: `${item.name} deleted.` })} className="p-1.5 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
                 </div>
               )},
             ]}
@@ -1533,7 +1533,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
           <div className="bg-white rounded-xl border border-border-light overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border-light bg-surface-2/50">
               <p className="text-[12px] text-text-muted">{GENERATED_REPORTS.length} reports</p>
-              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+              <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-lg">
                 <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="List view"><List size={15} /></button>
                 <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
               </div>
@@ -1564,7 +1564,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                     <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border-light opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={13} /></button>
                       <button onClick={(e) => { e.stopPropagation(); onShare ? onShare(r.id) : addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={13} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="p-1 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={13} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="p-1 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={13} /></button>
                     </div>
                   </motion.div>
                 );
@@ -1582,7 +1582,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             searchKeys={['name', 'sharedBy', 'sharedWith']}
             paginated={false}
             headerExtra={
-              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+              <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-lg">
                 <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="List view"><List size={15} /></button>
                 <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
               </div>
@@ -1613,7 +1613,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                 <div className="flex items-center justify-end gap-1">
                   <button onClick={() => addToast({ type: 'success', message: `Downloading ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={14} /></button>
                   <button onClick={() => addToast({ type: 'info', message: `Sharing ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={14} /></button>
-                  <button onClick={() => addToast({ type: 'success', message: `${item.name} deleted.` })} className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
+                  <button onClick={() => addToast({ type: 'success', message: `${item.name} deleted.` })} className="p-1.5 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
                 </div>
               )},
             ]}
@@ -1624,7 +1624,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
           <div className="bg-white rounded-xl border border-border-light overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border-light bg-surface-2/50">
               <p className="text-[12px] text-text-muted">{SHARED_REPORTS.length} reports</p>
-              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+              <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-lg">
                 <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="List view"><List size={15} /></button>
                 <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
               </div>
@@ -1649,7 +1649,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                   <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border-light opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={13} /></button>
                     <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={13} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="p-1 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={13} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="p-1 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={13} /></button>
                   </div>
                 </motion.div>
               ))}
@@ -1662,7 +1662,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
           <div className="grid grid-cols-3 gap-4">
             {REPORT_TEMPLATES.map((rt, i) => {
               const Icon = ICON_MAP[rt.icon] || FileText;
-              const color = CATEGORY_COLORS[rt.category] || 'text-gray-600 bg-gray-50';
+              const color = CATEGORY_COLORS[rt.category] || 'text-ink-500 bg-paper-50';
               return (
                 <motion.div
                   key={rt.id}
@@ -1748,12 +1748,12 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                     <p className="text-[11px] text-text-muted">Select a template to get started</p>
                   </div>
                 </div>
-                <button onClick={() => setShowNewReportTemplateSelector(false)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
+                <button onClick={() => setShowNewReportTemplateSelector(false)} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {REPORT_TEMPLATES.map((rt, i) => {
                   const Icon = ICON_MAP[rt.icon] || FileText;
-                  const color = CATEGORY_COLORS[rt.category] || 'text-gray-600 bg-gray-50';
+                  const color = CATEGORY_COLORS[rt.category] || 'text-ink-500 bg-paper-50';
                   return (
                     <motion.button
                       key={rt.id}

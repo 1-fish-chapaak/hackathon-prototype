@@ -31,7 +31,7 @@ const RUN_HISTORY = [
 ];
 
 function ScoreChip({ score }: { score: number }) {
-  const bg = score >= 85 ? 'bg-primary/10 text-primary' : score >= 70 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
+  const bg = score >= 85 ? 'bg-primary/10 text-primary' : score >= 70 ? 'bg-mitigated-50 text-mitigated-700' : 'bg-risk-50 text-risk-700';
   return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold font-mono ${bg}`}>{score}</span>;
 }
 
@@ -93,18 +93,18 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
             </div>
             <div className="flex items-center gap-2 shrink-0 ml-6">
               {onViewDashboard && (
-                <button onClick={onViewDashboard} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 hover:border-primary/30 transition-colors cursor-pointer">
+                <button onClick={onViewDashboard} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-paper-50 hover:border-primary/30 transition-colors cursor-pointer">
                   <Activity size={13} />
                   Dashboard
                 </button>
               )}
               {onGenerateReport && (
-                <button onClick={onGenerateReport} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 hover:border-primary/30 transition-colors cursor-pointer">
+                <button onClick={onGenerateReport} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-paper-50 hover:border-primary/30 transition-colors cursor-pointer">
                   <Download size={13} />
                   Report
                 </button>
               )}
-              <button onClick={() => onEditInChat ? onEditInChat() : addToast({ message: 'Opening workflow in chat...', type: 'info' })} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 hover:border-primary/30 transition-colors cursor-pointer">
+              <button onClick={() => onEditInChat ? onEditInChat() : addToast({ message: 'Opening workflow in chat...', type: 'info' })} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-paper-50 hover:border-primary/30 transition-colors cursor-pointer">
                 <MessageSquare size={13} />
                 Edit in Chat
               </button>
@@ -122,8 +122,8 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
           <div className="grid grid-cols-3 gap-4">
             {[
               { l: 'Total Runs', v: vData.runs.toString(), icon: Activity, color: 'bg-primary/10 text-primary', note: '+3 this week' },
-              { l: 'Flags Raised', v: vData.flags, icon: AlertTriangle, color: 'bg-amber-50 text-amber-600', note: '8 critical' },
-              { l: 'Impact Score', v: vData.score, icon: TrendingUp, color: 'bg-green-50 text-green-600', note: vData.scoreNote },
+              { l: 'Flags Raised', v: vData.flags, icon: AlertTriangle, color: 'bg-mitigated-50 text-mitigated-700', note: '8 critical' },
+              { l: 'Impact Score', v: vData.score, icon: TrendingUp, color: 'bg-compliant-50 text-compliant-700', note: vData.scoreNote },
             ].map(k => (
               <div key={k.l} className="bg-surface-2 border border-border-light rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all duration-300 group cursor-default">
                 <div className={`w-7 h-7 rounded-lg ${k.color} flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform duration-300`}>
@@ -154,7 +154,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
               <span className="flex items-center gap-2">
                 {t.label}
                 {t.count != null && (
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${tab === t.id ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{t.count}</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${tab === t.id ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{t.count}</span>
                 )}
               </span>
             </button>
@@ -255,7 +255,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                 <span className="text-[12px] font-mono text-text font-medium">{run.duration}</span>
                 <span className="text-[12px] font-mono text-text font-medium">{run.flags}</span>
                 <ScoreChip score={run.score} />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-success bg-green-50 px-2 py-0.5 rounded text-center">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-success bg-compliant-50 px-2 py-0.5 rounded text-center">
                   {run.status === 'ok' ? 'PASS' : 'WARN'}
                 </span>
               </motion.div>
@@ -333,13 +333,13 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                 ].map(ds => (
                   <div key={ds.name} className="flex items-center justify-between p-3 rounded-xl bg-surface-2/50 border border-border-light/50">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                      <div className="w-2 h-2 rounded-full bg-compliant-500" />
                       <div>
                         <div className="text-[12px] font-medium text-text">{ds.name}</div>
                         <div className="text-[10px] text-text-muted">{ds.type} · {ds.records} records</div>
                       </div>
                     </div>
-                    <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">{ds.status}</span>
+                    <span className="text-[9px] font-bold text-compliant-700 bg-compliant-50 px-1.5 py-0.5 rounded-full">{ds.status}</span>
                   </div>
                 ))}
               </div>

@@ -15,10 +15,10 @@ interface Props {
 
 function TestPill({ status }: { status: string }) {
   const map: Record<string, { bg: string; text: string; label: string }> = {
-    'not-started': { bg: 'bg-gray-100', text: 'text-gray-500', label: 'Not started' },
-    'in-progress': { bg: 'bg-blue-50', text: 'text-blue-700', label: 'In progress' },
-    effective: { bg: 'bg-green-50', text: 'text-green-700', label: 'Effective' },
-    ineffective: { bg: 'bg-red-50', text: 'text-red-700', label: 'Ineffective' },
+    'not-started': { bg: 'bg-paper-50', text: 'text-ink-500', label: 'Not started' },
+    'in-progress': { bg: 'bg-evidence-50', text: 'text-evidence-700', label: 'In progress' },
+    effective: { bg: 'bg-compliant-50', text: 'text-compliant-700', label: 'Effective' },
+    ineffective: { bg: 'bg-risk-50', text: 'text-risk-700', label: 'Ineffective' },
   };
   const s = map[status] || map['not-started'];
   return <span title={s.label} className={`inline-flex items-center ${s.bg} ${s.text} px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap`}>{s.label}</span>;
@@ -119,7 +119,7 @@ export default function AuditExecution({ onAskAboutControl: _unused }: Props) {
             <span className="flex items-center gap-2">
               <ClipboardCheck size={14} />
               Control Testing
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'controls' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{controls.length}</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'controls' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{controls.length}</span>
             </span>
           </button>
           <button
@@ -133,7 +133,7 @@ export default function AuditExecution({ onAskAboutControl: _unused }: Props) {
             <span className="flex items-center gap-2">
               <AlertTriangle size={14} />
               Deficiencies
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'deficiencies' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{DEFICIENCIES.length}</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'deficiencies' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{DEFICIENCIES.length}</span>
             </span>
           </button>
         </div>
@@ -154,7 +154,7 @@ export default function AuditExecution({ onAskAboutControl: _unused }: Props) {
                 <span className="text-text font-medium">{String(item.control)}</span>
               )},
               { key: 'isKey', label: 'Key', align: 'center', width: '50px', render: (item) => (
-                item.isKey ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-[9px] font-bold">K</span> : null
+                item.isKey ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-mitigated-50 text-mitigated-700 text-[9px] font-bold">K</span> : null
               )},
               { key: 'assignee', label: 'Assignee', width: '110px', render: (item) => (
                 <div className="flex items-center gap-1.5">

@@ -47,7 +47,7 @@ function LinkControlsModal({ risk, onClose }: { risk: typeof RISKS[0]; onClose: 
         <div className="sticky top-0 bg-white border-b border-border-light px-6 py-4 z-10">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-base font-bold text-text">Link Controls</h2>
-            <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+            <button onClick={onClose} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors">
               <X size={16} className="text-text-muted" />
             </button>
           </div>
@@ -88,7 +88,7 @@ function LinkControlsModal({ risk, onClose }: { risk: typeof RISKS[0]; onClose: 
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[13px] font-semibold text-text">{ctl.name}</span>
                       {ctl.isKey && (
-                        <span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase">Key</span>
+                        <span className="text-[9px] font-bold bg-mitigated-50 text-mitigated-700 px-1.5 py-0.5 rounded uppercase">Key</span>
                       )}
                     </div>
                     <p className="text-[11.5px] text-text-muted leading-relaxed">{ctl.desc}</p>
@@ -106,7 +106,7 @@ function LinkControlsModal({ risk, onClose }: { risk: typeof RISKS[0]; onClose: 
         <div className="sticky bottom-0 bg-white border-t border-border-light px-6 py-4 flex items-center justify-between">
           <span className="text-[12px] text-text-muted">{selected.size} controls selected</span>
           <div className="flex items-center gap-2">
-            <button onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-[13px] font-medium text-text-secondary hover:bg-gray-50 transition-colors">
+            <button onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-[13px] font-medium text-text-secondary hover:bg-paper-50 transition-colors">
               Cancel
             </button>
             <button onClick={onClose} className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors flex items-center gap-1.5">
@@ -134,7 +134,7 @@ function UploadSOPModal({ onClose }: { onClose: () => void }) {
         <div className="px-6 py-5 border-b border-border-light">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-text">Upload SOP</h2>
-            <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X size={16} className="text-text-muted" /></button>
+            <button onClick={onClose} className="p-1.5 hover:bg-paper-50 rounded-lg"><X size={16} className="text-text-muted" /></button>
           </div>
           <p className="text-[12px] text-text-muted mt-1">AI will automatically scaffold a RACM from the uploaded document</p>
         </div>
@@ -154,7 +154,7 @@ function UploadSOPModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="px-6 py-4 border-t border-border-light flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-gray-50">Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-paper-50">Cancel</button>
           <button onClick={onClose} className="px-4 py-2 bg-primary text-white rounded-lg text-[13px] font-semibold hover:bg-primary-hover flex items-center gap-1.5">
             <Upload size={14} />
             Upload & Process
@@ -168,10 +168,10 @@ function UploadSOPModal({ onClose }: { onClose: () => void }) {
 /* ─── SOP Flow Chart ─── */
 function SOPFlowChart({ steps }: { steps: typeof SOP_FLOWS[string] }) {
   const nodeStyles: Record<string, string> = {
-    start: 'bg-green-50 border-green-400 text-green-700',
-    process: 'bg-blue-50 border-blue-300 text-blue-700',
-    decision: 'bg-amber-50 border-amber-400 text-amber-700',
-    end: 'bg-red-50 border-red-400 text-red-700',
+    start: 'bg-compliant-50 border-green-400 text-compliant-700',
+    process: 'bg-evidence-50 border-blue-300 text-evidence-700',
+    decision: 'bg-mitigated-50 border-amber-400 text-mitigated-700',
+    end: 'bg-risk-50 border-red-400 text-risk-700',
   };
   const nodeShapes: Record<string, string> = {
     start: 'rounded-full px-4 py-2',
@@ -204,14 +204,14 @@ function SOPFlowChart({ steps }: { steps: typeof SOP_FLOWS[string] }) {
           {i < steps.length - 1 && (
             <div className="flex flex-col items-center">
               <div className="w-px h-4 bg-gray-300" />
-              <ChevronDown size={12} className="text-gray-400 -mt-1" />
+              <ChevronDown size={12} className="text-ink-500 -mt-1" />
             </div>
           )}
           {step.type === 'decision' && step.next && step.next.length > 1 && (
             <div className="flex items-center gap-1 -mt-1 mb-1">
-              <span className="text-[9px] text-green-600 font-bold">Yes</span>
-              <span className="text-[9px] text-gray-400 mx-2">|</span>
-              <span className="text-[9px] text-red-600 font-bold">No</span>
+              <span className="text-[9px] text-compliant-700 font-bold">Yes</span>
+              <span className="text-[9px] text-ink-500 mx-2">|</span>
+              <span className="text-[9px] text-risk-700 font-bold">No</span>
             </div>
           )}
         </div>
@@ -241,9 +241,9 @@ function SOPRelationshipMap({ sopId, bpId }: { sopId: string; bpId: string }) {
       <div className="flex flex-col gap-1.5 shrink-0 min-w-[130px]">
         <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">RACMs</div>
         {relatedRacms.length > 0 ? relatedRacms.map(r => (
-          <div key={r.id} className="px-2.5 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="text-[10px] font-semibold text-blue-700">{r.id}</div>
-            <div className="text-[9px] text-blue-500 truncate">{r.name}</div>
+          <div key={r.id} className="px-2.5 py-1.5 bg-evidence-50 border border-blue-200 rounded-lg">
+            <div className="text-[10px] font-semibold text-evidence-700">{r.id}</div>
+            <div className="text-[9px] text-evidence-700 truncate">{r.name}</div>
           </div>
         )) : <div className="text-[10px] text-text-muted italic">None linked</div>}
       </div>
@@ -252,9 +252,9 @@ function SOPRelationshipMap({ sopId, bpId }: { sopId: string; bpId: string }) {
       <div className="flex flex-col gap-1.5 shrink-0 min-w-[140px]">
         <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Risks</div>
         {relatedRisks.map(r => (
-          <div key={r.id} className="px-2.5 py-1.5 bg-orange-50 border border-orange-200 rounded-lg">
-            <div className="text-[10px] font-semibold text-orange-700">{r.id}</div>
-            <div className="text-[9px] text-orange-500 leading-tight truncate max-w-[130px]">{r.name.split(' ').slice(0, 4).join(' ')}...</div>
+          <div key={r.id} className="px-2.5 py-1.5 bg-high-50 border border-orange-200 rounded-lg">
+            <div className="text-[10px] font-semibold text-high-700">{r.id}</div>
+            <div className="text-[9px] text-high-700 leading-tight truncate max-w-[130px]">{r.name.split(' ').slice(0, 4).join(' ')}...</div>
           </div>
         ))}
       </div>
@@ -263,9 +263,9 @@ function SOPRelationshipMap({ sopId, bpId }: { sopId: string; bpId: string }) {
       <div className="flex flex-col gap-1.5 shrink-0 min-w-[140px]">
         <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Controls</div>
         {relatedControls.map(c => (
-          <div key={c.id} className="px-2.5 py-1.5 bg-green-50 border border-green-200 rounded-lg">
-            <div className="text-[10px] font-semibold text-green-700">{c.id}</div>
-            <div className="text-[9px] text-green-500 leading-tight truncate max-w-[130px]">{c.name}</div>
+          <div key={c.id} className="px-2.5 py-1.5 bg-compliant-50 border border-green-200 rounded-lg">
+            <div className="text-[10px] font-semibold text-compliant-700">{c.id}</div>
+            <div className="text-[9px] text-compliant-700 leading-tight truncate max-w-[130px]">{c.name}</div>
           </div>
         ))}
       </div>
@@ -281,16 +281,16 @@ function SOPAIRecommendations({ sopId }: { sopId: string }) {
   if (recommendations.length === 0) return null;
 
   const typeConfig: Record<string, { icon: typeof Plus; bg: string; text: string }> = {
-    add: { icon: Plus, bg: 'bg-green-100 text-green-600', text: 'text-green-600' },
-    improve: { icon: TrendingUp, bg: 'bg-blue-100 text-blue-600', text: 'text-blue-600' },
-    remove: { icon: X, bg: 'bg-red-100 text-red-600', text: 'text-red-600' },
-    update: { icon: RefreshCw, bg: 'bg-amber-100 text-amber-600', text: 'text-amber-600' },
+    add: { icon: Plus, bg: 'bg-compliant-50 text-compliant-700', text: 'text-compliant-700' },
+    improve: { icon: TrendingUp, bg: 'bg-evidence-50 text-evidence-700', text: 'text-evidence-700' },
+    remove: { icon: X, bg: 'bg-risk-50 text-risk-700', text: 'text-risk-700' },
+    update: { icon: RefreshCw, bg: 'bg-mitigated-50 text-mitigated-700', text: 'text-mitigated-700' },
   };
 
   const impactColors: Record<string, string> = {
-    high: 'text-red-600',
-    medium: 'text-amber-600',
-    low: 'text-green-600',
+    high: 'text-risk-700',
+    medium: 'text-mitigated-700',
+    low: 'text-compliant-700',
   };
 
   return (
@@ -323,13 +323,13 @@ function SOPAIRecommendations({ sopId }: { sopId: string }) {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.06 }}
-                    className="flex items-start gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-200"
+                    className="flex items-start gap-2.5 p-3 rounded-xl bg-paper-50 border border-gray-200"
                   >
                     <div className={`p-1.5 rounded-lg shrink-0 ${config.bg}`}>
                       <TypeIcon size={12} />
                     </div>
                     <div className="flex-1">
-                      <div className="text-[11.5px] text-gray-800 leading-relaxed">{rec.text}</div>
+                      <div className="text-[11.5px] text-ink-500 leading-relaxed">{rec.text}</div>
                       <div className={`text-[9px] font-bold uppercase tracking-wider mt-1 ${impactColors[rec.impact]}`}>
                         {rec.impact} impact
                       </div>
@@ -449,7 +449,7 @@ function RACMWorkflowPanel({ bpId }: { bpId: string }) {
                   <Workflow size={10} className="text-primary/60 shrink-0" />
                   <span className="text-[11px] text-text group-hover:text-primary transition-colors flex-1 truncate">{wf.name}</span>
                   <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                    wf.status === 'active' ? 'bg-green-50 text-green-600' : wf.status === 'paused' ? 'bg-amber-50 text-amber-600' : 'bg-gray-100 text-gray-500'
+                    wf.status === 'active' ? 'bg-compliant-50 text-compliant-700' : wf.status === 'paused' ? 'bg-mitigated-50 text-mitigated-700' : 'bg-paper-50 text-ink-500'
                   }`}>{wf.status}</span>
                   <span className="text-[9px] text-text-muted">{wf.runs} runs</span>
                 </div>
@@ -543,7 +543,7 @@ function BPDetailView({ bp, onBack }: {
               <p className="text-[12px] text-text-muted">Business Process · FY 2025--26</p>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setUploadModal(true)} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 transition-colors">
+              <button onClick={() => setUploadModal(true)} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-paper-50 transition-colors">
                 <Upload size={13} />
                 Upload SOP
               </button>
@@ -562,7 +562,7 @@ function BPDetailView({ bp, onBack }: {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Status:</span>
-              <span className="inline-flex items-center gap-1.5 bg-success-bg text-green-800 px-2.5 py-0.5 rounded-full text-[11px] font-semibold">
+              <span className="inline-flex items-center gap-1.5 bg-success-bg text-compliant-700 px-2.5 py-0.5 rounded-full text-[11px] font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-success" />
                 Active
               </span>
@@ -626,7 +626,7 @@ function BPDetailView({ bp, onBack }: {
                 {t.label}
                 {t.count != null && (
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                    tab === t.id ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'
+                    tab === t.id ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'
                   }`}>{t.count}</span>
                 )}
               </span>
@@ -668,7 +668,7 @@ function BPDetailView({ bp, onBack }: {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[13px] font-semibold text-text">{sop.name}</span>
-                          <span className="text-[10px] font-bold bg-gray-100 text-text-muted px-1.5 py-0.5 rounded">{sop.version}</span>
+                          <span className="text-[10px] font-bold bg-paper-50 text-text-muted px-1.5 py-0.5 rounded">{sop.version}</span>
                           <StatusBadge status={sop.status} />
                         </div>
                         <div className="text-[11px] text-text-muted">
@@ -681,7 +681,7 @@ function BPDetailView({ bp, onBack }: {
                           View RACM
                         </button>
                       ) : (
-                        <button className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 transition-colors">
+                        <button className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-paper-50 transition-colors">
                           <Plus size={12} />
                           Generate RACM
                         </button>
@@ -696,7 +696,7 @@ function BPDetailView({ bp, onBack }: {
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
                             activeVisual === 'flow'
                               ? 'bg-primary/10 text-primary border border-primary/20'
-                              : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+                              : 'bg-paper-50 text-ink-500 border border-gray-200 hover:bg-paper-50'
                           }`}
                         >
                           <GitBranch size={12} />
@@ -708,7 +708,7 @@ function BPDetailView({ bp, onBack }: {
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
                           activeVisual === 'map'
                             ? 'bg-primary/10 text-primary border border-primary/20'
-                            : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+                            : 'bg-paper-50 text-ink-500 border border-gray-200 hover:bg-paper-50'
                         }`}
                       >
                         <Network size={12} />
@@ -727,8 +727,8 @@ function BPDetailView({ bp, onBack }: {
                           className="overflow-hidden"
                         >
                           <div className="mt-3 pt-3 border-t border-border-light">
-                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Process Flow</div>
-                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                            <div className="text-[10px] font-bold text-ink-500 uppercase tracking-wider mb-2">Process Flow</div>
+                            <div className="bg-paper-50 rounded-xl p-4 border border-gray-200">
                               <SOPFlowChart steps={flowSteps} />
                             </div>
                           </div>
@@ -743,8 +743,8 @@ function BPDetailView({ bp, onBack }: {
                           className="overflow-hidden"
                         >
                           <div className="mt-3 pt-3 border-t border-border-light">
-                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Relationship Map</div>
-                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                            <div className="text-[10px] font-bold text-ink-500 uppercase tracking-wider mb-2">Relationship Map</div>
+                            <div className="bg-paper-50 rounded-xl p-4 border border-gray-200">
                               <SOPRelationshipMap sopId={sop.id} bpId={sop.bpId} />
                             </div>
                           </div>
@@ -827,9 +827,9 @@ function BPDetailView({ bp, onBack }: {
                                 {RACM_RECOMMENDED_CONTROLS[r.id].map((rec, idx) => (
                                   <div key={idx} className="flex items-start gap-2.5 p-2 rounded-lg bg-white/80 border border-border-light hover:shadow-sm transition-all">
                                     <div className={`p-1 rounded-md shrink-0 ${
-                                      rec.type === 'automated' ? 'bg-blue-50 text-blue-600' :
-                                      rec.type === 'detective' ? 'bg-amber-50 text-amber-600' :
-                                      'bg-green-50 text-green-600'
+                                      rec.type === 'automated' ? 'bg-evidence-50 text-evidence-700' :
+                                      rec.type === 'detective' ? 'bg-mitigated-50 text-mitigated-700' :
+                                      'bg-compliant-50 text-compliant-700'
                                     }`}>
                                       {rec.type === 'automated' ? <Zap size={10} /> : rec.type === 'detective' ? <Eye size={10} /> : <Shield size={10} />}
                                     </div>
@@ -838,9 +838,9 @@ function BPDetailView({ bp, onBack }: {
                                       <div className="flex items-center gap-2 mt-1">
                                         <span className="text-[9px] text-text-muted">Mitigates: {rec.risk}</span>
                                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                                          rec.type === 'automated' ? 'bg-blue-50 text-blue-600' :
-                                          rec.type === 'detective' ? 'bg-amber-50 text-amber-600' :
-                                          'bg-green-50 text-green-600'
+                                          rec.type === 'automated' ? 'bg-evidence-50 text-evidence-700' :
+                                          rec.type === 'detective' ? 'bg-mitigated-50 text-mitigated-700' :
+                                          'bg-compliant-50 text-compliant-700'
                                         }`}>{rec.type}</span>
                                       </div>
                                     </div>
@@ -899,8 +899,8 @@ function BPDetailView({ bp, onBack }: {
                   onClick={() => { setBulkMode(!bulkMode); setSelectedWorkflows(new Set()); }}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold transition-colors ${
                     bulkMode
-                      ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                      : 'border border-border text-text-secondary hover:bg-gray-50'
+                      ? 'bg-high-50 text-high-700 hover:bg-orange-200'
+                      : 'border border-border text-text-secondary hover:bg-paper-50'
                   }`}
                 >
                   <CheckCircle2 size={13} />
@@ -955,7 +955,7 @@ function BPDetailView({ bp, onBack }: {
                         <Play size={10} />
                         Run Now
                       </button>
-                      <button className="flex items-center gap-1 px-3 py-1.5 border border-border rounded-lg text-[11px] font-medium text-text-secondary hover:bg-gray-50">
+                      <button className="flex items-center gap-1 px-3 py-1.5 border border-border rounded-lg text-[11px] font-medium text-text-secondary hover:bg-paper-50">
                         <ArrowUpRight size={10} />
                         Promote to Control
                       </button>

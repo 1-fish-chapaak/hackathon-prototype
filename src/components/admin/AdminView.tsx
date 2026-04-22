@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, Shield, Settings, Plug, ScrollText,
-  UserPlus, Clock, CheckCircle2, Mail,
-  Construction,
+  UserPlus, Construction,
 } from 'lucide-react';
-import FloatingLines from '../shared/FloatingLines';
+import { StatusBadge, Avatar } from '../shared/StatusBadge';
 
 interface Props {
   activeTab?: string;
@@ -29,178 +28,78 @@ const tabs: Tab[] = [
 
 interface MockUser {
   name: string;
-  initials: string;
   email: string;
   role: string;
-  roleColor: string;
   team: string;
-  status: 'Active' | 'Invited';
+  status: 'active' | 'invited';
   lastLogin: string;
 }
 
 const mockUsers: MockUser[] = [
-  {
-    name: 'John Doe',
-    initials: 'JD',
-    email: 'john@company.com',
-    role: 'Lead Auditor',
-    roleColor: 'bg-violet-100 text-violet-700 border-violet-200',
-    team: 'SOX Audit Team',
-    status: 'Active',
-    lastLogin: 'Today',
-  },
-  {
-    name: 'Sarah Miller',
-    initials: 'SM',
-    email: 'sarah@company.com',
-    role: 'Staff Auditor',
-    roleColor: 'bg-blue-100 text-blue-700 border-blue-200',
-    team: 'SOX Audit Team',
-    status: 'Active',
-    lastLogin: 'Yesterday',
-  },
-  {
-    name: 'Mike Ross',
-    initials: 'MR',
-    email: 'mike@company.com',
-    role: 'Audit Manager',
-    roleColor: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    team: 'Management',
-    status: 'Active',
-    lastLogin: 'Mar 28',
-  },
-  {
-    name: 'Jane Chen',
-    initials: 'JC',
-    email: 'jane@company.com',
-    role: 'Staff Auditor',
-    roleColor: 'bg-blue-100 text-blue-700 border-blue-200',
-    team: 'IFC Team',
-    status: 'Active',
-    lastLogin: 'Mar 27',
-  },
-  {
-    name: 'Alex Kumar',
-    initials: 'AK',
-    email: 'alex@company.com',
-    role: 'External Auditor',
-    roleColor: 'bg-amber-100 text-amber-700 border-amber-200',
-    team: '\u2014',
-    status: 'Invited',
-    lastLogin: '\u2014',
-  },
-];
-
-const avatarGradients = [
-  'from-violet-500 to-purple-600',
-  'from-sky-500 to-blue-600',
-  'from-emerald-500 to-teal-600',
-  'from-rose-500 to-pink-600',
-  'from-amber-500 to-orange-600',
+  { name: 'John Doe',     email: 'john@company.com',   role: 'Lead Auditor',     team: 'SOX Audit Team', status: 'active',  lastLogin: 'Today' },
+  { name: 'Sarah Miller', email: 'sarah@company.com',  role: 'Staff Auditor',    team: 'SOX Audit Team', status: 'active',  lastLogin: 'Yesterday' },
+  { name: 'Mike Ross',    email: 'mike@company.com',   role: 'Audit Manager',    team: 'Management',     status: 'active',  lastLogin: 'Mar 28, 2026' },
+  { name: 'Jane Chen',    email: 'jane@company.com',   role: 'Staff Auditor',    team: 'IFC Team',       status: 'active',  lastLogin: 'Mar 27, 2026' },
+  { name: 'Alex Kumar',   email: 'alex@company.com',   role: 'External Auditor', team: '—',              status: 'invited', lastLogin: '—' },
 ];
 
 function UsersTab() {
+  const totalUsers = mockUsers.length;
+  const activeUsers = mockUsers.filter(u => u.status === 'active').length;
+  const invitedUsers = mockUsers.filter(u => u.status === 'invited').length;
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      exit={{ opacity: 0, y: -4 }}
+      transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
     >
-      {/* Actions + Stats */}
+      {/* Stats + primary action */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-50 border border-violet-100">
-            <Users size={13} className="text-violet-600" />
-            <span className="text-[12px] font-semibold text-violet-700">Total Users: 12</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-100">
-            <CheckCircle2 size={13} className="text-emerald-600" />
-            <span className="text-[12px] font-semibold text-emerald-700">Active: 10</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-100">
-            <Mail size={13} className="text-amber-600" />
-            <span className="text-[12px] font-semibold text-amber-700">Invited: 2</span>
-          </div>
+        <div className="flex items-center gap-6 tabular-nums text-[13px] text-ink-700">
+          <span><span className="font-display text-[20px] font-[420] text-ink-900 mr-1.5">{totalUsers}</span>total users</span>
+          <span><span className="font-display text-[20px] font-[420] text-compliant-700 mr-1.5">{activeUsers}</span>active</span>
+          <span><span className="font-display text-[20px] font-[420] text-mitigated-700 mr-1.5">{invitedUsers}</span>invited</span>
         </div>
 
-        <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white text-[13px] font-semibold shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 hover:scale-[1.02] transition-all cursor-pointer">
+        <button className="flex items-center gap-2 px-4 h-10 rounded-md bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white text-[13px] font-semibold transition-colors cursor-pointer">
           <UserPlus size={14} />
-          Invite User
+          Invite user
         </button>
       </div>
 
       {/* Table */}
-      <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/60 shadow-sm overflow-hidden"
-        style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02)' }}
-      >
-        <table className="w-full">
+      <div className="rounded-xl border border-canvas-border bg-canvas-elevated overflow-hidden">
+        <table className="w-full text-[13px]">
           <thead>
-            <tr className="border-b border-border-light/60">
-              <th className="text-left px-6 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">User</th>
-              <th className="text-left px-6 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">Email</th>
-              <th className="text-left px-6 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">Role</th>
-              <th className="text-left px-6 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">Team</th>
-              <th className="text-left px-6 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">Status</th>
-              <th className="text-left px-6 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">Last Login</th>
+            <tr className="border-b border-canvas-border bg-paper-50/40">
+              <th className="text-left px-4 h-10 text-[11px] font-semibold text-ink-500">User</th>
+              <th className="text-left px-4 h-10 text-[11px] font-semibold text-ink-500">Email</th>
+              <th className="text-left px-4 h-10 text-[11px] font-semibold text-ink-500">Role</th>
+              <th className="text-left px-4 h-10 text-[11px] font-semibold text-ink-500">Team</th>
+              <th className="text-left px-4 h-10 text-[11px] font-semibold text-ink-500">Status</th>
+              <th className="text-left px-4 h-10 text-[11px] font-semibold text-ink-500">Last login</th>
             </tr>
           </thead>
           <tbody>
             {mockUsers.map((user, i) => (
-              <motion.tr
+              <tr
                 key={user.email}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: 0.05 + i * 0.05 }}
-                className="border-b border-border-light/40 last:border-0 hover:bg-violet-50/30 transition-colors"
+                className={`h-12 ${i > 0 ? 'border-t border-canvas-border' : ''} hover:bg-brand-50/40 transition-colors`}
               >
-                {/* User */}
-                <td className="px-6 py-3.5">
+                <td className="px-4">
                   <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarGradients[i]} flex items-center justify-center shadow-sm`}>
-                      <span className="text-[11px] font-bold text-white">{user.initials}</span>
-                    </div>
-                    <span className="text-[13px] font-semibold text-text">{user.name}</span>
+                    <Avatar name={user.name} size={28} />
+                    <span className="text-ink-900 font-medium">{user.name}</span>
                   </div>
                 </td>
-
-                {/* Email */}
-                <td className="px-6 py-3.5">
-                  <span className="text-[12.5px] text-text-secondary">{user.email}</span>
-                </td>
-
-                {/* Role */}
-                <td className="px-6 py-3.5">
-                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold border ${user.roleColor}`}>
-                    {user.role}
-                  </span>
-                </td>
-
-                {/* Team */}
-                <td className="px-6 py-3.5">
-                  <span className="text-[12.5px] text-text-secondary">{user.team}</span>
-                </td>
-
-                {/* Status */}
-                <td className="px-6 py-3.5">
-                  {user.status === 'Active' ? (
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-emerald-600">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      Active
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-amber-600">
-                      <Clock size={11} />
-                      Invited
-                    </span>
-                  )}
-                </td>
-
-                {/* Last Login */}
-                <td className="px-6 py-3.5">
-                  <span className="text-[12.5px] text-text-muted">{user.lastLogin}</span>
-                </td>
-              </motion.tr>
+                <td className="px-4 text-ink-700">{user.email}</td>
+                <td className="px-4 text-ink-700">{user.role}</td>
+                <td className="px-4 text-ink-700">{user.team}</td>
+                <td className="px-4"><StatusBadge status={user.status} /></td>
+                <td className="px-4 text-ink-500 tabular-nums">{user.lastLogin}</td>
+              </tr>
             ))}
           </tbody>
         </table>
@@ -211,27 +110,22 @@ function UsersTab() {
 
 function ComingSoonTab({ tab }: { tab: Tab }) {
   const Icon = tab.icon;
-
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      exit={{ opacity: 0, y: -4 }}
+      transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
       className="flex flex-col items-center justify-center py-24"
     >
-      <motion.div
-        animate={{ y: [0, -6, 0] }}
-        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-        className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 border border-violet-200/40 flex items-center justify-center mb-5 shadow-lg shadow-violet-500/10"
-      >
-        <Icon size={28} className="text-violet-500" />
-      </motion.div>
-      <h3 className="text-[18px] font-bold text-text mb-2">{tab.label}</h3>
-      <p className="text-[13px] text-text-muted mb-4">This section is under development</p>
-      <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-50 border border-violet-100">
-        <Construction size={14} className="text-violet-500" />
-        <span className="text-[12px] font-semibold text-violet-600">Coming Soon</span>
+      <div className="w-14 h-14 rounded-md bg-brand-50 flex items-center justify-center mb-5">
+        <Icon size={26} className="text-brand-700" />
+      </div>
+      <h3 className="font-display text-[22px] font-[420] text-ink-900 mb-2">{tab.label}</h3>
+      <p className="text-[13px] text-ink-500 mb-4">This section is under development.</p>
+      <div className="inline-flex items-center gap-2 px-3 h-7 rounded-full bg-mitigated-50 text-mitigated-700 text-[12px] font-medium">
+        <Construction size={12} />
+        Coming soon
       </div>
     </motion.div>
   );
@@ -247,45 +141,19 @@ export default function AdminView({ activeTab }: Props) {
   };
 
   const [currentTab, setCurrentTab] = useState<TabId>(resolveInitialTab);
-
   const activeTabObj = tabs.find((t) => t.id === currentTab)!;
 
   return (
-    <div className="h-full overflow-y-auto relative" style={{ background: 'linear-gradient(180deg, #f8f5ff 0%, #fafafa 300px)' }}>
-      {/* Hero */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#f3ecff] via-[#faf8ff] to-[#eee8f9]" />
-        <FloatingLines enabledWaves={['top', 'middle']} lineCount={4} lineDistance={6} bendRadius={4} bendStrength={-0.3} interactive={true} parallax={true} color="#6a12cd" opacity={0.04} />
-
-        <div className="relative max-w-6xl mx-auto px-10 pt-10 pb-6">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
-                <Settings size={20} className="text-white" />
-              </div>
-              <div>
-                <h1 className="text-[28px] font-extrabold tracking-tight">
-                  <span className="ai-gradient-text">Administration</span>
-                </h1>
-                <p className="text-[14px] text-text-secondary leading-relaxed">
-                  Manage users, teams, roles, and platform settings
-                </p>
-              </div>
-            </div>
-          </motion.div>
+    <div className="h-full overflow-y-auto bg-canvas">
+      {/* Page header — Editorial: breadcrumb · serif title · context · tabs */}
+      <div className="border-b border-canvas-border bg-canvas-elevated">
+        <div className="max-w-6xl mx-auto px-8 pt-8 pb-0">
+          <div className="font-mono text-[11px] text-ink-500 mb-2 tracking-tight">Admin · {activeTabObj.label}</div>
+          <h1 className="font-display text-[34px] font-[420] tracking-tight text-ink-900 leading-[1.15]">Administration</h1>
+          <p className="text-[14px] text-ink-500 mt-1 mb-6">Manage users, teams, roles, and platform settings.</p>
 
           {/* Tabs */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-6 flex items-center gap-1 bg-white/60 backdrop-blur-xl rounded-xl border border-white/70 p-1 shadow-sm w-fit"
-            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02)' }}
-          >
+          <div className="flex items-center gap-0 border-b border-transparent -mb-px">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = currentTab === tab.id;
@@ -293,32 +161,28 @@ export default function AdminView({ activeTab }: Props) {
                 <button
                   key={tab.id}
                   onClick={() => setCurrentTab(tab.id)}
-                  className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-[12.5px] font-semibold transition-all cursor-pointer ${
-                    isActive
-                      ? 'text-violet-700'
-                      : 'text-text-muted hover:text-text-secondary hover:bg-white/60'
+                  className={`relative flex items-center gap-2 px-4 h-11 text-[13px] font-medium transition-colors cursor-pointer ${
+                    isActive ? 'text-brand-700' : 'text-ink-500 hover:text-ink-700'
                   }`}
                 >
+                  <Icon size={14} />
+                  {tab.label}
                   {isActive && (
                     <motion.div
-                      layoutId="admin-tab-bg"
-                      className="absolute inset-0 bg-white rounded-lg shadow-sm border border-violet-100/60"
+                      layoutId="admin-tab-bar"
+                      className="absolute left-0 right-0 -bottom-px h-[2px] bg-brand-600"
                       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                     />
                   )}
-                  <span className="relative z-10 flex items-center gap-2">
-                    <Icon size={14} />
-                    {tab.label}
-                  </span>
                 </button>
               );
             })}
-          </motion.div>
+          </div>
         </div>
       </div>
 
-      {/* Tab Content */}
-      <div className="max-w-6xl mx-auto px-10 pb-12 pt-2">
+      {/* Tab content */}
+      <div className="max-w-6xl mx-auto px-8 py-8">
         <AnimatePresence mode="wait">
           {currentTab === 'users' ? (
             <UsersTab key="users" />

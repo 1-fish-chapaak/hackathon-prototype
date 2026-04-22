@@ -61,12 +61,12 @@ export default function PowerBIImportWizard({ onClose }: Props) {
         {/* Header */}
         <div className="px-5 py-4 border-b border-border-light flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-yellow-100 rounded-xl">
-              <BarChart3 size={16} className="text-yellow-700" />
+            <div className="p-2 bg-mitigated-50 rounded-xl">
+              <BarChart3 size={16} className="text-mitigated-700" />
             </div>
             <h3 className="text-[15px] font-semibold text-text">Import from Power BI</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+          <button onClick={onClose} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer">
             <X size={16} className="text-text-muted" />
           </button>
         </div>
@@ -76,8 +76,8 @@ export default function PowerBIImportWizard({ onClose }: Props) {
           {steps.map((s, i) => (
             <div key={s} className="flex items-center gap-2 flex-1">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                i < currentIndex ? 'bg-green-100 text-green-700' :
-                i === currentIndex ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-400'
+                i < currentIndex ? 'bg-compliant-50 text-compliant-700' :
+                i === currentIndex ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'
               }`}>
                 {i < currentIndex ? <CheckCircle size={14} /> : i + 1}
               </div>
@@ -100,7 +100,7 @@ export default function PowerBIImportWizard({ onClose }: Props) {
                 <h4 className="text-[16px] font-semibold text-text mb-1">Connect to Power BI</h4>
                 <p className="text-[13px] text-text-muted mb-6 max-w-[300px]">Sign in to your Power BI account to browse and import dashboards.</p>
                 {connected ? (
-                  <div className="flex items-center gap-2 text-green-600">
+                  <div className="flex items-center gap-2 text-compliant-700">
                     <CheckCircle size={20} />
                     <span className="text-[14px] font-semibold">Connected!</span>
                   </div>
@@ -132,7 +132,7 @@ export default function PowerBIImportWizard({ onClose }: Props) {
                       }`}
                     >
                       <div className="h-12 rounded-lg bg-gradient-to-br from-yellow-100 to-orange-100 mb-2.5 flex items-center justify-center">
-                        <BarChart3 size={20} className="text-yellow-600" />
+                        <BarChart3 size={20} className="text-mitigated-700" />
                       </div>
                       <div className="text-[12px] font-semibold text-text mb-0.5">{dash.name}</div>
                       <div className="text-[10px] text-text-muted">{dash.workspace} · {dash.tiles} tiles</div>
@@ -141,7 +141,7 @@ export default function PowerBIImportWizard({ onClose }: Props) {
                   ))}
                 </div>
                 <div className="flex justify-between mt-5">
-                  <button onClick={() => setStep('connect')} className="flex items-center gap-1.5 px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">
+                  <button onClick={() => setStep('connect')} className="flex items-center gap-1.5 px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-paper-50 rounded-lg transition-colors cursor-pointer">
                     <ArrowLeft size={13} /> Back
                   </button>
                   <button
@@ -175,7 +175,7 @@ export default function PowerBIImportWizard({ onClose }: Props) {
                   </div>
                 </div>
                 <div className="flex justify-between">
-                  <button onClick={() => setStep('browse')} className="flex items-center gap-1.5 px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">
+                  <button onClick={() => setStep('browse')} className="flex items-center gap-1.5 px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-paper-50 rounded-lg transition-colors cursor-pointer">
                     <ArrowLeft size={13} /> Back
                   </button>
                   <button
@@ -196,9 +196,9 @@ export default function PowerBIImportWizard({ onClose }: Props) {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', stiffness: 200, damping: 12 }}
-                  className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4"
+                  className="w-16 h-16 rounded-full bg-compliant-50 flex items-center justify-center mb-4"
                 >
-                  <CheckCircle size={32} className="text-green-600" />
+                  <CheckCircle size={32} className="text-compliant-700" />
                 </motion.div>
                 <h4 className="text-[16px] font-semibold text-text mb-1">Dashboard Imported!</h4>
                 <p className="text-[13px] text-text-muted mb-6">"{selectedData?.name}" has been added to your dashboards.</p>

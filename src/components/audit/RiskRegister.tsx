@@ -79,16 +79,16 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
         <div className="grid grid-cols-4 gap-4 mb-6">
           {Object.entries(severityCounts).map(([sev, count], i) => {
             const colors: Record<string, string> = {
-              critical: 'border-red-200 bg-red-50',
-              high: 'border-orange-200 bg-orange-50',
-              medium: 'border-yellow-200 bg-yellow-50',
-              low: 'border-green-200 bg-green-50',
+              critical: 'border-risk bg-risk-50',
+              high: 'border-orange-200 bg-high-50',
+              medium: 'border-yellow-200 bg-mitigated-50',
+              low: 'border-green-200 bg-compliant-50',
             };
             const textColors: Record<string, string> = {
-              critical: 'text-red-700',
-              high: 'text-orange-700',
-              medium: 'text-yellow-700',
-              low: 'text-green-700',
+              critical: 'text-risk-700',
+              high: 'text-high-700',
+              medium: 'text-mitigated-700',
+              low: 'text-compliant-700',
             };
             return (
               <motion.div
@@ -139,7 +139,7 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
                   {risk.bpId === 'p2p' && onRunWorkflow && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onRunWorkflow('wf-001'); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-semibold rounded-lg cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-compliant-50 hover:bg-compliant-50 text-compliant-700 text-[11px] font-semibold rounded-lg cursor-pointer"
                     >
                       <ArrowRight size={12} />
                       Run Workflow

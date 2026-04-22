@@ -130,11 +130,11 @@ export default function ReportBuilder({ context, onBack }: Props) {
 
   const sectionColor = (type: ReportSection['type']) => {
     const colors = {
-      'workflow-output': 'bg-blue-50 text-blue-600',
-      text: 'bg-gray-50 text-gray-600',
-      chart: 'bg-purple-50 text-purple-600',
-      'exception-summary': 'bg-orange-50 text-orange-600',
-      'action-taken': 'bg-green-50 text-green-600',
+      'workflow-output': 'bg-evidence-50 text-evidence-700',
+      text: 'bg-paper-50 text-ink-500',
+      chart: 'bg-brand-50 text-brand-700',
+      'exception-summary': 'bg-high-50 text-high-700',
+      'action-taken': 'bg-compliant-50 text-compliant-700',
     };
     return colors[type];
   };
@@ -184,7 +184,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
         {/* Top Bar */}
         <div className="h-12 border-b border-border-light bg-white flex items-center justify-between px-5 shrink-0">
           <div className="flex items-center gap-3">
-            <button onClick={onBack} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+            <button onClick={onBack} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer">
               <ArrowLeft size={16} className="text-text-muted" />
             </button>
             <div className="flex items-center gap-2">
@@ -200,7 +200,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
             <button
               onClick={() => setShowPreview(p => !p)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors cursor-pointer ${
-                showPreview ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-gray-50'
+                showPreview ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-paper-50'
               }`}
             >
               <Eye size={13} />
@@ -208,7 +208,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
             </button>
             <button
               onClick={() => { setTemplateName(title); setShowSaveTemplate(true); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-text-secondary hover:bg-paper-50 transition-colors cursor-pointer"
             >
               <BookOpen size={13} />
               Save as Template
@@ -351,7 +351,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                     <span className="text-[9px] font-bold uppercase tracking-wider text-text-muted bg-surface-2 px-2 py-0.5 rounded">
                       {section.type.replace('-', ' ')}
                     </span>
-                    <button onClick={() => removeSection(section.id)} className="p-1 hover:bg-red-50 hover:text-red-500 rounded text-text-muted transition-colors cursor-pointer">
+                    <button onClick={() => removeSection(section.id)} className="p-1 hover:bg-risk-50 hover:text-risk-700 rounded text-text-muted transition-colors cursor-pointer">
                       <X size={13} />
                     </button>
                   </div>
@@ -367,7 +367,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                       </div>
                     ) : section.type === 'workflow-output' ? (
                       <div className="flex items-center gap-3 p-3 bg-surface-2 rounded-lg">
-                        <BarChart3 size={16} className="text-blue-500" />
+                        <BarChart3 size={16} className="text-evidence-700" />
                         <div>
                           <div className="text-[12px] font-medium text-text">{section.title}</div>
                           <div className="text-[10px] text-text-muted">{section.content}</div>
@@ -376,17 +376,17 @@ export default function ReportBuilder({ context, onBack }: Props) {
                     ) : section.type === 'exception-summary' ? (
                       <div className="space-y-2">
                         <div className="flex gap-3">
-                          <div className="flex-1 p-2.5 bg-red-50 rounded-lg text-center">
-                            <div className="text-[16px] font-bold text-red-700">8</div>
-                            <div className="text-[9px] text-red-600 uppercase font-semibold">Flagged</div>
+                          <div className="flex-1 p-2.5 bg-risk-50 rounded-lg text-center">
+                            <div className="text-[16px] font-bold text-risk-700">8</div>
+                            <div className="text-[9px] text-risk-700 uppercase font-semibold">Flagged</div>
                           </div>
-                          <div className="flex-1 p-2.5 bg-orange-50 rounded-lg text-center">
-                            <div className="text-[16px] font-bold text-orange-700">3</div>
-                            <div className="text-[9px] text-orange-600 uppercase font-semibold">Assigned</div>
+                          <div className="flex-1 p-2.5 bg-high-50 rounded-lg text-center">
+                            <div className="text-[16px] font-bold text-high-700">3</div>
+                            <div className="text-[9px] text-high-700 uppercase font-semibold">Assigned</div>
                           </div>
-                          <div className="flex-1 p-2.5 bg-green-50 rounded-lg text-center">
-                            <div className="text-[16px] font-bold text-green-700">1</div>
-                            <div className="text-[9px] text-green-600 uppercase font-semibold">Resolved</div>
+                          <div className="flex-1 p-2.5 bg-compliant-50 rounded-lg text-center">
+                            <div className="text-[16px] font-bold text-compliant-700">1</div>
+                            <div className="text-[9px] text-compliant-700 uppercase font-semibold">Resolved</div>
                           </div>
                         </div>
                         <div className="text-[11px] text-text-muted">Total flagged amount: $616,650</div>
@@ -478,7 +478,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                         />
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full shrink-0">{approver.status}</span>
+                    <span className="text-[10px] font-bold text-mitigated-700 bg-mitigated-50 px-2 py-0.5 rounded-full shrink-0">{approver.status}</span>
                     {i > 0 && i < approvers.length && (
                       <div className="text-[9px] text-text-muted shrink-0">Step {i + 1}</div>
                     )}
@@ -517,7 +517,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                   <div className="p-1.5 bg-primary/10 text-primary rounded-lg"><BookOpen size={14} /></div>
                   <h4 className="text-[14px] font-semibold text-text">Save as Template</h4>
                 </div>
-                <button onClick={() => setShowSaveTemplate(false)} className="p-1 hover:bg-gray-100 rounded-lg cursor-pointer">
+                <button onClick={() => setShowSaveTemplate(false)} className="p-1 hover:bg-paper-50 rounded-lg cursor-pointer">
                   <X size={14} className="text-text-muted" />
                 </button>
               </div>
@@ -572,7 +572,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                 </div>
               </div>
               <div className="px-5 py-4 border-t border-border-light flex justify-end gap-2">
-                <button onClick={() => setShowSaveTemplate(false)} className="px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">Cancel</button>
+                <button onClick={() => setShowSaveTemplate(false)} className="px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-paper-50 rounded-lg transition-colors cursor-pointer">Cancel</button>
                 <button
                   onClick={() => { addToast({ type: 'success', message: 'Template saved to library!' }); setShowSaveTemplate(false); }}
                   className="px-5 py-2 bg-primary text-white rounded-xl text-[12px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer"
@@ -605,7 +605,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
             >
               <div className="px-4 py-3 border-b border-border-light flex items-center justify-between">
                 <h4 className="text-[13px] font-semibold text-text">Add Workflow Output</h4>
-                <button onClick={() => setShowWorkflowPicker(false)} className="p-1 hover:bg-gray-100 rounded cursor-pointer">
+                <button onClick={() => setShowWorkflowPicker(false)} className="p-1 hover:bg-paper-50 rounded cursor-pointer">
                   <X size={14} className="text-text-muted" />
                 </button>
               </div>

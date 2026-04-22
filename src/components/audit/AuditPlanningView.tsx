@@ -258,19 +258,19 @@ function GanttTooltip({ item, position }: { item: AuditEngagement; position: { x
           <div className="flex justify-between text-[10px]">
             <span className="text-text-muted">Status</span>
             <span className={`font-bold px-1.5 py-0.5 rounded-full ${
-              item.status === 'active' ? 'bg-green-50 text-green-600' :
-              item.status === 'completed' ? 'bg-blue-50 text-blue-600' :
-              item.status === 'on-hold' ? 'bg-orange-50 text-orange-600' :
-              'bg-gray-100 text-gray-500'
+              item.status === 'active' ? 'bg-compliant-50 text-compliant-700' :
+              item.status === 'completed' ? 'bg-evidence-50 text-evidence-700' :
+              item.status === 'on-hold' ? 'bg-high-50 text-high-700' :
+              'bg-paper-50 text-ink-500'
             }`}>{item.status}</span>
           </div>
           <div className="flex justify-between text-[10px]">
             <span className="text-text-muted">Priority</span>
             <span className={`font-bold ${
-              item.priority === 'Critical' ? 'text-red-600' :
-              item.priority === 'High' ? 'text-orange-600' :
-              item.priority === 'Medium' ? 'text-amber-600' :
-              'text-green-600'
+              item.priority === 'Critical' ? 'text-risk-700' :
+              item.priority === 'High' ? 'text-high-700' :
+              item.priority === 'Medium' ? 'text-mitigated-700' :
+              'text-compliant-700'
             }`}>{item.priority}</span>
           </div>
           <div className="flex justify-between text-[10px]">
@@ -313,9 +313,9 @@ function GanttChart({
   return (
     <div className="glass-card rounded-2xl overflow-hidden relative">
       {frozen && (
-        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2 py-1 bg-blue-50/80 backdrop-blur-sm border border-blue-200 rounded-md">
-          <Lock size={10} className="text-blue-500" />
-          <span className="text-[9px] font-semibold text-blue-600">Locked</span>
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2 py-1 bg-evidence-50/80 backdrop-blur-sm border border-blue-200 rounded-md">
+          <Lock size={10} className="text-evidence-700" />
+          <span className="text-[9px] font-semibold text-evidence-700">Locked</span>
         </div>
       )}
 
@@ -361,10 +361,10 @@ function GanttChart({
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[10px] text-text-muted">{item.owner}</span>
               <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                item.status === 'active' ? 'bg-green-50 text-green-600' :
-                item.status === 'completed' ? 'bg-blue-50 text-blue-600' :
-                item.status === 'on-hold' ? 'bg-orange-50 text-orange-600' :
-                'bg-gray-100 text-gray-500'
+                item.status === 'active' ? 'bg-compliant-50 text-compliant-700' :
+                item.status === 'completed' ? 'bg-evidence-50 text-evidence-700' :
+                item.status === 'on-hold' ? 'bg-high-50 text-high-700' :
+                'bg-paper-50 text-ink-500'
               }`}>{item.status}</span>
               <span className="text-[9px] text-text-muted">{item.controls} controls</span>
             </div>
@@ -444,12 +444,12 @@ function MilestonesStrip() {
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
                   isPast
-                    ? 'bg-green-50 border-green-300 text-green-600'
+                    ? 'bg-compliant-50 border-green-300 text-compliant-700'
                     : 'bg-white border-border-light text-text-muted'
                 } transition-colors`}>
                   <ms.icon size={13} />
                 </div>
-                <span className={`text-[10px] font-semibold ${isPast ? 'text-green-600' : 'text-text-muted'}`}>
+                <span className={`text-[10px] font-semibold ${isPast ? 'text-compliant-700' : 'text-text-muted'}`}>
                   {ms.label}
                 </span>
                 <span className="text-[9px] text-text-muted">{MONTHS[ms.month]}</span>
@@ -484,7 +484,7 @@ function ResourcesTab() {
             const totalHours = Object.values(alloc).reduce((s, h) => s + h, 0);
             const totalCapacity = member.capacity * 12;
             const utilization = Math.round((totalHours / totalCapacity) * 100);
-            const barColor = utilization > 100 ? 'bg-red-500' : utilization > 80 ? 'bg-amber-500' : 'bg-green-500';
+            const barColor = utilization > 100 ? 'bg-risk-500' : utilization > 80 ? 'bg-mitigated-500' : 'bg-compliant-500';
 
             return (
               <motion.div
@@ -512,7 +512,7 @@ function ResourcesTab() {
                 </div>
                 <div className="flex items-center justify-between text-[10px] mb-1.5">
                   <span className="text-text-muted">{totalHours}h / {totalCapacity}h</span>
-                  <span className={`font-bold ${utilization > 100 ? 'text-red-600' : utilization > 80 ? 'text-amber-600' : 'text-green-600'}`}>
+                  <span className={`font-bold ${utilization > 100 ? 'text-risk-700' : utilization > 80 ? 'text-mitigated-700' : 'text-compliant-700'}`}>
                     {utilization}%
                   </span>
                 </div>
@@ -566,9 +566,9 @@ function ResourcesTab() {
                         return (
                           <td key={mIdx} className="px-1 py-1.5">
                             <div className={`w-full h-8 rounded flex items-center justify-center text-[9px] font-bold ${
-                              hours > 100 ? 'bg-red-200 text-red-800' :
-                              hours > 60 ? 'bg-amber-100 text-amber-700' :
-                              hours > 0 ? 'bg-green-50 text-green-600' :
+                              hours > 100 ? 'bg-red-200 text-risk-700' :
+                              hours > 60 ? 'bg-mitigated-50 text-mitigated-700' :
+                              hours > 0 ? 'bg-compliant-50 text-compliant-700' :
                               'bg-surface-2 text-text-muted/30'
                             }`}>
                               {hours > 0 ? `${hours}h` : '\u2014'}
@@ -585,8 +585,8 @@ function ResourcesTab() {
           {/* Legend */}
           <div className="px-4 py-2.5 border-t border-border-light flex items-center gap-4">
             <span className="text-[9px] font-semibold text-text-muted uppercase tracking-wider">Legend:</span>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-green-50 border border-green-200" /><span className="text-[9px] text-text-muted">&lt; 40h (Available)</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-amber-100 border border-amber-200" /><span className="text-[9px] text-text-muted">40–80h (Loaded)</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-compliant-50 border border-green-200" /><span className="text-[9px] text-text-muted">&lt; 40h (Available)</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-mitigated-50 border border-amber-200" /><span className="text-[9px] text-text-muted">40–80h (Loaded)</span></div>
             <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-red-200 border border-red-300" /><span className="text-[9px] text-text-muted">&gt; 100h (Overloaded)</span></div>
           </div>
         </div>
@@ -603,10 +603,10 @@ function RiskMatrixTab() {
     for (let i = 1; i <= 5; i++) {
       const score = l * i;
       gridColors[`${l}-${i}`] =
-        score >= 15 ? 'bg-red-100/80 border-red-200' :
-        score >= 10 ? 'bg-orange-100/80 border-orange-200' :
-        score >= 5 ? 'bg-amber-50/80 border-amber-200' :
-        'bg-green-50/80 border-green-200';
+        score >= 15 ? 'bg-risk-50/80 border-risk' :
+        score >= 10 ? 'bg-high-50/80 border-orange-200' :
+        score >= 5 ? 'bg-mitigated-50/80 border-amber-200' :
+        'bg-compliant-50/80 border-green-200';
     }
   }
 
@@ -670,10 +670,10 @@ function RiskMatrixTab() {
 
         {/* Legend */}
         <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border-light">
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-green-50 border border-green-200" /><span className="text-[9px] text-text-muted">Low (1-4)</span></div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-amber-50 border border-amber-200" /><span className="text-[9px] text-text-muted">Medium (5-9)</span></div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-orange-100 border border-orange-200" /><span className="text-[9px] text-text-muted">High (10-14)</span></div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-red-100 border border-red-200" /><span className="text-[9px] text-text-muted">Critical (15+)</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-compliant-50 border border-green-200" /><span className="text-[9px] text-text-muted">Low (1-4)</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-mitigated-50 border border-amber-200" /><span className="text-[9px] text-text-muted">Medium (5-9)</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-high-50 border border-orange-200" /><span className="text-[9px] text-text-muted">High (10-14)</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-risk-50 border border-risk" /><span className="text-[9px] text-text-muted">Critical (15+)</span></div>
         </div>
       </div>
 
@@ -693,7 +693,7 @@ function RiskMatrixTab() {
               className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-2 transition-colors"
             >
               <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold text-white ${
-                idx === 0 ? 'bg-red-500' : idx < 3 ? 'bg-orange-500' : idx < 5 ? 'bg-amber-500' : 'bg-green-500'
+                idx === 0 ? 'bg-risk-500' : idx < 3 ? 'bg-high-500' : idx < 5 ? 'bg-mitigated-500' : 'bg-compliant-500'
               }`}>
                 {idx + 1}
               </div>
@@ -705,10 +705,10 @@ function RiskMatrixTab() {
                   L={item.likelihood} / I={item.impact}
                 </div>
                 <div className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                  item.score >= 15 ? 'bg-red-50 text-red-600' :
-                  item.score >= 10 ? 'bg-orange-50 text-orange-600' :
-                  item.score >= 5 ? 'bg-amber-50 text-amber-600' :
-                  'bg-green-50 text-green-600'
+                  item.score >= 15 ? 'bg-risk-50 text-risk-700' :
+                  item.score >= 10 ? 'bg-high-50 text-high-700' :
+                  item.score >= 5 ? 'bg-mitigated-50 text-mitigated-700' :
+                  'bg-compliant-50 text-compliant-700'
                 }`}>
                   Score: {item.score}
                 </div>
@@ -736,9 +736,9 @@ function BudgetTab() {
 
   const budgetKpis = [
     { label: 'Total Budget', value: fmt(totalBudget), icon: DollarSign, color: 'text-primary bg-primary-xlight' },
-    { label: 'Spent', value: fmt(totalSpent), icon: TrendingUp, color: 'text-blue-600 bg-blue-50' },
-    { label: 'Remaining', value: fmt(remaining), icon: Clock, color: 'text-emerald-600 bg-emerald-50' },
-    { label: 'Utilization', value: `${utilization}%`, icon: Zap, color: 'text-orange-600 bg-orange-50' },
+    { label: 'Spent', value: fmt(totalSpent), icon: TrendingUp, color: 'text-evidence-700 bg-evidence-50' },
+    { label: 'Remaining', value: fmt(remaining), icon: Clock, color: 'text-compliant-700 bg-compliant-50' },
+    { label: 'Utilization', value: `${utilization}%`, icon: Zap, color: 'text-high-700 bg-high-50' },
   ];
 
   const maxBudget = Math.max(...BUDGET_DATA.map(b => b.budget));
@@ -794,7 +794,7 @@ function BudgetTab() {
                   </td>
                   <td className="text-[12px] text-text-secondary px-4 py-3">${row.budget.toLocaleString()}</td>
                   <td className="text-[12px] text-text-secondary px-4 py-3">${row.spent.toLocaleString()}</td>
-                  <td className={`text-[12px] font-semibold px-4 py-3 ${row.variance < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <td className={`text-[12px] font-semibold px-4 py-3 ${row.variance < 0 ? 'text-compliant-700' : 'text-risk-700'}`}>
                     {row.variance < 0 ? '-' : '+'}${Math.abs(row.variance).toLocaleString()}
                   </td>
                 </motion.tr>
@@ -896,9 +896,9 @@ function EngagementDrawer({
 
           {/* Frozen banner */}
           {readOnly && (
-            <div className="flex items-center gap-2.5 p-3 bg-blue-50 rounded-xl mb-5 border border-blue-200">
-              <Lock size={14} className="text-blue-600 shrink-0" />
-              <span className="text-[12px] text-blue-700 font-medium">Plan is frozen — fields are read-only.</span>
+            <div className="flex items-center gap-2.5 p-3 bg-evidence-50 rounded-xl mb-5 border border-blue-200">
+              <Lock size={14} className="text-evidence-700 shrink-0" />
+              <span className="text-[12px] text-evidence-700 font-medium">Plan is frozen — fields are read-only.</span>
             </div>
           )}
 
@@ -997,10 +997,10 @@ function EngagementDrawer({
               disabled={readOnly}
               renderOption={(opt) => (
                 <span className={`font-semibold ${
-                  opt === 'Critical' ? 'text-red-600' :
-                  opt === 'High' ? 'text-orange-600' :
-                  opt === 'Medium' ? 'text-amber-600' :
-                  'text-green-600'
+                  opt === 'Critical' ? 'text-risk-700' :
+                  opt === 'High' ? 'text-high-700' :
+                  opt === 'Medium' ? 'text-mitigated-700' :
+                  'text-compliant-700'
                 }`}>{opt}</span>
               )}
             />
@@ -1088,7 +1088,7 @@ function EngagementDrawer({
                                   </div>
                                 </div>
                                 {hasSkillMatch && (
-                                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 text-green-600">
+                                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-compliant-50 text-compliant-700">
                                     Skill Match
                                   </span>
                                 )}
@@ -1116,7 +1116,7 @@ function EngagementDrawer({
               {!isCreate && (
                 <button
                   onClick={() => onDelete(form.id)}
-                  className="w-full py-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl text-[12px] font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full py-2 text-risk-700 hover:text-risk-700 hover:bg-risk-50 rounded-xl text-[12px] font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Trash2 size={13} />
                   Delete Engagement
@@ -1281,10 +1281,10 @@ export default function AuditPlanningView() {
               Add Engagement
             </button>
             {planFrozen ? (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
-                <Lock size={13} className="text-blue-600" />
-                <span className="text-[12px] font-semibold text-blue-700">Plan Frozen</span>
-                <span className="text-[10px] text-blue-500">by Karan Mehta — Mar 1, 2026</span>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-evidence-50 border border-blue-200 rounded-lg">
+                <Lock size={13} className="text-evidence-700" />
+                <span className="text-[12px] font-semibold text-evidence-700">Plan Frozen</span>
+                <span className="text-[10px] text-evidence-700">by Karan Mehta — Mar 1, 2026</span>
               </div>
             ) : (
               <button
@@ -1312,9 +1312,9 @@ export default function AuditPlanningView() {
         {/* KPI Strip */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           <KpiCard label="Planned Engagements" value={plan.length} icon={ClipboardList} color="text-primary bg-primary-xlight" index={0} />
-          <KpiCard label="Processes Covered" value={uniqueProcesses} icon={LayoutGrid} color="text-blue-600 bg-blue-50" index={1} />
-          <KpiCard label="Total Controls" value={totalControls} icon={ShieldCheck} color="text-emerald-600 bg-emerald-50" index={2} />
-          <KpiCard label="Team Members" value={uniqueOwners} icon={Users} color="text-orange-600 bg-orange-50" index={3} />
+          <KpiCard label="Processes Covered" value={uniqueProcesses} icon={LayoutGrid} color="text-evidence-700 bg-evidence-50" index={1} />
+          <KpiCard label="Total Controls" value={totalControls} icon={ShieldCheck} color="text-compliant-700 bg-compliant-50" index={2} />
+          <KpiCard label="Team Members" value={uniqueOwners} icon={Users} color="text-high-700 bg-high-50" index={3} />
         </div>
 
         {/* Tabs */}
@@ -1336,7 +1336,7 @@ export default function AuditPlanningView() {
                 <tab.icon size={14} className={isDisabled ? 'opacity-40' : ''} />
                 <span className={isDisabled ? 'opacity-40' : ''}>{tab.label}</span>
                 {isDisabled && (
-                  <span className="ml-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400 uppercase tracking-wider">v2</span>
+                  <span className="ml-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-paper-50 text-ink-500 uppercase tracking-wider">v2</span>
                 )}
               </button>
             );
@@ -1344,7 +1344,7 @@ export default function AuditPlanningView() {
         </div>
         {/* v2 note */}
         <div className="text-[11px] text-text-muted mb-4 flex items-center gap-1.5">
-          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 uppercase">Note</span>
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-paper-50 text-ink-500 uppercase">Note</span>
           Resources, Risk Matrix, and Budget tabs coming in v2
         </div>
 
@@ -1544,10 +1544,10 @@ export default function AuditPlanningView() {
                     <td className="px-5 py-3">
                       <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
                         entry.status === 'completed'
-                          ? 'bg-green-50 text-green-600'
+                          ? 'bg-compliant-50 text-compliant-700'
                           : signedOff && entry.action === 'Final Sign-Off'
-                            ? 'bg-green-50 text-green-600'
-                            : 'bg-orange-50 text-orange-600'
+                            ? 'bg-compliant-50 text-compliant-700'
+                            : 'bg-high-50 text-high-700'
                       }`}>
                         {entry.status === 'completed'
                           ? 'Completed'
@@ -1589,9 +1589,9 @@ export default function AuditPlanningView() {
                   <X size={16} className="text-text-muted" />
                 </button>
               </div>
-              <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-xl mb-5">
-                <Lock size={16} className="text-blue-600 mt-0.5 shrink-0" />
-                <p className="text-[13px] text-blue-800">
+              <div className="flex items-start gap-3 p-3 bg-evidence-50 rounded-xl mb-5">
+                <Lock size={16} className="text-evidence-700 mt-0.5 shrink-0" />
+                <p className="text-[13px] text-evidence-700">
                   Freeze the FY26 audit plan? This will lock all scheduling changes.
                 </p>
               </div>

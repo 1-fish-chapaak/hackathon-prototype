@@ -16,9 +16,9 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  sql: 'text-blue-600 bg-blue-50',
-  csv: 'text-green-600 bg-green-50',
-  pdf: 'text-orange-600 bg-orange-50',
+  sql: 'text-evidence-700 bg-evidence-50',
+  csv: 'text-compliant-700 bg-compliant-50',
+  pdf: 'text-high-700 bg-high-50',
 };
 
 export default function DataSourcesView() {
@@ -49,8 +49,8 @@ export default function DataSourcesView() {
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
             { label: 'Total Sources', value: DATA_SOURCES.length, icon: HardDrive, color: 'text-primary bg-primary-xlight' },
-            { label: 'Connected', value: DATA_SOURCES.filter(d => d.status === 'connected').length, icon: Link2, color: 'text-green-600 bg-green-50' },
-            { label: 'Disconnected', value: DATA_SOURCES.filter(d => d.status === 'disconnected').length, icon: Unlink, color: 'text-red-600 bg-red-50' },
+            { label: 'Connected', value: DATA_SOURCES.filter(d => d.status === 'connected').length, icon: Link2, color: 'text-compliant-700 bg-compliant-50' },
+            { label: 'Disconnected', value: DATA_SOURCES.filter(d => d.status === 'disconnected').length, icon: Unlink, color: 'text-risk-700 bg-risk-50' },
           ].map((stat, i) => (
             <motion.div
               key={stat.label}
@@ -72,7 +72,7 @@ export default function DataSourcesView() {
         <div className="space-y-3">
           {DATA_SOURCES.map((ds, i) => {
             const Icon = TYPE_ICONS[ds.type] || Database;
-            const color = TYPE_COLORS[ds.type] || 'text-gray-600 bg-gray-50';
+            const color = TYPE_COLORS[ds.type] || 'text-ink-500 bg-paper-50';
             const isConnected = ds.status === 'connected';
 
             return (
@@ -82,7 +82,7 @@ export default function DataSourcesView() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
                 className={`glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 active:scale-[0.998] transition-all duration-300 group ${
-                  !isConnected ? '!border-red-200 !bg-red-50/30' : 'hover:border-primary/20'
+                  !isConnected ? '!border-risk !bg-risk-50/30' : 'hover:border-primary/20'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -108,7 +108,7 @@ export default function DataSourcesView() {
                         <RefreshCw size={14} />
                       </button>
                     )}
-                    <button onClick={() => addToast({ message: 'Data source settings opened', type: 'info' })} className="p-2 text-text-muted hover:text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer" title="Settings">
+                    <button onClick={() => addToast({ message: 'Data source settings opened', type: 'info' })} className="p-2 text-text-muted hover:text-text-secondary hover:bg-paper-50 rounded-lg transition-colors cursor-pointer" title="Settings">
                       <Settings size={14} />
                     </button>
                     {!isConnected && (

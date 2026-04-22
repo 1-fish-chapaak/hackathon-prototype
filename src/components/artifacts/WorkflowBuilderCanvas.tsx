@@ -27,16 +27,16 @@ const STAGE_LABELS = [
 ];
 
 const TYPE_BADGES: Record<string, { label: string; color: string }> = {
-  text: { label: 'TXT', color: 'bg-blue-50 text-blue-600' },
-  number: { label: 'NUM', color: 'bg-violet-50 text-violet-600' },
-  badge: { label: 'BADGE', color: 'bg-purple-50 text-purple-600' },
-  percent: { label: '%', color: 'bg-amber-50 text-amber-600' },
+  text: { label: 'TXT', color: 'bg-evidence-50 text-evidence-700' },
+  number: { label: 'NUM', color: 'bg-brand-50 text-brand-700' },
+  badge: { label: 'BADGE', color: 'bg-brand-50 text-brand-700' },
+  percent: { label: '%', color: 'bg-mitigated-50 text-mitigated-700' },
 };
 
 const FORMAT_COLORS: Record<string, string> = {
-  CSV: 'bg-purple-50 text-purple-600 border-purple-200',
-  'PDF/CSV': 'bg-orange-50 text-orange-600 border-orange-200',
-  SQL: 'bg-blue-50 text-blue-600 border-blue-200',
+  CSV: 'bg-brand-50 text-brand-700 border-purple-200',
+  'PDF/CSV': 'bg-high-50 text-high-700 border-orange-200',
+  SQL: 'bg-evidence-50 text-evidence-700 border-blue-200',
 };
 
 const TYPE_COLOR_CLASSES: Record<WorkflowTypeId, {
@@ -44,24 +44,24 @@ const TYPE_COLOR_CLASSES: Record<WorkflowTypeId, {
   gradient: string; badgeBg: string; badgeText: string;
 }> = {
   reconciliation: {
-    accent: 'text-purple-600', accentBg: 'bg-purple-50', accentBorder: 'border-purple-200',
+    accent: 'text-brand-700', accentBg: 'bg-brand-50', accentBorder: 'border-purple-200',
     accentRing: 'ring-purple-300', gradient: 'from-purple-400 to-violet-500',
-    badgeBg: 'bg-purple-50', badgeText: 'text-purple-700',
+    badgeBg: 'bg-brand-50', badgeText: 'text-brand-700',
   },
   detection: {
-    accent: 'text-purple-600', accentBg: 'bg-purple-50', accentBorder: 'border-purple-200',
+    accent: 'text-brand-700', accentBg: 'bg-brand-50', accentBorder: 'border-purple-200',
     accentRing: 'ring-purple-300', gradient: 'from-purple-500 to-violet-500',
-    badgeBg: 'bg-purple-50', badgeText: 'text-purple-700',
+    badgeBg: 'bg-brand-50', badgeText: 'text-brand-700',
   },
   monitoring: {
-    accent: 'text-sky-600', accentBg: 'bg-sky-50', accentBorder: 'border-sky-200',
+    accent: 'text-evidence-700', accentBg: 'bg-evidence-50', accentBorder: 'border-sky-200',
     accentRing: 'ring-sky-300', gradient: 'from-sky-400 to-blue-500',
-    badgeBg: 'bg-sky-50', badgeText: 'text-sky-700',
+    badgeBg: 'bg-evidence-50', badgeText: 'text-evidence-700',
   },
   compliance: {
-    accent: 'text-violet-600', accentBg: 'bg-violet-50', accentBorder: 'border-violet-200',
+    accent: 'text-brand-700', accentBg: 'bg-brand-50', accentBorder: 'border-violet-200',
     accentRing: 'ring-violet-300', gradient: 'from-violet-500 to-purple-500',
-    badgeBg: 'bg-violet-50', badgeText: 'text-violet-700',
+    badgeBg: 'bg-brand-50', badgeText: 'text-brand-700',
   },
 };
 
@@ -231,7 +231,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
               </span>
             )}
           </div>
-          <button onClick={onClose} className="p-1.5 text-text-muted hover:text-text-secondary rounded-md hover:bg-gray-50 cursor-pointer">
+          <button onClick={onClose} className="p-1.5 text-text-muted hover:text-text-secondary rounded-md hover:bg-paper-50 cursor-pointer">
             <X size={14} />
           </button>
         </div>
@@ -248,13 +248,13 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                     filled
                       ? `bg-gradient-to-r ${colors?.gradient || 'from-teal-400 to-emerald-500'} text-white`
                       : active
-                        ? `${colors?.accentBg || 'bg-teal-100'} ${colors?.accent || 'text-teal-600'} ring-2 ${colors?.accentRing || 'ring-teal-300'}`
-                        : 'bg-gray-100 text-gray-400'
+                        ? `${colors?.accentBg || 'bg-evidence-50'} ${colors?.accent || 'text-evidence-700'} ring-2 ${colors?.accentRing || 'ring-teal-300'}`
+                        : 'bg-paper-50 text-ink-500'
                   }`}>
                     {filled ? <CheckCircle size={12} /> : i + 1}
                   </div>
                   <span className={`text-[9px] font-medium truncate transition-colors ${
-                    active ? `${colors?.accent || 'text-teal-600'} font-bold` : filled ? 'text-text' : 'text-text-muted'
+                    active ? `${colors?.accent || 'text-evidence-700'} font-bold` : filled ? 'text-text' : 'text-text-muted'
                   }`}>
                     {s.label}
                   </span>
@@ -340,7 +340,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                         {/* Header */}
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <div className={`p-1 rounded-md ${source.frozen ? `${colors.accentBg} ${colors.accent}` : 'bg-gray-50 text-gray-500'}`}>
+                            <div className={`p-1 rounded-md ${source.frozen ? `${colors.accentBg} ${colors.accent}` : 'bg-paper-50 text-ink-500'}`}>
                               {source.frozen ? <Lock size={12} /> : <Database size={12} />}
                             </div>
                             <div>
@@ -348,7 +348,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                               <div className="text-[9px] text-text-muted">{source.type}</div>
                             </div>
                           </div>
-                          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${FORMAT_COLORS[source.format] || 'bg-gray-50 text-gray-500 border-gray-200'}`}>
+                          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${FORMAT_COLORS[source.format] || 'bg-paper-50 text-ink-500 border-gray-200'}`}>
                             {source.format}
                           </span>
                         </div>
@@ -382,7 +382,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                               <CheckCircle size={7} /> Frozen
                             </span>
                           ) : (
-                            <span className="text-[8px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-full">
+                            <span className="text-[8px] font-bold text-high-700 bg-high-50 px-1.5 py-0.5 rounded-full">
                               Required
                             </span>
                           )}
@@ -525,7 +525,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                               setOutputSheets(remaining);
                               if (activeSheetId === sheet.id) setActiveSheetId(remaining[0].id);
                             }}
-                            className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-red-500 transition-all cursor-pointer"
+                            className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-risk-700 transition-all cursor-pointer"
                           >
                             <X size={9} />
                           </button>
@@ -614,7 +614,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                         />
                         <span className="text-[11px] font-medium text-text flex-1">{kpi.label}</span>
                         {kpi.id === 'run_comparison' && (
-                          <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">DELTA</span>
+                          <span className="text-[8px] font-bold text-mitigated-700 bg-mitigated-50 px-1.5 py-0.5 rounded">DELTA</span>
                         )}
                       </label>
                     ))}
@@ -695,8 +695,8 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                   <div className="flex items-center gap-2">
                     <FileText size={14} className={colors.accent} />
                     <h2 className="text-[13px] font-semibold text-text">{config.name}</h2>
-                    <span className="text-[8px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Live Preview
+                    <span className="text-[8px] font-bold bg-compliant-50 text-compliant-700 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-compliant-500 animate-pulse" /> Live Preview
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -729,7 +729,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                 <div className="bg-white rounded-xl border border-border-light shadow-sm p-3 mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Execution Trend — Last 7 Runs</span>
-                    <span className="text-[10px] font-semibold text-green-600">{'\u2191'} 12% improvement</span>
+                    <span className="text-[10px] font-semibold text-compliant-700">{'\u2191'} 12% improvement</span>
                   </div>
                   <svg width="100%" height="48" viewBox="0 0 400 48" preserveAspectRatio="none">
                     <defs>
@@ -755,25 +755,25 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                   {config.id === 'reconciliation' && (
                     <p className="text-[11.5px] text-text leading-relaxed">
                       Processed <strong>1,247 records</strong> across PO, GRN, and Invoice data. <strong>87% matched</strong> successfully with zero variance.
-                      <strong className="text-amber-600"> 98 records</strong> show amount variances within the 5% tolerance — recommend bulk approval.
-                      <strong className="text-red-600"> 60 unmatched items</strong> require manual investigation:
+                      <strong className="text-mitigated-700"> 98 records</strong> show amount variances within the 5% tolerance — recommend bulk approval.
+                      <strong className="text-risk-700"> 60 unmatched items</strong> require manual investigation:
                       32 missing GRNs (likely goods in transit) and 28 invoices with no corresponding PO.
                       Top vendor by variance: <strong>Global Supplies Ltd</strong> (₹2,450 across 3 invoices).
                     </p>
                   )}
                   {config.id === 'detection' && (
                     <p className="text-[11.5px] text-text leading-relaxed">
-                      Scanned <strong>12,450 invoices</strong> against 6-month history. Identified <strong className="text-red-600">8 potential duplicates</strong> totaling <strong>₹6.16L at risk</strong>.
+                      Scanned <strong>12,450 invoices</strong> against 6-month history. Identified <strong className="text-risk-700">8 potential duplicates</strong> totaling <strong>₹6.16L at risk</strong>.
                       Highest confidence match: INV-4521 vs INV-3102 (Acme Corp, 96% match).
                       <strong> 3 invoices</strong> from the same vendor within 48 hours flagged as suspicious.
-                      False positive rate: <strong className="text-green-600">4.2%</strong> (down from 6.5% last run).
+                      False positive rate: <strong className="text-compliant-700">4.2%</strong> (down from 6.5% last run).
                       Recommend immediate review of the 3 critical-severity flags before next payment batch.
                     </p>
                   )}
                   {config.id === 'monitoring' && (
                     <p className="text-[11.5px] text-text leading-relaxed">
                       Detected <strong>24 vendor master changes</strong> in the monitoring window.
-                      <strong className="text-red-600"> 3 unauthorized changes</strong> flagged — 2 bank account modifications by unrecognized users.
+                      <strong className="text-risk-700"> 3 unauthorized changes</strong> flagged — 2 bank account modifications by unrecognized users.
                       <strong>16 changes auto-approved</strong> based on authorization matrix.
                       Avg response time for flagged items: <strong>2.4 hours</strong>.
                       Critical alert: <strong>Acme Corp</strong> bank account changed from HDFC to ICICI by <code className="text-[10px] bg-surface-2 px-1 rounded">admin_user</code> — requires immediate verification.
@@ -781,9 +781,9 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                   )}
                   {config.id === 'compliance' && (
                     <p className="text-[11.5px] text-text leading-relaxed">
-                      Scanned <strong>2,341 users</strong> against 156 SOD rules. Found <strong className="text-red-600">12 violations</strong> —
+                      Scanned <strong>2,341 users</strong> against 156 SOD rules. Found <strong className="text-risk-700">12 violations</strong> —
                       <strong>4 critical</strong> (Create PO + Approve PO, Edit Master + Pay Vendor).
-                      <strong className="text-green-600">8 violations have compensating controls</strong> in place.
+                      <strong className="text-compliant-700">8 violations have compensating controls</strong> in place.
                       4 users require immediate role remediation.
                       P2P process has the highest violation density (7 of 12).
                       Recommend escalating USR-042 and USR-201 to access governance team.
@@ -827,9 +827,9 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                   {/* Table Rows */}
                   {config.previewRows.map((row, i) => {
                     const rowBg =
-                      row.status === 'matched' || row.status === 'ok' ? (i % 2 === 0 ? 'bg-green-50/30' : 'bg-green-50/15') :
-                      row.status === 'variance' || row.status === 'warning' ? (i % 2 === 0 ? 'bg-amber-50/40' : 'bg-amber-50/20') :
-                      row.status === 'unmatched' || row.status === 'flagged' ? (i % 2 === 0 ? 'bg-red-50/30' : 'bg-red-50/15') :
+                      row.status === 'matched' || row.status === 'ok' ? (i % 2 === 0 ? 'bg-compliant-50/30' : 'bg-compliant-50/15') :
+                      row.status === 'variance' || row.status === 'warning' ? (i % 2 === 0 ? 'bg-mitigated-50/40' : 'bg-mitigated-50/20') :
+                      row.status === 'unmatched' || row.status === 'flagged' ? (i % 2 === 0 ? 'bg-risk-50/30' : 'bg-risk-50/15') :
                       (i % 2 === 0 ? 'bg-white' : 'bg-surface-2/30');
 
                     return (
@@ -849,9 +849,9 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
 
                           if (isBadge) {
                             const badgeColor =
-                              row.status === 'matched' || row.status === 'ok' ? 'text-green-700 bg-green-100' :
-                              row.status === 'variance' || row.status === 'warning' ? 'text-amber-700 bg-amber-100' :
-                              'text-red-700 bg-red-100';
+                              row.status === 'matched' || row.status === 'ok' ? 'text-compliant-700 bg-compliant-50' :
+                              row.status === 'variance' || row.status === 'warning' ? 'text-mitigated-700 bg-mitigated-50' :
+                              'text-risk-700 bg-risk-50';
                             const badgeIcon =
                               row.status === 'matched' || row.status === 'ok' ? '\u2713' :
                               row.status === 'variance' || row.status === 'warning' ? '\u26A0' : '\u2717';
@@ -866,7 +866,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
 
                           if (isPercent) {
                             const pctNum = parseInt(cellValue);
-                            const pctColor = pctNum >= 90 ? 'text-green-600' : pctNum >= 50 ? 'text-amber-600' : 'text-red-500';
+                            const pctColor = pctNum >= 90 ? 'text-compliant-700' : pctNum >= 50 ? 'text-mitigated-700' : 'text-risk-700';
                             return (
                               <div key={col.id} className={`text-[10px] font-bold ${pctColor}`}>
                                 {cellValue}

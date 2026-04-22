@@ -30,7 +30,7 @@ function CollapsibleSection({ title, icon: Icon, defaultOpen = true, children }:
       <button
         onClick={() => setOpen(p => !p)}
         aria-expanded={open}
-        className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-text hover:bg-gray-50 transition-colors cursor-pointer"
+        className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-text hover:bg-paper-50 transition-colors cursor-pointer"
       >
         <Icon size={14} className="text-primary" />
         <span className="flex-1 text-left">{title}</span>
@@ -72,7 +72,7 @@ function PlanTab() {
             <div key={s.step} className="flex gap-3">
               <div className="flex flex-col items-center">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                  s.status === 'done' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                  s.status === 'done' ? 'bg-compliant-50 text-compliant-700' : 'bg-paper-50 text-ink-500'
                 }`}>
                   {s.step}
                 </div>
@@ -88,10 +88,10 @@ function PlanTab() {
       </CollapsibleSection>
 
       {/* Assumptions Section */}
-      <div className="mt-4 p-3 bg-amber-50/50 border border-amber-200/50 rounded-xl">
+      <div className="mt-4 p-3 bg-mitigated-50/50 border border-amber-200/50 rounded-xl">
         <div className="flex items-center gap-1.5 mb-2">
-          <AlertTriangle size={12} className="text-amber-500" />
-          <span className="text-[11px] font-bold text-amber-700">Assumptions Made</span>
+          <AlertTriangle size={12} className="text-mitigated-700" />
+          <span className="text-[11px] font-bold text-mitigated-700">Assumptions Made</span>
         </div>
         <div className="space-y-1.5">
           {[
@@ -104,7 +104,7 @@ function PlanTab() {
           ].map((assumption, i) => (
             <div key={i} className="flex items-start gap-2">
               <div className="w-1 h-1 rounded-full bg-amber-400 mt-1.5 shrink-0" />
-              <span className="text-[10.5px] text-amber-800">{assumption}</span>
+              <span className="text-[10.5px] text-mitigated-700">{assumption}</span>
             </div>
           ))}
         </div>
@@ -138,7 +138,7 @@ ORDER BY
           <pre className="bg-gray-950 text-gray-200 rounded-lg p-4 text-[12px] font-mono overflow-x-auto leading-relaxed">
             <code>{sql}</code>
           </pre>
-          <button className="absolute top-2 right-2 p-1.5 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-md transition-colors cursor-pointer">
+          <button className="absolute top-2 right-2 p-1.5 bg-gray-800 hover:bg-gray-700 text-ink-500 rounded-md transition-colors cursor-pointer">
             <Copy size={12} />
           </button>
         </div>
@@ -212,13 +212,13 @@ function ResultTab({ onManageExceptions, onAddToReport, onShareResults }: {
   ];
 
   const severityColor: Record<string, string> = {
-    critical: 'bg-red-100 text-red-700',
-    high: 'bg-orange-100 text-orange-700',
+    critical: 'bg-risk-50 text-risk-700',
+    high: 'bg-high-50 text-high-700',
   };
 
   const statusColor: Record<string, string> = {
-    open: 'text-red-600',
-    mitigated: 'text-green-600',
+    open: 'text-risk-700',
+    mitigated: 'text-compliant-700',
   };
 
   return (
@@ -324,7 +324,7 @@ export default function ArtifactPanel({ activeTab, setActiveTab, onClose, onMana
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors cursor-pointer ${
                 activeTab === tab.id
                   ? 'bg-primary/10 text-primary'
-                  : 'text-text-muted hover:text-text-secondary hover:bg-gray-50'
+                  : 'text-text-muted hover:text-text-secondary hover:bg-paper-50'
               }`}
             >
               <tab.icon size={13} />
@@ -333,13 +333,13 @@ export default function ArtifactPanel({ activeTab, setActiveTab, onClose, onMana
           ))}
         </div>
         <div className="flex items-center gap-1">
-          <button className="p-1.5 text-text-muted hover:text-text-secondary rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
+          <button className="p-1.5 text-text-muted hover:text-text-secondary rounded-md hover:bg-paper-50 transition-colors cursor-pointer">
             <Download size={14} />
           </button>
-          <button className="p-1.5 text-text-muted hover:text-text-secondary rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
+          <button className="p-1.5 text-text-muted hover:text-text-secondary rounded-md hover:bg-paper-50 transition-colors cursor-pointer">
             <Maximize2 size={14} />
           </button>
-          <button onClick={onClose} className="p-1.5 text-text-muted hover:text-text-secondary rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
+          <button onClick={onClose} className="p-1.5 text-text-muted hover:text-text-secondary rounded-md hover:bg-paper-50 transition-colors cursor-pointer">
             <X size={14} />
           </button>
         </div>

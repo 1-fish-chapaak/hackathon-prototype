@@ -16,15 +16,15 @@ interface Props {
 type ExceptionStatus = 'unassigned' | 'assigned' | 'notified' | 'in-progress' | 'resolved';
 
 const STATUS_COLORS: Record<ExceptionStatus, string> = {
-  unassigned: 'bg-gray-100 text-gray-600',
-  assigned: 'bg-blue-100 text-blue-700',
-  notified: 'bg-orange-100 text-orange-700',
-  'in-progress': 'bg-amber-100 text-amber-700',
-  resolved: 'bg-green-100 text-green-700',
+  unassigned: 'bg-paper-50 text-ink-500',
+  assigned: 'bg-evidence-50 text-evidence-700',
+  notified: 'bg-high-50 text-high-700',
+  'in-progress': 'bg-mitigated-50 text-mitigated-700',
+  resolved: 'bg-compliant-50 text-compliant-700',
 };
 
 const SCORE_COLOR = (score: number) =>
-  score >= 90 ? 'bg-red-100 text-red-700' : score >= 80 ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700';
+  score >= 90 ? 'bg-risk-50 text-risk-700' : score >= 80 ? 'bg-high-50 text-high-700' : 'bg-mitigated-50 text-mitigated-700';
 
 export default function ExceptionManagementModal({ onClose, onGenerateReport, onViewEmail }: Props) {
   const { addToast } = useToast();
@@ -118,7 +118,7 @@ export default function ExceptionManagementModal({ onClose, onGenerateReport, on
         <div className="px-6 py-4 border-b border-border-light flex items-center justify-between shrink-0">
           <div>
             <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-orange-100 text-orange-600 rounded-xl">
+              <div className="p-2 bg-high-50 text-high-700 rounded-xl">
                 <AlertTriangle size={18} />
               </div>
               <div>
@@ -127,7 +127,7 @@ export default function ExceptionManagementModal({ onClose, onGenerateReport, on
               </div>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+          <button onClick={onClose} className="p-2 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer">
             <X size={18} className="text-text-muted" />
           </button>
         </div>
@@ -208,7 +208,7 @@ export default function ExceptionManagementModal({ onClose, onGenerateReport, on
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.03 }}
                   className={`border-t border-border-light hover:bg-primary-xlight/30 transition-colors ${
-                    justAssigned === exc.id ? 'bg-green-50' : i % 2 === 0 ? 'bg-white' : 'bg-surface-2/30'
+                    justAssigned === exc.id ? 'bg-compliant-50' : i % 2 === 0 ? 'bg-white' : 'bg-surface-2/30'
                   }`}
                 >
                   <td className="px-4 py-3">
@@ -241,7 +241,7 @@ export default function ExceptionManagementModal({ onClose, onGenerateReport, on
                           {exc.assignee.split(' ').map(n => n[0]).join('')}
                         </div>
                         <span className="text-[11px] text-text">{exc.assignee}</span>
-                        {justAssigned === exc.id && <CheckCircle size={12} className="text-green-500" />}
+                        {justAssigned === exc.id && <CheckCircle size={12} className="text-compliant-700" />}
                       </div>
                     ) : (
                       <div className="relative">
@@ -309,8 +309,8 @@ export default function ExceptionManagementModal({ onClose, onGenerateReport, on
             <span><strong className="text-text">{stats.assigned}</strong> assigned</span>
             <span><strong className="text-text">{stats.notified}</strong> notified</span>
             <span><strong className="text-text">{stats.inProgress}</strong> in progress</span>
-            <span><strong className="text-green-600">{stats.resolved}</strong> resolved</span>
-            <span><strong className="text-red-500">{stats.unassigned}</strong> unassigned</span>
+            <span><strong className="text-compliant-700">{stats.resolved}</strong> resolved</span>
+            <span><strong className="text-risk-700">{stats.unassigned}</strong> unassigned</span>
           </div>
           <button
             onClick={onGenerateReport}

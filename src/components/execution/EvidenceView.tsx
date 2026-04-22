@@ -2,11 +2,9 @@ import { useState } from 'react';
 import {
   Search, Upload, FileSpreadsheet, FileText, File,
   Download, Eye, Sparkles, Shield, TableProperties,
-  ChevronRight, CloudUpload, X, CheckCircle2,
-  Clock, XCircle
+  ChevronRight, CloudUpload, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import Orb from '../shared/Orb';
 
 interface FileRow {
   id: string;
@@ -92,30 +90,29 @@ const FILES: FileRow[] = [
 
 function FileIcon({ type }: { type: 'xlsx' | 'csv' | 'pdf' }) {
   const config = {
-    xlsx: { icon: FileSpreadsheet, color: 'text-green-600', bg: 'bg-green-50' },
-    csv: { icon: File, color: 'text-blue-600', bg: 'bg-blue-50' },
-    pdf: { icon: FileText, color: 'text-red-600', bg: 'bg-red-50' },
+    xlsx: { icon: FileSpreadsheet, color: 'text-compliant-700', bg: 'bg-compliant-50' },
+    csv:  { icon: File,            color: 'text-evidence-700',  bg: 'bg-evidence-50' },
+    pdf:  { icon: FileText,        color: 'text-risk-700',      bg: 'bg-risk-50' },
   };
   const c = config[type];
   const Icon = c.icon;
   return (
-    <div className={`w-8 h-8 rounded-lg ${c.bg} flex items-center justify-center`}>
+    <div className={`w-8 h-8 rounded-md ${c.bg} flex items-center justify-center`}>
       <Icon size={16} className={c.color} />
     </div>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
-    'Mapped': { bg: 'bg-green-50', text: 'text-green-700', icon: <CheckCircle2 size={11} /> },
-    'Processed': { bg: 'bg-blue-50', text: 'text-blue-700', icon: <Sparkles size={11} /> },
-    'Pending Mapping': { bg: 'bg-amber-50', text: 'text-amber-700', icon: <Clock size={11} /> },
-    'Error': { bg: 'bg-red-50', text: 'text-red-700', icon: <XCircle size={11} /> },
+  // Editorial: flat pill, no border, no icon. Always spelled out.
+  const map: Record<string, string> = {
+    'Mapped':          'bg-compliant-50 text-compliant-700',
+    'Processed':       'bg-evidence-50 text-evidence-700',
+    'Pending Mapping': 'bg-mitigated-50 text-mitigated-700',
+    'Error':           'bg-risk-50 text-risk-700',
   };
-  const s = map[status] || map['Pending Mapping'];
   return (
-    <span className={`inline-flex items-center gap-1 ${s.bg} ${s.text} px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap`}>
-      {s.icon}
+    <span className={`inline-flex items-center px-2.5 h-6 rounded-full text-[12px] font-medium whitespace-nowrap ${map[status] || map['Pending Mapping']}`}>
       {status}
     </span>
   );
@@ -123,11 +120,11 @@ function StatusBadge({ status }: { status: string }) {
 
 function ActionBtn({ label }: { label: string }) {
   const styles: Record<string, string> = {
-    'View': 'text-text-secondary hover:text-primary',
-    'Download': 'text-text-secondary hover:text-primary',
-    'Forensics': 'text-purple-600 hover:text-purple-800 bg-purple-50 hover:bg-purple-100',
-    'Map Schema': 'text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100',
-    'Re-upload': 'text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100',
+    'View':       'text-ink-500 hover:text-brand-700',
+    'Download':   'text-ink-500 hover:text-brand-700',
+    'Forensics':  'text-brand-700 hover:bg-brand-50 bg-brand-50/60',
+    'Map Schema': 'text-mitigated-700 hover:bg-mitigated-50 bg-mitigated-50/60',
+    'Re-upload':  'text-risk-700 hover:bg-risk-50 bg-risk-50/60',
   };
   const icons: Record<string, React.ReactNode> = {
     'View': <Eye size={10} />,
@@ -155,8 +152,7 @@ export default function EvidenceView() {
   });
 
   return (
-    <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
-      <Orb hoverIntensity={0.09} rotateOnHover hue={160} opacity={0.08} />
+    <div className="h-full overflow-y-auto bg-canvas">
       <div className="max-w-7xl mx-auto px-8 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">

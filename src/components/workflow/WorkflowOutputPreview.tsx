@@ -43,7 +43,7 @@ function DetectionOutput() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: i * 0.04 }}
-          className={`grid grid-cols-[4px_70px_1fr_100px_60px_70px_160px] gap-3 px-4 py-3 border-b border-border-light last:border-0 items-center ${r.severity === 'critical' ? 'bg-red-50/30' : 'hover:bg-surface-2/30'} transition-colors`}
+          className={`grid grid-cols-[4px_70px_1fr_100px_60px_70px_160px] gap-3 px-4 py-3 border-b border-border-light last:border-0 items-center ${r.severity === 'critical' ? 'bg-risk-50/30' : 'hover:bg-surface-2/30'} transition-colors`}
         >
           <div className="w-1 h-8 rounded-full" style={{ background: sevColor[r.severity] }} />
           <span className="text-[11px] font-mono text-primary font-medium">{r.id}</span>
@@ -60,9 +60,9 @@ function DetectionOutput() {
           </div>
           <span className="text-[10px] text-text-muted">{r.date}</span>
           <div className="flex gap-1">
-            <button className="px-2 py-1 rounded-md text-[9px] font-semibold bg-green-50 text-green-700 hover:bg-green-100 transition-colors cursor-pointer">Approve</button>
-            <button className="px-2 py-1 rounded-md text-[9px] font-semibold bg-red-50 text-red-700 hover:bg-red-100 transition-colors cursor-pointer">Block</button>
-            <button className="px-2 py-1 rounded-md text-[9px] font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer">Escalate</button>
+            <button className="px-2 py-1 rounded-md text-[9px] font-semibold bg-compliant-50 text-compliant-700 hover:bg-compliant-50 transition-colors cursor-pointer">Approve</button>
+            <button className="px-2 py-1 rounded-md text-[9px] font-semibold bg-risk-50 text-risk-700 hover:bg-risk-50 transition-colors cursor-pointer">Block</button>
+            <button className="px-2 py-1 rounded-md text-[9px] font-semibold bg-mitigated-50 text-mitigated-700 hover:bg-mitigated-50 transition-colors cursor-pointer">Escalate</button>
           </div>
         </motion.div>
       ))}
@@ -81,9 +81,9 @@ function MonitoringOutput() {
   ];
 
   const statusColor: Record<string, { bg: string; dot: string; label: string }> = {
-    red: { bg: 'bg-red-50', dot: 'bg-red-500', label: 'Critical' },
-    amber: { bg: 'bg-amber-50', dot: 'bg-amber-500', label: 'Warning' },
-    green: { bg: 'bg-green-50', dot: 'bg-green-500', label: 'Normal' },
+    red: { bg: 'bg-risk-50', dot: 'bg-risk-500', label: 'Critical' },
+    amber: { bg: 'bg-mitigated-50', dot: 'bg-mitigated-500', label: 'Warning' },
+    green: { bg: 'bg-compliant-50', dot: 'bg-compliant-500', label: 'Normal' },
   };
 
   return (
@@ -106,12 +106,12 @@ function MonitoringOutput() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-[12px] font-semibold text-text">{e.title}</span>
-                <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${sc.bg} ${e.status === 'red' ? 'text-red-700' : e.status === 'amber' ? 'text-amber-700' : 'text-green-700'}`}>{sc.label}</span>
+                <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${sc.bg} ${e.status === 'red' ? 'text-risk-700' : e.status === 'amber' ? 'text-mitigated-700' : 'text-compliant-700'}`}>{sc.label}</span>
               </div>
               <p className="text-[11px] text-text-muted leading-relaxed mb-1.5">{e.detail}</p>
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-mono text-text-muted">{e.time} · {e.date}</span>
-                <button className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-semibold transition-colors cursor-pointer ${e.ack ? 'bg-green-100 text-green-700' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'}`}>
+                <button className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-semibold transition-colors cursor-pointer ${e.ack ? 'bg-compliant-50 text-compliant-700' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'}`}>
                   {e.ack ? <><CheckCircle2 size={9} /> Acknowledged</> : <><Eye size={9} /> Acknowledge</>}
                 </button>
               </div>
@@ -160,11 +160,11 @@ function ComplianceOutput() {
         <div className="flex-1 grid grid-cols-3 gap-4">
           <div>
             <div className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Passed</div>
-            <div className="text-[20px] font-bold font-mono text-green-600">{passCount}</div>
+            <div className="text-[20px] font-bold font-mono text-compliant-700">{passCount}</div>
           </div>
           <div>
             <div className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Failed</div>
-            <div className="text-[20px] font-bold font-mono text-red-600">{total - passCount}</div>
+            <div className="text-[20px] font-bold font-mono text-risk-700">{total - passCount}</div>
           </div>
           <div>
             <div className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Total Checks</div>
@@ -181,17 +181,17 @@ function ComplianceOutput() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: i * 0.04 }}
-            className={`flex items-center gap-3 px-4 py-3 border-b border-border-light last:border-0 ${c.status === 'fail' ? 'bg-red-50/30' : ''} transition-colors`}
+            className={`flex items-center gap-3 px-4 py-3 border-b border-border-light last:border-0 ${c.status === 'fail' ? 'bg-risk-50/30' : ''} transition-colors`}
           >
             {c.status === 'pass'
-              ? <CheckCircle2 size={15} className="text-green-600 shrink-0" />
-              : <XCircle size={15} className="text-red-600 shrink-0" />
+              ? <CheckCircle2 size={15} className="text-compliant-700 shrink-0" />
+              : <XCircle size={15} className="text-risk-700 shrink-0" />
             }
             <div className="flex-1 min-w-0">
               <div className="text-[12px] font-medium text-text">{c.rule}</div>
             </div>
             <span className="text-[9px] font-mono font-semibold text-text-muted bg-surface-2 px-2 py-0.5 rounded-full shrink-0">{c.ref}</span>
-            <span className={`text-[11px] font-bold font-mono w-10 text-right ${c.status === 'pass' ? 'text-green-600' : 'text-red-600'}`}>{c.score}%</span>
+            <span className={`text-[11px] font-bold font-mono w-10 text-right ${c.status === 'pass' ? 'text-compliant-700' : 'text-risk-700'}`}>{c.score}%</span>
           </motion.div>
         ))}
       </div>
@@ -210,9 +210,9 @@ function ReconciliationOutput() {
   ];
 
   const statusStyles: Record<string, { bg: string; text: string; label: string }> = {
-    matched: { bg: 'bg-green-50', text: 'text-green-700', label: 'Matched' },
-    variance: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Variance' },
-    unmatched: { bg: 'bg-red-50', text: 'text-red-700', label: 'Unmatched' },
+    matched: { bg: 'bg-compliant-50', text: 'text-compliant-700', label: 'Matched' },
+    variance: { bg: 'bg-mitigated-50', text: 'text-mitigated-700', label: 'Variance' },
+    unmatched: { bg: 'bg-risk-50', text: 'text-risk-700', label: 'Unmatched' },
   };
 
   return (
@@ -225,7 +225,7 @@ function ReconciliationOutput() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className={`grid grid-cols-[1fr_auto_1fr] gap-0 rounded-xl border overflow-hidden ${m.status === 'unmatched' ? 'border-red-200' : m.status === 'variance' ? 'border-amber-200' : 'border-border-light'}`}
+            className={`grid grid-cols-[1fr_auto_1fr] gap-0 rounded-xl border overflow-hidden ${m.status === 'unmatched' ? 'border-risk' : m.status === 'variance' ? 'border-amber-200' : 'border-border-light'}`}
           >
             {/* PO Side */}
             <div className="p-3.5 bg-white">
@@ -239,10 +239,10 @@ function ReconciliationOutput() {
               <ArrowRightLeft size={14} className={ss.text} />
               <span className={`text-[8px] font-bold ${ss.text} uppercase`}>{ss.label}</span>
               {m.variance !== '₹0' && m.variance !== 'Missing' && (
-                <span className="text-[9px] font-mono font-semibold text-amber-700">{m.variance}</span>
+                <span className="text-[9px] font-mono font-semibold text-mitigated-700">{m.variance}</span>
               )}
               {m.variance === 'Missing' && (
-                <span className="text-[9px] font-mono font-semibold text-red-600">No Invoice</span>
+                <span className="text-[9px] font-mono font-semibold text-risk-700">No Invoice</span>
               )}
             </div>
 
@@ -327,8 +327,8 @@ export default function WorkflowOutputPreview({ workflowId: _workflowId, workflo
           <span className="text-[10px] text-text-muted">Processing time: <span className="font-semibold text-text">1.8s</span></span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Shield size={10} className="text-green-600" />
-          <span className="text-[10px] font-medium text-green-700">Audit trail recorded</span>
+          <Shield size={10} className="text-compliant-700" />
+          <span className="text-[10px] font-medium text-compliant-700">Audit trail recorded</span>
         </div>
       </div>
     </div>
