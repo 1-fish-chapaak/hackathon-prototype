@@ -6,7 +6,7 @@ import {
   Sparkles, Eye, Settings, Palette, Type,
   Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2
 } from 'lucide-react';
-import { REPORT_TEMPLATES, GENERATED_REPORTS } from '../../data/mockData';
+import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/mockData';
 import { StatusBadge } from '../shared/StatusBadge';
 import SmartTable from '../shared/SmartTable';
 import Orb from '../shared/Orb';
@@ -1377,7 +1377,7 @@ function ReportView({ report, onBack, onShare }: {
 
 // ─── Main Reports View ───
 export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps = {}) {
-  const [activeTab, setActiveTab] = useState<'templates' | 'my-reports'>('my-reports');
+  const [activeTab, setActiveTab] = useState<'templates' | 'my-reports' | 'shared-reports'>('my-reports');
   const [viewingReport, setViewingReport] = useState<typeof GENERATED_REPORTS[0] | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [previewingTemplate, setPreviewingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
@@ -1457,6 +1457,16 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
               <BookOpen size={14} />
               My Reports
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'my-reports' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{GENERATED_REPORTS.length}</span>
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('shared-reports')}
+            className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors cursor-pointer ${activeTab === 'shared-reports' ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
+          >
+            <span className="flex items-center gap-2">
+              <Share2 size={14} />
+              Shared Reports
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'shared-reports' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{SHARED_REPORTS.length}</span>
             </span>
           </button>
           <button
@@ -1544,6 +1554,46 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                   <button onClick={() => { const r = GENERATED_REPORTS.find(rr => rr.id === item.id); if (r) setViewingReport(r); }} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="View"><Eye size={14} /></button>
                   <button onClick={() => addToast({ type: 'success', message: `Downloading ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={14} /></button>
                   {onShare && <button onClick={() => onShare(String(item.id))} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={14} /></button>}
+                </div>
+              )},
+            ]}
+          />
+        )}
+
+        {/* Shared Reports */}
+        {activeTab === 'shared-reports' && (
+          <SmartTable
+            data={SHARED_REPORTS as unknown as Record<string, unknown>[]}
+            keyField="id"
+            searchPlaceholder="Search shared reports..."
+            searchKeys={['name', 'sharedBy', 'sharedWith']}
+            paginated={false}
+            columns={[
+              { key: 'name', label: 'Report', render: (item) => (
+                <div className="flex items-center gap-2">
+                  <FileText size={14} className="text-primary" />
+                  <div>
+                    <div className="text-text font-medium">{String(item.name)}</div>
+                    <div className="text-[10px] text-text-muted">{String(item.pages)} pages · shared with {String(item.sharedWith)}</div>
+                  </div>
+                </div>
+              )},
+              { key: 'sharedBy', label: 'Shared By', width: '140px', render: (item) => (
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
+                    {String(item.sharedBy).split(' ').map((n: string) => n[0]).join('')}
+                  </div>
+                  <span className="text-text-secondary text-[12px]">{String(item.sharedBy)}</span>
+                </div>
+              )},
+              { key: 'sharedAt', label: 'Date', width: '120px', render: (item) => (
+                <span className="text-text-muted text-[12px]">{String(item.sharedAt)}</span>
+              )},
+              { key: 'status', label: 'Status', width: '100px', render: (item) => <StatusBadge status={String(item.status)} /> },
+              { key: 'actions', label: '', width: '100px', sortable: false, align: 'right', render: (item) => (
+                <div className="flex items-center justify-end gap-1">
+                  <button onClick={() => addToast({ type: 'info', message: `Opening ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="View"><Eye size={14} /></button>
+                  <button onClick={() => addToast({ type: 'success', message: `Downloading ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={14} /></button>
                 </div>
               )},
             ]}

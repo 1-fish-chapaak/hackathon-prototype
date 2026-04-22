@@ -158,6 +158,13 @@ export const GENERATED_REPORTS = [
   { id: "gr-003", templateId: "rt-004", name: "Workflow Performance — Feb 2026", generatedBy: "AI Copilot", generatedAt: "Mar 1, 2026", status: "final", pages: 8 },
 ];
 
+export const SHARED_REPORTS = [
+  { id: "sr-001", name: "FY26 Internal Audit Summary", sharedBy: "Neha Joshi", sharedAt: "Apr 10, 2026", status: "final", pages: 18, sharedWith: "Audit Team" },
+  { id: "sr-002", name: "O2C Controls Review — Q1 2026", sharedBy: "Deepak Bansal", sharedAt: "Apr 5, 2026", status: "final", pages: 14, sharedWith: "Finance" },
+  { id: "sr-003", name: "Vendor Risk Exposure Report", sharedBy: "Karan Mehta", sharedAt: "Mar 28, 2026", status: "draft", pages: 9, sharedWith: "Risk Committee" },
+  { id: "sr-004", name: "GL Reconciliation — Feb 2026", sharedBy: "Sneha Desai", sharedAt: "Mar 15, 2026", status: "final", pages: 22, sharedWith: "CFO Office" },
+];
+
 // ─── Data Sources ───
 export const DATA_SOURCES = [
   { id: "ds-001", name: "SAP ERP — AP Module", type: "sql", status: "connected", lastSync: "Mar 20, 2026", records: "1.2M" },
