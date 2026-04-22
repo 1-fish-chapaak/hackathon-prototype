@@ -18,8 +18,10 @@ permissions:
   id-token: write
 
 concurrency:
+  # Always deploy the newest commit. A newer push cancels any in-flight build
+  # so the live revision matches the latest tip of main, not whatever raced.
   group: deploy-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:

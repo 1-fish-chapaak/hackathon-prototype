@@ -1,14 +1,80 @@
 #!/usr/bin/env bash
 # Claude preflight review — runs before `git push` (or via `npm run review:local`).
 # Hackathon prototype: gentle on tech, brutal on design/UX/redundancy conflicts.
-# Advisory only. Always exits 0 — never blocks the push.
+#
+# Behaviour:
+#   1. Auto-rebase: if pushing main and the remote has new commits, fetch and
+#      `git pull --rebase --autostash` first. Stops on conflict so you can
+#      resolve manually.
+#   2. Claude review: focused on design / feature redundancy / UX gaps.
+#      Advisory only — never blocks the push.
+#
+# Skip everything with: SKIP_PREFLIGHT=1 git push
 
 set -uo pipefail
 
 if [[ "${SKIP_PREFLIGHT:-}" == "1" ]]; then
-  echo "preflight: SKIP_PREFLIGHT=1, skipping review"
+  echo "preflight: SKIP_PREFLIGHT=1, skipping rebase + review"
   exit 0
 fi
+
+# ── 1. Auto-rebase on main ─────────────────────────────────────────────────
+
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
+resolve_remote() {
+  local r
+  r=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null | cut -d/ -f1)
+  if [[ -n "$r" ]] && git remote get-url "$r" >/dev/null 2>&1; then
+    printf '%s' "$r"; return
+  fi
+  for cand in hackathon origin; do
+    if git remote get-url "$cand" >/dev/null 2>&1; then
+      printf '%s' "$cand"; return
+    fi
+  done
+}
+
+REMOTE=$(resolve_remote)
+
+if [[ "$CURRENT_BRANCH" == "main" && -n "$REMOTE" ]]; then
+  echo "preflight: fetching ${REMOTE}/main…"
+  if ! git fetch "$REMOTE" main --quiet 2>/dev/null; then
+    echo "preflight: fetch failed (offline?), skipping rebase."
+  else
+    BEHIND=$(git rev-list --count "HEAD..${REMOTE}/main" 2>/dev/null || echo "0")
+    if [[ "$BEHIND" -gt 0 ]]; then
+      printf '\npreflight: local main is behind %s/main by %s commit(s) — rebasing…\n\n' "$REMOTE" "$BEHIND"
+      if git pull --rebase --autostash "$REMOTE" main; then
+        printf '\npreflight: rebase clean. proceeding.\n'
+      else
+        cat <<MSG
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  preflight: REBASE CONFLICT — push aborted
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Your local commits conflict with new work on ${REMOTE}/main. To resolve:
+
+  1. git status                       # see the conflicted files
+  2. <fix the conflict markers>
+  3. git add <files>
+  4. git rebase --continue
+  5. git push                         # this hook runs again
+
+To bail out instead: git rebase --abort
+To skip this hook for one push: SKIP_PREFLIGHT=1 git push
+
+MSG
+        exit 1
+      fi
+    else
+      echo "preflight: up-to-date with ${REMOTE}/main."
+    fi
+  fi
+fi
+
+# ── 2. Claude design / redundancy / UX review ──────────────────────────────
 
 if ! command -v claude &> /dev/null; then
   echo "preflight: claude CLI not found — install with 'npm install -g @anthropic-ai/claude-code', then re-run."
@@ -16,9 +82,9 @@ if ! command -v claude &> /dev/null; then
   exit 0
 fi
 
-git fetch origin main --quiet 2>/dev/null || true
-
-if git rev-parse --verify origin/main >/dev/null 2>&1; then
+if [[ -n "$REMOTE" ]] && git rev-parse --verify "${REMOTE}/main" >/dev/null 2>&1; then
+  BASE="${REMOTE}/main"
+elif git rev-parse --verify origin/main >/dev/null 2>&1; then
   BASE="origin/main"
 else
   BASE="HEAD~1"

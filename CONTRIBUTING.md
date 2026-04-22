@@ -85,6 +85,13 @@ npm run lint
             │
             ▼
    ┌────────────────────────────────────┐
+   │  AUTO-REBASE                       │
+   │  fetch origin/main, pull --rebase  │
+   │  (only if you are behind)          │
+   └────────────────────────────────────┘
+            │  (stops on conflict — you resolve, then `git push` again)
+            ▼
+   ┌────────────────────────────────────┐
    │  CLAUDE PREFLIGHT REVIEW           │
    │  · design conflicts vs main        │
    │  · feature redundancy              │
@@ -97,7 +104,8 @@ npm run lint
             │
             ▼
    .github/workflows/deploy.yml runs
-            │
+            │  (any in-flight older deploy is cancelled —
+            │   the newest commit always wins)
             ▼
    Cloud Run hackathon-demo updated   ~2 min total
             │
@@ -107,8 +115,17 @@ npm run lint
 
 ### 3.2 The preflight, in detail
 
-When you `git push`, the hook runs `tools/preflight-review.sh`, which calls
-the Claude CLI with a prompt focused on **three axes only**:
+When you `git push`, the hook runs `tools/preflight-review.sh`, which does
+two things in order:
+
+**Step 1 — auto-rebase.** Fetches `<remote>/main` and, if your local main is
+behind, runs `git pull --rebase --autostash` to stack your work on top of
+whatever other pods pushed. If the rebase is clean, the script keeps going.
+If the rebase hits a conflict, the script aborts the push with instructions:
+resolve the markers, `git add`, `git rebase --continue`, then `git push` again.
+
+**Step 2 — Claude review.** Calls the Claude CLI with a prompt focused on
+**three axes only**:
 
 1. **Design conflicts** — new colors / typography / spacing / card patterns
    that contradict the established bento + charcoal + purple-accent system.
@@ -127,13 +144,14 @@ findings now, fix-forward in a follow-up commit, or ignore them.
 
 ### 3.3 Skipping the preflight
 
-For a doc-only commit or an emergency fix:
+For a doc-only commit or an emergency fix (skips **both** the rebase and the
+Claude review — you become responsible for the rebase):
 
 ```bash
 SKIP_PREFLIGHT=1 git push
 ```
 
-Or run it on demand without pushing:
+Or run the Claude review on demand without pushing (no rebase in this mode):
 
 ```bash
 npm run review:local
@@ -194,9 +212,9 @@ You can re-run the review on a PR by commenting `@claude` in the PR thread.
 
 | File | Purpose | Triggers when |
 | --- | --- | --- |
-| `tools/preflight-review.sh` | Local Claude review (design / redundancy / UX) | You run `git push` (after `npm run setup-hooks`) — or `npm run review:local` |
+| `tools/preflight-review.sh` | Auto-rebase onto remote main, then run the focused Claude review (design / redundancy / UX). Aborts on rebase conflict so you resolve before pushing. | You run `git push` (after `npm run setup-hooks`) — or `npm run review:local` (review only, no rebase) |
 | `.githooks/pre-push` | Calls the preflight from git's hook system | Same |
-| `.github/workflows/deploy.yml` | Build Docker → push to Artifact Registry → deploy to Cloud Run | Push to `main` |
+| `.github/workflows/deploy.yml` | Build Docker → push to Artifact Registry → deploy to Cloud Run. **`cancel-in-progress: true`** so a newer push kills any in-flight older build — the live revision always matches the latest tip of main. | Push to `main` |
 | `.github/workflows/claude-review.yml` | Same focused review, posted as PR comment | PR opened / `@claude` comment |
 | `cloudbuild.yaml` | Manual `gcloud builds submit` config (not used by CI) | Only if you run it explicitly |
 | `Dockerfile` + `nginx.conf` | Multi-stage node:22-alpine → nginx:alpine on :8080 | Used by deploy and cloudbuild |
@@ -243,8 +261,8 @@ gcloud run services update-traffic hackathon-demo \
 - **You skipped `npm run setup-hooks`.** No preflight ran on your push. Re-run it once per clone.
 - **Don't commit `node_modules/`, `dist/`, or `.serena/`.** All in `.gitignore`. Use `git add <specific files>`, not `git add .`.
 - **Don't add real API keys.** Mocked-data demo only. No `.env`, no secrets.
-- **The deploy auto-fires on every main push, including doc-only changes.** That's fine (Docker build is fast and cached) but be aware.
-- **Two pods edit the same file → real git merge conflict.** Resolve locally with `git pull --rebase`, then `git push` again (preflight will re-run on the merged result).
+- **The deploy auto-fires on every main push, including doc-only changes.** That's fine (Docker build is fast and cached) but be aware. If two pushes race, the older deploy is **cancelled mid-flight** so the newest commit wins.
+- **Two pods edit the same file → real git merge conflict.** The preflight tries to rebase you onto remote main automatically. If the rebase is clean, your push proceeds. If it conflicts, the push aborts with a message telling you to fix the markers, `git add`, `git rebase --continue`, then `git push` again (the hook runs once more on the merged result). To bail: `git rebase --abort`.
 - **Preflight told you about a conflict — what now?** Talk to the other pod in your team channel before fixing forward. The whole point of the review is to surface coordination issues you'd otherwise discover at demo time.
 
 ---
@@ -261,7 +279,7 @@ gcloud run services update-traffic hackathon-demo \
 > - Live URL: https://hackathon-demo-ujihgyhrpa-uc.a.run.app
 > - GCP project: `gen-lang-client-0250661731` · region `us-central1` · service `hackathon-demo`
 >
-> **Pre-push preflight (already enabled if `npm run setup-hooks` was run):** when you `git push`, `tools/preflight-review.sh` runs and shows a Claude review focused on **design conflicts**, **feature redundancy**, and **UX/flow gaps** vs `origin/main`. It's advisory and never blocks. Skip with `SKIP_PREFLIGHT=1 git push`. Run on demand with `npm run review:local`.
+> **Pre-push preflight (already enabled if `npm run setup-hooks` was run):** when you `git push`, `tools/preflight-review.sh` first **auto-rebases** you onto remote main if you are behind (aborting the push on a rebase conflict so you resolve manually), then shows a Claude review focused on **design conflicts**, **feature redundancy**, and **UX/flow gaps**. The Claude review is advisory and never blocks. Skip both with `SKIP_PREFLIGHT=1 git push`. Run review on demand with `npm run review:local`. The deploy workflow is set to **`cancel-in-progress: true`** so a newer push always wins — the live revision matches the latest tip of main.
 >
 > **Review priorities (mirror these in your own thinking before pushing):**
 > 1. Design conflicts — does this contradict the existing bento / charcoal / purple-accent design system? Different colors/typography/spacing/shapes from what's already in `src/components/`?
