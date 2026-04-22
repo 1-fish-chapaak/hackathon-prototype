@@ -1390,12 +1390,9 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
 
   // Approval statuses for reports
   const REPORT_APPROVAL: Record<string, string> = {
-    'rpt-001': 'Approved',
-    'rpt-002': 'Pending Approval',
-    'rpt-003': 'Draft',
-    'rpt-004': 'Approved',
-    'rpt-005': 'Pending Approval',
-    'rpt-006': 'Draft',
+    'gr-001': 'Approved',
+    'gr-002': 'Pending Approval',
+    'gr-003': 'Draft',
   };
 
   const approvalColor = (status: string) => {
