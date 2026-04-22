@@ -166,7 +166,8 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -4, scale: 0.98 }}
               transition={{ duration: 0.12 }}
-              className="absolute left-3 right-3 top-full mt-1 bg-brand-900 border border-white/[0.1] rounded-lg shadow-lg z-50 overflow-hidden"
+              className="absolute left-3 right-3 top-full mt-1 border border-white/[0.1] rounded-lg shadow-lg z-50 overflow-hidden"
+              style={{ background: '#371A58' }}
             >
               {/* Search */}
               <div className="p-2.5">
