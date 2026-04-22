@@ -169,37 +169,38 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
               className="absolute left-3 right-3 top-full mt-1 bg-canvas-elevated border border-canvas-border rounded-xl shadow-xl z-50 overflow-hidden"
             >
               {/* Search */}
-              <div className="p-2.5">
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-canvas-border bg-canvas text-[13px] text-ink-500">
-                  <SearchIcon size={14} className="text-ink-400 shrink-0" />
+              <div className="p-3">
+                <div className="flex items-center gap-2.5 px-3 h-10 rounded-md border border-paper-200 bg-paper-0 text-[13px]">
+                  <SearchIcon size={15} className="text-ink-400 shrink-0" />
                   <input
                     type="text"
                     placeholder="Search Team"
                     value={teamSearch}
                     onChange={e => setTeamSearch(e.target.value)}
-                    className="flex-1 bg-transparent outline-none text-ink-800 placeholder:text-ink-300"
+                    className="flex-1 bg-transparent outline-none text-ink-800 placeholder:text-ink-300 text-[13px]"
+                    style={{ boxShadow: 'none' }}
                     autoFocus
                   />
                 </div>
               </div>
 
-              <div className="h-px bg-canvas-border mx-2.5" />
+              <div className="h-px bg-paper-200 mx-3" />
 
               {/* Team list */}
-              <div className="py-1.5 max-h-[200px] overflow-y-auto">
+              <div className="py-2 max-h-[220px] overflow-y-auto">
                 {filteredTeams.map(team => (
                   <button
                     key={team.id}
                     onClick={() => { setActiveTeam(team.id); setTeamOpen(false); }}
-                    className="w-full flex items-center justify-between px-4 py-3 text-[14px] text-ink-800 hover:bg-brand-50 transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-between px-4 py-3.5 text-[14px] text-ink-800 hover:bg-paper-50 transition-colors cursor-pointer"
                   >
                     <span style={{ fontWeight: activeTeam === team.id ? 600 : 400 }}>{team.name}</span>
                     {activeTeam === team.id ? (
-                      <div className="w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center">
-                        <Check size={12} className="text-white" />
+                      <div className="w-[22px] h-[22px] rounded-full bg-brand-600 flex items-center justify-center">
+                        <Check size={13} className="text-white" />
                       </div>
                     ) : (
-                      <div className="w-5 h-5 rounded-full border border-ink-300" />
+                      <div className="w-[22px] h-[22px] rounded-full border-2 border-paper-300" />
                     )}
                   </button>
                 ))}
