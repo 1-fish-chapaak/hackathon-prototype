@@ -1,12 +1,10 @@
-import { Pencil, Upload, Link2, Play, Check } from 'lucide-react';
-
 export type JourneyStep = 1 | 2 | 3 | 4;
 
-const STEPS: { id: JourneyStep; label: string; icon: typeof Pencil }[] = [
-  { id: 1, label: 'Write Prompt', icon: Pencil },
-  { id: 2, label: 'Upload Files', icon: Upload },
-  { id: 3, label: 'Map Data', icon: Link2 },
-  { id: 4, label: 'Review & Run', icon: Play },
+const STEPS: { id: JourneyStep; label: string }[] = [
+  { id: 1, label: 'Describe' },
+  { id: 2, label: 'Upload' },
+  { id: 3, label: 'Map' },
+  { id: 4, label: 'Review' },
 ];
 
 interface Props {
@@ -17,52 +15,47 @@ interface Props {
 
 export default function Stepper({ current, completed, onJump }: Props) {
   return (
-    <ol className="flex items-center gap-3 w-full">
+    <ol className="flex items-center gap-2">
       {STEPS.map((s, i) => {
         const isCurrent = s.id === current;
-        const isDone = completed.has(s.id);
-        const Icon = isDone ? Check : s.icon;
+        const isDone = completed.has(s.id) && !isCurrent;
         const isJumpable = isDone || s.id < current;
 
         return (
-          <li key={s.id} className="flex items-center gap-3 flex-1 min-w-0">
+          <li key={s.id} className="flex items-center gap-2">
             <button
               type="button"
               disabled={!isJumpable && !isCurrent}
               onClick={() => isJumpable && onJump?.(s.id)}
               className={[
-                'flex items-center gap-2.5 rounded-full px-3 py-1.5 transition-colors text-left min-w-0',
-                isCurrent
-                  ? 'bg-brand-600 text-white shadow-sm'
-                  : isDone
-                    ? 'bg-brand-50 text-brand-700 hover:bg-brand-100 cursor-pointer'
-                    : 'bg-canvas text-ink-400 border border-canvas-border cursor-not-allowed',
+                'flex items-center gap-2 rounded-full px-2 py-1 transition-colors',
+                isJumpable && !isCurrent ? 'cursor-pointer hover:bg-brand-50' : '',
+                !isJumpable && !isCurrent ? 'cursor-not-allowed' : '',
               ].join(' ')}
             >
               <span
                 className={[
-                  'w-6 h-6 rounded-full flex items-center justify-center shrink-0',
+                  'w-5 h-5 rounded-full flex items-center justify-center text-[10.5px] font-bold shrink-0',
                   isCurrent
-                    ? 'bg-white/20'
+                    ? 'bg-brand-600 text-white'
                     : isDone
-                      ? 'bg-brand-600 text-white'
-                      : 'bg-white border border-canvas-border',
+                      ? 'bg-compliant text-white'
+                      : 'bg-canvas border border-canvas-border text-ink-400',
                 ].join(' ')}
               >
-                <Icon size={13} className={isDone && !isCurrent ? 'text-white' : ''} />
+                {s.id}
               </span>
-              <span className="text-[12.5px] font-semibold truncate">
-                <span className="opacity-70 mr-1">{s.id}.</span>
+              <span
+                className={[
+                  'text-[11.5px] font-semibold',
+                  isCurrent ? 'text-brand-700' : isDone ? 'text-ink-700' : 'text-ink-400',
+                ].join(' ')}
+              >
                 {s.label}
               </span>
             </button>
             {i < STEPS.length - 1 && (
-              <span
-                className={[
-                  'h-px flex-1 min-w-[12px]',
-                  isDone ? 'bg-brand-300' : 'bg-canvas-border',
-                ].join(' ')}
-              />
+              <span className={`h-px w-6 ${isDone ? 'bg-compliant/40' : 'bg-canvas-border'}`} />
             )}
           </li>
         );
