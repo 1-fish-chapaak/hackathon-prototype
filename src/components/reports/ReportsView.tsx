@@ -1413,7 +1413,6 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
 
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
-      <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
       <div className="max-w-5xl mx-auto px-8 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
@@ -1488,7 +1487,9 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                   const report = GENERATED_REPORTS.find(r => r.id === item.id);
                   if (report) setViewingReport(report);
                 }}>
-                  <FileText size={14} className="text-primary" />
+                  <div className="flex items-center justify-center w-8 h-8 shrink-0" style={{ background: 'rgba(106,18,205,0.04)', borderRadius: '8px' }}>
+                    <FileText size={16} style={{ color: '#6a12cd' }} />
+                  </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-text font-medium hover:text-primary transition-colors">{String(item.name)}</span>
@@ -1502,21 +1503,13 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                   </div>
                 </div>
               )},
-              { key: 'generatedBy', label: 'Author', width: '130px', render: (item) => (
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
-                    {String(item.generatedBy).split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <span className="text-text-secondary text-[12px]">{String(item.generatedBy)}</span>
-                </div>
-              )},
               { key: 'generatedAt', label: 'Date', width: '120px', render: (item) => (
                 <span className="text-text-muted text-[12px]">{String(item.generatedAt)}</span>
               )},
               { key: 'status', label: 'Status', width: '100px', render: (item) => <StatusBadge status={String(item.status)} /> },
               { key: 'approval', label: 'Approval', width: '130px', render: (item) => {
                 const approval = REPORT_APPROVAL[String(item.id)] || 'Draft';
-                return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${approvalColor(approval)}`}>{approval}</span>;
+                return <span className={`inline-flex items-center px-2.5 h-6 rounded-full text-[12px] leading-[16px] font-medium whitespace-nowrap ${approvalColor(approval)}`}>{approval}</span>;
               }},
               { key: 'actions', label: '', width: '110px', sortable: false, align: 'right', render: (item) => (
                 <div className="flex items-center justify-end gap-1">
@@ -1538,7 +1531,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                 <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
               </div>
             </div>
-            <div className="p-4 grid grid-cols-3 gap-4">
+            <div className="p-4 grid grid-cols-3 gap-4 items-start">
               {GENERATED_REPORTS.map((r, i) => {
                 const approval = REPORT_APPROVAL[r.id] || 'Draft';
                 return (
@@ -1546,25 +1539,21 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                     className="glass-card rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all group cursor-pointer"
                     onClick={() => setViewingReport(r)}
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="p-2 bg-primary/10 text-primary rounded-lg"><FileText size={16} /></div>
-                      <StatusBadge status={r.status} />
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-center w-8 h-8 shrink-0" style={{ background: 'rgba(106,18,205,0.04)', borderRadius: '8px' }}><FileText size={16} style={{ color: '#6a12cd' }} /></div>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Download"><Download size={15} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); onShare ? onShare(r.id) : addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Share"><Share2 size={15} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="hover:text-red-500 transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Delete"><Trash2 size={15} /></button>
+                      </div>
                     </div>
                     <div className="font-medium text-[13px] text-text mb-1 group-hover:text-primary transition-colors leading-snug">{r.name}</div>
                     <div className="text-[11px] text-text-muted mb-3">{r.pages} pages · {r.generatedAt}</div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
-                          {r.generatedBy.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <span className="text-[11px] text-text-secondary">{r.generatedBy}</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
+                        {r.generatedBy.split(' ').map(n => n[0]).join('')}
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${approvalColor(approval)}`}>{approval}</span>
-                    </div>
-                    <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border-light opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={13} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); onShare ? onShare(r.id) : addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={13} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="p-1 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={13} /></button>
+                      <span className="text-[11px] text-text-secondary">{r.generatedBy}</span>
                     </div>
                   </motion.div>
                 );
