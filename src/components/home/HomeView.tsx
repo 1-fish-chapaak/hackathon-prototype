@@ -1,596 +1,562 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { motion } from 'motion/react';
 import {
-  ArrowRight, TrendingUp, TrendingDown,
-  AlertTriangle, Shield, CheckCircle2, Clock, Zap, Activity,
-  ChevronDown, Lightbulb, DollarSign, Users, Calendar,
-  FileWarning, ShieldAlert, Target, Eye, Ban, Sparkles,
-  ChevronRight, ExternalLink, Settings2, Plus, X
+  Check, X, Calendar, ChevronDown, GripVertical, Sparkles,
+  Workflow as WorkflowIcon, ShieldAlert, ClipboardCheck,
+  ArrowRight, Plus,
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
-import Orb from '../shared/Orb';
-import { useToast } from '../shared/Toast';
+import { RISKS, CONTROLS, ENGAGEMENTS, ENGAGEMENT_CONTROLS, DEFICIENCIES, WORKFLOWS } from '../../data/mockData';
+import { SeverityBadge } from '../shared/StatusBadge';
 
 interface Props {
   setView: (v: View) => void;
 }
 
-function MiniDonut({ data, colors, size = 64 }: { data: number[]; colors: string[]; size?: number }) {
-  const total = data.reduce((a, b) => a + b, 0);
-  const r = (size - 8) / 2;
-  const circ = 2 * Math.PI * r;
-  let offset = 0;
+// ─── Onboarding checklist ────────────────────────────────────────────────────
+
+interface OnboardingStep {
+  id: string;
+  label: string;
+  cta: string;
+  go: View;
+}
+
+const ONBOARDING_STEPS: OnboardingStep[] = [
+  { id: 'team',       label: 'Invite your team',         cta: 'Open Users',   go: 'admin-users' },
+  { id: 'data',       label: 'Connect a data source',    cta: 'Connect',      go: 'data-sources' },
+  { id: 'workflow',   label: 'Run your first workflow',  cta: 'Open library', go: 'workflow-templates' },
+  { id: 'engagement', label: 'Create a test engagement', cta: 'Start',        go: 'audit-execution' },
+  { id: 'report',     label: 'Export your first report', cta: 'Open builder', go: 'reports' },
+];
+
+const ONBOARDING_KEY = 'home.onboarding.v1';
+const ORDER_KEY      = 'home.section-order.v1';
+
+function QuickActionPanel({ setView, onDismiss }: { setView: Props['setView']; onDismiss: () => void }) {
+  const [done, setDone] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(ONBOARDING_KEY) || '[]')); }
+    catch { return new Set(); }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(ONBOARDING_KEY, JSON.stringify(Array.from(done)));
+  }, [done]);
+
+  const total = ONBOARDING_STEPS.length;
+  const completed = done.size;
+  const pct = Math.round((completed / total) * 100);
+
+  const toggle = (id: string) => {
+    setDone(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      {data.map((val, i) => {
-        const pct = (val / total) * circ;
-        const seg = (
-          <circle key={i} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colors[i]} strokeWidth="7"
-            strokeDasharray={`${pct} ${circ - pct}`} strokeDashoffset={-offset} strokeLinecap="round"
-            transform={`rotate(-90 ${size / 2} ${size / 2})`} />
-        );
-        offset += pct;
-        return seg;
-      })}
+    <section className="rounded-xl border border-canvas-border bg-canvas-elevated p-6">
+      <div className="flex items-start justify-between gap-4 mb-5">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-md bg-brand-50 flex items-center justify-center shrink-0">
+            <Sparkles size={16} className="text-brand-700" />
+          </div>
+          <div>
+            <div className="font-display text-[20px] font-[420] text-ink-900 leading-tight">
+              Welcome, Administrator <span className="font-mono font-normal text-[12px] text-ink-500 ml-1">— {completed}/{total} done</span>
+            </div>
+            <p className="text-[13px] text-ink-500 mt-0.5">Get your workspace set up in a few quick steps.</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="text-[11px] font-mono text-ink-500 tabular-nums">{pct}%</div>
+          <div className="w-32 h-1.5 rounded-full bg-canvas-border overflow-hidden">
+            <div
+              className="h-full bg-brand-600 transition-[width] duration-300 ease-out"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <button
+            onClick={onDismiss}
+            className="text-ink-400 hover:text-ink-700 transition-colors p-1 rounded-md cursor-pointer"
+            aria-label="Dismiss onboarding"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+
+      <ul className="divide-y divide-canvas-border">
+        {ONBOARDING_STEPS.map(step => {
+          const isDone = done.has(step.id);
+          return (
+            <li key={step.id} className="flex items-center gap-3 py-3">
+              <button
+                onClick={() => toggle(step.id)}
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                  isDone
+                    ? 'bg-compliant border-compliant text-white'
+                    : 'border-canvas-border hover:border-brand-300'
+                }`}
+                aria-label={isDone ? 'Mark incomplete' : 'Mark complete'}
+              >
+                {isDone && <Check size={12} strokeWidth={3} />}
+              </button>
+              <span className={`flex-1 text-[14px] ${isDone ? 'text-ink-400 line-through' : 'text-ink-800'}`}>
+                {step.label}
+              </span>
+              <button
+                onClick={() => setView(step.go)}
+                className="flex items-center gap-1 text-[13px] font-semibold text-brand-700 hover:text-brand-600 transition-colors cursor-pointer"
+              >
+                {step.cta}
+                <ArrowRight size={13} />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+// ─── Work Queue ──────────────────────────────────────────────────────────────
+
+type QueueType = 'workflow' | 'approval' | 'task';
+
+interface QueueItem {
+  id: string;
+  type: QueueType;
+  item: string;
+  context: string;
+  risk: 'critical' | 'high' | 'medium' | 'low';
+  due: string;            // human-readable
+  dueDate: Date;
+  action: { label: string; go: View };
+}
+
+function buildWorkQueue(): QueueItem[] {
+  const today = new Date('2026-04-23');
+  const days = (n: number) => { const d = new Date(today); d.setDate(d.getDate() + n); return d; };
+  const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  // Workflows that haven't been run recently — flag a few as "pending to run".
+  const pendingWfs = WORKFLOWS.slice(0, 3).map((wf, i): QueueItem => ({
+    id: `q-wf-${wf.id}`,
+    type: 'workflow',
+    item: wf.name,
+    context: `${wf.type} · ${wf.runs} prior runs`,
+    risk: i === 0 ? 'critical' : i === 1 ? 'high' : 'medium',
+    due: fmt(days(i === 0 ? -1 : i + 1)),
+    dueDate: days(i === 0 ? -1 : i + 1),
+    action: { label: 'Run', go: 'workflow-templates' },
+  }));
+
+  // Deficiency approvals.
+  const approvals = DEFICIENCIES.filter(d => d.status !== 'resolved').map((d): QueueItem => ({
+    id: `q-app-${d.id}`,
+    type: 'approval',
+    item: d.finding.length > 60 ? d.finding.slice(0, 57) + '…' : d.finding,
+    context: `Deficiency · ${d.assignee}`,
+    risk: d.severity === 'MW' ? 'critical' : d.severity === 'SD' ? 'high' : 'medium',
+    due: d.due,
+    dueDate: new Date(d.due),
+    action: { label: 'Open', go: 'findings' },
+  }));
+
+  // Engagement control tasks (those not started).
+  const tasks = ENGAGEMENT_CONTROLS
+    .filter(c => c.oe === 'not-started' || c.de === 'not-started')
+    .slice(0, 3)
+    .map((c, i): QueueItem => ({
+      id: `q-tk-${c.id}`,
+      type: 'task',
+      item: `Test ${c.control}`,
+      context: `${c.racm} · ${c.assignee}`,
+      risk: c.isKey ? 'high' : 'medium',
+      due: fmt(days(i + 5)),
+      dueDate: days(i + 5),
+      action: { label: 'Open', go: 'execution-testing' },
+    }));
+
+  return [...pendingWfs, ...approvals, ...tasks].sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+}
+
+const TYPE_META: Record<QueueType, { label: string; icon: React.ElementType }> = {
+  workflow: { label: 'Workflow',  icon: WorkflowIcon },
+  approval: { label: 'Approval',  icon: ShieldAlert },
+  task:     { label: 'Task',      icon: ClipboardCheck },
+};
+
+function WorkQueueSection({ setView }: { setView: Props['setView'] }) {
+  const items = useMemo(buildWorkQueue, []);
+  const today = new Date('2026-04-23');
+
+  return (
+    <div>
+      <div className="flex items-end justify-between mb-3">
+        <div>
+          <div className="font-mono text-[11px] text-ink-500 tracking-tight tabular-nums">Work queue</div>
+          <h2 className="font-display text-[24px] font-[420] text-ink-900 leading-tight">{items.length} items waiting on you</h2>
+        </div>
+        <button
+          onClick={() => setView('workflow-templates')}
+          className="text-[13px] font-semibold text-brand-700 hover:text-brand-600 transition-colors cursor-pointer"
+        >
+          View all →
+        </button>
+      </div>
+
+      <div className="rounded-xl border border-canvas-border bg-canvas-elevated overflow-hidden">
+        <table className="w-full text-[13px] tabular-nums">
+          <thead>
+            <tr className="border-b border-canvas-border bg-paper-50/40">
+              <th className="text-left font-semibold text-ink-500 px-4 h-10 w-[110px]">Type</th>
+              <th className="text-left font-semibold text-ink-500 px-2 h-10">Item</th>
+              <th className="text-left font-semibold text-ink-500 px-2 h-10 w-[110px]">Risk</th>
+              <th className="text-left font-semibold text-ink-500 px-2 h-10 w-[110px]">Due</th>
+              <th className="text-right font-semibold text-ink-500 px-4 h-10 w-[90px]">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((it, idx) => {
+              const Icon = TYPE_META[it.type].icon;
+              const overdue = it.dueDate < today;
+              return (
+                <tr
+                  key={it.id}
+                  className={`h-12 ${idx > 0 ? 'border-t border-canvas-border' : ''} hover:bg-brand-50/40 transition-colors`}
+                >
+                  <td className="px-4">
+                    <span className="inline-flex items-center gap-1.5 text-[12px] text-ink-700 font-medium">
+                      <Icon size={13} className="text-ink-500" />
+                      {TYPE_META[it.type].label}
+                    </span>
+                  </td>
+                  <td className="px-2">
+                    <div className="text-ink-900">{it.item}</div>
+                    <div className="text-[11px] text-ink-500 mt-0.5">{it.context}</div>
+                  </td>
+                  <td className="px-2">
+                    <SeverityBadge severity={it.risk} />
+                  </td>
+                  <td className="px-2">
+                    <span className={`inline-flex items-center gap-1 ${overdue ? 'text-risk-700 font-medium' : 'text-ink-700'}`}>
+                      <Calendar size={12} />
+                      {it.due}
+                    </span>
+                  </td>
+                  <td className="px-4 text-right">
+                    <button
+                      onClick={() => setView(it.action.go)}
+                      className="inline-flex items-center gap-1 text-[12px] font-semibold text-brand-700 hover:text-brand-600 transition-colors cursor-pointer"
+                    >
+                      {it.action.label}
+                      <ArrowRight size={12} />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+            {items.length === 0 && (
+              <tr><td colSpan={5} className="text-center text-ink-500 py-8">Nothing waiting on you. Nice.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── Health Dashboard ────────────────────────────────────────────────────────
+
+function PieDonut({ value, total, size = 120 }: { value: number; total: number; size?: number }) {
+  const r = (size - 14) / 2;
+  const circ = 2 * Math.PI * r;
+  const pct = total > 0 ? value / total : 0;
+  const dash = pct * circ;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-label="planned vs executed">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-canvas-border)" strokeWidth="10" />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke="var(--color-brand-600)" strokeWidth="10"
+        strokeDasharray={`${dash} ${circ - dash}`}
+        strokeDashoffset={circ / 4}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle"
+        className="font-display tabular-nums" style={{ fontSize: 22, fill: 'var(--color-ink-900)' }}>
+        {Math.round(pct * 100)}%
+      </text>
     </svg>
   );
 }
 
-// MiniTrend replaced by inline bento chart components
+function HealthDashboardSection() {
+  const active = ENGAGEMENTS.filter(e => e.status === 'active');
+  const planned   = active.reduce((s, e) => s + e.controls, 0);
+  const executed  = active.reduce((s, e) => s + e.tested, 0);
+  const completionPct = planned > 0 ? Math.round((executed / planned) * 100) : 0;
 
-export default function HomeView({ setView }: Props) {
-  const { addToast } = useToast();
-  const [dateRange, setDateRange] = useState('This quarter');
-  const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
-  const [showProTip, setShowProTip] = useState(false);
-  const [attentionExpanded, setAttentionExpanded] = useState(true);
-  const [showCustomize, setShowCustomize] = useState(false);
-  const [kpiPrefs, setKpiPrefs] = useState({
-    compliance: true,
-    moneyAtRisk: true,
-    exceptions: true,
-    savings: true,
-    deadline: true,
-    controlsTested: false,
-    teamUtilization: false,
-    workflowRuns: false,
-  });
+  const riskTotal   = RISKS.length;
+  const riskFailed  = RISKS.filter(r => r.status === 'open' && (r.severity === 'critical' || r.severity === 'high')).length;
+  const riskHealthy = RISKS.filter(r => r.status === 'mitigated').length;
 
-  const togglePref = (key: string) => {
-    setKpiPrefs(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
-  };
-
-  useEffect(() => {
-    if (!dateDropdownOpen) return;
-    const close = () => setDateDropdownOpen(false);
-    document.addEventListener('click', close);
-    return () => document.removeEventListener('click', close);
-  }, [dateDropdownOpen]);
-
-  useEffect(() => {
-    if (!showCustomize) return;
-    const close = (e: MouseEvent) => {
-      if (!(e.target as HTMLElement).closest('[data-customize-panel]')) {
-        setShowCustomize(false);
-      }
-    };
-    document.addEventListener('click', close);
-    return () => document.removeEventListener('click', close);
-  }, [showCustomize]);
-
-  useEffect(() => {
-    const t = setTimeout(() => setShowProTip(true), 2500);
-    return () => clearTimeout(t);
-  }, []);
+  const ctlTotal   = CONTROLS.length;
+  const ctlPending = CONTROLS.filter(c => c.status === 'not-tested').length;
+  const ctlOverdue = CONTROLS.filter(c => c.status === 'ineffective').length;
 
   return (
-    <div className="h-full overflow-y-auto relative bg-canvas">
-      {/* Page header — Editorial: breadcrumb → serif title → context → actions. No hero banner. */}
-      <div className="relative overflow-hidden border-b border-canvas-border bg-canvas-elevated">
-        <div className="relative max-w-6xl mx-auto px-8 pt-8 pb-6">
+    <div>
+      <div className="flex items-end justify-between mb-3">
+        <div>
+          <div className="font-mono text-[11px] text-ink-500 tracking-tight tabular-nums">Health · {active.length} active engagement{active.length === 1 ? '' : 's'}</div>
+          <h2 className="font-display text-[24px] font-[420] text-ink-900 leading-tight">Audit health at a glance</h2>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-12 gap-4">
+        {/* Completion + Pie */}
+        <div className="col-span-6 rounded-xl border border-canvas-border bg-canvas-elevated p-5">
+          <div className="text-[11px] font-mono text-ink-500 tabular-nums mb-2">Engagement completion</div>
+          <div className="flex items-center gap-6">
+            <div>
+              <div className="font-display text-[44px] font-[420] tabular-nums text-ink-900 leading-none">{completionPct}%</div>
+              <div className="text-[12px] text-ink-500 mt-2">
+                <span className="text-ink-800 font-medium tabular-nums">{executed}</span> of <span className="text-ink-800 font-medium tabular-nums">{planned}</span> controls executed
+              </div>
+              <div className="text-[12px] text-ink-500 mt-0.5">across {active.length} active engagement{active.length === 1 ? '' : 's'}</div>
+            </div>
+            <div className="ml-auto">
+              <PieDonut value={executed} total={planned} />
+            </div>
+          </div>
+        </div>
+
+        {/* Risk overview */}
+        <div className="col-span-3 rounded-xl border border-canvas-border bg-canvas-elevated p-5">
+          <div className="text-[11px] font-mono text-ink-500 tabular-nums mb-3">Risk overview</div>
+          <div className="font-display text-[36px] font-[420] tabular-nums text-ink-900 leading-none">{riskTotal}</div>
+          <div className="text-[12px] text-ink-500 mt-2">total risks tracked</div>
+          <div className="mt-4 space-y-2 pt-4 border-t border-canvas-border">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[12px] text-ink-500">Failed</span>
+              <span className="font-display text-[20px] font-[420] tabular-nums text-risk-700">{riskFailed}</span>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-[12px] text-ink-500">Healthy</span>
+              <span className="font-display text-[20px] font-[420] tabular-nums text-compliant-700">{riskHealthy}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Controls overview */}
+        <div className="col-span-3 rounded-xl border border-canvas-border bg-canvas-elevated p-5">
+          <div className="text-[11px] font-mono text-ink-500 tabular-nums mb-3">Controls overview</div>
+          <div className="font-display text-[36px] font-[420] tabular-nums text-ink-900 leading-none">{ctlTotal}</div>
+          <div className="text-[12px] text-ink-500 mt-2">total controls in library</div>
+          <div className="mt-4 space-y-2 pt-4 border-t border-canvas-border">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[12px] text-ink-500">Pending</span>
+              <span className="font-display text-[20px] font-[420] tabular-nums text-mitigated-700">{ctlPending}</span>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-[12px] text-ink-500">Overdue</span>
+              <span className="font-display text-[20px] font-[420] tabular-nums text-risk-700">{ctlOverdue}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Draggable section wrapper ───────────────────────────────────────────────
+
+type SectionKey = 'queue' | 'health';
+
+function DraggableSection({
+  index, dragKey, isDraggedOver, onDragStart, onDragOver, onDragLeave, onDrop, children,
+}: {
+  index: number;
+  dragKey: SectionKey;
+  isDraggedOver: boolean;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragOver:  (e: React.DragEvent) => void;
+  onDragLeave: () => void;
+  onDrop:      (e: React.DragEvent) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      className={`group relative rounded-2xl transition-colors ${isDraggedOver ? 'ring-2 ring-brand-300 ring-offset-4 ring-offset-canvas' : ''}`}
+      data-section={dragKey}
+      data-index={index}
+    >
+      <div
+        draggable
+        onDragStart={onDragStart}
+        className="absolute -left-7 top-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-ink-400 hover:text-ink-700"
+        aria-label="Drag to reorder section"
+        title="Drag to reorder"
+      >
+        <GripVertical size={18} />
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ─── HomeView ────────────────────────────────────────────────────────────────
+
+const PERIODS = ['This Quarter', 'Last Quarter', 'Custom'] as const;
+type Period = typeof PERIODS[number];
+
+const ONBOARDING_DISMISSED_KEY = 'home.onboarding-dismissed.v1';
+
+export default function HomeView({ setView }: Props) {
+  const [period, setPeriod] = useState<Period>('This Quarter');
+  const [periodOpen, setPeriodOpen] = useState(false);
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem(ONBOARDING_DISMISSED_KEY) === '1');
+
+  const [order, setOrder] = useState<SectionKey[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(ORDER_KEY) || '[]') as SectionKey[];
+      if (saved.length === 2 && saved.every(k => k === 'queue' || k === 'health')) return saved;
+    } catch { /* fall through */ }
+    return ['queue', 'health'];
+  });
+  useEffect(() => { localStorage.setItem(ORDER_KEY, JSON.stringify(order)); }, [order]);
+
+  const draggedRef = useRef<SectionKey | null>(null);
+  const [hoverKey, setHoverKey] = useState<SectionKey | null>(null);
+
+  const dismiss = () => {
+    setDismissed(true);
+    localStorage.setItem(ONBOARDING_DISMISSED_KEY, '1');
+  };
+
+  const sectionFor = (key: SectionKey) =>
+    key === 'queue' ? <WorkQueueSection setView={setView} /> : <HealthDashboardSection />;
+
+  const handleDragStart = (key: SectionKey) => (e: React.DragEvent) => {
+    draggedRef.current = key;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', key);
+  };
+
+  const handleDragOver = (key: SectionKey) => (e: React.DragEvent) => {
+    e.preventDefault();
+    if (draggedRef.current && draggedRef.current !== key) setHoverKey(key);
+  };
+
+  const handleDragLeave = () => setHoverKey(null);
+
+  const handleDrop = (key: SectionKey) => (e: React.DragEvent) => {
+    e.preventDefault();
+    const dragged = draggedRef.current;
+    setHoverKey(null);
+    draggedRef.current = null;
+    if (!dragged || dragged === key) return;
+    setOrder(prev => {
+      const next: SectionKey[] = [...prev];
+      const di = next.indexOf(dragged);
+      const tj = next.indexOf(key);
+      if (di === -1 || tj === -1) return prev;
+      [next[di], next[tj]] = [next[tj], next[di]];
+      return next;
+    });
+  };
+
+  return (
+    <div className="h-full overflow-y-auto bg-canvas">
+      {/* Page header */}
+      <div className="border-b border-canvas-border bg-canvas-elevated">
+        <div className="max-w-6xl mx-auto px-8 pt-8 pb-6">
           <div className="font-mono text-[11px] text-ink-500 mb-2 tracking-tight">Home</div>
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }} className="flex items-end justify-between">
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+            className="flex items-end justify-between"
+          >
             <div>
               <h1 className="font-display text-[40px] font-[420] tracking-tight text-ink-900 leading-[1.1] mb-2">
                 Good morning, Auditor.
               </h1>
               <p className="text-[14px] text-ink-500 leading-relaxed">Here is your FY26 audit landscape at a glance.</p>
-              <AnimatePresence>
-                {showProTip && (
-                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-2 flex items-center gap-2 text-[11px] text-text-muted">
-                    <Lightbulb size={11} className="text-primary/60" />
-                    <span>Try: &quot;What risks need attention this week?&quot; or &quot;Build a vendor payment workflow&quot;</span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
-            <div className="flex items-center gap-2.5">
-              <div className="relative" data-customize-panel>
-                <button onClick={(e) => { e.stopPropagation(); setShowCustomize(p => !p); }} className="p-2.5 rounded-lg border border-canvas-border bg-canvas-elevated text-ink-400 hover:text-brand-600 hover:border-brand-200 transition-all cursor-pointer">
-                  <Settings2 size={14} />
-                </button>
-                <AnimatePresence>
-                  {showCustomize && (
-                    <motion.div initial={{ opacity: 0, y: -4, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.98 }} transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-full mt-1 bg-canvas-elevated border border-canvas-border rounded-lg shadow-md overflow-hidden z-20 w-[260px]"
-                      onClick={(e) => e.stopPropagation()}>
-                      <div className="px-4 pt-3.5 pb-2 border-b border-border-light/60">
-                        <div className="text-[13px] font-semibold text-text">Customize Dashboard</div>
-                        <div className="text-[10px] text-text-muted mt-0.5">Toggle KPI cards on the homepage</div>
-                      </div>
-                      <div className="px-4 py-2.5 space-y-1.5 max-h-[260px] overflow-y-auto">
-                        {([
-                          { key: 'compliance', label: 'Compliance Score' },
-                          { key: 'moneyAtRisk', label: 'Money at Risk' },
-                          { key: 'exceptions', label: 'Open Exceptions' },
-                          { key: 'savings', label: 'Automation Savings' },
-                          { key: 'deadline', label: 'SOX Deadline' },
-                          { key: 'controlsTested', label: 'Controls Tested' },
-                          { key: 'teamUtilization', label: 'Team Utilization' },
-                          { key: 'workflowRuns', label: 'Workflow Runs' },
-                        ] as const).map(item => (
-                          <button key={item.key} onClick={() => togglePref(item.key)}
-                            className="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-surface-2/60 transition-colors cursor-pointer">
-                            <span className="text-[12px] text-text-secondary">{item.label}</span>
-                            <div className={`w-8 h-[18px] rounded-full relative transition-colors duration-200 ${kpiPrefs[item.key] ? 'bg-primary' : 'bg-gray-200'}`}>
-                              <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform duration-200 ${kpiPrefs[item.key] ? 'left-[16px]' : 'left-[2px]'}`} />
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                      <div className="px-4 py-3 border-t border-border-light/60">
-                        <button onClick={() => { setShowCustomize(false); addToast({ message: 'Dashboard layout saved successfully', type: 'success' }); }}
-                          className="w-full px-3 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
-                          Save Layout
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-              <div className="relative">
-                <button onClick={(e) => { e.stopPropagation(); setDateDropdownOpen(p => !p); }} className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-canvas-border bg-canvas-elevated text-[12px] text-ink-500 hover:border-brand-200 transition-all cursor-pointer">
-                  {dateRange}
-                  <ChevronDown size={12} className={`transition-transform ${dateDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                <AnimatePresence>
-                  {dateDropdownOpen && (
-                    <motion.div initial={{ opacity: 0, y: -4, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.98 }} transition={{ duration: 0.12 }} className="absolute right-0 top-full mt-1 bg-canvas-elevated border border-canvas-border rounded-lg shadow-md overflow-hidden z-20 min-w-[140px]">
-                      {['This week', 'This month', 'This quarter', 'This year'].map(opt => (
-                        <button key={opt} onClick={() => { setDateRange(opt); setDateDropdownOpen(false); }} className={`w-full text-left px-3 py-2 text-[12px] transition-colors cursor-pointer ${dateRange === opt ? 'bg-primary/10 text-primary font-semibold' : 'text-text-secondary hover:bg-surface-2'}`}>{opt}</button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+
+            <div className="relative">
+              <button
+                onClick={() => setPeriodOpen(p => !p)}
+                className="flex items-center gap-2 px-3 h-10 border border-canvas-border bg-canvas-elevated rounded-md text-[13px] text-ink-700 hover:border-brand-200 transition-colors cursor-pointer"
+              >
+                <Calendar size={14} className="text-ink-500" />
+                <span className="font-medium">{period}</span>
+                <ChevronDown size={14} className={`transition-transform ${periodOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {periodOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setPeriodOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1 w-44 z-20 bg-canvas-elevated border border-canvas-border rounded-md py-1 shadow-md">
+                    {PERIODS.map(p => (
+                      <button
+                        key={p}
+                        onClick={() => { setPeriod(p); setPeriodOpen(false); }}
+                        className={`w-full text-left px-3 py-1.5 text-[13px] cursor-pointer transition-colors ${
+                          p === period ? 'text-brand-700 font-semibold bg-brand-50' : 'text-ink-700 hover:bg-paper-50'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </motion.div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-10 py-8 relative">
-        <Orb hoverIntensity={0.05} rotateOnHover hue={275} opacity={0.04} />
-
-        {/* ─── ROW 1: Premium Bento Grid ─── */}
-        <div className="grid grid-cols-12 gap-3 mb-7">
-          {/* ── Large: Compliance trend chart (spans 5 cols, 2 rows) ── */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
-            onClick={() => setView('dashboards')}
-            className="col-span-5 row-span-2 rounded-xl p-6 cursor-pointer group relative overflow-hidden transition-all duration-150 bg-canvas-elevated border border-canvas-border hover:border-paper-300">
-            <button onClick={e => { e.stopPropagation(); addToast({ message: 'Widget removed from dashboard', type: 'info' }); }} className="absolute top-3 right-3 p-1 rounded-lg text-text-muted/20 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-10" title="Remove widget"><X size={12} /></button>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[12px] text-text-muted font-medium tracking-wide">FY26</span>
-              <div className="flex items-center gap-1.5 text-[10px] text-green-600 font-semibold">
-                <TrendingUp size={10} /> +12.4%
-              </div>
-            </div>
-            <div className="text-[42px] leading-none tracking-tighter mb-2 numeric" style={{ fontFamily: 'var(--font-display)', fontWeight: 420, color: 'var(--color-ink-900)' }}>94.2%</div>
-            <p className="text-[12px] text-text-muted leading-relaxed mb-5">Compliance score driven by automated controls and continuous monitoring across 4 business processes.</p>
-            {/* Area chart */}
-            <svg width="100%" height="120" viewBox="0 0 400 120" preserveAspectRatio="none" className="opacity-80">
-              <defs>
-                <linearGradient id="bento-area" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6a12cd" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#6a12cd" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <polygon fill="url(#bento-area)" points="0,120 0,100 30,95 60,90 90,88 120,80 150,82 180,70 210,65 240,55 270,48 300,42 330,35 360,28 400,18 400,120" />
-              <polyline fill="none" stroke="#6a12cd" strokeWidth="2.5" strokeLinecap="round" points="0,100 30,95 60,90 90,88 120,80 150,82 180,70 210,65 240,55 270,48 300,42 330,35 360,28 400,18" />
-              <circle cx="400" cy="18" r="4" fill="#6a12cd" />
-              <circle cx="400" cy="18" r="8" fill="#6a12cd" opacity="0.2" />
-              {/* Grid lines */}
-              {[30, 55, 80, 105].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="rgba(106,18,205,0.06)" strokeDasharray="4 6" />)}
-            </svg>
-            {/* Vertical cursor line */}
-            <div className="absolute bottom-6 right-[60px] w-px h-[100px] bg-primary/8" />
-            <div className="absolute bottom-[106px] right-[56px] w-2 h-2 rounded-full bg-white border-2 border-white" />
-          </motion.div>
-
-          {/* ── Money at Risk (dark card) ── */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
-            onClick={() => setView('chat')}
-            className="col-span-4 rounded-xl p-5 cursor-pointer group relative overflow-hidden transition-all duration-150 bg-canvas-elevated border border-canvas-border hover:border-paper-300">
-            <button onClick={e => { e.stopPropagation(); addToast({ message: 'Widget removed from dashboard', type: 'info' }); }} className="absolute top-3 right-3 p-1 rounded-lg text-text-muted/20 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-10" title="Remove widget"><X size={12} /></button>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-1.5 rounded-lg bg-red-100"><DollarSign size={13} className="text-red-600" /></div>
-              <span className="text-[11px] text-text-muted font-medium">Money at Risk</span>
-            </div>
-            <div className="text-[28px] leading-none tracking-tight mb-1 numeric" style={{ fontFamily: 'var(--font-display)', fontWeight: 480, color: 'var(--color-ink-900)' }}>₹6.16L</div>
-            <div className="flex items-center gap-2 mt-2">
-              <span className="text-[11px] text-green-600 font-semibold flex items-center gap-0.5"><TrendingDown size={10} /> -₹2.1L</span>
-              <span className="text-[10px] text-text-muted/70">vs last quarter</span>
-            </div>
-            {/* Mini bar chart */}
-            <div className="flex items-end gap-1.5 mt-4 h-8">
-              {[65, 55, 48, 52, 42, 38].map((h, i) => (
-                <motion.div key={i} initial={{ height: 0 }} animate={{ height: `${h}%` }} transition={{ delay: 0.3 + i * 0.05, duration: 0.5 }}
-                  className="flex-1 rounded-sm" style={{ background: i === 5 ? '#c084fc' : 'rgba(106,18,205,0.12)' }} />
-              ))}
-            </div>
-          </motion.div>
-
-          {/* ── Audit Days Left (accent card) ── */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
-            onClick={() => setView('audit-planning')}
-            className="col-span-3 rounded-xl p-5 cursor-pointer group transition-all duration-150 bg-canvas-elevated border border-canvas-border hover:border-paper-300">
-            <button onClick={e => { e.stopPropagation(); addToast({ message: 'Widget removed from dashboard', type: 'info' }); }} className="absolute top-3 right-3 p-1 rounded-lg text-text-muted/20 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-10" title="Remove widget"><X size={12} /></button>
-            <div className="flex items-center gap-2 mb-2">
-              <Clock size={13} className="text-primary/60" />
-              <span className="text-[11px] text-primary/50 font-medium">SOX Deadline</span>
-            </div>
-            <div className="text-[36px] leading-none tracking-tighter" style={{ fontFamily: 'var(--font-display)', fontWeight: 420, color: 'var(--color-brand-600)' }}>6</div>
-            <div className="text-[12px] text-brand-600/60 font-medium mt-0.5">Days remaining</div>
-            {/* Dot grid pattern */}
-            <div className="grid grid-cols-6 gap-1 mt-4">
-              {Array.from({ length: 30 }).map((_, i) => (
-                <div key={i} className={`w-2 h-2 rounded-full ${i < 24 ? 'bg-primary/30' : 'bg-primary/8'}`} />
-              ))}
-            </div>
-          </motion.div>
-
-          {/* ── Open Exceptions (dark card) ── */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-            onClick={() => setView('reports')}
-            className="col-span-4 rounded-xl p-5 cursor-pointer group relative overflow-hidden transition-all duration-150 bg-canvas-elevated border border-canvas-border hover:border-paper-300">
-            <button onClick={e => { e.stopPropagation(); addToast({ message: 'Widget removed from dashboard', type: 'info' }); }} className="absolute top-3 right-3 p-1 rounded-lg text-text-muted/20 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-10" title="Remove widget"><X size={12} /></button>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 rounded-lg bg-orange-100"><FileWarning size={13} className="text-orange-600" /></div>
-              <span className="text-[11px] text-text-muted font-medium">Open Exceptions</span>
-              <span className="ml-auto text-[10px] text-text-muted/70 bg-surface-2 px-2 py-0.5 rounded-full">This week</span>
-            </div>
-            <div className="text-[28px] leading-none tracking-tight numeric" style={{ fontFamily: 'var(--font-display)', fontWeight: 480, color: 'var(--color-ink-900)' }}>7</div>
-            <div className="text-[11px] text-text-muted mt-1">3 unassigned, 4 in progress</div>
-            <div className="flex items-center gap-1 mt-1">
-              <span className="text-[11px] text-red-600 font-semibold flex items-center gap-0.5"><TrendingUp size={10} /> +2</span>
-              <span className="text-[10px] text-text-muted/70">this week</span>
-            </div>
-          </motion.div>
-
-          {/* ── Automation Savings (accent card) ── */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}
-            onClick={() => setView('workflow-templates')}
-            className="col-span-3 rounded-xl p-5 cursor-pointer group transition-all duration-150 relative overflow-hidden bg-canvas-elevated border border-canvas-border hover:border-paper-300">
-            <button onClick={e => { e.stopPropagation(); addToast({ message: 'Widget removed from dashboard', type: 'info' }); }} className="absolute top-3 right-3 p-1 rounded-lg text-text-muted/20 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-10" title="Remove widget"><X size={12} /></button>
-            <div className="flex items-center gap-2 mb-2">
-              <Zap size={13} className="text-green-600" />
-              <span className="text-[11px] text-green-600/60 font-medium">Savings YTD</span>
-            </div>
-            <div className="text-[32px] leading-none tracking-tighter" style={{ fontFamily: 'var(--font-display)', fontWeight: 420, color: 'var(--color-compliant)' }}>₹24L</div>
-            <div className="text-[11px] text-compliant/60 mt-1">Cost avoided via AI workflows</div>
-            {/* Bar chart */}
-            <div className="flex items-end gap-1 mt-3 h-10">
-              {[20, 35, 45, 55, 70, 80, 90, 100].map((h, i) => (
-                <motion.div key={i} initial={{ height: 0 }} animate={{ height: `${h}%` }} transition={{ delay: 0.4 + i * 0.04, duration: 0.4 }}
-                  className="flex-1 rounded-sm" style={{ background: i >= 6 ? '#16a34a' : 'rgba(22,163,74,0.15)' }} />
-              ))}
-            </div>
-          </motion.div>
-        </div>
-
-        {/* ─── Add Widget Button ─── */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-          className="flex justify-center mb-5 -mt-3">
-          <button onClick={() => addToast({ message: 'Widget picker opened — drag a widget to add it to your dashboard', type: 'info' })}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-dashed border-primary/20 text-[11px] text-primary/50 font-medium hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all cursor-pointer">
-            <Plus size={12} /> Add Widget
+      {/* Body */}
+      <div className="max-w-6xl mx-auto px-8 py-8 space-y-8">
+        {!dismissed && <QuickActionPanel setView={setView} onDismiss={dismiss} />}
+        {dismissed && (
+          <button
+            onClick={() => { setDismissed(false); localStorage.removeItem(ONBOARDING_DISMISSED_KEY); }}
+            className="inline-flex items-center gap-1.5 text-[12px] text-ink-500 hover:text-brand-700 transition-colors cursor-pointer"
+          >
+            <Plus size={12} />
+            Restore onboarding
           </button>
-        </motion.div>
+        )}
 
-        {/* ─── ROW 2: Needs Your Attention (actionable items) ─── */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="glass-card rounded-2xl mb-7 overflow-hidden">
-          <button onClick={() => setAttentionExpanded(p => !p)} className="w-full flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-surface-2/50 transition-colors">
-            <div className="flex items-center gap-2.5">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-[14px] font-semibold text-text">Needs Your Attention</span>
-              <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">5 items</span>
-            </div>
-            <ChevronDown size={14} className={`text-text-muted transition-transform ${attentionExpanded ? '' : '-rotate-90'}`} />
-          </button>
-          <AnimatePresence>
-            {attentionExpanded && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
-                <div className="px-5 pb-4 space-y-2">
-                  {[
-                    { icon: ShieldAlert, severity: 'critical', text: 'Material weakness DEF-002 remediation due in 6 days', detail: 'Journal entry approval override — 7 instances undocumented', action: 'Review', actionView: 'audit-execution' as View, color: 'text-red-600 bg-red-50 border-red-200' },
-                    { icon: Ban, severity: 'critical', text: '2 critical risks have zero controls mapped', detail: 'RSK-004 (Fictitious vendors), RSK-007 (Malware via portals)', action: 'Assign Controls', actionView: 'audit-risk-register' as View, color: 'text-red-600 bg-red-50 border-red-200' },
-                    { icon: Clock, severity: 'high', text: '3 exceptions unassigned for 48+ hours', detail: 'EXC-001 ($45K), EXC-006 ($156K), EXC-007 ($34K) — total $235K at risk', action: 'Assign', actionView: 'reports' as View, color: 'text-orange-600 bg-orange-50 border-orange-200' },
-                    { icon: AlertTriangle, severity: 'high', text: '4 contracts expiring within 30 days', detail: '2 high-value (>$500K) — vendor renegotiation needed', action: 'View', actionView: 'dashboards' as View, color: 'text-orange-600 bg-orange-50 border-orange-200' },
-                    { icon: Users, severity: 'medium', text: 'Tushar Goel over-allocated in April (120% capacity)', detail: 'Assigned to P2P SOX + IFC Assessment simultaneously', action: 'Rebalance', actionView: 'audit-planning' as View, color: 'text-amber-600 bg-amber-50 border-amber-200' },
-                  ].map((item, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.04 }}
-                      className={`flex items-start gap-3 p-3 rounded-xl border ${item.color} ${item.severity === 'critical' ? 'card-alert-critical' : item.severity === 'high' ? 'card-alert-high' : 'card-alert-medium'} hover:shadow-md transition-all cursor-pointer group`}
-                      onClick={() => setView(item.actionView)}>
-                      <div className={`p-1.5 rounded-lg shrink-0 ${item.color.split(' ').slice(0, 2).join(' ')}`}>
-                        <item.icon size={14} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[12px] font-semibold text-text leading-tight">{item.text}</div>
-                        <div className="text-[11px] text-text-muted mt-0.5 leading-relaxed">{item.detail}</div>
-                      </div>
-                      <button className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors opacity-0 group-hover:opacity-100">
-                        {item.action} <ArrowRight size={10} />
-                      </button>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+        {order.map((key, idx) => (
+          <DraggableSection
+            key={key}
+            dragKey={key}
+            index={idx}
+            isDraggedOver={hoverKey === key}
+            onDragStart={handleDragStart(key)}
+            onDragOver={handleDragOver(key)}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop(key)}
+          >
+            {sectionFor(key)}
+          </DraggableSection>
+        ))}
 
-        {/* ─── ROW 3: Audit Progress + Risk Heatmap side by side ─── */}
-        <div className="grid grid-cols-5 gap-5 mb-7">
-          {/* Audit completion by process — 3 cols */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-            className="col-span-3 card-content rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[13px] font-semibold text-text flex items-center gap-2">
-                <Target size={14} className="text-primary" /> FY26 Audit Progress by Process
-              </h3>
-              <button onClick={() => setView('audit-planning')} className="text-[11px] text-primary font-medium hover:underline cursor-pointer flex items-center gap-1">
-                Full Plan <ExternalLink size={9} />
-              </button>
-            </div>
-            <div className="space-y-4">
-              {[
-                { name: 'Procure to Pay', abbr: 'P2P', progress: 72, tested: 17, total: 24, deficiencies: 1, color: '#6a12cd', deadline: 'Mar 31' },
-                { name: 'Order to Cash', abbr: 'O2C', progress: 44, tested: 8, total: 18, deficiencies: 0, color: '#0284c7', deadline: 'Mar 31' },
-                { name: 'Record to Report', abbr: 'R2R', progress: 85, tested: 26, total: 31, deficiencies: 1, color: '#d97706', deadline: 'Mar 31' },
-                { name: 'Source to Contract', abbr: 'S2C', progress: 21, tested: 3, total: 14, deficiencies: 0, color: '#059669', deadline: 'Jun 30' },
-              ].map((p, i) => (
-                <motion.div key={p.abbr} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55 + i * 0.05 }}
-                  className="group cursor-pointer" onClick={() => setView('business-processes')}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white" style={{ background: p.color }}>{p.abbr}</div>
-                      <div>
-                        <span className="text-[12px] font-medium text-text group-hover:text-primary transition-colors">{p.name}</span>
-                        <span className="text-[10px] text-text-muted ml-2">{p.tested}/{p.total} controls</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {p.deficiencies > 0 && (
-                        <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full">{p.deficiencies} deficiency</span>
-                      )}
-                      <span className="text-[10px] text-text-muted">Due {p.deadline}</span>
-                      <span className="text-[13px] font-bold font-mono text-text w-10 text-right">{p.progress}%</span>
-                    </div>
-                  </div>
-                  <div className="h-2 bg-surface-3 rounded-full overflow-hidden">
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${p.progress}%` }} transition={{ duration: 0.8, delay: 0.6 + i * 0.1 }}
-                      className="h-full rounded-full" style={{ background: p.color }} />
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-            <div className="mt-4 pt-3 border-t border-border-light flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <span className="text-[13px] font-bold text-text">Overall:</span>
-                <span className="text-[13px] font-bold text-primary font-mono">58%</span>
-                <span className="text-[11px] text-text-muted ml-1">— 54 of 87 controls tested</span>
-              </div>
-              <div className="flex items-center gap-1 text-[11px] font-medium text-green-600">
-                <TrendingUp size={11} /> On track for Q1 filing
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Risk Exposure Summary — 2 cols */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
-            className="col-span-2 card-content rounded-2xl p-5">
-            <h3 className="text-[13px] font-semibold text-text mb-4 flex items-center gap-2">
-              <AlertTriangle size={14} className="text-orange-500" /> Risk Exposure
-            </h3>
-            <div className="flex items-center gap-4 mb-4">
-              <MiniDonut data={[2, 5, 3, 2]} colors={['#dc2626', '#ea580c', '#d97706', '#16a34a']} size={72} />
-              <div className="space-y-1.5 flex-1">
-                {[
-                  { label: 'Critical', value: 2, color: '#dc2626', detail: '0 controls mapped' },
-                  { label: 'High', value: 5, color: '#ea580c', detail: '3 partially mitigated' },
-                  { label: 'Medium', value: 3, color: '#d97706', detail: 'All mitigated' },
-                  { label: 'Low', value: 2, color: '#16a34a', detail: 'All mitigated' },
-                ].map(r => (
-                  <div key={r.label} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ background: r.color }} />
-                      <span className="text-[11px] text-text-secondary">{r.label}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-text-muted">{r.detail}</span>
-                      <span className="text-[12px] font-bold text-text w-4 text-right">{r.value}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Uncontrolled risks callout */}
-            <div className="p-3 rounded-xl bg-red-50/80 border border-red-200/60">
-              <div className="flex items-center gap-1.5 mb-1">
-                <ShieldAlert size={12} className="text-red-500" />
-                <span className="text-[10px] font-bold text-red-700 uppercase tracking-wider">Uncontrolled Risks</span>
-              </div>
-              <div className="text-[11px] text-red-800 leading-relaxed">
-                <strong>RSK-004</strong> Fictitious vendor registration & <strong>RSK-007</strong> Malware via vendor portals have zero controls. Estimated exposure: <strong>₹18L</strong>.
-              </div>
-              <button onClick={() => setView('audit-risk-register')} className="mt-2 text-[10px] font-semibold text-red-600 hover:underline cursor-pointer flex items-center gap-1">
-                Assign controls <ArrowRight size={9} />
-              </button>
-            </div>
-            <button onClick={() => setView('audit-risk-register')} className="mt-3 text-[11px] text-primary font-medium hover:underline cursor-pointer flex items-center gap-1 justify-end w-full">
-              Full Risk Register <ChevronRight size={10} />
-            </button>
-          </motion.div>
+        <div className="text-[11px] text-ink-400 text-center pt-4 pb-2">
+          Hover a section to drag it. The new order persists across reloads.
         </div>
-
-        {/* ─── ROW 4: AI Insights + Upcoming Deadlines ─── */}
-        <div className="grid grid-cols-2 gap-5 mb-7">
-          {/* AI Insights */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65 }}
-            className="card-content rounded-2xl p-5">
-            <h3 className="text-[13px] font-semibold text-text mb-3 flex items-center gap-2">
-              <Sparkles size={14} className="text-primary" /> AI Insights
-              <span className="text-[9px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">Updated 2h ago</span>
-            </h3>
-            <div className="space-y-2.5">
-              {[
-                { icon: DollarSign, text: 'Duplicate invoice detection saved ₹2.4L this month. 3 invoices from Acme Corp blocked before payment.', color: 'text-green-600 bg-green-50', actionLabel: 'View savings', actionView: 'workflow-templates' as View },
-                { icon: Eye, text: 'Vendor Master Monitor detected 2 unauthorized bank account changes. Both flagged before payment release.', color: 'text-blue-600 bg-blue-50', actionLabel: 'View alerts', actionView: 'dashboards' as View },
-                { icon: Activity, text: 'R2R process is 85% complete — ahead of schedule. Recommend reallocating Karan Mehta to S2C which is lagging (21%).', color: 'text-purple-600 bg-purple-50', actionLabel: 'Adjust plan', actionView: 'audit-planning' as View },
-                { icon: TrendingDown, text: 'False positive rate in fraud detection dropped from 6.5% to 4.2% after model retrain. Auditor review time reduced by 35%.', color: 'text-emerald-600 bg-emerald-50', actionLabel: 'View metrics', actionView: 'workflow-templates' as View },
-              ].map((insight, i) => (
-                <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.7 + i * 0.04 }}
-                  className="flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-surface-2 transition-colors cursor-pointer group"
-                  onClick={() => setView(insight.actionView)}>
-                  <div className={`p-1.5 rounded-lg shrink-0 ${insight.color}`}><insight.icon size={12} /></div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[11.5px] text-text leading-relaxed">{insight.text}</div>
-                    <span className="text-[10px] text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 mt-0.5">
-                      {insight.actionLabel} <ArrowRight size={8} />
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Upcoming Deadlines + Team Snapshot */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
-            className="card-content rounded-2xl p-5">
-            <h3 className="text-[13px] font-semibold text-text mb-3 flex items-center gap-2">
-              <Calendar size={14} className="text-orange-500" /> Deadlines & Milestones
-            </h3>
-            <div className="space-y-2">
-              {[
-                { label: 'DEF-002 Remediation Due', date: 'Mar 31, 2026', daysLeft: 6, severity: 'critical', owner: 'Rohan Patel' },
-                { label: 'FY26 SOX Audit Completion', date: 'Mar 31, 2026', daysLeft: 6, severity: 'high', owner: 'Karan Mehta' },
-                { label: 'Q1 Audit Committee Report', date: 'Apr 10, 2026', daysLeft: 16, severity: 'high', owner: 'Abhinav S' },
-                { label: 'S2C Contract Review Kickoff', date: 'Apr 15, 2026', daysLeft: 21, severity: 'medium', owner: 'Rohan Patel' },
-                { label: 'IFC Assessment Start', date: 'Apr 1, 2026', daysLeft: 7, severity: 'medium', owner: 'Sneha Desai' },
-              ].map((d, i) => {
-                const urgencyColor = d.daysLeft <= 7 ? 'text-red-600 bg-red-50' : d.daysLeft <= 14 ? 'text-orange-600 bg-orange-50' : 'text-text-muted bg-surface-2';
-                return (
-                  <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.75 + i * 0.04 }}
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-2/80 transition-colors">
-                    <div className={`text-[11px] font-bold px-2 py-1 rounded-lg shrink-0 font-mono ${urgencyColor}`}>
-                      {d.daysLeft}d
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[12px] font-medium text-text leading-tight">{d.label}</div>
-                      <div className="text-[10px] text-text-muted">{d.owner} · {d.date}</div>
-                    </div>
-                    {d.daysLeft <= 7 && <Clock size={13} className="text-red-600 animate-pulse shrink-0" />}
-                  </motion.div>
-                );
-              })}
-            </div>
-            <button onClick={() => setView('audit-planning')} className="mt-3 w-full text-center text-[11px] text-primary font-medium hover:underline cursor-pointer flex items-center gap-1 justify-center">
-              View Full Audit Calendar <ArrowRight size={10} />
-            </button>
-          </motion.div>
-        </div>
-
-        {/* ─── ROW 5: Quick Stats Bar + Recent Activity ─── */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}
-          className="glass-card rounded-2xl p-4 mb-6">
-          <div className="flex items-center justify-around">
-            {[
-              { icon: CheckCircle2, label: 'Controls Effective', value: '48/54', pct: '89%', color: 'text-green-600' },
-              { icon: Shield, label: 'Deficiencies Open', value: '2', pct: '', color: 'text-red-600' },
-              { icon: Zap, label: 'Workflows Active', value: '8', pct: '115 runs', color: 'text-primary' },
-              { icon: Activity, label: 'Exceptions Resolved', value: '5/8', pct: '63%', color: 'text-blue-600' },
-              { icon: Users, label: 'Team Utilization', value: '74%', pct: '5 of 7', color: 'text-orange-600' },
-            ].map(s => (
-              <div key={s.label} className="flex items-center gap-2.5 px-3">
-                <s.icon size={14} className={s.color} />
-                <div>
-                  <div className="text-[12px] font-bold text-text">{s.value} <span className="text-[10px] font-normal text-text-muted">{s.pct}</span></div>
-                  <div className="text-[10px] text-text-muted">{s.label}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Pending Workflow Runs */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.83 }} className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[14px] font-semibold text-text flex items-center gap-2">
-              <Clock size={13} className="text-orange-500" /> Pending Workflow Runs
-            </h2>
-            <button onClick={() => setView('workflow-templates')} className="text-[11px] text-primary font-medium hover:underline cursor-pointer flex items-center gap-1">
-              View all <ArrowRight size={10} />
-            </button>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { name: 'SOD Violation Detector', time: 'Scheduled — Today 6 PM', type: 'Compliance', status: 'queued', color: '#7c3aed' },
-              { name: 'Three-Way PO Match', time: 'Scheduled — Tomorrow 6 AM', type: 'Reconciliation', status: 'queued', color: '#0284c7' },
-              { name: 'Contract Expiry Alert', time: 'Scheduled — Mar 28', type: 'Monitoring', status: 'pending-data', color: '#059669' },
-            ].map((w, i) => (
-              <motion.div key={w.name} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.85 + i * 0.04 }}
-                onClick={() => setView('workflow-templates')}
-                className="glass-card card-nav rounded-2xl p-4 group">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 rounded-full dot-breathe" style={{ background: w.color }} />
-                  <span className="text-[12px] font-semibold text-text group-hover:text-primary transition-colors truncate">{w.name}</span>
-                </div>
-                <div className="text-[10.5px] text-text-muted mb-2">{w.time}</div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-bold text-text-muted bg-surface-2 px-1.5 py-0.5 rounded-full">{w.type}</span>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${w.status === 'queued' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
-                    {w.status === 'queued' ? 'Queued' : 'Waiting for data'}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Recent Activity */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[14px] font-semibold text-text">Recent Activity</h2>
-            <button onClick={() => setView('dashboards')} className="text-[11px] text-primary font-medium hover:underline cursor-pointer flex items-center gap-1">
-              View all <ArrowRight size={10} />
-            </button>
-          </div>
-          <div className="space-y-2">
-            {[
-              { icon: CheckCircle2, text: 'Duplicate Invoice Detector blocked ₹45K payment to Acme Corp', time: '2h ago', color: 'text-green-500' },
-              { icon: AlertTriangle, text: 'Material weakness DEF-002: Rohan Patel submitted remediation evidence', time: '4h ago', color: 'text-orange-500' },
-              { icon: Zap, text: 'Vendor Master Monitor: 2 unauthorized bank changes detected & blocked', time: '6h ago', color: 'text-blue-500' },
-              { icon: Shield, text: 'R2R — 3 more controls tested (CTR-007, CTR-008 effective; CTR-006 pending)', time: '1d ago', color: 'text-purple-500' },
-              { icon: Users, text: 'Sneha Desai signed off on Risk Assessment Review for FY26 plan', time: '1d ago', color: 'text-emerald-500' },
-            ].map((a, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 + i * 0.04 }}
-                className="flex items-center gap-3 p-3 rounded-xl feed-item cursor-pointer active:scale-[0.995]">
-                <a.icon size={14} className={a.color} />
-                <span className="text-[12px] text-text flex-1">{a.text}</span>
-                <span className="text-[10px] text-text-muted shrink-0">{a.time}</span>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
       </div>
     </div>
   );
