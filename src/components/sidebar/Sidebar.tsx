@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   MessageSquare, Workflow, Database, LayoutDashboard,
   FileBarChart, ChevronDown, PanelLeft,
   AlertTriangle, Sparkles, Building2, Home, Calendar,
-  Shield, Search, Settings, Clock,
+  Shield, Search as SearchIcon, Settings, Clock, Check,
   Wand2
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
@@ -79,9 +79,30 @@ function Divider({ label, expanded }: { label?: string; expanded: boolean }) {
   );
 }
 
+const TEAMS = [
+  { id: 'irame-5', name: 'Irame 5' },
+  { id: 'test', name: 'test' },
+  { id: 'irame-india', name: 'Irame India' },
+];
+
 export default function Sidebar({ view, setView, expanded, toggleSidebar }: SidebarProps) {
   const [hoverExpanded, setHoverExpanded] = useState(false);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [teamOpen, setTeamOpen] = useState(false);
+  const [activeTeam, setActiveTeam] = useState('irame-5');
+  const [teamSearch, setTeamSearch] = useState('');
+  const teamRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!teamOpen) return;
+    const close = (e: MouseEvent) => {
+      if (teamRef.current && !teamRef.current.contains(e.target as Node)) setTeamOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [teamOpen]);
+
+  const filteredTeams = TEAMS.filter(t => t.name.toLowerCase().includes(teamSearch.toLowerCase()));
 
   const isExpanded = expanded || hoverExpanded;
 
@@ -109,8 +130,8 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* ── Logo row ── */}
-      <div className={`border-b border-sidebar-border shrink-0 ${isExpanded ? 'px-4 pt-[18px] pb-4' : 'px-2 py-3'}`}>
+      {/* ── Logo row + team switcher ── */}
+      <div className={`border-b border-sidebar-border shrink-0 relative ${isExpanded ? 'px-4 pt-[18px] pb-4' : 'px-2 py-3'}`} ref={teamRef}>
         <div className={`flex items-center ${isExpanded ? 'gap-3' : 'justify-center'}`}>
           <div className="w-[30px] h-[30px] rounded-lg bg-gradient-to-br from-brand-500 to-brand-400 flex items-center justify-center shrink-0" style={{ boxShadow: '0 2px 8px rgb(106 18 205 / 0.30)' }}>
             <Sparkles size={12} className="text-white" />
@@ -125,14 +146,67 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                 className="overflow-hidden"
               >
                 <div className="text-[14px] font-bold text-sidebar-accent leading-tight tracking-normal whitespace-nowrap">IRAME.AI</div>
-                <div className="text-[12px] text-sidebar-text-dim font-medium whitespace-nowrap flex items-center gap-1">
+                <button
+                  onClick={() => { setTeamOpen(p => !p); setTeamSearch(''); }}
+                  className="text-[12px] text-sidebar-text-dim font-medium whitespace-nowrap flex items-center gap-1 hover:text-sidebar-text transition-colors cursor-pointer"
+                >
                   Audit Intelligence
-                  <ChevronDown size={8} className="text-sidebar-text-muted" />
-                </div>
+                  <ChevronDown size={8} className={`text-sidebar-text-muted transition-transform duration-150 ${teamOpen ? 'rotate-180' : ''}`} />
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
+
+        {/* Team switcher dropdown */}
+        <AnimatePresence>
+          {teamOpen && isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, y: -4, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -4, scale: 0.98 }}
+              transition={{ duration: 0.12 }}
+              className="absolute left-3 right-3 top-full mt-1 bg-canvas-elevated border border-canvas-border rounded-xl shadow-xl z-50 overflow-hidden"
+            >
+              {/* Search */}
+              <div className="p-2.5">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-canvas-border bg-canvas text-[13px] text-ink-500">
+                  <SearchIcon size={14} className="text-ink-400 shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Search Team"
+                    value={teamSearch}
+                    onChange={e => setTeamSearch(e.target.value)}
+                    className="flex-1 bg-transparent outline-none text-ink-800 placeholder:text-ink-300"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="h-px bg-canvas-border mx-2.5" />
+
+              {/* Team list */}
+              <div className="py-1.5 max-h-[200px] overflow-y-auto">
+                {filteredTeams.map(team => (
+                  <button
+                    key={team.id}
+                    onClick={() => { setActiveTeam(team.id); setTeamOpen(false); }}
+                    className="w-full flex items-center justify-between px-4 py-3 text-[14px] text-ink-800 hover:bg-brand-50 transition-colors cursor-pointer"
+                  >
+                    <span style={{ fontWeight: activeTeam === team.id ? 600 : 400 }}>{team.name}</span>
+                    {activeTeam === team.id ? (
+                      <div className="w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center">
+                        <Check size={12} className="text-white" />
+                      </div>
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border border-ink-300" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* ── Navigation ── */}
@@ -141,7 +215,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
 
           {/* Top actions */}
           <NavItem icon={MessageSquare} label="Ask IRA" active={view === 'chat' || view === 'chat-trash'} expanded={isExpanded} onClick={() => setView('chat')} />
-          <NavItem icon={Search} label="Search" active={false} expanded={isExpanded} onClick={() => setView('chat')} />
+          <NavItem icon={SearchIcon} label="Search" active={false} expanded={isExpanded} onClick={() => setView('chat')} />
 
           {/* Primary */}
           <NavItem icon={Home} label="Home" active={view === 'home'} expanded={isExpanded} onClick={() => setView('home')} />
