@@ -3,18 +3,20 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Send, Paperclip, Sparkles, History, X, FileText,
   Workflow, ShieldCheck, BarChart3, Search, ChevronDown,
-  MessageSquare, ArrowRight, Mic, Plus, Lightbulb, Zap,
-  Save, Monitor, Layout, CheckCircle, AlertTriangle, SlidersHorizontal
+  MessageSquare, ArrowRight, ArrowRightLeft, Mic, Plus, Lightbulb, Zap,
+  SlidersHorizontal, Target, Code2, Database, Save, CheckCircle
 } from 'lucide-react';
-import { CHAT_HISTORY, CHAT_CONVERSATIONS, CLARIFICATION_STEPS, WORKFLOW_CLARIFICATION_STEPS, WORKFLOW_ASSUMPTIONS } from '../../data/mockData';
+import { CHAT_HISTORY, CHAT_CONVERSATIONS, CLARIFICATION_STEPS } from '../../data/mockData';
+import type { WorkflowTypeId } from '../../data/mockData';
 import type { ArtifactTab } from '../../hooks/useAppState';
 import { TextShimmer } from '../shared/TextShimmer';
 import { AuditifyHelloEffect } from '../shared/HelloEffect';
 import BorderGlow from '../shared/BorderGlow';
 import FloatingLines from '../shared/FloatingLines';
-import { Persona } from '../shared/Persona';
-import LiquidFillGraphic from './LiquidFillGraphic';
-import ComponentLoader from '../shared/ComponentLoader';
+// Persona removed — Rive WebGL crashes in some browsers
+import ClarificationCard from './ClarificationCard';
+import AssumptionsPanel from './AssumptionsPanel';
+import ProgressiveLoader from './ProgressiveLoader';
 
 interface ChatMessage {
   id: string;
@@ -25,11 +27,8 @@ interface ChatMessage {
   artifactType?: 'workflow' | 'query' | 'report';
   followUps?: string[];
   timestamp: Date;
-  clarificationOptions?: string[];
-  isComponentResult?: boolean;
-  componentType?: 'plan' | 'code' | 'sources' | 'result';
   // Rich inline components
-  richType?: 'summary-kpi' | 'threshold-control' | 'save-workflow' | 'layout-switcher' | 'ui-recommendations';
+  richType?: 'summary-kpi' | 'threshold-control' | 'save-workflow-prompt';
   richData?: Record<string, unknown>;
 }
 
@@ -39,16 +38,21 @@ interface ChatViewProps {
   setShowArtifacts: (v: boolean) => void;
   setActiveArtifactTab: (t: ArtifactTab) => void;
   setArtifactMode: (m: 'query' | 'workflow') => void;
-  setWorkflowBuildStage?: (stage: number) => void;
-  setWorkflowUiEnhancements?: (enhancements: string[]) => void;
+  setWorkflowCanvasStage?: (stage: number) => void;
+  setWorkflowType?: (type: WorkflowTypeId | null) => void;
+  setQueryAssumptions?: (assumptions: string[]) => void;
   initialQuery?: string;
   onInitialQueryProcessed?: () => void;
 }
 
-type DetailedQueryType = 'duplicate-invoice' | 'workflow' | 'sox-compliance' | 'vendor-spend' | 'uncontrolled-risks' | 'control-effectiveness' | 'generic';
+type DetailedQueryType = 'duplicate-invoice' | 'workflow' | 'reconciliation' | 'sox-compliance' | 'vendor-spend' | 'uncontrolled-risks' | 'control-effectiveness' | 'generic';
 
 const classifyDetailedQuery = (msg: string): DetailedQueryType => {
   const lower = msg.toLowerCase();
+  // Reconciliation (check before workflow since "build a reconciliation" should match reconciliation)
+  if (lower.includes('reconciliation') || lower.includes('three-way') || lower.includes('3-way') || lower.includes('po match')) {
+    return 'reconciliation';
+  }
   // Workflow
   if (lower.includes('workflow') || lower.includes('build a') || lower.includes('build me') || lower.includes('create a') || lower.includes('design a')) {
     return 'workflow';
@@ -76,7 +80,7 @@ const classifyDetailedQuery = (msg: string): DetailedQueryType => {
   return 'generic';
 };
 
-const DETAILED_QUERY_CONFIG: Record<Exclude<DetailedQueryType, 'duplicate-invoice' | 'workflow'>, {
+const DETAILED_QUERY_CONFIG: Record<Exclude<DetailedQueryType, 'duplicate-invoice' | 'workflow' | 'reconciliation'>, {
   thinking: string[];
   responseText: string;
   insightsText: string;
@@ -210,12 +214,8 @@ const QUICK_ACTIONS = [
   { icon: ShieldCheck, label: 'Run audit query', color: 'from-blue-500 to-cyan-500' },
   { icon: BarChart3, label: 'Generate report', color: 'from-emerald-500 to-teal-500' },
   { icon: Search, label: 'Search risk register', color: 'from-orange-500 to-amber-500' },
+  { icon: ArrowRightLeft, label: 'Run 3-way reconciliation', color: 'from-teal-500 to-emerald-500' },
 ];
-
-// DEMO_THINKING_WORKFLOW removed — workflow now uses clarification flow
-// DEMO_THINKING_QUERY moved into DETAILED_QUERY_CONFIG
-
-// WORKFLOW_FOLLOWUPS removed — workflow now uses UI recommendations flow
 
 const QUERY_FOLLOWUPS = [
   'Show me the trend over the last 6 months',
@@ -226,225 +226,51 @@ const QUERY_FOLLOWUPS = [
 ];
 
 const RECOMMENDED_WORKFLOWS = [
-  { label: 'Vendor Onboarding Validator', desc: 'Verify new vendor documents & compliance', icon: ShieldCheck, color: 'text-blue-600 bg-blue-50' },
+  { label: 'Three-Way PO Reconciliation', desc: 'Match PO, GRN & Invoice data with freeze options', icon: ArrowRightLeft, color: 'text-teal-600 bg-teal-50' },
   { label: 'Payment Anomaly Detector', desc: 'ML-based unusual payment pattern detection', icon: Zap, color: 'text-orange-600 bg-orange-50' },
   { label: 'Audit Evidence Collector', desc: 'Auto-gather evidence for control testing', icon: BarChart3, color: 'text-green-600 bg-green-50' },
 ];
 
-// Save workflow card with confirmation
-function SaveWorkflowCard() {
-  const [saved, setSaved] = useState(false);
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="ml-7">
-      <div className="glass-card rounded-xl p-4">
-        {saved ? (
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center justify-center gap-3 py-2">
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 12 }}>
-              <CheckCircle size={22} className="text-green-500" />
-            </motion.div>
-            <div>
-              <div className="text-[13px] font-semibold text-text">Workflow added to library!</div>
-              <div className="text-[11px] text-text-muted">Saved as "Duplicate Invoice Detector v4"</div>
-            </div>
-          </motion.div>
-        ) : (
-          <>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setSaved(true)} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary text-white rounded-xl text-[13px] font-semibold transition-all cursor-pointer shadow-md shadow-primary/20">
-                <Save size={15} /> Save to Workflow Library
-              </button>
-              <button className="flex items-center justify-center gap-2 px-4 py-3 border border-border rounded-xl text-[13px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer">
-                <AlertTriangle size={14} /> Test Run
-              </button>
-            </div>
-            <p className="text-[10px] text-text-muted text-center mt-2">Workflow will be saved as "Duplicate Invoice Detector v4"</p>
-          </>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-// Layout switcher with prominent UI
-function LayoutSwitcherCard() {
-  const [selected, setSelected] = useState('Standard');
-  const [tolerance, setTolerance] = useState('5');
-  const layouts = [
-    { label: 'Standard', desc: 'Form + Results table', icon: Layout },
-    { label: 'Dashboard', desc: 'KPIs + Charts + Table', icon: BarChart3 },
-    { label: 'Conversational', desc: 'Chat + Side results', icon: MessageSquare },
-  ];
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="ml-7">
-      <div className="glass-card rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Monitor size={14} className="text-primary" />
-          <span className="text-[12px] font-semibold text-text">Customize Output</span>
-          <span className="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-            <Sparkles size={7} /> AI Recommended
-          </span>
-        </div>
-        {/* Layout options */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          {layouts.map(layout => (
-            <button key={layout.label} onClick={() => setSelected(layout.label)} className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${selected === layout.label ? 'border-primary bg-primary/5 shadow-sm' : 'border-border-light hover:border-primary/30'}`}>
-              <div className={`w-8 h-8 rounded-lg mb-2 flex items-center justify-center ${selected === layout.label ? 'bg-primary/10' : 'bg-surface-2'}`}>
-                <layout.icon size={16} className={selected === layout.label ? 'text-primary' : 'text-text-muted'} />
-              </div>
-              <div className={`text-[11px] font-semibold ${selected === layout.label ? 'text-primary' : 'text-text'}`}>{layout.label}</div>
-              <div className="text-[9px] text-text-muted">{layout.desc}</div>
-              {selected === layout.label && <div className="text-[8px] text-primary font-bold mt-1.5 flex items-center gap-0.5"><CheckCircle size={8} /> Active</div>}
-            </button>
-          ))}
-        </div>
-        {/* Threshold input */}
-        <div className="p-3 rounded-lg bg-surface-2 border border-border-light">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-semibold text-text flex items-center gap-1.5"><SlidersHorizontal size={12} className="text-primary" /> Match Tolerance</span>
-            <div className="flex items-center gap-1">
-              <input type="number" value={tolerance} onChange={e => setTolerance(e.target.value)} className="w-12 text-center text-[12px] font-bold text-primary bg-white border border-primary/20 rounded-lg py-1 focus:outline-none focus:border-primary" />
-              <span className="text-[11px] text-text-muted font-medium">%</span>
-            </div>
-          </div>
-          <div className="h-1.5 bg-surface-3 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-primary/60 to-primary rounded-full transition-all" style={{ width: `${Math.min(Number(tolerance) * 10, 100)}%` }} />
-          </div>
-          <div className="flex justify-between text-[8px] text-text-muted mt-1"><span>Exact</span><span>5%</span><span>10%</span></div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// UI Recommendations + Freeze + Save card for workflow build
-function UIRecommendationsCard({ onEnhancementsApplied }: { onEnhancementsApplied?: (enhancements: string[]) => void }) {
-  const [phase, setPhase] = useState<'recommend' | 'frozen' | 'saving' | 'saved'>('recommend');
-
-  const recommendations = [
-    { label: 'Add severity color coding to results table', key: 'severity' },
-    { label: 'Include export buttons (PDF, Excel) on output', key: 'export' },
-    { label: 'Add date range filter to input form', key: 'date' },
-  ];
-
-  const [applied, setApplied] = useState<Set<number>>(new Set());
-
-  const toggleApply = (i: number) => {
-    setApplied(prev => {
-      const next = new Set(prev);
-      if (next.has(i)) next.delete(i); else next.add(i);
-      return next;
-    });
-  };
-
-  const handleFreeze = () => {
-    const appliedLabels = recommendations.filter((_, i) => applied.has(i)).map(r => r.label);
-    onEnhancementsApplied?.(appliedLabels);
-    setPhase('frozen');
-  };
-
-  const handleSave = () => {
-    setPhase('saving');
-    setTimeout(() => {
-      setPhase('saved');
-    }, 1200);
-  };
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="ml-7 space-y-3">
-      {/* Recommendations */}
-      {phase === 'recommend' && (
-        <div className="glass-card rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles size={14} className="text-primary" />
-            <span className="text-[12px] font-semibold text-text">Recommended UI Changes</span>
-          </div>
-          <div className="space-y-2 mb-4">
-            {recommendations.map((rec, i) => (
-              <button
-                key={i}
-                onClick={() => toggleApply(i)}
-                className={`w-full flex items-center gap-3 p-2.5 rounded-lg border text-left transition-all cursor-pointer text-[12px] ${
-                  applied.has(i) ? 'border-primary bg-primary/5 text-primary' : 'border-border-light hover:border-primary/30 text-text-secondary'
-                }`}
-              >
-                <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${applied.has(i) ? 'bg-primary text-white' : 'bg-surface-2'}`}>
-                  {applied.has(i) ? <CheckCircle size={12} /> : <Plus size={12} className="text-text-muted" />}
-                </div>
-                {rec.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <button onClick={handleFreeze} className="flex-1 px-4 py-2.5 bg-gradient-to-r from-primary to-primary-medium text-white rounded-xl text-[12px] font-semibold hover:from-primary-hover hover:to-primary transition-all cursor-pointer">
-              {applied.size > 0 ? `Apply ${applied.size} changes & Freeze` : 'Keep as is & Freeze'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Frozen state */}
-      {phase === 'frozen' && (
-        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
-          <div className="glass-card rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <CheckCircle size={14} className="text-green-500" />
-              <span className="text-[12px] font-semibold text-text">Layout Frozen</span>
-              {applied.size > 0 && <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">{applied.size} changes applied</span>}
-            </div>
-            <p className="text-[11px] text-text-muted mb-3">Output layout is locked. Save this workflow to your library.</p>
-            <button onClick={handleSave} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary text-white rounded-xl text-[13px] font-semibold transition-all cursor-pointer shadow-md shadow-primary/20">
-              <Save size={15} /> Save Workflow to Library
-            </button>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Saving */}
-      {phase === 'saving' && (
-        <div className="glass-card rounded-xl p-4 flex items-center justify-center gap-3 py-6">
-          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-            <Sparkles size={18} className="text-primary" />
-          </motion.div>
-          <span className="text-[13px] font-medium text-text-secondary">Saving workflow...</span>
-        </div>
-      )}
-
-      {/* Saved with redirect */}
-      {phase === 'saved' && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-          <div className="glass-card rounded-xl p-4">
-            <div className="flex items-center gap-3 mb-2">
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 12 }}>
-                <CheckCircle size={22} className="text-green-500" />
-              </motion.div>
-              <div>
-                <div className="text-[13px] font-semibold text-text">Workflow saved to library!</div>
-                <div className="text-[11px] text-text-muted">Duplicate Invoice Detector v4 — Ready to run</div>
-              </div>
-            </div>
-            <div className="mt-3 flex gap-2">
-              <button className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors cursor-pointer">
-                <ArrowRight size={12} /> View in Workflow Library
-              </button>
-              <button className="flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-medium text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer border border-border-light">
-                <BarChart3 size={12} /> Add to Dashboard
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      )}
-    </motion.div>
-  );
-}
-
-const COMPONENT_LOADING_MESSAGES = [
-  { type: 'plan' as const, title: 'Execution Plan', text: '5-step query plan generated. Scanning SAP ERP AP Module with fuzzy match logic across selected vendor scope.' },
-  { type: 'code' as const, title: 'Generated SQL', text: 'SELECT inv.*, h.invoice_no AS original, similarity_score(inv.amount, h.amount, inv.vendor_id, h.vendor_id) AS match_pct FROM invoices inv JOIN invoice_history h ON ...' },
-  { type: 'sources' as const, title: 'Data Sources', text: 'Connected: SAP ERP AP Module (1.2M rows), Vendor Master Data (892 vendors), Invoice Archive 2026 (4,521 records)' },
-  { type: 'result' as const, title: 'Results', text: 'Found 8 potential duplicate invoices totaling $616,650. Highest match: INV-2026-4521 (96% match to INV-2026-3102, Acme Corp, $45,200).' },
+const LOADING_STEPS = [
+  { label: 'Generating execution plan...', title: 'Execution Plan', content: '5-step query plan: Ingest → Normalize → Match → Score → Flag', icon: Target, type: 'plan' as const },
+  { label: 'Writing SQL query...', title: 'Generated Query', content: 'SELECT inv.*, similarity_score(...) AS match_pct FROM invoices inv JOIN ...', icon: Code2, type: 'code' as const },
+  { label: 'Connecting data sources...', title: 'Data Sources', content: 'SAP ERP AP Module (1.2M rows), Vendor Master (892), Invoice Archive (4,521)', icon: Database, type: 'sources' as const },
+  { label: 'Processing 1.2M records...', title: 'Results', content: '8 potential duplicates found totaling ₹6.16L. Highest match: 96%', icon: BarChart3, type: 'result' as const },
 ];
 
-export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowBuildStage, setWorkflowUiEnhancements, initialQuery, onInitialQueryProcessed }: ChatViewProps) {
+const WORKFLOW_TYPE_NAMES: Record<WorkflowTypeId, string> = {
+  reconciliation: 'Three-Way Reconciliation',
+  detection: 'Duplicate Detection',
+  monitoring: 'Vendor Master Monitoring',
+  compliance: 'Segregation of Duties Compliance',
+};
+
+const detectWorkflowType = (msg: string): WorkflowTypeId => {
+  const lower = msg.toLowerCase();
+  if (lower.includes('reconciliation') || lower.includes('3-way') || lower.includes('po match')) return 'reconciliation';
+  if (lower.includes('duplicate') || lower.includes('detection')) return 'detection';
+  if (lower.includes('monitor') || lower.includes('vendor master') || lower.includes('change')) return 'monitoring';
+  if (lower.includes('sod') || lower.includes('segregation') || lower.includes('compliance')) return 'compliance';
+  return 'detection';
+};
+
+function SaveWorkflowButton() {
+  const [saved, setSaved] = useState(false);
+  if (saved) {
+    return (
+      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="flex items-center gap-1.5 px-3 py-2 bg-green-50 text-green-600 rounded-lg text-[11px] font-semibold">
+        <CheckCircle size={12} /> Saved to Library
+      </motion.div>
+    );
+  }
+  return (
+    <button onClick={() => setSaved(true)} className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[11px] font-semibold transition-colors cursor-pointer">
+      <Save size={12} /> Save to Library
+    </button>
+  );
+}
+
+export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowType, setQueryAssumptions, initialQuery, onInitialQueryProcessed }: ChatViewProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -452,16 +278,22 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
   const [thinkingExpanded, setThinkingExpanded] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const processingRef = useRef(false);
-  // Clarification mode state (query)
-  const [clarificationMode, setClarificationMode] = useState(false);
-  const [clarificationStep, setClarificationStep] = useState(0);
-  const [liquidFillPercent, setLiquidFillPercent] = useState(0);
-  const [liquidStage, setLiquidStage] = useState('');
-  const [, setShowComponentLoading] = useState(false);
-  const [loadedComponents, setLoadedComponents] = useState<Set<string>>(new Set());
-  // Workflow build clarification state
-  const [workflowClarificationMode, setWorkflowClarificationMode] = useState(false);
-  const [workflowClarificationStep, setWorkflowClarificationStep] = useState(0);
+
+  // New flow state
+  const [showClarificationCard, setShowClarificationCard] = useState(false);
+  const [clarificationQuestions, setClarificationQuestions] = useState<Array<{ question: string; options: string[] }>>([]);
+  const [showAssumptions, setShowAssumptions] = useState(false);
+  const [currentAssumptions, setCurrentAssumptions] = useState<string[]>([]);
+  const [clarificationAnswers, setClarificationAnswers] = useState<Record<number, string>>({});
+  const [showProgressiveLoader, setShowProgressiveLoader] = useState(false);
+
+  // Workflow build flow state
+  const [workflowBuildPhase, setWorkflowBuildPhase] = useState(0); // 0=idle, 1=asking-files, 2=asking-logic, 3=confirming, 4=input-config, 5=freeze-confirm, 6=output-config, 7=save
+  const [currentWorkflowType, setCurrentWorkflowType] = useState<WorkflowTypeId | null>(null);
+
+  // Track which query flow triggered the progressive loader
+  const activeQueryFlowRef = useRef<'duplicate-invoice' | 'other' | null>(null);
+  const activeQueryConfigRef = useRef<typeof DETAILED_QUERY_CONFIG['sox-compliance'] | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -481,7 +313,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     if (!isUserScrolledUp.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isTyping, thinkingSteps, liquidFillPercent, loadedComponents.size]);
+  }, [messages, isTyping, thinkingSteps, showClarificationCard, showAssumptions, showProgressiveLoader]);
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -500,128 +332,6 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery]);
 
-  // isDuplicateInvoiceQuery and classifyQuery replaced by classifyDetailedQuery
-
-  const startClarificationFlow = () => {
-    clearTimers();
-    setClarificationMode(true);
-    setClarificationStep(0);
-    setLiquidFillPercent(0);
-    setLiquidStage('Intent');
-
-    schedule(() => {
-      const step = CLARIFICATION_STEPS[0];
-      setMessages(prev => [...prev, {
-        id: `msg-clarify-0`,
-        role: 'assistant',
-        text: step.question,
-        clarificationOptions: step.options,
-        timestamp: new Date(),
-      }]);
-    }, 600);
-  };
-
-  const handleClarificationOptionClick = (option: string) => {
-    if (processingRef.current) return;
-    processingRef.current = true;
-    setTimeout(() => { processingRef.current = false; }, 1500);
-    clearTimers();
-
-    // Add user's selection as message
-    setMessages(prev => [...prev, {
-      id: `msg-${Date.now()}`,
-      role: 'user',
-      text: option,
-      timestamp: new Date(),
-    }]);
-
-    const currentStep = CLARIFICATION_STEPS[clarificationStep];
-    setLiquidFillPercent(currentStep.fillPercent);
-    setLiquidStage(currentStep.category);
-
-    const nextStep = clarificationStep + 1;
-
-    if (nextStep < CLARIFICATION_STEPS.length) {
-      setClarificationStep(nextStep);
-      schedule(() => {
-        const next = CLARIFICATION_STEPS[nextStep];
-        setMessages(prev => [...prev, {
-          id: `msg-clarify-${nextStep}`,
-          role: 'assistant',
-          text: next.question,
-          clarificationOptions: next.options,
-          timestamp: new Date(),
-        }]);
-      }, 800);
-    } else {
-      // All clarifications done — component-by-component loading
-      setClarificationMode(false);
-      setLoadedComponents(new Set());
-
-      // Clarification summary
-      schedule(() => {
-        setMessages(prev => [...prev, {
-          id: `msg-clarification-summary`,
-          role: 'assistant',
-          text: `**Configuration Summary**\n\n` +
-            `Date Range: Full FY26\n` +
-            `Tolerance: +/- 5%\n` +
-            `Vendor Scope: All vendors\n` +
-            `Match Logic: Fuzzy match all fields\n\n` +
-            `**Assumptions:**\n` +
-            `- Excluding voided invoices\n` +
-            `- Currency conversion at booking rate\n` +
-            `- Looking back 12 months for duplicates\n` +
-            `- Results sorted by match score (descending)`,
-          timestamp: new Date(),
-        }]);
-      }, 300);
-
-      schedule(() => {
-        setMessages(prev => [...prev, {
-          id: `msg-analyzing`,
-          role: 'assistant',
-          text: "All parameters confirmed. Running duplicate invoice analysis now...",
-          timestamp: new Date(),
-        }]);
-      }, 900);
-
-      // Progressive component loading
-      COMPONENT_LOADING_MESSAGES.forEach((comp, i) => {
-        schedule(() => {
-          setLoadedComponents(prev => new Set([...prev, comp.type]));
-          setMessages(prev => [...prev, {
-            id: `msg-component-${comp.type}`,
-            role: 'assistant',
-            text: `**${comp.title}**\n${comp.text}`,
-            timestamp: new Date(),
-            isComponentResult: true,
-            componentType: comp.type,
-          }]);
-        }, 1700 + i * 800);
-      });
-
-      // Final answer
-      const finalDelay = 1700 + COMPONENT_LOADING_MESSAGES.length * 800 + 600;
-      schedule(() => {
-        const shuffled = [...QUERY_FOLLOWUPS].sort(() => Math.random() - 0.5);
-        setMessages(prev => [...prev, {
-          id: `msg-final-result`,
-          role: 'assistant',
-          text: "Analysis complete! I've identified 8 potential duplicate invoices across your vendor payments. The artifact panel shows the full execution plan, SQL query, data sources, and detailed results table with match scores.",
-          hasArtifact: true,
-          artifactType: 'query',
-          followUps: shuffled.slice(0, 3),
-          timestamp: new Date(),
-        }]);
-        setLiquidFillPercent(0);
-        setArtifactMode('query');
-        setShowArtifacts(true);
-        setActiveArtifactTab('result');
-      }, finalDelay);
-    }
-  };
-
   // Clear all pending timers
   const clearTimers = () => {
     timersRef.current.forEach(t => clearTimeout(t));
@@ -634,131 +344,307 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     timersRef.current.push(t);
   };
 
-  // Start workflow build with 5-stage clarification
-  const startWorkflowBuildFlow = () => {
-    clearTimers();
-    setWorkflowClarificationMode(true);
-    setWorkflowClarificationStep(0);
+  // ─── Query Clarification Complete Handler ───
+  const handleQueryClarificationComplete = (answers: Record<number, string>) => {
+    setClarificationAnswers(answers);
 
-    // Open canvas in build mode (stage 0)
-    setArtifactMode('workflow');
-    setShowArtifacts(true);
-    if (setWorkflowBuildStage) setWorkflowBuildStage(0);
-
-    // Show first clarification question
-    schedule(() => {
-      const step = WORKFLOW_CLARIFICATION_STEPS[0];
+    // Add summary message
+    const answerEntries = Object.entries(answers);
+    if (answerEntries.length > 0) {
+      const summaryLines = answerEntries.map(([, value]) => `• ${value}`).join('\n');
       setMessages(prev => [...prev, {
-        id: `msg-wf-clarify-0`,
+        id: `msg-clarification-summary-${Date.now()}`,
         role: 'assistant',
-        text: step.question,
-        clarificationOptions: step.options,
+        text: `Got it! Here's what I'll use:\n\n${summaryLines}`,
         timestamp: new Date(),
       }]);
-    }, 600);
+    }
+
+    // Generate assumptions
+    const assumptions = [
+      'Excluding voided invoices',
+      'Currency conversion at booking rate',
+      'Looking back 12 months for duplicates',
+      'Results sorted by match score (descending)',
+    ];
+    setCurrentAssumptions(assumptions);
+    setQueryAssumptions?.(assumptions);
+    setShowAssumptions(true);
   };
 
-  const handleWorkflowClarificationClick = (option: string) => {
-    if (processingRef.current) return;
-    processingRef.current = true;
-    setTimeout(() => { processingRef.current = false; }, 1500);
-    clearTimers();
+  // ─── Workflow Clarification Complete Handler ───
+  const handleWorkflowClarificationComplete = (answers: Record<number, string>) => {
+    setShowClarificationCard(false);
 
-    // Add user's selection as message
+    if (workflowBuildPhase === 1) {
+      // Phase 1 complete — summarize and move to Phase 2 (logic)
+      const format = answers[0] || 'Mixed sources';
+      const count = answers[1] || '3+ sources';
+      setMessages(prev => [...prev, {
+        id: `msg-wf-files-summary-${Date.now()}`,
+        role: 'assistant',
+        text: `Got it — **${format}** with **${count}**. Now let me understand the matching logic.`,
+        timestamp: new Date(),
+      }]);
+      setWorkflowBuildPhase(2);
+
+      // Show logic clarification card after brief delay
+      schedule(() => {
+        setClarificationQuestions([
+          { question: 'What matching logic should I use?', options: ['Exact field matching', 'Fuzzy match with tolerance', 'AI-powered pattern detection', 'Custom rules (I\'ll define)'] },
+          { question: 'What should happen with mismatches?', options: ['Flag for manual review', 'Auto-reject and notify', 'Quarantine for investigation', 'Score and prioritize'] },
+        ]);
+        setShowClarificationCard(true);
+      }, 800);
+    }
+    else if (workflowBuildPhase === 2) {
+      // Phase 2 complete — summarize and wait for user confirmation before opening canvas
+      const logic = answers[0] || 'Fuzzy match';
+      const action = answers[1] || 'Flag for review';
+      setMessages(prev => [...prev, {
+        id: `msg-wf-logic-summary-${Date.now()}`,
+        role: 'assistant',
+        text: `Perfect — **${logic}** with **${action}** for mismatches.\n\nHere's what I'll build:\n\n• **Data sources:** Mixed format (SQL + file upload)\n• **Matching:** ${logic}\n• **Mismatches:** ${action}\n\nShall I open the workflow canvas and configure the inputs? Type **"go"** or **"looks good"** to proceed.`,
+        timestamp: new Date(),
+        followUps: ['Looks good, build it', 'Change the matching logic', 'Add more data sources'],
+      }]);
+      setWorkflowBuildPhase(3);
+    }
+  };
+
+  // ─── Clarification Card Complete Router ───
+  const handleClarificationCardComplete = (answers: Record<number, string>) => {
+    setShowClarificationCard(false);
+    setClarificationAnswers(answers);
+
+    if (workflowBuildPhase > 0) {
+      handleWorkflowClarificationComplete(answers);
+    } else {
+      handleQueryClarificationComplete(answers);
+    }
+  };
+
+  // ─── Assumptions Confirmed Handler ───
+  const handleAssumptionsConfirmed = () => {
+    setShowAssumptions(false);
+    activeQueryFlowRef.current = 'duplicate-invoice';
+
+    // Add starting message
     setMessages(prev => [...prev, {
-      id: `msg-${Date.now()}`,
-      role: 'user',
-      text: option,
+      id: `msg-starting-analysis-${Date.now()}`,
+      role: 'assistant',
+      text: "Starting analysis...",
       timestamp: new Date(),
     }]);
 
-    const currentStep = WORKFLOW_CLARIFICATION_STEPS[workflowClarificationStep];
+    // Show progressive loader
+    setShowProgressiveLoader(true);
 
-    // Update canvas stage — each answer reveals a new section
-    if (setWorkflowBuildStage) setWorkflowBuildStage(currentStep.stage);
+    // Open artifact panel in query mode
+    setArtifactMode('query');
+    setShowArtifacts(true);
+    setActiveArtifactTab('plan');
+  };
 
-    const nextStep = workflowClarificationStep + 1;
+  // ─── Progressive Loading Complete Handler ───
+  const handleProgressiveLoadingComplete = () => {
+    setShowProgressiveLoader(false);
+    setActiveArtifactTab('result');
 
-    if (nextStep < WORKFLOW_CLARIFICATION_STEPS.length) {
-      setWorkflowClarificationStep(nextStep);
+    if (activeQueryFlowRef.current === 'other' && activeQueryConfigRef.current) {
+      // "Other query type" flow — show type-specific KPIs and follow-ups
+      const config = activeQueryConfigRef.current;
+      setMessages(prev => [...prev, {
+        id: `msg-result-kpi-${Date.now()}`,
+        role: 'assistant',
+        text: '',
+        timestamp: new Date(),
+        richType: 'summary-kpi',
+        richData: { kpis: config.kpis },
+      }]);
+
       schedule(() => {
-        const next = WORKFLOW_CLARIFICATION_STEPS[nextStep];
         setMessages(prev => [...prev, {
-          id: `msg-wf-clarify-${nextStep}`,
+          id: `msg-insights-${Date.now()}`,
           role: 'assistant',
-          text: next.question,
-          clarificationOptions: next.options,
+          text: config.insightsText,
+          hasArtifact: true,
+          artifactType: 'query',
           timestamp: new Date(),
         }]);
-      }, 800);
-    } else {
-      // Stage 5 complete — canvas expands, show UI customization flow
-      setWorkflowClarificationMode(false);
-      if (setWorkflowBuildStage) setWorkflowBuildStage(5);
+      }, 600);
 
-      // Workflow clarification summary with all 5 steps + assumptions
       schedule(() => {
-        const summaryLines = WORKFLOW_CLARIFICATION_STEPS.map((step, i) => {
-          const assumptions = WORKFLOW_ASSUMPTIONS[i + 1] || [];
-          return `**Step ${i + 1} - ${step.category}:** ${step.options[0]}\n` +
-            (assumptions.length > 0 ? assumptions.map(a => `  - ${a}`).join('\n') : '');
-        }).join('\n\n');
-
+        const shuffled = [...config.followUps].sort(() => Math.random() - 0.5);
         setMessages(prev => [...prev, {
-          id: `msg-wf-clarification-summary`,
-          role: 'assistant',
-          text: `**Workflow Configuration Summary**\n\n${summaryLines}`,
-          timestamp: new Date(),
-        }]);
-      }, 200);
-
-      // 1. Canvas expanded message
-      schedule(() => {
-        setMessages(prev => [...prev, {
-          id: `msg-wf-expanded`,
-          role: 'assistant',
-          text: "Canvas expanded with your AI-recommended output layout. Here are some suggested UI improvements:",
-          timestamp: new Date(),
-        }]);
-      }, 700);
-
-      // 2. Recommended UI changes
-      schedule(() => {
-        setMessages(prev => [...prev, {
-          id: `msg-wf-ui-recs`,
+          id: `msg-threshold-${Date.now()}`,
           role: 'assistant',
           text: '',
           timestamp: new Date(),
-          richType: 'ui-recommendations',
+          richType: 'threshold-control',
+          followUps: shuffled.slice(0, 3),
         }]);
-      }, 1200);
+      }, 1100);
+
+      activeQueryFlowRef.current = null;
+      activeQueryConfigRef.current = null;
+    } else {
+      // Duplicate-invoice flow — original behavior
+      const shuffled = [...QUERY_FOLLOWUPS].sort(() => Math.random() - 0.5);
+      setMessages(prev => [...prev, {
+        id: `msg-final-result-${Date.now()}`,
+        role: 'assistant',
+        text: "Analysis complete! I've identified 8 potential duplicate invoices across your vendor payments. The artifact panel shows the full execution plan, SQL query, data sources, and detailed results table with match scores.",
+        hasArtifact: true,
+        artifactType: 'query',
+        followUps: shuffled.slice(0, 3),
+        timestamp: new Date(),
+      }]);
+      activeQueryFlowRef.current = null;
     }
+  };
+
+  // ─── Query Clarification Flow (duplicate-invoice) ───
+  const startQueryClarificationFlow = () => {
+    clearTimers();
+    setIsTyping(true);
+    setThinkingSteps([]);
+
+    // Brief thinking animation
+    schedule(() => {
+      setIsTyping(false);
+      // Add ambiguity message
+      setMessages(prev => [...prev, {
+        id: `msg-ambiguity-${Date.now()}`,
+        role: 'assistant',
+        text: "Identified ambiguity in your query. A few quick questions before I dive in:",
+        timestamp: new Date(),
+      }]);
+
+      // Set clarification questions from CLARIFICATION_STEPS
+      const questions = CLARIFICATION_STEPS.map(step => ({
+        question: step.question,
+        options: step.options,
+      }));
+      setClarificationQuestions(questions);
+      setShowClarificationCard(true);
+    }, 1000);
+  };
+
+  // ─── Conversational Workflow Flow ───
+  const startConversationalWorkflowFlow = (userMsg: string) => {
+    clearTimers();
+    const wfType = detectWorkflowType(userMsg);
+    const wfName = WORKFLOW_TYPE_NAMES[wfType];
+    setCurrentWorkflowType(wfType);
+    setWorkflowBuildPhase(1);
+
+    // Brief thinking animation
+    setIsTyping(true);
+    schedule(() => {
+      setIsTyping(false);
+      setMessages(prev => [...prev, {
+        id: `msg-wf-intro-${Date.now()}`,
+        role: 'assistant',
+        text: `Great, I'll help you build a **${wfName}** workflow. Let me understand your data sources first.`,
+        timestamp: new Date(),
+      }]);
+      // Show file type clarification card
+      setClarificationQuestions([
+        { question: 'What data format are your source files?', options: ['CSV / Excel upload', 'Direct SQL connection', 'User uploads in chat', 'Mixed (SQL + file upload)'] },
+        { question: 'How many data sources will this workflow need?', options: ['1 source (single file)', '2 sources (input + reference)', '3+ sources (multi-way match)', 'Not sure \u2014 recommend for me'] },
+      ]);
+      setShowClarificationCard(true);
+    }, 1200);
+  };
+
+  // ─── Open Canvas After User Confirms (workflow phase 3) ───
+  const openCanvasAfterConfirmation = () => {
+    setIsTyping(true);
+    schedule(() => {
+      setIsTyping(false);
+      setMessages(prev => [...prev, {
+        id: `msg-wf-opening-canvas-${Date.now()}`,
+        role: 'assistant',
+        text: `Setting up your workflow canvas now...`,
+        timestamp: new Date(),
+      }]);
+    }, 600);
+
+    schedule(() => {
+      setArtifactMode('workflow');
+      setWorkflowType?.(currentWorkflowType);
+      setShowArtifacts(true);
+    }, 1200);
+
+    schedule(() => {
+      setMessages(prev => [...prev, {
+        id: `msg-wf-canvas-ready-${Date.now()}`,
+        role: 'assistant',
+        text: `I've configured the input sources based on your selections. Review and customize the input configuration in the canvas.\n\nTake your time — click **'Confirm Inputs'** when ready.`,
+        timestamp: new Date(),
+      }]);
+      setWorkflowBuildPhase(4);
+    }, 2500);
+
+    // Tip messages
+    const freezeHintId = 'msg-wf-freeze-hint';
+    schedule(() => {
+      setMessages(prev => {
+        if (prev.some(m => m.id === freezeHintId)) return prev;
+        return [...prev, {
+          id: freezeHintId,
+          role: 'assistant' as const,
+          text: `**Tip:** I've frozen the **Vendor Master Data** by default (last refreshed Mar 20). Toggle freeze on any other source that doesn't change between runs.`,
+          timestamp: new Date(),
+        }];
+      });
+    }, 8000);
+
+    schedule(() => {
+      setMessages(prev => {
+        if (prev.some(m => m.id === 'msg-wf-save-prompt')) return prev;
+        return [...prev, {
+          id: 'msg-wf-save-prompt',
+          role: 'assistant' as const,
+          text: '',
+          richType: 'save-workflow-prompt',
+          timestamp: new Date(),
+        }];
+      });
+    }, 20000);
   };
 
   const simulateResponse = (userMsg: string) => {
     clearTimers();
 
-    // If we're in workflow build mode, treat any text input as continuing the build
-    if (workflowClarificationMode) {
-      handleWorkflowClarificationClick(userMsg);
+    // If workflow is awaiting user confirmation (phase 3), any positive reply opens canvas
+    if (workflowBuildPhase === 3) {
+      openCanvasAfterConfirmation();
       return;
     }
 
     const detailedType = classifyDetailedQuery(userMsg);
 
-    // Workflow queries → 5-stage build clarification
+    // Reconciliation queries → workflow flow
+    if (detailedType === 'reconciliation') {
+      startConversationalWorkflowFlow(userMsg);
+      return;
+    }
+
+    // Workflow queries → workflow flow
     if (detailedType === 'workflow') {
-      startWorkflowBuildFlow();
+      startConversationalWorkflowFlow(userMsg);
       return;
     }
 
     // Duplicate invoice query → query clarification flow
     if (detailedType === 'duplicate-invoice') {
-      startClarificationFlow();
+      startQueryClarificationFlow();
       return;
     }
 
-    // All other query types — thinking steps → result with type-specific content
+    // All other query types — thinking steps → progressive loading (Plan → Code → Sources → Result)
     const config = DETAILED_QUERY_CONFIG[detailedType];
     const thinkingList = config.thinking;
 
@@ -775,58 +661,31 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
 
     const totalThinkingTime = 400 * thinkingList.length + 400;
 
-    // 1. Text response
+    // After thinking completes — show response + start progressive loading
     schedule(() => {
       setMessages(prev => [...prev, {
         id: `msg-${Date.now()}`,
         role: 'assistant',
         text: config.responseText,
-        hasArtifact: true,
-        artifactType: 'query',
         timestamp: new Date(),
         thinking: [...thinkingList],
       }]);
       setIsTyping(false);
       setThinkingSteps([]);
+
+      // Store config so handleProgressiveLoadingComplete can use type-specific data
+      activeQueryFlowRef.current = 'other';
+      activeQueryConfigRef.current = config;
+
+      // Start progressive loading — loader in chat drives tab switching via onTabClick
+      setShowProgressiveLoader(true);
+
+      // Open artifact panel with plan tab first
       setArtifactMode('query');
       setShowArtifacts(true);
-      setActiveArtifactTab('result');
+      setActiveArtifactTab('plan');
     }, totalThinkingTime);
-
-    // 2. Summary KPI cards in chat (type-specific)
-    schedule(() => {
-      setMessages(prev => [...prev, {
-        id: `msg-summary-kpi-${Date.now()}`,
-        role: 'assistant',
-        text: '',
-        timestamp: new Date(),
-        richType: 'summary-kpi',
-        richData: { kpis: config.kpis },
-      }]);
-    }, totalThinkingTime + 500);
-
-    // 3. Textual summary insights (type-specific)
-    schedule(() => {
-      setMessages(prev => [...prev, {
-        id: `msg-insights-${Date.now()}`,
-        role: 'assistant',
-        text: config.insightsText,
-        timestamp: new Date(),
-      }]);
-    }, totalThinkingTime + 900);
-
-    // 4. Threshold control with type-specific follow-ups
-    schedule(() => {
-      const shuffled = [...config.followUps].sort(() => Math.random() - 0.5);
-      setMessages(prev => [...prev, {
-        id: `msg-threshold-${Date.now()}`,
-        role: 'assistant',
-        text: '',
-        timestamp: new Date(),
-        richType: 'threshold-control',
-        followUps: shuffled.slice(0, 3),
-      }]);
-    }, totalThinkingTime + 1000);
+    // ProgressiveLoader will fire onComplete → handleProgressiveLoadingComplete handles the rest
   };
 
   const handleSend = () => {
@@ -905,10 +764,13 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                     }));
                     setMessages(msgs);
                     // Reset any active flows
-                    setClarificationMode(false);
-                    setWorkflowClarificationMode(false);
+                    setShowClarificationCard(false);
+                    setShowAssumptions(false);
+                    setShowProgressiveLoader(false);
                     setIsTyping(false);
                     setThinkingSteps([]);
+                    setWorkflowBuildPhase(0);
+                    setCurrentWorkflowType(null);
                     clearTimers();
                   }
                 }}
@@ -1136,7 +998,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { setMessages([]); setInput(''); setClarificationMode(false); setLiquidFillPercent(0); setShowComponentLoading(false); }}
+              onClick={() => { setMessages([]); setInput(''); setShowClarificationCard(false); setShowAssumptions(false); setShowProgressiveLoader(false); setWorkflowBuildPhase(0); setCurrentWorkflowType(null); clearTimers(); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-light text-[11px] font-medium text-text-secondary hover:bg-white hover:border-primary/20 transition-all cursor-pointer"
             >
               <Plus size={12} />
@@ -1160,7 +1022,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
               {messages.map((msg, msgIdx) => (
                 <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className="max-w-[85%]">
-                    {msg.role === 'assistant' && !msg.isComponentResult && !msg.richType && (
+                    {msg.role === 'assistant' && !msg.richType && (
                       <div className="flex items-center gap-2 mb-1.5">
                         <div className="w-5 h-5 rounded-md bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center">
                           <Sparkles size={10} className="text-white" />
@@ -1251,64 +1113,27 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                           </div>
                         </div>
                       </motion.div>
-                    ) : msg.richType === 'layout-switcher' ? (
-                      <LayoutSwitcherCard />
-                    ) : msg.richType === 'ui-recommendations' ? (
-                      <UIRecommendationsCard onEnhancementsApplied={setWorkflowUiEnhancements} />
-                    ) : msg.richType === 'save-workflow' ? (
-                      <SaveWorkflowCard />
-                    ) : msg.isComponentResult ? (
-                      <ComponentLoader delay={0} loaded={true} skeletonHeight={60}>
-                        <div className="ml-7 px-4 py-3 rounded-xl border border-primary/10 bg-gradient-to-r from-primary-xlight/50 to-white shadow-sm">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="w-4 h-4 rounded bg-primary/10 flex items-center justify-center">
-                              {msg.componentType === 'plan' && <Sparkles size={9} className="text-primary" />}
-                              {msg.componentType === 'code' && <FileText size={9} className="text-primary" />}
-                              {msg.componentType === 'sources' && <BarChart3 size={9} className="text-primary" />}
-                              {msg.componentType === 'result' && <ShieldCheck size={9} className="text-primary" />}
-                            </div>
-                            <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
-                              {msg.componentType}
-                            </span>
+                    ) : msg.richType === 'save-workflow-prompt' ? (
+                      <div className="ml-12 mt-1">
+                        <div className="glass-card rounded-xl p-4 border border-primary/10 max-w-md">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Save size={13} className="text-primary" />
+                            <span className="text-[12px] font-semibold text-text">Save Workflow</span>
                           </div>
-                          <div className="text-[12px] text-text-secondary leading-relaxed">
-                            {msg.text.split('\n').map((line, i) => (
-                              <span key={i}>
-                                {line.startsWith('**') ? <strong className="text-text">{line.replace(/\*\*/g, '')}</strong> : line}
-                                {i < msg.text.split('\n').length - 1 && <br />}
-                              </span>
-                            ))}
+                          <p className="text-[11px] text-text-muted mb-3">Ready to save this workflow to your library for recurring use?</p>
+                          <div className="flex gap-2">
+                            <SaveWorkflowButton />
+                            <button className="px-3 py-2 text-[11px] font-medium text-text-muted hover:text-text-secondary hover:bg-surface-2 rounded-lg transition-colors cursor-pointer">
+                              Continue editing
+                            </button>
                           </div>
                         </div>
-                      </ComponentLoader>
+                      </div>
                     ) : msg.text ? (
                       <div className={`px-4 py-3 rounded-2xl text-[13.5px] leading-relaxed ${msg.role === 'user' ? 'bg-gradient-to-r from-primary to-primary-medium text-white rounded-br-sm shadow-md' : 'bg-white border border-border-light text-text rounded-bl-sm shadow-sm ml-7'}`}>
                         {msg.text}
                       </div>
                     ) : null}
-
-                    {/* Clarification option chips — for both query and workflow modes */}
-                    {msg.clarificationOptions && msgIdx === messages.length - 1 && (clarificationMode || workflowClarificationMode) && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="mt-3 ml-7 flex flex-wrap gap-2"
-                      >
-                        {msg.clarificationOptions.map((option, i) => (
-                          <motion.button
-                            key={option}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.3 + i * 0.08 }}
-                            onClick={() => workflowClarificationMode ? handleWorkflowClarificationClick(option) : handleClarificationOptionClick(option)}
-                            className="px-3.5 py-2 rounded-xl border border-primary/20 bg-white text-[12px] font-medium text-text-secondary hover:bg-primary-xlight hover:border-primary/40 hover:text-primary transition-all cursor-pointer shadow-sm"
-                          >
-                            {option}
-                          </motion.button>
-                        ))}
-                      </motion.div>
-                    )}
 
                     {msg.hasArtifact && (
                       <button
@@ -1372,30 +1197,15 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
               ))}
             </AnimatePresence>
 
-            {/* Liquid Fill Graphic — shown during clarification mode */}
-            <AnimatePresence>
-              {clarificationMode && liquidFillPercent > 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex justify-center py-4"
-                >
-                  <LiquidFillGraphic
-                    fillPercent={liquidFillPercent}
-                    currentStage={liquidStage}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
+            {/* Thinking animation */}
             {isTyping && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
                 <div className="max-w-[85%]">
                   <div className="flex items-start gap-3">
-                    {/* Rive Persona — halo variant in thinking state */}
-                    <div className="shrink-0 -mt-1 -ml-2">
-                      <Persona variant="halo" state="thinking" className="!w-14 !h-14" />
+                    <div className="shrink-0 mt-0.5">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shadow-sm ai-pulse-ring-infinite">
+                        <Sparkles size={14} className="text-white" />
+                      </div>
                     </div>
 
                     <div className="flex-1 min-w-0 pt-1">
@@ -1433,10 +1243,57 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
             )}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Clarification Card — moved to input area */}
+
+          {/* Assumptions Panel */}
+          <AnimatePresence>
+            {showAssumptions && (
+              <div className="px-6 pb-4">
+                <AssumptionsPanel
+                  answers={clarificationAnswers}
+                  assumptions={currentAssumptions}
+                  onConfirm={handleAssumptionsConfirmed}
+                />
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Progressive Loader */}
+          <AnimatePresence>
+            {showProgressiveLoader && (
+              <div className="px-6 pb-4">
+                <ProgressiveLoader
+                  steps={LOADING_STEPS}
+                  onComplete={handleProgressiveLoadingComplete}
+                  onTabClick={(tab) => setActiveArtifactTab(tab as ArtifactTab)}
+                />
+              </div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Input */}
+        {/* Input area — clarification card sits on top, connected */}
         <div className="shrink-0 px-4 sm:px-6 pb-5 max-w-3xl mx-auto w-full">
+          {/* Clarification Card — joined to input box */}
+          <AnimatePresence>
+            {showClarificationCard && (
+              <div className="mb-0">
+                <ClarificationCard
+                  questions={clarificationQuestions}
+                  onComplete={handleClarificationCardComplete}
+                  onSkipAll={() => {
+                    setShowClarificationCard(false);
+                    if (workflowBuildPhase > 0) {
+                      handleWorkflowClarificationComplete({});
+                    } else {
+                      handleQueryClarificationComplete({});
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </AnimatePresence>
           {files.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {files.map((f, i) => (
@@ -1454,7 +1311,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                 value={input}
                 onChange={e => { setInput(e.target.value); handleTextareaInput(); }}
                 onKeyDown={handleKeyDown}
-                placeholder={clarificationMode ? "Or type your preference..." : "Ask anything or describe a workflow to build..."}
+                placeholder="Ask anything or describe a workflow to build..."
                 className="w-full bg-transparent border-none outline-none resize-none py-3.5 pl-4 pr-28 text-[13.5px] text-text placeholder:text-text-muted min-h-[48px] max-h-[160px] rounded-[18px]"
                 rows={1}
               />

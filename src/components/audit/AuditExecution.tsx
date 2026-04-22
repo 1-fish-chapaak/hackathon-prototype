@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   ClipboardCheck, Play, FileText,
-  AlertTriangle, MessageSquare
+  AlertTriangle
 } from 'lucide-react';
 import { ENGAGEMENTS, ENGAGEMENT_CONTROLS, DEFICIENCIES } from '../../data/mockData';
 import { StatusBadge, SeverityBadge, FrameworkBadge, Avatar } from '../shared/StatusBadge';
@@ -10,7 +10,7 @@ import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
 
 interface Props {
-  onAskAboutControl: (controlId: string) => void;
+  onAskAboutControl?: (controlId: string) => void;
 }
 
 function TestPill({ status }: { status: string }) {
@@ -24,7 +24,7 @@ function TestPill({ status }: { status: string }) {
   return <span title={s.label} className={`inline-flex items-center ${s.bg} ${s.text} px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap`}>{s.label}</span>;
 }
 
-export default function AuditExecution({ onAskAboutControl }: Props) {
+export default function AuditExecution({ onAskAboutControl: _unused }: Props) {
   const [selectedEngId, setSelectedEngId] = useState(ENGAGEMENTS[0].id);
   const [activeTab, setActiveTab] = useState<'controls' | 'deficiencies'>('controls');
   const { addToast } = useToast();
@@ -171,15 +171,7 @@ export default function AuditExecution({ onAskAboutControl }: Props) {
                   {String(item.evidence)}
                 </span>
               )},
-              { key: 'actions', label: '', width: '60px', sortable: false, align: 'right', render: (item) => (
-                <button
-                  onClick={(e) => { e.stopPropagation(); addToast({ message: 'Opening AI analysis...', type: 'info' }); onAskAboutControl(String(item.id)); }}
-                  className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1 text-[11px] text-primary font-medium hover:underline transition-all cursor-pointer"
-                >
-                  <MessageSquare size={11} />
-                  Ask AI
-                </button>
-              )},
+              /* Ask AI removed from all pages per PRD 2026-04-06 */
             ]}
           />
         )}

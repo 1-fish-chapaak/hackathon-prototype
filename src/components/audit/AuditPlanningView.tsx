@@ -1319,20 +1319,33 @@ export default function AuditPlanningView() {
 
         {/* Tabs */}
         <div className="flex items-center border-b border-border-light mb-4">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors cursor-pointer ${
-                activeTab === tab.id
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-text-muted hover:text-text-secondary'
-              }`}
-            >
-              <tab.icon size={14} />
-              {tab.label}
-            </button>
-          ))}
+          {tabs.map(tab => {
+            const isDisabled = tab.id !== 'timeline';
+            return (
+              <button
+                key={tab.id}
+                onClick={() => !isDisabled && setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-primary text-primary cursor-pointer'
+                    : isDisabled
+                      ? 'border-transparent text-text-muted/40 cursor-not-allowed'
+                      : 'border-transparent text-text-muted hover:text-text-secondary cursor-pointer'
+                }`}
+              >
+                <tab.icon size={14} className={isDisabled ? 'opacity-40' : ''} />
+                <span className={isDisabled ? 'opacity-40' : ''}>{tab.label}</span>
+                {isDisabled && (
+                  <span className="ml-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400 uppercase tracking-wider">v2</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {/* v2 note */}
+        <div className="text-[11px] text-text-muted mb-4 flex items-center gap-1.5">
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 uppercase">Note</span>
+          Resources, Risk Matrix, and Budget tabs coming in v2
         </div>
 
         {/* Filters (show for timeline, resources, budget) */}
@@ -1392,6 +1405,10 @@ export default function AuditPlanningView() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
+              <div className="flex items-center gap-2 mb-3 text-[11px] text-text-muted">
+                <Calendar size={12} className="text-primary/60" />
+                <span>Timeline bars are draggable for Manager+ roles. Click an engagement to edit details.</span>
+              </div>
               <GanttChart
                 items={plan}
                 frozen={planFrozen}

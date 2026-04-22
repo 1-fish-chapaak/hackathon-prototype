@@ -1,21 +1,23 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import {
-  ArrowLeft, Play, Settings, Activity,
+  ArrowLeft, Activity,
   CheckCircle2, Sparkles, TrendingUp,
   Download, AlertTriangle, Calendar,
-  SlidersHorizontal, Database, Bell
+  SlidersHorizontal, Database, Bell,
+  ExternalLink, MessageSquare, Clock
 } from 'lucide-react';
 import { WORKFLOWS } from '../../data/mockData';
 import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
-import WorkflowOutputPreview from './WorkflowOutputPreview';
 
 interface Props {
   workflowId: string;
   onBack: () => void;
   onViewDashboard?: () => void;
   onGenerateReport?: () => void;
+  onOpenExecutor?: () => void;
+  onEditInChat?: () => void;
 }
 
 const RUN_HISTORY = [
@@ -28,40 +30,17 @@ const RUN_HISTORY = [
   { id: '#6', date: 'Mar 14, 2026', trigger: 'Scheduled', duration: '2.0s', flags: 4, score: 80, status: 'ok' },
 ];
 
-const VARIABLES = [
-  { name: 'Match Threshold', value: '85%', unit: '', threshold: '> 80%', pct: 85, status: 'ok', delta: '+2%', trend: [78, 80, 82, 83, 85] },
-  { name: 'Avg Processing Time', value: '1.8', unit: 's', threshold: '< 3s', pct: 60, status: 'ok', delta: '-0.3s', trend: [2.4, 2.1, 1.9, 1.8, 1.8] },
-  { name: 'False Positive Rate', value: '4.2', unit: '%', threshold: '< 5%', pct: 84, status: 'ok', delta: '-0.8%', trend: [6.5, 5.8, 5.0, 4.5, 4.2] },
-  { name: 'Records Scanned', value: '12.4K', unit: '', threshold: '> 10K', pct: 100, status: 'ok', delta: '+1.2K', trend: [8, 9.5, 10.2, 11.1, 12.4] },
-  { name: 'Flags Raised', value: '23', unit: '', threshold: 'Monitor', pct: 50, status: 'warn', delta: '+8', trend: [12, 14, 15, 18, 23] },
-  { name: 'Coverage', value: '98.5', unit: '%', threshold: '> 95%', pct: 98, status: 'ok', delta: '+0.5%', trend: [96, 97, 97.5, 98, 98.5] },
-];
-
 function ScoreChip({ score }: { score: number }) {
   const bg = score >= 85 ? 'bg-primary/10 text-primary' : score >= 70 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
   return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold font-mono ${bg}`}>{score}</span>;
 }
 
-function MiniTrend({ data, color }: { data: number[]; color: string }) {
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const h = 24;
-  const w = 48;
-  const points = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / (max - min || 1)) * h}`).join(' ');
-  return (
-    <svg width={w} height={h}>
-      <polyline fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
-    </svg>
-  );
-}
+type TabId = 'overview' | 'runs' | 'config';
 
-type TabId = 'overview' | 'variables' | 'runs' | 'config' | 'output';
-
-export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, onGenerateReport }: Props) {
+export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, onGenerateReport, onOpenExecutor, onEditInChat }: Props) {
   const wf = WORKFLOWS.find(w => w.id === workflowId);
   const [tab, setTab] = useState<TabId>('overview');
   const { addToast } = useToast();
-  const [running, setRunning] = useState(false);
   const [version, setVersion] = useState('v3');
   if (!wf) return null;
 
@@ -125,35 +104,16 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                   Report
                 </button>
               )}
-              <button onClick={() => addToast({ message: 'Workflow configuration panel opening...', type: 'info' })} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 transition-colors cursor-pointer">
-                <Settings size={13} />
-                Configure
+              <button onClick={() => onEditInChat ? onEditInChat() : addToast({ message: 'Opening workflow in chat...', type: 'info' })} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 hover:border-primary/30 transition-colors cursor-pointer">
+                <MessageSquare size={13} />
+                Edit in Chat
               </button>
               <button
-                onClick={() => {
-                  setRunning(true);
-                  addToast({ message: 'Workflow execution started...', type: 'success' });
-                  setTimeout(() => {
-                    setRunning(false);
-                    addToast({ message: 'Workflow completed — 2 new flags raised', type: 'success' });
-                  }, 2500);
-                }}
-                disabled={running}
-                className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover disabled:opacity-70 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
+                onClick={() => onOpenExecutor ? onOpenExecutor() : addToast({ message: 'Opening executor...', type: 'info' })}
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
               >
-                {running ? (
-                  <>
-                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-                      <Sparkles size={13} />
-                    </motion.div>
-                    Running...
-                  </>
-                ) : (
-                  <>
-                    <Play size={13} />
-                    Run Now
-                  </>
-                )}
+                <ExternalLink size={13} />
+                Open Executor
               </button>
             </div>
           </div>
@@ -180,11 +140,9 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
         {/* Tabs */}
         <div className="flex gap-0 border-b border-border mb-6">
           {([
-            { id: 'overview' as TabId, label: 'Execution Plan' },
-            { id: 'variables' as TabId, label: 'Variables', count: VARIABLES.length },
-            { id: 'runs' as TabId, label: 'Run History', count: RUN_HISTORY.length },
+            { id: 'overview' as TabId, label: 'Overview' },
+            { id: 'runs' as TabId, label: 'Runs', count: RUN_HISTORY.length },
             { id: 'config' as TabId, label: 'Configuration' },
-            { id: 'output' as TabId, label: 'Output Preview' },
           ]).map(t => (
             <button
               key={t.id}
@@ -203,10 +161,32 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
           ))}
         </div>
 
-        {/* Execution Plan Tab - professional list */}
+        {/* Overview Tab */}
         {tab === 'overview' && (
           <div className="space-y-5">
-            {/* AI derivation note */}
+            {/* Schedule Info */}
+            <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
+              <h4 className="text-[12px] font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><Calendar size={13} className="text-primary" /> Schedule</h4>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-surface-2 border border-border-light rounded-xl p-3">
+                  <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Type</div>
+                  <div className="text-[14px] font-bold text-text">Daily</div>
+                </div>
+                <div className="bg-surface-2 border border-border-light rounded-xl p-3">
+                  <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Run Time</div>
+                  <div className="text-[14px] font-bold text-text">06:00 AM</div>
+                </div>
+                <div className="bg-surface-2 border border-border-light rounded-xl p-3">
+                  <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Next Run</div>
+                  <div className="text-[14px] font-bold text-primary flex items-center gap-1.5">
+                    <Clock size={13} />
+                    Tomorrow, 06:00 AM
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Execution Plan */}
             <div className="bg-surface-2 border border-border-light rounded-xl p-4 flex items-start gap-3">
               <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                 <Sparkles size={12} className="text-primary" />
@@ -246,67 +226,6 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                       <CheckCircle2 size={13} className="text-success" />
                       <span className="text-[11px] text-success font-medium">OK</span>
                     </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Variables Tab */}
-        {tab === 'variables' && (
-          <div>
-            {/* Historical Performance */}
-            <div className="rounded-2xl border border-border-light p-5 mb-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
-              <h4 className="text-[12px] font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><TrendingUp size={13} className="text-primary" /> Impact Score Trend — Last 30 Days</h4>
-              <svg width="100%" height="120" viewBox="0 0 400 120" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6a12cd" stopOpacity="0.15" />
-                    <stop offset="100%" stopColor="#6a12cd" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <polygon fill="url(#trend-fill)" points="0,120 0,90 20,85 40,88 60,80 80,75 100,78 120,70 140,72 160,65 180,60 200,58 220,55 240,50 260,48 280,45 300,40 320,38 340,35 360,30 380,25 400,20 400,120" />
-                <polyline fill="none" stroke="#6a12cd" strokeWidth="2" strokeLinecap="round" points="0,90 20,85 40,88 60,80 80,75 100,78 120,70 140,72 160,65 180,60 200,58 220,55 240,50 260,48 280,45 300,40 320,38 340,35 360,30 380,25 400,20" />
-              </svg>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-[10px] text-text-muted">Feb 20</span>
-                <span className="text-[11px] font-bold text-primary">Score: 95 ↑</span>
-                <span className="text-[10px] text-text-muted">Mar 20</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              {VARIABLES.map((v, i) => {
-                const statusColor = v.status === 'ok' ? '#16a34a' : v.status === 'warn' ? '#d97706' : '#dc2626';
-                return (
-                  <motion.div
-                    key={v.name}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="bg-white rounded-xl border border-border-light p-5 hover:shadow-md hover:border-primary/20 cursor-default transition-all"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">{v.name}</span>
-                      <div className="w-2 h-2 rounded-full mt-1" style={{ background: statusColor, boxShadow: `0 0 6px ${statusColor}40` }} />
-                    </div>
-                    <div className="flex items-baseline gap-1 mb-1.5">
-                      <span className="text-2xl font-bold font-mono text-text">{v.value}</span>
-                      {v.unit && <span className="text-sm font-mono text-text-muted">{v.unit}</span>}
-                      <span className={`ml-2 text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded ${
-                        v.delta.startsWith('+') && v.status === 'ok' ? 'bg-green-50 text-green-600' :
-                        v.delta.startsWith('-') && v.name.includes('Time') ? 'bg-green-50 text-green-600' :
-                        v.delta.startsWith('-') && v.name.includes('False') ? 'bg-green-50 text-green-600' :
-                        v.status === 'warn' ? 'bg-amber-50 text-amber-600' :
-                        'bg-green-50 text-green-600'
-                      }`}>{v.delta}</span>
-                    </div>
-                    <div className="text-[10px] text-text-muted mb-2">Threshold: <span className="font-semibold">{v.threshold}</span></div>
-                    <div className="h-1 bg-surface-3 rounded-full overflow-hidden mb-3">
-                      <div className="h-full rounded-full" style={{ width: `${Math.min(v.pct, 100)}%`, background: statusColor }} />
-                    </div>
-                    <MiniTrend data={v.trend} color={statusColor} />
                   </motion.div>
                 );
               })}
@@ -448,10 +367,6 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
           </div>
         )}
 
-        {/* Output Preview Tab */}
-        {tab === 'output' && (
-          <WorkflowOutputPreview workflowId={workflowId} workflowType={wf.type} workflowName={wf.name} />
-        )}
       </div>
     </div>
   );

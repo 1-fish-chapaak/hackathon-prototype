@@ -879,47 +879,62 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
             <div className="grid grid-cols-12 gap-3 mb-6">
               {dashboard.kpis.map((kpi, i) => {
                 const colSpan = i === 0 ? 'col-span-5' : i === 1 ? 'col-span-3' : 'col-span-4';
-                const isDark = i === 0 || i === 1;
                 const Icon = kpi.icon;
+                const trendColor = kpi.trend === 'up' ? (kpi.change.includes('-') ? 'text-emerald-600' : 'text-emerald-600') : 'text-red-500';
+                // Mini chart data per card position
+                const MINI_CHARTS: number[][] = [
+                  [35, 42, 38, 52, 48, 58, 55, 68, 62, 75, 70, 80],
+                  [60, 45, 55, 35, 50, 40, 48, 30, 42, 25, 35, 23],
+                  [1.2, 1.4, 1.3, 1.5, 1.4, 1.6, 1.5, 1.3, 1.2, 1.0, 0.9, 0.8],
+                  [88, 89, 87, 90, 91, 89, 92, 91, 93, 92, 94, 94.2],
+                ];
+                const chartData = MINI_CHARTS[i % 4];
+                const chartMax = Math.max(...chartData);
+                const chartMin = Math.min(...chartData);
                 return (
                   <motion.div
                     key={kpi.title}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 + i * 0.05 }}
-                    className={`${colSpan} rounded-3xl p-5 cursor-default transition-all duration-300 hover:scale-[1.005]`}
-                    style={{
-                      background: isDark
-                        ? 'linear-gradient(145deg, #1e1230 0%, #160d24 100%)'
-                        : 'linear-gradient(145deg, #f0e6fb 0%, #e8daf5 100%)',
-                      border: `1px solid rgba(106,18,205,${isDark ? '0.12' : '0.1'})`,
-                    }}
+                    className={`${colSpan} rounded-2xl p-5 bg-white border border-border-light cursor-default transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/15`}
                   >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`p-1.5 rounded-lg ${isDark ? 'bg-white/10' : ''}`}>
-                        <Icon size={13} className={isDark ? 'text-purple-400' : 'text-primary/60'} />
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1.5 rounded-lg ${kpi.color}`}>
+                          <Icon size={13} />
+                        </div>
+                        <span className="text-[11px] font-medium text-text-muted">{kpi.title}</span>
                       </div>
-                      <span className={`text-[11px] font-medium ${isDark ? 'text-white/40' : 'text-primary/50'}`}>{kpi.title}</span>
+                      <div className={`flex items-center gap-1 text-[10px] font-semibold ${trendColor}`}>
+                        {kpi.trend === 'up' ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
+                        {kpi.change}
+                      </div>
                     </div>
-                    <div className={`text-[26px] font-extrabold leading-none tracking-tight ${isDark ? 'text-white' : 'text-primary'}`}>{kpi.value}</div>
-                    <div className={`flex items-center gap-1 mt-1.5 text-[11px] font-semibold ${kpi.trend === 'up' ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {kpi.trend === 'up' ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                      {kpi.change}
-                    </div>
-                    {/* Mini chart accent for first card */}
-                    {i === 0 && (
-                      <div className="flex items-end gap-1 mt-3 h-6">
-                        {[40, 55, 48, 62, 58, 70, 65, 80].map((h, j) => (
-                          <motion.div key={j} initial={{ height: 0 }} animate={{ height: `${h}%` }} transition={{ delay: 0.3 + j * 0.04, duration: 0.4 }}
-                            className="flex-1 rounded-sm" style={{ background: j >= 6 ? '#c084fc' : 'rgba(192,132,252,0.2)' }} />
+                    <div className="text-[24px] font-bold leading-none tracking-tight text-text mb-3">{kpi.value}</div>
+                    {/* Mini sparkline — unique per card */}
+                    {i === 0 ? (
+                      <div className="flex items-end gap-[3px] h-8">
+                        {chartData.map((v, j) => (
+                          <motion.div key={j} initial={{ height: 0 }} animate={{ height: `${((v - chartMin) / (chartMax - chartMin)) * 100}%` }} transition={{ delay: 0.2 + j * 0.03, duration: 0.3 }}
+                            className="flex-1 rounded-sm min-h-[2px]" style={{ background: j >= chartData.length - 2 ? '#6a12cd' : 'rgba(106,18,205,0.15)' }} />
                         ))}
                       </div>
-                    )}
-                    {/* Dot pattern for accent cards */}
-                    {i === 2 && (
-                      <div className="flex items-center gap-1 mt-3">
-                        {Array.from({ length: 8 }).map((_, j) => (
-                          <div key={j} className={`w-1.5 h-1.5 rounded-full ${j < 6 ? 'bg-primary/30' : 'bg-primary/10'}`} />
+                    ) : i === 1 ? (
+                      <svg width="100%" height="32" viewBox="0 0 120 32" preserveAspectRatio="none">
+                        <polyline points={chartData.map((v, j) => `${j * (120 / (chartData.length - 1))},${32 - ((v - chartMin) / (chartMax - chartMin)) * 28}`).join(' ')} fill="none" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <polyline points={`0,32 ${chartData.map((v, j) => `${j * (120 / (chartData.length - 1))},${32 - ((v - chartMin) / (chartMax - chartMin)) * 28}`).join(' ')} 120,32`} fill="rgba(239,68,68,0.06)" stroke="none" />
+                      </svg>
+                    ) : i === 2 ? (
+                      <svg width="100%" height="32" viewBox="0 0 120 32" preserveAspectRatio="none">
+                        <polyline points={chartData.map((v, j) => `${j * (120 / (chartData.length - 1))},${32 - ((v - chartMin) / (chartMax - chartMin)) * 28}`).join(' ')} fill="none" stroke="#0891b2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <polyline points={`0,32 ${chartData.map((v, j) => `${j * (120 / (chartData.length - 1))},${32 - ((v - chartMin) / (chartMax - chartMin)) * 28}`).join(' ')} 120,32`} fill="rgba(8,145,178,0.06)" stroke="none" />
+                      </svg>
+                    ) : (
+                      <div className="flex items-end gap-[3px] h-8">
+                        {chartData.map((v, j) => (
+                          <motion.div key={j} initial={{ height: 0 }} animate={{ height: `${((v - chartMin) / (chartMax - chartMin)) * 100}%` }} transition={{ delay: 0.2 + j * 0.03, duration: 0.3 }}
+                            className="flex-1 rounded-sm min-h-[2px]" style={{ background: j >= chartData.length - 2 ? '#16a34a' : 'rgba(22,163,74,0.15)' }} />
                         ))}
                       </div>
                     )}

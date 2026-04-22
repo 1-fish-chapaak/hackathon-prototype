@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import {
   Sparkles,
-  MessageSquare, Download, Plus, Lightbulb, Shield, X, ArrowRight
+  Download, Plus, Lightbulb, Shield, ArrowRight
 } from 'lucide-react';
 import { RISKS, BUSINESS_PROCESSES } from '../../data/mockData';
 import { StatusBadge, SeverityBadge } from '../shared/StatusBadge';
@@ -11,7 +11,6 @@ import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
 
 interface Props {
-  onAskAboutRisk: (riskId: string) => void;
   onRunWorkflow?: (workflowId: string) => void;
 }
 
@@ -21,11 +20,11 @@ const AI_RECOMMENDED_CONTROLS = [
   { riskId: 'RSK-009', riskName: 'Third-party vendor access', control: 'Just-in-time access provisioning with auto-expiry', confidence: 91 },
 ];
 
-export default function RiskRegister({ onAskAboutRisk, onRunWorkflow }: Props) {
+export default function RiskRegister({ onRunWorkflow }: Props) {
   const { addToast } = useToast();
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [showRecommendations, setShowRecommendations] = useState(true);
+  // Recommendations are always visible inline
 
   const filtered = RISKS.filter(r => {
     if (severityFilter !== 'all' && r.severity !== severityFilter) return false;
@@ -146,13 +145,6 @@ export default function RiskRegister({ onAskAboutRisk, onRunWorkflow }: Props) {
                       Run Workflow
                     </button>
                   )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onAskAboutRisk(risk.id); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-semibold rounded-lg cursor-pointer"
-                  >
-                    <MessageSquare size={12} />
-                    Ask AI
-                  </button>
                 </div>
               </div>
             );
@@ -189,91 +181,74 @@ export default function RiskRegister({ onAskAboutRisk, onRunWorkflow }: Props) {
             { key: 'status', label: 'Status', width: '100px', render: (item) => (
               <StatusBadge status={String(item.status)} />
             )},
-            { key: 'actions', label: '', width: '70px', sortable: false, align: 'right', render: (item) => (
-              <button
-                onClick={(e) => { e.stopPropagation(); onAskAboutRisk(String(item.id)); }}
-                className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1 text-[11px] text-primary font-medium hover:underline transition-all cursor-pointer"
-              >
-                <MessageSquare size={12} />
-                Ask AI
-              </button>
-            )},
           ]}
         />
 
-        {/* AI Recommended Controls */}
-        <AnimatePresence>
-          {showRecommendations && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ delay: 0.2 }}
-              className="mt-6"
-            >
-              <div className="rounded-xl border border-primary/15 bg-gradient-to-br from-primary-xlight/60 via-white to-primary-xlight/30 p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 bg-primary/10 rounded-lg">
-                      <Lightbulb size={14} className="text-primary" />
+        {/* AI Risk Analysis — Always Visible Inline */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mt-6"
+        >
+          <div className="rounded-xl border border-primary/15 bg-gradient-to-br from-primary-xlight/60 via-white to-primary-xlight/30 p-5">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="p-1.5 bg-primary/10 rounded-lg">
+                <Lightbulb size={14} className="text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-[13px] font-semibold text-text">AI Risk Analysis &amp; Recommendations</h3>
+                <p className="text-[10.5px] text-text-muted mt-0.5">{AI_RECOMMENDED_CONTROLS.length} risks with zero controls — AI suggests mitigations</p>
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/5 border border-primary/10 rounded-full">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-[9px] font-semibold text-text-muted">Auto-refreshes when risks or controls change</span>
+              </div>
+            </div>
+            <div className="space-y-2.5">
+              {AI_RECOMMENDED_CONTROLS.map((rec, i) => (
+                <motion.div
+                  key={rec.riskId}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + i * 0.08 }}
+                  className="flex items-start gap-3 p-3.5 rounded-xl bg-white border border-border-light hover:border-primary/20 hover:shadow-sm transition-all group"
+                >
+                  <div className="p-1.5 bg-primary/5 rounded-lg text-primary shrink-0 mt-0.5">
+                    <Shield size={14} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-mono font-bold text-primary">{rec.riskId}</span>
+                      <span className="text-[11px] font-medium text-text">Recommend mapping control</span>
                     </div>
-                    <div>
-                      <h3 className="text-[13px] font-semibold text-text">AI Recommended Controls</h3>
-                      <p className="text-[10.5px] text-text-muted mt-0.5">{AI_RECOMMENDED_CONTROLS.length} risks with zero controls — AI suggests mitigations</p>
+                    <div className="text-[12.5px] font-medium text-text">{rec.control}</div>
+                    <div className="text-[10.5px] text-text-muted mt-1">Mitigates: {rec.riskName}</div>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <div className="flex items-center gap-1">
+                        <Sparkles size={9} className="text-primary" />
+                        <span className="text-[10px] font-semibold text-primary">{rec.confidence}% confidence</span>
+                      </div>
+                      <div className="h-1 flex-1 max-w-[60px] bg-surface-3 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full" style={{ width: `${rec.confidence}%` }} />
+                      </div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setShowRecommendations(false)}
-                    className="text-text-muted hover:text-text-secondary p-1 rounded cursor-pointer"
-                  >
-                    <X size={14} />
+                  <button className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2.5 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-semibold rounded-lg cursor-pointer shrink-0">
+                    <Plus size={10} />
+                    Add
                   </button>
-                </div>
-                <div className="space-y-2.5">
-                  {AI_RECOMMENDED_CONTROLS.map((rec, i) => (
-                    <motion.div
-                      key={rec.riskId}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.3 + i * 0.08 }}
-                      className="flex items-start gap-3 p-3.5 rounded-xl bg-white border border-border-light hover:border-primary/20 hover:shadow-sm transition-all group"
-                    >
-                      <div className="p-1.5 bg-primary/5 rounded-lg text-primary shrink-0 mt-0.5">
-                        <Shield size={14} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[10px] font-mono font-bold text-text-muted">{rec.riskId}</span>
-                          <span className="text-[10px] text-text-muted truncate">{rec.riskName}</span>
-                        </div>
-                        <div className="text-[12.5px] font-medium text-text">{rec.control}</div>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <div className="flex items-center gap-1">
-                            <Sparkles size={9} className="text-primary" />
-                            <span className="text-[10px] font-semibold text-primary">{rec.confidence}% confidence</span>
-                          </div>
-                          <div className="h-1 flex-1 max-w-[60px] bg-surface-3 rounded-full overflow-hidden">
-                            <div className="h-full bg-primary rounded-full" style={{ width: `${rec.confidence}%` }} />
-                          </div>
-                        </div>
-                      </div>
-                      <button className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2.5 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-semibold rounded-lg cursor-pointer shrink-0">
-                        <Plus size={10} />
-                        Add
-                      </button>
-                    </motion.div>
-                  ))}
-                </div>
-                <div className="mt-3 flex justify-center">
-                  <button className="flex items-center gap-1.5 text-[11px] text-primary font-semibold hover:underline cursor-pointer">
-                    View all recommendations
-                    <ArrowRight size={10} />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                </motion.div>
+              ))}
+            </div>
+            <div className="mt-3 flex justify-center">
+              <button className="flex items-center gap-1.5 text-[11px] text-primary font-semibold hover:underline cursor-pointer">
+                View all recommendations
+                <ArrowRight size={10} />
+              </button>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );

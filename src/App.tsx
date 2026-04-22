@@ -22,6 +22,15 @@ import ShareModal from './components/modals/ShareModal';
 import PowerBIImportWizard from './components/modals/PowerBIImportWizard';
 import ReportBuilder from './components/reports/ReportBuilder';
 import AuditPlanningView from './components/audit/AuditPlanningView';
+// New pages
+import RACMView from './components/governance/RACMView';
+import ControlLibraryView from './components/governance/ControlLibraryView';
+import ControlTestingView from './components/execution/ControlTestingView';
+import EvidenceView from './components/execution/EvidenceView';
+import AIConciergeView from './components/intelligence/AIConciergeView';
+import AdminView from './components/admin/AdminView';
+import FindingsView from './components/execution/FindingsView';
+import WorkflowExecutor from './components/workflow/WorkflowExecutor';
 
 export default function App() {
   const {
@@ -40,9 +49,12 @@ export default function App() {
     setShowShareModal,
     setShowPowerBIWizard,
     openReportBuilder,
-    setWorkflowBuildStage,
-    setWorkflowUiEnhancements,
+    setWorkflowCanvasStage,
+    setWorkflowType,
     setChatInitialQuery,
+    setQueryAssumptions,
+    enterWorkflowMode,
+    openWorkflowExecutor,
   } = useAppState();
 
   const mainScrollRef = useRef<HTMLDivElement>(null);
@@ -61,29 +73,8 @@ export default function App() {
     return () => clearTimeout(t);
   }, [state.view]);
 
-  const handleAskAboutRisk = (riskId: string) => {
-    const riskNames: Record<string, string> = {
-      'RSK-001': 'Unauthorized vendor payments processed without approval',
-      'RSK-002': 'Duplicate invoices leading to overpayment',
-      'RSK-003': 'Vendor master data manipulation by unauthorized users',
-      'RSK-004': 'Fictitious vendor registration bypassing approval',
-      'RSK-005': 'Unauthorized changes to payment terms',
-      'RSK-006': 'Late payment causing contractual penalty exposure',
-      'RSK-007': 'Malware infection via vendor portals',
-      'RSK-008': 'Segregation of duties violation in Accounts Payable',
-      'RSK-009': 'Third-party vendor access without proper controls',
-      'RSK-010': 'Revenue recognition timing manipulation',
-      'RSK-011': 'Incorrect period-end journal entries',
-      'RSK-012': 'GL balance discrepancy across subsidiaries',
-    };
-    setChatInitialQuery(`Analyze risk ${riskId}: ${riskNames[riskId] || riskId}. What controls exist, what's the current status, and what actions do you recommend?`);
-    setView('chat');
-  };
-
-  const handleAskAboutControl = (controlId: string) => {
-    setChatInitialQuery(`Review control ${controlId} effectiveness. Show test results and any findings.`);
-    setView('chat');
-  };
+  // Ask AI removed from all pages per PRD 2026-04-06 decision
+  // IRA AI is accessed exclusively via sidebar navigation to /chat
 
   const renderArtifactPanel = () => {
     if (!state.showArtifacts) return null;
@@ -92,8 +83,7 @@ export default function App() {
       return (
         <WorkflowBuilderCanvas
           onClose={() => setShowArtifacts(false)}
-          buildStage={state.workflowBuildStage}
-          uiEnhancements={state.workflowUiEnhancements}
+          workflowType={state.workflowType ?? undefined}
         />
       );
     }
@@ -137,8 +127,9 @@ export default function App() {
               setShowArtifacts={setShowArtifacts}
               setActiveArtifactTab={setActiveArtifactTab}
               setArtifactMode={setArtifactMode}
-              setWorkflowBuildStage={setWorkflowBuildStage}
-              setWorkflowUiEnhancements={setWorkflowUiEnhancements}
+              setWorkflowCanvasStage={setWorkflowCanvasStage}
+              setWorkflowType={setWorkflowType}
+              setQueryAssumptions={setQueryAssumptions}
               initialQuery={state.chatInitialQuery ?? undefined}
               onInitialQueryProcessed={() => setChatInitialQuery(null)}
             />
@@ -152,7 +143,8 @@ export default function App() {
         return (
           <WorkflowTemplates
             onSelectWorkflow={(id) => setSelectedWorkflow(id)}
-            onBuildNew={() => setView('chat')}
+            onBuildNew={() => enterWorkflowMode()}
+            onRunWorkflow={(id) => openWorkflowExecutor(id)}
           />
         );
 
@@ -163,6 +155,8 @@ export default function App() {
             onBack={() => setSelectedWorkflow(null)}
             onViewDashboard={() => setView('dashboards')}
             onGenerateReport={() => openReportBuilder('new')}
+            onOpenExecutor={() => openWorkflowExecutor(state.selectedWorkflowId!)}
+            onEditInChat={() => enterWorkflowMode({ workflowId: state.selectedWorkflowId! })}
           />
         );
 
@@ -170,7 +164,15 @@ export default function App() {
         return (
           <WorkflowTemplates
             onSelectWorkflow={(id) => setSelectedWorkflow(id)}
-            onBuildNew={() => setView('chat')}
+            onBuildNew={() => enterWorkflowMode()}
+          />
+        );
+
+      case 'workflow-executor':
+        return (
+          <WorkflowExecutor
+            workflowId={state.selectedWorkflowId!}
+            onBack={() => setSelectedWorkflow(null)}
           />
         );
 
@@ -186,13 +188,12 @@ export default function App() {
       case 'audit-risk-register':
         return (
           <RiskRegister
-            onAskAboutRisk={handleAskAboutRisk}
             onRunWorkflow={(id) => setSelectedWorkflow(id)}
           />
         );
 
       case 'audit-execution':
-        return <AuditExecution onAskAboutControl={handleAskAboutControl} />;
+        return <AuditExecution />;
 
       case 'dashboards':
         return (
@@ -223,7 +224,47 @@ export default function App() {
         return <AuditPlanningView />;
 
       case 'data-sources':
+      case 'configuration':
         return <DataSourcesView />;
+
+      // Governance — new pages
+      case 'governance-racm':
+      case 'governance-racm-detail':
+      case 'governance-racm-generate':
+        return <RACMView />;
+
+      case 'governance-controls':
+      case 'governance-control-detail':
+        return <ControlLibraryView />;
+
+      // Execution — new pages
+      case 'execution-testing':
+        return <ControlTestingView />;
+
+      case 'execution-evidence':
+        return <EvidenceView />;
+
+      // Intelligence — AI Concierge
+      case 'ai-concierge':
+      case 'ai-concierge-forensics':
+      case 'ai-concierge-table-extractor':
+        return <AIConciergeView setView={setView} />;
+
+      // Execution — Findings
+      case 'findings':
+        return <FindingsView />;
+
+      // Admin
+      case 'admin-users':
+        return <AdminView activeTab="users" />;
+      case 'admin-roles':
+        return <AdminView activeTab="roles" />;
+      case 'admin-settings':
+        return <AdminView activeTab="settings" />;
+      case 'admin-integrations':
+        return <AdminView activeTab="integrations" />;
+      case 'admin-logs':
+        return <AdminView activeTab="logs" />;
 
       default:
         return (

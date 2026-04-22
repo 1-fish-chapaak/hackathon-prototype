@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Search, Plus, Activity, Eye,
   Zap, Shield, RefreshCw, Sparkles, TrendingUp, TrendingDown,
-  Clock, Lightbulb, ArrowRight, Play, Check, X
+  Clock, Lightbulb, ArrowRight, Play, Check, X, ChevronDown,
+  FileText, Bot, Copy, Trash2, Edit3
 } from 'lucide-react';
 import { WORKFLOWS } from '../../data/mockData';
 import { StatusBadge, TypeBadge } from '../shared/StatusBadge';
@@ -14,6 +15,7 @@ import { useToast } from '../shared/Toast';
 interface Props {
   onSelectWorkflow: (id: string) => void;
   onBuildNew: () => void;
+  onRunWorkflow?: (id: string) => void;
 }
 
 const TYPE_ICONS: Record<string, React.ElementType> = {
@@ -53,7 +55,7 @@ function MiniSparkline({ data, color = '#6a12cd' }: { data: number[]; color?: st
   );
 }
 
-export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew }: Props) {
+export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunWorkflow }: Props) {
   const totalRuns = WORKFLOWS.reduce((a, w) => a + w.runs, 0);
   const avgScore = 82;
 
@@ -62,6 +64,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew }: Prop
   const [selectedWfs, setSelectedWfs] = useState<Set<string>>(new Set());
   const [bulkSearch, setBulkSearch] = useState('');
   const [bulkRunning, setBulkRunning] = useState(false);
+  const [showBuildDropdown, setShowBuildDropdown] = useState(false);
 
   const filteredForBulk = bulkSearch
     ? WORKFLOWS.filter(w => w.name.toLowerCase().includes(bulkSearch.toLowerCase()))
@@ -116,13 +119,51 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew }: Prop
               <Play size={14} />
               {bulkMode ? 'Cancel Bulk Run' : 'Bulk Run'}
             </button>
-            <button
-              onClick={onBuildNew}
-              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer"
-            >
-              <Plus size={14} />
-              Build New
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowBuildDropdown(p => !p)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer"
+              >
+                <Plus size={14} />
+                Build New
+                <ChevronDown size={12} className={`transition-transform ${showBuildDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              <AnimatePresence>
+                {showBuildDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowBuildDropdown(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: -5, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -5, scale: 0.97 }}
+                      className="absolute right-0 top-full mt-1 w-[200px] bg-white rounded-xl shadow-xl border border-border-light z-50 overflow-hidden"
+                    >
+                      <button
+                        onClick={() => { setShowBuildDropdown(false); onBuildNew(); }}
+                        className="w-full text-left px-4 py-3 hover:bg-primary-xlight transition-colors cursor-pointer flex items-center gap-2.5"
+                      >
+                        <div className="p-1.5 rounded-lg bg-primary/10 text-primary"><FileText size={13} /></div>
+                        <div>
+                          <div className="text-[12px] font-semibold text-text">From Template</div>
+                          <div className="text-[10px] text-text-muted">Start from a template</div>
+                        </div>
+                      </button>
+                      <div className="border-t border-border-light" />
+                      <button
+                        onClick={() => { setShowBuildDropdown(false); onBuildNew(); }}
+                        className="w-full text-left px-4 py-3 hover:bg-primary-xlight transition-colors cursor-pointer flex items-center gap-2.5"
+                      >
+                        <div className="p-1.5 rounded-lg bg-primary/10 text-primary"><Bot size={13} /></div>
+                        <div>
+                          <div className="text-[12px] font-semibold text-text">With AI</div>
+                          <div className="text-[10px] text-text-muted">Describe in chat</div>
+                        </div>
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
 
@@ -405,7 +446,35 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew }: Prop
                   </div>
                 </div>
 
-                {/* AI insight - show on first two */}
+                {/* Card Actions */}
+                <div className="mt-3 flex items-center gap-2 pt-3 border-t border-border-light">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onRunWorkflow?.(wf.id); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-[11px] font-semibold hover:bg-primary/20 transition-colors cursor-pointer"
+                  >
+                    <Play size={11} /> Run
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onBuildNew(); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
+                  >
+                    <Edit3 size={11} /> Edit
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); addToast({ message: `"${wf.name}" duplicated`, type: 'success' }); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
+                  >
+                    <Copy size={11} /> Duplicate
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); addToast({ message: `"${wf.name}" deleted`, type: 'info' }); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ml-auto"
+                  >
+                    <Trash2 size={11} /> Delete
+                  </button>
+                </div>
+
+                {/* Insight - show on first two */}
                 {i < 2 && (
                   <div className={`mt-3 flex items-start gap-2 rounded-lg p-2.5 text-[11px] leading-relaxed ${
                     i === 0 ? 'bg-green-50 border border-green-100 text-green-700' : 'bg-amber-50 border border-amber-100 text-amber-700'

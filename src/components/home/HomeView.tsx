@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  MessageSquare, ArrowRight, TrendingUp, TrendingDown,
+  ArrowRight, TrendingUp, TrendingDown,
   AlertTriangle, Shield, CheckCircle2, Clock, Zap, Activity,
   ChevronDown, Lightbulb, DollarSign, Users, Calendar,
   FileWarning, ShieldAlert, Target, Eye, Ban, Sparkles,
@@ -107,9 +107,6 @@ export default function HomeView({ setView }: Props) {
               </AnimatePresence>
             </div>
             <div className="flex items-center gap-2.5">
-              <button onClick={() => setView('chat')} className="btn-primary flex items-center gap-2 px-6 py-2.5 rounded-xl text-[13px] shadow-lg shadow-primary/20">
-                <MessageSquare size={14} /> Ask Ira
-              </button>
               <div className="relative" data-customize-panel>
                 <button onClick={(e) => { e.stopPropagation(); setShowCustomize(p => !p); }} className="p-2.5 rounded-xl border border-border/60 bg-white/60 backdrop-blur text-text-muted hover:text-primary hover:border-primary/20 transition-all cursor-pointer">
                   <Settings2 size={14} />

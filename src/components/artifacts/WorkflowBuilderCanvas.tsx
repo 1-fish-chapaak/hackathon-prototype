@@ -1,77 +1,195 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  X, CheckCircle, Play, Save, History, Undo,
-  Database, ArrowRight, LayoutTemplate,
-  Sparkles, Zap, ChevronDown, Monitor, Plus,
-  Check, Target, Cpu, Lightbulb, AlertTriangle
+  X, CheckCircle, Database, ArrowRight,
+  Sparkles, Lock, Upload, ToggleLeft, ToggleRight,
+  FileText, Hash, GripVertical, Eye, EyeOff,
+  Play, Save, ChevronLeft, Plus,
 } from 'lucide-react';
-import { WORKFLOW_CLARIFICATION_STEPS, WORKFLOW_ASSUMPTIONS } from '../../data/mockData';
-import { NoiseButton } from '../shared/NoiseButton';
+import {
+  WORKFLOW_TYPE_CONFIGS,
+  type WorkflowTypeId,
+  type WorkflowInputSource,
+  type WorkflowOutputColumn,
+} from '../../data/mockData';
+import { useToast } from '../shared/Toast';
 
 interface Props {
   onClose: () => void;
-  buildStage?: number; // 0-5, driven by chat clarifications
-  uiEnhancements?: string[]; // list of applied UI enhancements from chat
+  workflowType?: WorkflowTypeId;
+  buildStage?: number; // 0=waiting, 1=input, 2=output, 3=preview
 }
 
 const STAGE_LABELS = [
-  { label: 'Data Source', icon: Database, color: '#c084fc' },
-  { label: 'Detection', icon: Target, color: '#9b59d6' },
-  { label: 'Rules', icon: Cpu, color: '#7c3aed' },
-  { label: 'Input / Output', icon: ArrowRight, color: '#6a12cd' },
-  { label: 'Output Layout', icon: Monitor, color: '#4c1d95' },
+  { label: 'Input Config', icon: Database },
+  { label: 'Output Config', icon: ArrowRight },
+  { label: 'Preview', icon: Eye },
 ];
 
-const DEMO_PURPOSE = 'Detect duplicate invoices across vendor payments by matching key fields against historical data, flagging potential duplicates before payment processing.';
+const TYPE_BADGES: Record<string, { label: string; color: string }> = {
+  text: { label: 'TXT', color: 'bg-blue-50 text-blue-600' },
+  number: { label: 'NUM', color: 'bg-violet-50 text-violet-600' },
+  badge: { label: 'BADGE', color: 'bg-purple-50 text-purple-600' },
+  percent: { label: '%', color: 'bg-amber-50 text-amber-600' },
+};
 
-const DEMO_STEPS = [
-  'Ingest invoice data from SAP ERP',
-  'Normalize fields (amount, date, vendor)',
-  'Fuzzy match against historical records',
-  'Score duplicate probability',
-  'Flag & notify AP team',
-];
+const FORMAT_COLORS: Record<string, string> = {
+  CSV: 'bg-purple-50 text-purple-600 border-purple-200',
+  'PDF/CSV': 'bg-orange-50 text-orange-600 border-orange-200',
+  SQL: 'bg-blue-50 text-blue-600 border-blue-200',
+};
 
-const DEMO_INPUTS = [
-  { name: 'Invoice Data', type: 'file' },
-  { name: 'Vendor ID', type: 'text' },
-  { name: 'Date Range', type: 'date' },
-];
+const TYPE_COLOR_CLASSES: Record<WorkflowTypeId, {
+  accent: string; accentBg: string; accentBorder: string; accentRing: string;
+  gradient: string; badgeBg: string; badgeText: string;
+}> = {
+  reconciliation: {
+    accent: 'text-purple-600', accentBg: 'bg-purple-50', accentBorder: 'border-purple-200',
+    accentRing: 'ring-purple-300', gradient: 'from-purple-400 to-violet-500',
+    badgeBg: 'bg-purple-50', badgeText: 'text-purple-700',
+  },
+  detection: {
+    accent: 'text-purple-600', accentBg: 'bg-purple-50', accentBorder: 'border-purple-200',
+    accentRing: 'ring-purple-300', gradient: 'from-purple-500 to-violet-500',
+    badgeBg: 'bg-purple-50', badgeText: 'text-purple-700',
+  },
+  monitoring: {
+    accent: 'text-sky-600', accentBg: 'bg-sky-50', accentBorder: 'border-sky-200',
+    accentRing: 'ring-sky-300', gradient: 'from-sky-400 to-blue-500',
+    badgeBg: 'bg-sky-50', badgeText: 'text-sky-700',
+  },
+  compliance: {
+    accent: 'text-violet-600', accentBg: 'bg-violet-50', accentBorder: 'border-violet-200',
+    accentRing: 'ring-violet-300', gradient: 'from-violet-500 to-purple-500',
+    badgeBg: 'bg-violet-50', badgeText: 'text-violet-700',
+  },
+};
 
-const DEMO_OUTPUTS = [
-  { name: 'Duplicate Report', type: 'table' },
-  { name: 'Risk Score', type: 'number' },
-  { name: 'Flagged Invoices', type: 'file' },
-];
+const RUN_LABELS: Record<WorkflowTypeId, string> = {
+  reconciliation: 'Run Reconciliation',
+  detection: 'Run Detection',
+  monitoring: 'Run Now',
+  compliance: 'Run Now',
+};
 
-const VERSIONS = [
-  { id: 'v3', time: 'Now', msg: 'Added output schema' },
-  { id: 'v2', time: '2m ago', msg: 'Defined workflow steps' },
-  { id: 'v1', time: '4m ago', msg: 'Initial state' },
-];
+function AISuggestionRow({ suggestion, colors: _colors, onApply }: { suggestion: { text: string; applied: boolean }; colors: any; onApply: () => void }) {
+  const [applied, setApplied] = useState(suggestion.applied);
+  return (
+    <div className={`flex items-start gap-2.5 p-2 rounded-lg transition-all ${applied ? 'bg-primary/5 border border-primary/15' : 'hover:bg-white/60'}`}>
+      <button
+        onClick={() => { if (!applied) { setApplied(true); onApply(); } }}
+        className={`shrink-0 mt-0.5 w-5 h-5 rounded-md flex items-center justify-center transition-all cursor-pointer ${
+          applied ? 'bg-primary text-white' : `border-2 border-border hover:border-primary/40`
+        }`}
+      >
+        {applied && <CheckCircle size={12} />}
+      </button>
+      <span className={`text-[10.5px] leading-relaxed ${applied ? 'text-primary' : 'text-text-secondary'}`}>{suggestion.text}</span>
+    </div>
+  );
+}
 
-export default function WorkflowBuilderCanvas({ onClose, buildStage = 5, uiEnhancements = [] }: Props) {
-  const [versionOpen, setVersionOpen] = useState(false);
+export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStage }: Props) {
+  const { addToast } = useToast();
+  const config = workflowType ? WORKFLOW_TYPE_CONFIGS[workflowType] : null;
+  const colors = workflowType ? TYPE_COLOR_CLASSES[workflowType] : null;
+
+  // Internal stage management — external buildStage takes priority when provided
+  const [internalStage, setInternalStage] = useState(0);
+  const stage = buildStage !== undefined ? buildStage : internalStage;
+
+  // Sync internal stage when external buildStage changes
+  useEffect(() => {
+    if (buildStage !== undefined) {
+      setInternalStage(buildStage);
+    }
+  }, [buildStage]);
+
+  // State
+  const [sources, setSources] = useState<WorkflowInputSource[]>([]);
+  const [tolerance, setTolerance] = useState('5');
+  const [matchLogic, setMatchLogic] = useState('');
+  const [outputColumns, setOutputColumns] = useState<WorkflowOutputColumn[]>([]);
+  const [selectedLayout, setSelectedLayout] = useState('');
+  const [kpiToggles, setKpiToggles] = useState<Record<string, boolean>>({});
   const [showSavedBanner, setShowSavedBanner] = useState(false);
 
-  const isBuilding = buildStage > 0 && buildStage < 5;
-  const isComplete = buildStage >= 5;
-  const fillPercent = buildStage * 20;
-  const hasEnhancements = uiEnhancements.length > 0;
-  const hasSeverityColors = uiEnhancements.some(e => e.includes('severity'));
-  const hasExportButtons = uiEnhancements.some(e => e.includes('export'));
-  const hasDateFilter = uiEnhancements.some(e => e.includes('date'));
+  // Multi-sheet output configuration
+  const [outputSheets, setOutputSheets] = useState<{ id: string; name: string }[]>([
+    { id: 'sheet-1', name: 'Results' },
+  ]);
+  const [activeSheetId, setActiveSheetId] = useState('sheet-1');
+  const [editingSheetId, setEditingSheetId] = useState<string | null>(null);
 
-  const handleSave = () => {
+  // Init state from config when workflowType changes
+  useEffect(() => {
+    if (!config) return;
+    setSources(config.inputSources.map(s => ({ ...s })));
+    const tolNum = config.matchSettings.toleranceDefault.replace('%', '').replace('N/A', '0');
+    setTolerance(tolNum || '0');
+    setMatchLogic(config.matchSettings.defaultLogic);
+    setOutputColumns(config.outputColumns.map(c => ({ ...c })));
+    setSelectedLayout(config.layoutOptions[0] || 'Table');
+    const kpis: Record<string, boolean> = {};
+    config.kpiOptions.forEach(k => { kpis[k.id] = k.enabled; });
+    setKpiToggles(kpis);
+    // Set default sheets based on workflow type
+    const defaultSheets: { id: string; name: string }[] =
+      config.id === 'reconciliation'
+        ? [{ id: 'sheet-1', name: 'Matched' }, { id: 'sheet-2', name: 'Variances' }, { id: 'sheet-3', name: 'Unmatched' }]
+        : config.id === 'detection'
+        ? [{ id: 'sheet-1', name: 'Flagged Items' }, { id: 'sheet-2', name: 'Summary' }]
+        : [{ id: 'sheet-1', name: 'Results' }];
+    setOutputSheets(defaultSheets);
+    setActiveSheetId(defaultSheets[0].id);
+    setEditingSheetId(null);
+    // When config arrives and we're at stage 0, advance to stage 1
+    if (buildStage === undefined) {
+      setInternalStage(1);
+    }
+  }, [workflowType]);
+
+  const fillPercent = stage * 33.33;
+
+  const toggleFreeze = (id: string) => {
+    setSources(prev => prev.map(s => {
+      if (s.id !== id) return s;
+      const nowFrozen = !s.frozen;
+      return {
+        ...s,
+        frozen: nowFrozen,
+        frozenDate: nowFrozen ? 'Mar 26, 2026' : null,
+        records: nowFrozen ? (s.records || 'Cached') : null,
+      };
+    }));
+  };
+
+  const toggleColumn = (id: string) => {
+    setOutputColumns(prev => prev.map(c =>
+      c.id === id && !c.frozen ? { ...c, enabled: !c.enabled } : c
+    ));
+  };
+
+  const toggleKpi = (id: string) => {
+    setKpiToggles(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const advanceStage = (next: number) => {
+    setInternalStage(next);
+  };
+
+  const handleSaveWorkflow = () => {
     setShowSavedBanner(true);
+    addToast({ message: 'Workflow saved successfully', type: 'success' });
     setTimeout(() => setShowSavedBanner(false), 2500);
   };
+
+  const enabledColumns = outputColumns.filter(c => c.enabled);
 
   return (
     <motion.div
       initial={{ width: 0, opacity: 0 }}
-      animate={{ width: hasEnhancements ? 760 : isComplete ? 620 : 480, opacity: 1 }}
+      animate={{ width: stage >= 3 ? 700 : 680, opacity: 1 }}
       exit={{ width: 0, opacity: 0 }}
       transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
       className="h-full bg-surface-2 border-l border-border-light flex flex-col overflow-hidden shrink-0 relative"
@@ -84,10 +202,10 @@ export default function WorkflowBuilderCanvas({ onClose, buildStage = 5, uiEnhan
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -60, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            className="absolute top-0 left-0 right-0 z-50 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-3 flex items-center justify-center gap-2 shadow-lg"
+            className={`absolute top-0 left-0 right-0 z-50 bg-gradient-to-r ${colors?.gradient || 'from-teal-500 to-emerald-500'} text-white px-4 py-3 flex items-center justify-center gap-2 shadow-lg`}
           >
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 12, delay: 0.1 }}>
-              <Check size={18} />
+              <CheckCircle size={18} />
             </motion.div>
             <span className="text-[13px] font-semibold">Workflow Saved Successfully</span>
           </motion.div>
@@ -98,376 +216,697 @@ export default function WorkflowBuilderCanvas({ onClose, buildStage = 5, uiEnhan
       <div className="border-b border-border-light bg-white shrink-0">
         <div className="flex items-center justify-between px-3 h-11">
           <div className="flex items-center gap-2">
-            <Sparkles size={14} className="text-primary" />
-            <span className="text-[12px] font-semibold text-text">Workflow Canvas</span>
-            {isBuilding && (
-              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full animate-pulse">
-                Building...
+            <Sparkles size={14} className={colors?.accent || 'text-primary'} />
+            <span className="text-[12px] font-semibold text-text">
+              {config ? config.name : 'Workflow Canvas'}
+            </span>
+            {config && (
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${colors?.badgeBg} ${colors?.badgeText}`}>
+                {config.id.charAt(0).toUpperCase() + config.id.slice(1)}
+              </span>
+            )}
+            {stage > 0 && stage < 3 && (
+              <span className={`text-[10px] font-bold ${colors?.accent || 'text-primary'} ${colors?.accentBg || 'bg-primary/10'} px-2 py-0.5 rounded-full animate-pulse`}>
+                Configuring...
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1">
-            <div className="relative">
-              <button onClick={() => setVersionOpen(p => !p)} className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-muted hover:text-text-secondary hover:bg-gray-50 rounded-md transition-colors cursor-pointer">
-                <History size={12} /> v3 <ChevronDown size={10} />
-              </button>
-              <AnimatePresence>
-                {versionOpen && (
-                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl border border-border-light shadow-lg z-50 p-2">
-                    {VERSIONS.map((v, idx) => (
-                      <button key={v.id} onClick={() => setVersionOpen(false)} className={`w-full text-left px-3 py-2 rounded-lg text-[11px] transition-colors cursor-pointer ${idx === 0 ? 'bg-primary/5 text-primary font-medium' : 'text-text-secondary hover:bg-gray-50'}`}>
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold">{v.id}</span>
-                          <span className="text-text-muted text-[10px]">{v.time}</span>
-                        </div>
-                        <div className="text-[10px] mt-0.5 opacity-70">{v.msg}</div>
-                        {idx > 0 && <div className="flex items-center gap-0.5 text-primary text-[10px] mt-1 font-medium"><Undo size={8} /> Restore</div>}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            <button onClick={onClose} className="p-1.5 text-text-muted hover:text-text-secondary rounded-md hover:bg-gray-50 cursor-pointer">
-              <X size={14} />
-            </button>
-          </div>
+          <button onClick={onClose} className="p-1.5 text-text-muted hover:text-text-secondary rounded-md hover:bg-gray-50 cursor-pointer">
+            <X size={14} />
+          </button>
         </div>
 
-        {/* Understanding Meter */}
+        {/* Stage Progress */}
         <div className="px-4 pb-3">
           <div className="flex items-center gap-2 mb-2">
-            {STAGE_LABELS.map((stage, i) => {
-              const filled = buildStage > i;
-              const active = buildStage === i + 1;
+            {STAGE_LABELS.map((s, i) => {
+              const filled = stage > i + 1;
+              const active = stage === i + 1;
               return (
-                <div key={stage.label} className="flex items-center gap-1.5 flex-1">
+                <div key={s.label} className="flex items-center gap-1.5 flex-1">
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold transition-all duration-300 ${
-                    filled ? 'bg-primary text-white' : active ? 'bg-primary/20 text-primary ring-2 ring-primary/30' : 'bg-gray-100 text-gray-400'
+                    filled
+                      ? `bg-gradient-to-r ${colors?.gradient || 'from-teal-400 to-emerald-500'} text-white`
+                      : active
+                        ? `${colors?.accentBg || 'bg-teal-100'} ${colors?.accent || 'text-teal-600'} ring-2 ${colors?.accentRing || 'ring-teal-300'}`
+                        : 'bg-gray-100 text-gray-400'
                   }`}>
                     {filled ? <CheckCircle size={12} /> : i + 1}
                   </div>
-                  <span className={`text-[9px] font-medium truncate transition-colors ${active ? 'text-primary font-bold' : filled ? 'text-text' : 'text-text-muted'}`}>
-                    {stage.label}
+                  <span className={`text-[9px] font-medium truncate transition-colors ${
+                    active ? `${colors?.accent || 'text-teal-600'} font-bold` : filled ? 'text-text' : 'text-text-muted'
+                  }`}>
+                    {s.label}
                   </span>
-                  {i < STAGE_LABELS.length - 1 && <div className={`flex-1 h-px transition-colors ${filled ? 'bg-primary' : 'bg-border-light'}`} />}
+                  {i < STAGE_LABELS.length - 1 && (
+                    <div className={`flex-1 h-px transition-colors ${
+                      filled ? `bg-gradient-to-r ${colors?.gradient || 'from-teal-400 to-emerald-500'}` : 'bg-border-light'
+                    }`} />
+                  )}
                 </div>
               );
             })}
           </div>
-          {/* Progress bar */}
           <div className="h-1 bg-surface-3 rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-gradient-to-r from-primary to-primary-medium rounded-full"
+              className={`h-full bg-gradient-to-r ${colors?.gradient || 'from-teal-400 to-emerald-500'} rounded-full`}
               initial={{ width: '0%' }}
-              animate={{ width: `${fillPercent}%` }}
+              animate={{ width: `${Math.min(fillPercent, 100)}%` }}
               transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
             />
           </div>
         </div>
       </div>
 
-      {/* Canvas */}
+      {/* Canvas Content */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-4">
 
-          {/* Stage 0: Empty state */}
-          {buildStage === 0 && (
+          {/* Stage 0: Waiting */}
+          {stage === 0 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-primary/5 flex items-center justify-center mb-3">
-                <Sparkles size={24} className="text-primary/40" />
+              <div className={`w-14 h-14 rounded-2xl ${colors?.accentBg || 'bg-primary/5'} flex items-center justify-center mb-3`}>
+                <motion.div
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <Sparkles size={24} className={`${colors?.accent || 'text-primary'} opacity-60`} />
+                </motion.div>
               </div>
-              <h4 className="text-[14px] font-semibold text-text mb-1">Waiting for input...</h4>
-              <p className="text-[12px] text-text-muted max-w-[250px]">Describe a workflow in chat and I'll build it step by step.</p>
-            </motion.div>
-          )}
-
-          {/* Stage 1+: Overview */}
-          {buildStage >= 1 && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <div className="bg-white p-4 rounded-xl border border-border-light shadow-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 bg-primary-xlight text-primary rounded-lg"><LayoutTemplate size={14} /></div>
-                  <h2 className="text-[13px] font-semibold text-text">Overview</h2>
-                  <div className="ml-auto flex items-center gap-1 text-[9px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
-                    <CheckCircle size={9} /> Inferred from chat
-                  </div>
-                </div>
-                <p className="text-[12px] text-text-secondary leading-relaxed">{DEMO_PURPOSE}</p>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Stage 2+: Execution Steps */}
-          {buildStage >= 2 && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <div className="bg-white rounded-xl border border-border-light shadow-sm overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-border-light">
-                  <Zap size={13} className="text-primary" />
-                  <h2 className="text-[12px] font-semibold text-text">Execution Plan</h2>
-                  <span className="text-[10px] text-text-muted ml-auto">{DEMO_STEPS.length} steps</span>
-                </div>
-                {DEMO_STEPS.map((step, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.08 }}
-                    className="flex items-center gap-3 px-4 py-2.5 border-b border-border-light last:border-0 hover:bg-primary-xlight/30 transition-colors"
-                  >
-                    <span className="text-[11px] font-mono font-bold text-text-muted w-5 text-center">{i + 1}</span>
-                    <div className="w-px h-4 bg-border-light" />
-                    <span className="text-[12px] font-medium text-text flex-1">{step}</span>
-                    <CheckCircle size={12} className="text-success shrink-0" />
-                  </motion.div>
+              <h4 className="text-[14px] font-semibold text-text mb-1">Select a workflow type to begin configuration...</h4>
+              <p className="text-[12px] text-text-muted max-w-[280px]">Choose a workflow type in chat and the canvas will guide you through input, output, and preview steps.</p>
+              <motion.div
+                className="mt-4 flex gap-1"
+                animate={{ opacity: [0.3, 1, 0.3] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                {[0, 1, 2].map(i => (
+                  <div key={i} className="w-1.5 h-1.5 rounded-full bg-text-muted/30" />
                 ))}
-              </div>
+              </motion.div>
             </motion.div>
           )}
 
-          {/* Stage 3+: Inputs & Outputs */}
-          {buildStage >= 3 && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white p-4 rounded-xl border border-border-light shadow-sm">
-                  <div className="flex items-center gap-2 mb-2.5">
-                    <div className="p-1 bg-blue-50 text-blue-600 rounded-md"><Database size={13} /></div>
-                    <h2 className="text-[12px] font-semibold text-text">Inputs</h2>
-                  </div>
-                  <div className="space-y-1.5">
-                    {DEMO_INPUTS.map((inp, i) => (
-                      <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.1 }} className="flex items-center justify-between p-2 bg-surface-2 rounded-lg">
-                        <span className="text-[11px] font-medium text-text">{inp.name}</span>
-                        <span className="text-[9px] px-1.5 py-0.5 bg-white border border-border-light rounded text-text-muted uppercase tracking-wider font-bold">{inp.type}</span>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-border-light shadow-sm">
-                  <div className="flex items-center gap-2 mb-2.5">
-                    <div className="p-1 bg-emerald-50 text-emerald-600 rounded-md"><ArrowRight size={13} /></div>
-                    <h2 className="text-[12px] font-semibold text-text">Outputs</h2>
-                  </div>
-                  <div className="space-y-1.5">
-                    {DEMO_OUTPUTS.map((out, i) => (
-                      <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.1 }} className="flex items-center justify-between p-2 bg-surface-2 rounded-lg">
-                        <span className="text-[11px] font-medium text-text">{out.name}</span>
-                        <span className="text-[9px] px-1.5 py-0.5 bg-white border border-border-light rounded text-text-muted uppercase tracking-wider font-bold">{out.type}</span>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Stage 5: Output Screen — expands further when enhanced */}
-          {buildStage >= 5 && (
-            <motion.div initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.6 }}>
-              <div className={`bg-white rounded-xl border shadow-sm transition-all duration-500 ${hasEnhancements ? 'border-primary/20 p-5' : 'border-border-light p-4'}`}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className={`p-1.5 rounded-lg ${hasEnhancements ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'}`}><Monitor size={14} /></div>
-                    <h2 className="text-[13px] font-semibold text-text">Output Preview</h2>
-                    {hasEnhancements ? (
-                      <span className="text-[9px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                        <CheckCircle size={8} /> {uiEnhancements.length} Enhancements Applied
-                      </span>
-                    ) : (
-                      <span className="text-[9px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                        <Sparkles size={8} /> AI Recommended
-                      </span>
-                    )}
-                  </div>
+          {/* Stage 1: Input Configuration */}
+          <AnimatePresence mode="wait">
+            {stage === 1 && config && colors && (
+              <motion.div
+                key="stage-1"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.4 }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Database size={14} className={colors.accent} />
+                  <h2 className="text-[13px] font-semibold text-text">Input Configuration</h2>
+                  <span className={`text-[9px] font-bold ${colors.badgeText} ${colors.badgeBg} px-2 py-0.5 rounded-full`}>
+                    {sources.length} sources
+                  </span>
                 </div>
 
-                {/* Split-screen: Input Tab + Output Tab */}
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Input Form Preview */}
-                  <div className={`border rounded-xl overflow-hidden transition-all ${hasEnhancements ? 'border-primary/15' : 'border-border-light'}`}>
-                    <div className="bg-primary/5 px-3 py-1.5 border-b border-border-light flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Input Screen</span>
-                    </div>
-                    <div className="p-3 space-y-2.5">
-                      {DEMO_INPUTS.map((inp, i) => (
-                        <div key={i}>
-                          <div className="text-[9px] font-semibold text-text-muted uppercase tracking-wider mb-1">{inp.name}</div>
-                          {inp.type === 'file' ? (
-                            <div className="h-10 rounded-lg border border-dashed border-border flex items-center justify-center">
-                              <span className="text-[9px] text-text-muted flex items-center gap-1"><Plus size={8} /> Drop {inp.name.toLowerCase()}</span>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {sources.map((source, idx) => (
+                    <motion.div
+                      key={source.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.08 }}
+                      className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-all ${
+                        source.frozen ? colors.accentBorder : 'border-border-light'
+                      }`}
+                    >
+                      <div className="p-3">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`p-1 rounded-md ${source.frozen ? `${colors.accentBg} ${colors.accent}` : 'bg-gray-50 text-gray-500'}`}>
+                              {source.frozen ? <Lock size={12} /> : <Database size={12} />}
                             </div>
-                          ) : (
-                            <div className="h-7 rounded-lg border border-border-light bg-surface-2 flex items-center px-2">
-                              <div className="h-1.5 w-16 bg-text-muted/15 rounded" />
+                            <div>
+                              <div className="text-[11px] font-semibold text-text">{source.name}</div>
+                              <div className="text-[9px] text-text-muted">{source.type}</div>
                             </div>
-                          )}
+                          </div>
+                          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${FORMAT_COLORS[source.format] || 'bg-gray-50 text-gray-500 border-gray-200'}`}>
+                            {source.format}
+                          </span>
                         </div>
-                      ))}
-                      {/* Date filter — shown when enhancement applied */}
-                      {hasDateFilter && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
-                          <div className="text-[9px] font-semibold text-primary uppercase tracking-wider mb-1 flex items-center gap-1">
-                            <Sparkles size={7} /> Date Range Filter <span className="text-[7px] bg-green-100 text-green-700 px-1 rounded">NEW</span>
-                          </div>
-                          <div className="flex gap-1.5">
-                            <div className="flex-1 h-7 rounded-lg border border-primary/20 bg-primary/5 flex items-center px-2">
-                              <div className="h-1.5 w-10 bg-primary/20 rounded" />
-                            </div>
-                            <div className="flex-1 h-7 rounded-lg border border-primary/20 bg-primary/5 flex items-center px-2">
-                              <div className="h-1.5 w-10 bg-primary/20 rounded" />
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                      <div className="flex justify-end pt-1">
-                        <div className="h-6 w-16 bg-primary/20 rounded-lg flex items-center justify-center">
-                          <span className="text-[8px] text-primary font-bold">Run</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Output Display Preview */}
-                  <div className={`border rounded-xl overflow-hidden transition-all ${hasEnhancements ? 'border-primary/15' : 'border-border-light'}`}>
-                    <div className="bg-emerald-50 px-3 py-1.5 border-b border-border-light flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Output Screen</span>
-                      {/* Export buttons — shown when enhancement applied */}
-                      {hasExportButtons && (
-                        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="flex gap-1">
-                          <div className="text-[7px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                            <Sparkles size={6} /> PDF
-                          </div>
-                          <div className="text-[7px] font-bold text-green-700 bg-green-50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                            <Sparkles size={6} /> Excel
-                          </div>
-                        </motion.div>
-                      )}
-                    </div>
-                    <div className="p-3 space-y-2">
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {['Scanned', 'Flagged', 'Score'].map((l, i) => (
-                          <div key={l} className="bg-surface-2 rounded-lg p-1.5 text-center">
-                            <div className={`text-[11px] font-bold font-mono ${i === 1 ? 'text-orange-500' : i === 2 ? 'text-green-500' : 'text-text'}`}>
-                              {i === 0 ? '1.2K' : i === 1 ? '8' : '95'}
-                            </div>
-                            <div className="text-[7px] text-text-muted uppercase">{l}</div>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="rounded-lg border border-border-light overflow-hidden">
-                        <div className={`grid gap-0 bg-surface-2 px-2 py-1 ${hasSeverityColors ? 'grid-cols-5' : 'grid-cols-4'}`}>
-                          {['ID', 'Invoice', 'Match', ...(hasSeverityColors ? ['Severity'] : []), 'Status'].map(h => (
-                            <div key={h} className={`text-[7px] font-bold uppercase ${h === 'Severity' ? 'text-primary/60' : 'text-text-muted/40'}`}>{h}</div>
+                        {/* Fields */}
+                        <div className="flex flex-wrap gap-1 mb-2.5">
+                          {source.fields.map(field => (
+                            <span key={field} className="text-[8px] font-medium px-1.5 py-0.5 bg-surface-2 text-text-muted rounded">
+                              {field}
+                            </span>
                           ))}
                         </div>
-                        {[1, 2, 3].map(r => (
-                          <div key={r} className={`grid gap-0 px-2 py-1.5 border-t border-border-light ${hasSeverityColors ? 'grid-cols-5' : 'grid-cols-4'}`}>
-                            <div className="h-1.5 w-5 bg-text-muted/10 rounded" />
-                            <div className="h-1.5 w-10 bg-text-muted/10 rounded" />
-                            <div className={`h-1.5 w-7 rounded ${r === 1 ? 'bg-red-200' : r === 2 ? 'bg-orange-200' : 'bg-green-200'}`} />
-                            {/* Severity column — only when enhancement applied */}
-                            {hasSeverityColors && (
-                              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center">
-                                <div className={`h-3 px-1 rounded text-[5px] font-bold flex items-center ${
-                                  r === 1 ? 'bg-red-100 text-red-700' : r === 2 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
-                                }`}>
-                                  {r === 1 ? 'HIGH' : r === 2 ? 'MED' : 'LOW'}
-                                </div>
-                              </motion.div>
+
+                        {/* Freeze Toggle */}
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={() => toggleFreeze(source.id)}
+                            className="flex items-center gap-1.5 cursor-pointer"
+                          >
+                            {source.frozen ? (
+                              <ToggleRight size={18} className={colors.accent} />
+                            ) : (
+                              <ToggleLeft size={18} className="text-gray-300" />
                             )}
-                            <div className="h-1.5 w-7 bg-text-muted/10 rounded" />
+                            <span className={`text-[10px] font-medium ${source.frozen ? colors.accent : 'text-text-muted'}`}>
+                              {source.frozen ? 'Frozen' : 'Freeze'}
+                            </span>
+                          </button>
+                          {source.frozen ? (
+                            <span className={`text-[8px] font-bold ${colors.badgeText} ${colors.badgeBg} px-1.5 py-0.5 rounded-full flex items-center gap-0.5`}>
+                              <CheckCircle size={7} /> Frozen
+                            </span>
+                          ) : (
+                            <span className="text-[8px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-full">
+                              Required
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Frozen info or Upload zone */}
+                        {source.frozen ? (
+                          <div className={`mt-2 text-[9px] ${colors.accent} ${colors.accentBg}/50 rounded-lg px-2 py-1.5`}>
+                            Using cached version from {source.frozenDate}
+                            {source.records && <span className={`block text-[8px] ${colors.accent} opacity-70 mt-0.5`}>{source.records}</span>}
                           </div>
-                        ))}
+                        ) : (
+                          <div className={`mt-2 border border-dashed border-border rounded-lg p-2 flex items-center justify-center gap-1.5 hover:${colors.accentBorder} hover:${colors.accentBg}/30 transition-colors cursor-pointer`}>
+                            <Upload size={10} className="text-text-muted" />
+                            <span className="text-[9px] text-text-muted">Drop file or click to upload</span>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Match Tolerance */}
+                {config.matchSettings.toleranceDefault !== 'N/A' && (
+                  <div className="bg-white rounded-xl border border-border-light shadow-sm p-3 mb-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`text-[11px] font-semibold text-text flex items-center gap-1.5`}>
+                        <Hash size={12} className={colors.accent} /> Match Tolerance
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          value={tolerance}
+                          onChange={e => setTolerance(e.target.value)}
+                          className={`w-12 text-center text-[12px] font-bold ${colors.accent} bg-white border ${colors.accentBorder} rounded-lg py-1 focus:outline-none`}
+                        />
+                        <span className="text-[11px] text-text-muted font-medium">%</span>
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Enhancement summary */}
-                {hasEnhancements ? (
-                  <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="mt-3 flex items-start gap-2 rounded-lg p-2.5 bg-green-50 border border-green-200">
-                    <CheckCircle size={11} className="text-green-600 shrink-0 mt-0.5" />
-                    <div className="text-[10.5px] text-green-800 leading-relaxed">
-                      <span className="font-semibold">UI Enhanced:</span>{' '}
-                      {uiEnhancements.join(' · ')}
+                    <div className="h-1.5 bg-surface-3 rounded-full overflow-hidden">
+                      <div className={`h-full bg-gradient-to-r ${colors.gradient} rounded-full transition-all`} style={{ width: `${Math.min(Number(tolerance) * 10, 100)}%` }} />
                     </div>
-                  </motion.div>
-                ) : (
-                  <div className="mt-3 flex items-start gap-2 rounded-lg p-2.5 bg-primary-xlight/50 border border-primary/10">
-                    <Sparkles size={11} className="text-primary shrink-0 mt-0.5" />
-                    <div className="text-[10.5px] text-text-secondary leading-relaxed">
-                      <span className="font-semibold text-primary">AI recommended:</span>{' '}
-                      Standard layout with KPI cards and results table.
-                    </div>
+                    <div className="flex justify-between text-[8px] text-text-muted mt-1"><span>Exact</span><span>5%</span><span>10%</span></div>
                   </div>
                 )}
-              </div>
-            </motion.div>
-          )}
 
-          {/* Clarification & Assumptions Log */}
-          {buildStage > 0 && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <div className="mt-1">
-                <div className="flex items-center gap-2 mb-3">
-                  <Lightbulb size={14} className="text-primary" />
-                  <span className="text-[12px] font-semibold text-text">Clarifications & Assumptions</span>
+                {/* Match Logic */}
+                <div className="bg-white rounded-xl border border-border-light shadow-sm p-3 mb-4">
+                  <span className="text-[11px] font-semibold text-text mb-2 block">
+                    {config.matchSettings.toleranceDefault === 'N/A' ? 'Detection Logic' : 'Match Logic'}
+                  </span>
+                  <div className="flex gap-2">
+                    {config.matchSettings.logicOptions.map(option => (
+                      <button
+                        key={option}
+                        onClick={() => setMatchLogic(option)}
+                        className={`flex-1 px-3 py-2 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                          matchLogic === option
+                            ? `${colors.accentBg} ${colors.badgeText} border-2 ${colors.accentBorder} shadow-sm`
+                            : `bg-surface-2 text-text-muted border-2 border-transparent hover:${colors.accentBorder}`
+                        }`}
+                      >
+                        {option}
+                        {matchLogic === option && <CheckCircle size={10} className="inline ml-1" />}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  {Array.from({ length: Math.min(buildStage, 5) }, (_, i) => {
-                    const step = WORKFLOW_CLARIFICATION_STEPS[i];
-                    const assumptions = WORKFLOW_ASSUMPTIONS[i + 1] || [];
+
+                {/* Confirm Button */}
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="flex justify-end">
+                  <button
+                    onClick={() => advanceStage(2)}
+                    className={`flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r ${colors.gradient} hover:opacity-90 text-white rounded-xl text-[12px] font-semibold transition-all cursor-pointer shadow-md`}
+                  >
+                    Confirm Inputs <ArrowRight size={13} />
+                  </button>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Stage 2: Output Configuration */}
+          <AnimatePresence mode="wait">
+            {stage === 2 && config && colors && (
+              <motion.div
+                key="stage-2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.4 }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <ArrowRight size={14} className={colors.accent} />
+                  <h2 className="text-[13px] font-semibold text-text">Output Configuration</h2>
+                  <span className={`text-[9px] font-bold ${colors.badgeText} ${colors.badgeBg} px-2 py-0.5 rounded-full`}>
+                    {enabledColumns.length} columns
+                  </span>
+                </div>
+
+                {/* Output Sheets (Excel tabs) */}
+                <div className="bg-white rounded-xl border border-border-light shadow-sm p-3 mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold text-text flex items-center gap-1.5">
+                      <FileText size={12} className={colors.accent} /> Output Sheets
+                    </span>
+                    <span className="text-[9px] text-text-muted">Configure multiple sheets in Excel output</span>
+                  </div>
+                  <div className="flex items-end gap-0 bg-surface-2 rounded-t-lg overflow-hidden">
+                    {outputSheets.map((sheet) => (
+                      <div
+                        key={sheet.id}
+                        onClick={() => { setActiveSheetId(sheet.id); setEditingSheetId(null); }}
+                        className={`group relative flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium cursor-pointer transition-all border-b-2 ${
+                          activeSheetId === sheet.id
+                            ? `bg-white ${colors.accent} border-current shadow-sm -mb-px rounded-t-lg`
+                            : 'text-text-muted border-transparent hover:text-text-secondary hover:bg-white/50'
+                        }`}
+                      >
+                        {editingSheetId === sheet.id ? (
+                          <input
+                            autoFocus
+                            value={sheet.name}
+                            onChange={(e) => setOutputSheets(prev => prev.map(s => s.id === sheet.id ? { ...s, name: e.target.value } : s))}
+                            onBlur={() => setEditingSheetId(null)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') setEditingSheetId(null); }}
+                            className={`w-20 bg-transparent border-b ${colors.accentBorder} text-[11px] font-medium outline-none ${colors.accent}`}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : (
+                          <span onDoubleClick={(e) => { e.stopPropagation(); setEditingSheetId(sheet.id); }}>
+                            {sheet.name}
+                          </span>
+                        )}
+                        {outputSheets.length > 1 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const remaining = outputSheets.filter(s => s.id !== sheet.id);
+                              setOutputSheets(remaining);
+                              if (activeSheetId === sheet.id) setActiveSheetId(remaining[0].id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-red-500 transition-all cursor-pointer"
+                          >
+                            <X size={9} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => {
+                        const newId = `sheet-${Date.now()}`;
+                        setOutputSheets(prev => [...prev, { id: newId, name: `Sheet ${prev.length + 1}` }]);
+                        setActiveSheetId(newId);
+                        setEditingSheetId(newId);
+                      }}
+                      className={`flex items-center gap-1 px-2.5 py-2 text-[10px] text-text-muted hover:${colors.accent} transition-colors cursor-pointer`}
+                    >
+                      <Plus size={10} /> Add Sheet
+                    </button>
+                  </div>
+                  <div className="border border-t-0 border-border-light rounded-b-lg p-2.5 bg-white">
+                    <div className="flex items-center gap-2 text-[10px] text-text-muted">
+                      <FileText size={10} className={colors.accent} />
+                      <span>
+                        Configuring columns for <strong className={colors.accent}>{outputSheets.find(s => s.id === activeSheetId)?.name}</strong>
+                      </span>
+                      <span className="text-[8px] bg-surface-2 px-1.5 py-0.5 rounded">Double-click tab to rename</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Output Columns */}
+                <div className="grid grid-cols-2 gap-1.5 mb-4">
+                  {outputColumns.map((col, idx) => (
+                    <motion.div
+                      key={col.id}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.04 }}
+                      className={`bg-white rounded-lg border p-2.5 flex items-center gap-3 transition-all ${
+                        col.enabled ? 'border-border-light shadow-sm' : 'border-border-light/50 opacity-50'
+                      }`}
+                    >
+                      <GripVertical size={12} className="text-text-muted/30 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-medium text-text truncate">{col.name}</span>
+                          <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded shrink-0 ${TYPE_BADGES[col.type].color}`}>
+                            {TYPE_BADGES[col.type].label}
+                          </span>
+                          {col.frozen && (
+                            <span className={`text-[7px] font-bold ${colors.badgeText} ${colors.badgeBg} px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0`}>
+                              <Lock size={6} /> Required
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => toggleColumn(col.id)}
+                        disabled={col.frozen}
+                        className={`shrink-0 cursor-pointer ${col.frozen ? 'cursor-not-allowed' : ''}`}
+                      >
+                        {col.enabled ? (
+                          <Eye size={14} className={colors.accent} />
+                        ) : (
+                          <EyeOff size={14} className="text-gray-300" />
+                        )}
+                      </button>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* KPI Options */}
+                <div className="bg-white rounded-xl border border-border-light shadow-sm p-3 mb-4">
+                  <span className="text-[11px] font-semibold text-text mb-2 block">Dashboard KPIs</span>
+                  <div className="space-y-1.5">
+                    {config.kpiOptions.map(kpi => (
+                      <label
+                        key={kpi.id}
+                        className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={kpiToggles[kpi.id] ?? kpi.enabled}
+                          onChange={() => toggleKpi(kpi.id)}
+                          className="w-3.5 h-3.5 rounded accent-current cursor-pointer"
+                          style={{ accentColor: config.color }}
+                        />
+                        <span className="text-[11px] font-medium text-text flex-1">{kpi.label}</span>
+                        {kpi.id === 'run_comparison' && (
+                          <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">DELTA</span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* AI Suggestions */}
+                <div className="bg-gradient-to-r from-primary/5 via-white to-primary/5 rounded-xl border border-primary/10 p-3 mb-4">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="p-1 rounded-md bg-primary/10"><Sparkles size={11} className="text-primary" /></div>
+                    <span className="text-[11px] font-semibold text-text">AI Suggestions</span>
+                    <span className="text-[8px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">SMART</span>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { text: 'Add "Trend vs Previous Run" column to track changes between executions', applied: false },
+                      { text: 'Enable variance highlighting when amount difference exceeds tolerance', applied: true },
+                      { text: 'Include "Time to Resolution" metric for flagged items', applied: false },
+                      { text: 'Auto-group results by vendor for easier review', applied: false },
+                    ].map((suggestion, idx) => (
+                      <AISuggestionRow key={idx} suggestion={suggestion} colors={colors} onApply={() => addToast({ message: 'Suggestion applied to output configuration', type: 'success' })} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Layout Picker */}
+                <div className="bg-white rounded-xl border border-border-light shadow-sm p-3 mb-4">
+                  <span className="text-[11px] font-semibold text-text mb-2 block">Output Layout</span>
+                  <div className="flex gap-2">
+                    {config.layoutOptions.map(layout => (
+                      <button
+                        key={layout}
+                        onClick={() => setSelectedLayout(layout)}
+                        className={`flex-1 px-3 py-2.5 rounded-xl text-[11px] font-medium transition-all cursor-pointer border-2 ${
+                          selectedLayout === layout
+                            ? `${colors.accentBg} ${colors.badgeText} ${colors.accentBorder} shadow-sm`
+                            : `border-border-light text-text-muted hover:${colors.accentBorder}`
+                        }`}
+                      >
+                        {layout}
+                        {selectedLayout === layout && <CheckCircle size={10} className="inline ml-1" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Confirm Button */}
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="flex items-center justify-between">
+                  <button
+                    onClick={() => advanceStage(1)}
+                    className="flex items-center gap-1 text-[11px] text-text-muted hover:text-text-secondary cursor-pointer"
+                  >
+                    <ChevronLeft size={12} /> Back to Inputs
+                  </button>
+                  <button
+                    onClick={() => advanceStage(3)}
+                    className={`flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r ${colors.gradient} hover:opacity-90 text-white rounded-xl text-[12px] font-semibold transition-all cursor-pointer shadow-md`}
+                  >
+                    Confirm Output <ArrowRight size={13} />
+                  </button>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Stage 3: Preview */}
+          <AnimatePresence mode="wait">
+            {stage === 3 && config && colors && (
+              <motion.div
+                key="stage-3"
+                initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.5 }}
+              >
+                {/* Header Row */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <FileText size={14} className={colors.accent} />
+                    <h2 className="text-[13px] font-semibold text-text">{config.name}</h2>
+                    <span className="text-[8px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Live Preview
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button className={`flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r ${colors.gradient} hover:opacity-90 text-white rounded-lg text-[10px] font-semibold transition-all cursor-pointer shadow-sm`}>
+                      <Play size={10} /> Run Now
+                    </button>
+                    <button
+                      onClick={handleSaveWorkflow}
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-[10px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer"
+                    >
+                      <Save size={10} /> Save
+                    </button>
+                  </div>
+                </div>
+
+                {/* KPI Cards — dark bento style */}
+                <div className="grid grid-cols-4 gap-2 mb-4">
+                  {config.previewStats.map((stat, i) => (
+                    <motion.div key={stat.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
+                      className="rounded-2xl p-3 relative overflow-hidden"
+                      style={{ background: 'linear-gradient(145deg, #1e1230 0%, #160d24 100%)', border: '1px solid rgba(106,18,205,0.12)' }}>
+                      <div className={`text-[16px] font-extrabold text-white leading-none tracking-tight`}>{stat.value}</div>
+                      <div className="text-[8px] text-white/40 uppercase tracking-wider mt-1">{stat.label}</div>
+                      <div className="absolute -top-4 -right-4 w-12 h-12 rounded-full opacity-20 blur-xl" style={{ background: config.color }} />
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Mini Area Chart */}
+                <div className="bg-white rounded-xl border border-border-light shadow-sm p-3 mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Execution Trend — Last 7 Runs</span>
+                    <span className="text-[10px] font-semibold text-green-600">{'\u2191'} 12% improvement</span>
+                  </div>
+                  <svg width="100%" height="48" viewBox="0 0 400 48" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="preview-trend" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={config.color} stopOpacity={0.15} />
+                        <stop offset="100%" stopColor={config.color} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <polygon fill="url(#preview-trend)" points="0,48 0,38 57,35 114,30 171,32 228,25 285,20 342,15 400,10 400,48" />
+                    <polyline fill="none" stroke={config.color} strokeWidth="2" strokeLinecap="round" points="0,38 57,35 114,30 171,32 228,25 285,20 342,15 400,10" />
+                    <circle cx="400" cy="10" r="3" fill={config.color} />
+                  </svg>
+                </div>
+
+                {/* AI Summary */}
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                  className="rounded-xl p-4 mb-4 relative overflow-hidden"
+                  style={{ background: 'linear-gradient(135deg, rgba(106,18,205,0.04) 0%, rgba(255,255,255,0.8) 40%, rgba(106,18,205,0.02) 100%)', border: '1px solid rgba(106,18,205,0.08)' }}>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Sparkles size={12} className="text-primary" />
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider">AI Summary</span>
+                  </div>
+                  {config.id === 'reconciliation' && (
+                    <p className="text-[11.5px] text-text leading-relaxed">
+                      Processed <strong>1,247 records</strong> across PO, GRN, and Invoice data. <strong>87% matched</strong> successfully with zero variance.
+                      <strong className="text-amber-600"> 98 records</strong> show amount variances within the 5% tolerance — recommend bulk approval.
+                      <strong className="text-red-600"> 60 unmatched items</strong> require manual investigation:
+                      32 missing GRNs (likely goods in transit) and 28 invoices with no corresponding PO.
+                      Top vendor by variance: <strong>Global Supplies Ltd</strong> (₹2,450 across 3 invoices).
+                    </p>
+                  )}
+                  {config.id === 'detection' && (
+                    <p className="text-[11.5px] text-text leading-relaxed">
+                      Scanned <strong>12,450 invoices</strong> against 6-month history. Identified <strong className="text-red-600">8 potential duplicates</strong> totaling <strong>₹6.16L at risk</strong>.
+                      Highest confidence match: INV-4521 vs INV-3102 (Acme Corp, 96% match).
+                      <strong> 3 invoices</strong> from the same vendor within 48 hours flagged as suspicious.
+                      False positive rate: <strong className="text-green-600">4.2%</strong> (down from 6.5% last run).
+                      Recommend immediate review of the 3 critical-severity flags before next payment batch.
+                    </p>
+                  )}
+                  {config.id === 'monitoring' && (
+                    <p className="text-[11.5px] text-text leading-relaxed">
+                      Detected <strong>24 vendor master changes</strong> in the monitoring window.
+                      <strong className="text-red-600"> 3 unauthorized changes</strong> flagged — 2 bank account modifications by unrecognized users.
+                      <strong>16 changes auto-approved</strong> based on authorization matrix.
+                      Avg response time for flagged items: <strong>2.4 hours</strong>.
+                      Critical alert: <strong>Acme Corp</strong> bank account changed from HDFC to ICICI by <code className="text-[10px] bg-surface-2 px-1 rounded">admin_user</code> — requires immediate verification.
+                    </p>
+                  )}
+                  {config.id === 'compliance' && (
+                    <p className="text-[11.5px] text-text leading-relaxed">
+                      Scanned <strong>2,341 users</strong> against 156 SOD rules. Found <strong className="text-red-600">12 violations</strong> —
+                      <strong>4 critical</strong> (Create PO + Approve PO, Edit Master + Pay Vendor).
+                      <strong className="text-green-600">8 violations have compensating controls</strong> in place.
+                      4 users require immediate role remediation.
+                      P2P process has the highest violation density (7 of 12).
+                      Recommend escalating USR-042 and USR-201 to access governance team.
+                    </p>
+                  )}
+                </motion.div>
+
+                {/* Preview Table — enhanced */}
+                <div className="bg-white rounded-xl border border-border-light shadow-sm overflow-hidden mb-4">
+                  {/* Sheet Tabs */}
+                  {outputSheets.length > 1 && (
+                    <div className="flex items-center bg-surface-2 border-b border-border-light">
+                      {outputSheets.map((sheet) => (
+                        <button
+                          key={sheet.id}
+                          onClick={() => setActiveSheetId(sheet.id)}
+                          className={`px-4 py-2 text-[10px] font-semibold transition-all cursor-pointer border-b-2 ${
+                            activeSheetId === sheet.id
+                              ? `bg-white ${colors.accent} border-current -mb-px`
+                              : 'text-text-muted border-transparent hover:text-text-secondary hover:bg-white/40'
+                          }`}
+                        >
+                          {sheet.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {/* Table Header */}
+                  <div
+                    className="grid gap-0 bg-surface-2 px-3 py-2 border-b border-border-light"
+                    style={{ gridTemplateColumns: `28px repeat(${enabledColumns.length}, minmax(0, 1fr))` }}
+                  >
+                    <div className="text-[7px] font-bold uppercase tracking-wider text-text-muted/40">#</div>
+                    {enabledColumns.map(col => (
+                      <div key={col.id} className="text-[8px] font-bold uppercase tracking-wider text-text-muted/60 truncate pr-1">
+                        {col.name}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Table Rows */}
+                  {config.previewRows.map((row, i) => {
+                    const rowBg =
+                      row.status === 'matched' || row.status === 'ok' ? (i % 2 === 0 ? 'bg-green-50/30' : 'bg-green-50/15') :
+                      row.status === 'variance' || row.status === 'warning' ? (i % 2 === 0 ? 'bg-amber-50/40' : 'bg-amber-50/20') :
+                      row.status === 'unmatched' || row.status === 'flagged' ? (i % 2 === 0 ? 'bg-red-50/30' : 'bg-red-50/15') :
+                      (i % 2 === 0 ? 'bg-white' : 'bg-surface-2/30');
+
                     return (
                       <motion.div
                         key={i}
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.05 }}
-                        className="bg-surface-2 rounded-xl p-3 border border-border-light"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.3 + i * 0.06 }}
+                        className={`grid gap-0 px-3 py-2.5 border-b border-border-light last:border-0 ${rowBg}`}
+                        style={{ gridTemplateColumns: `28px repeat(${enabledColumns.length}, minmax(0, 1fr))` }}
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] font-bold text-primary uppercase tracking-wider">{step?.category}</span>
-                          <span className="text-[9px] text-text-muted">Step {i + 1}</span>
-                        </div>
-                        <div className="text-[11px] text-text font-medium mb-2 flex items-center gap-1">
-                          <CheckCircle size={10} className="text-green-500 shrink-0" /> {step?.options[0]}
-                        </div>
-                        {assumptions.length > 0 && (
-                          <div className="pl-3 border-l-2 border-amber-300">
-                            <div className="text-[9px] font-bold text-amber-600 uppercase tracking-wider mb-1 flex items-center gap-1">
-                              <AlertTriangle size={9} /> Assumptions
+                        <div className="text-[9px] font-mono text-text-muted/40">{i + 1}</div>
+                        {enabledColumns.map((col, ci) => {
+                          const cellValue = row.cells[ci] ?? '';
+                          const isBadge = col.type === 'badge';
+                          const isPercent = col.type === 'percent';
+
+                          if (isBadge) {
+                            const badgeColor =
+                              row.status === 'matched' || row.status === 'ok' ? 'text-green-700 bg-green-100' :
+                              row.status === 'variance' || row.status === 'warning' ? 'text-amber-700 bg-amber-100' :
+                              'text-red-700 bg-red-100';
+                            const badgeIcon =
+                              row.status === 'matched' || row.status === 'ok' ? '\u2713' :
+                              row.status === 'variance' || row.status === 'warning' ? '\u26A0' : '\u2717';
+                            return (
+                              <div key={col.id} className="flex items-center">
+                                <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full ${badgeColor} flex items-center gap-1`}>
+                                  <span className="text-[7px]">{badgeIcon}</span> {cellValue}
+                                </span>
+                              </div>
+                            );
+                          }
+
+                          if (isPercent) {
+                            const pctNum = parseInt(cellValue);
+                            const pctColor = pctNum >= 90 ? 'text-green-600' : pctNum >= 50 ? 'text-amber-600' : 'text-red-500';
+                            return (
+                              <div key={col.id} className={`text-[10px] font-bold ${pctColor}`}>
+                                {cellValue}
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div key={col.id} className={`text-[10px] ${col.type === 'number' ? 'font-mono' : ''} text-text truncate pr-1`}>
+                              {cellValue}
                             </div>
-                            {assumptions.map((a, j) => (
-                              <div key={j} className="text-[10px] text-text-muted leading-relaxed">&bull; {a}</div>
-                            ))}
-                          </div>
-                        )}
+                          );
+                        })}
                       </motion.div>
                     );
                   })}
                 </div>
-              </div>
-            </motion.div>
-          )}
 
-          {/* Actions — only show when complete */}
-          {isComplete && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="flex gap-3 justify-center pb-2">
-              <button className="flex items-center gap-1.5 px-5 py-2.5 border border-border rounded-xl text-[12px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer">
-                <Play size={13} /> Test Run
-              </button>
-              <NoiseButton containerClassName="rounded-xl" gradientColors={['rgb(106, 18, 205)', 'rgb(155, 89, 214)', 'rgb(192, 132, 252)']}>
-                <span className="flex items-center gap-1.5 px-5 py-2.5 text-white text-[12px] font-semibold cursor-pointer" onClick={handleSave}>
-                  <Save size={13} /> Save Workflow
-                </span>
-              </NoiseButton>
-            </motion.div>
-          )}
+                {/* Action Bar */}
+                <div className="flex items-center justify-between pt-3 border-t border-border-light">
+                  <button onClick={() => advanceStage(2)} className="flex items-center gap-1 text-[11px] text-text-muted hover:text-text-secondary cursor-pointer">
+                    <ChevronLeft size={12} /> Edit Configuration
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleSaveWorkflow} className="flex items-center gap-1.5 px-4 py-2 border border-border rounded-xl text-[11px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer">
+                      <Save size={12} /> Save to Library
+                    </button>
+                    <button className={`flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r ${colors.gradient} hover:opacity-90 text-white rounded-xl text-[11px] font-semibold transition-all cursor-pointer shadow-md`}>
+                      <Play size={12} /> {RUN_LABELS[config.id]}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* Building indicator when in progress */}
-          {isBuilding && (
+          {/* Building indicator — show when chat is driving stages and we're between 1-2 */}
+          {buildStage !== undefined && stage > 0 && stage < 3 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-center py-6">
-              <div className="flex items-center gap-2 text-[12px] text-primary font-medium">
+              <div className={`flex items-center gap-2 text-[12px] ${colors?.accent || 'text-primary'} font-medium`}>
                 <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>
                   <Sparkles size={14} />
                 </motion.div>

@@ -2,7 +2,7 @@
 export const BUSINESS_PROCESSES = [
   { id: "p2p", name: "Procure to Pay", abbr: "P2P", color: "#6a12cd", risks: 9, controls: 24, coverage: 72, sops: 2, workflows: 5 },
   { id: "o2c", name: "Order to Cash", abbr: "O2C", color: "#0284c7", risks: 7, controls: 18, coverage: 58, sops: 1, workflows: 3 },
-  { id: "s2c", name: "Source to Contract", abbr: "S2C", color: "#059669", risks: 5, controls: 14, coverage: 40, sops: 0, workflows: 4 },
+  { id: "s2c", name: "Source to Contract", abbr: "S2C", color: "#8b5cf6", risks: 5, controls: 14, coverage: 40, sops: 0, workflows: 4 },
   { id: "r2r", name: "Record to Report", abbr: "R2R", color: "#d97706", risks: 11, controls: 31, coverage: 85, sops: 3, workflows: 7 },
 ];
 
@@ -356,6 +356,40 @@ export const WORKFLOW_ASSUMPTIONS: Record<number, string[]> = {
   5: ['Standard layout selected', 'Results auto-refresh on new data', 'Max 100 rows per page in output table'],
 };
 
+// ─── Reconciliation Clarification Steps ───
+export const RECONCILIATION_CLARIFICATION_STEPS = [
+  {
+    stage: 1,
+    question: "I'll set up a Three-Way PO Match reconciliation. First \u2014 which data sources do you want to include?",
+    options: ['All 4 sources (PO + GRN + Invoice + Master)', 'PO + Invoice only (skip GRN)', 'Custom selection'],
+    category: 'Data Sources',
+  },
+  {
+    stage: 2,
+    question: "The Vendor Master Data was last refreshed on Mar 20. Should I freeze it for this run, or do you want to upload a fresh copy?",
+    options: ['Freeze current version (Mar 20)', 'Upload new master data', 'Skip master data validation'],
+    category: 'File Freeze',
+  },
+  {
+    stage: 3,
+    question: "What match tolerance should I use for amount variance?",
+    options: ['Exact match (0%)', '\u00b1 1% tolerance', '\u00b1 5% tolerance', 'AI-recommended threshold'],
+    category: 'Match Rules',
+  },
+  {
+    stage: 4,
+    question: "I've configured the inputs. Now let's customize the output. Which layout do you prefer?",
+    options: ['Table view (all columns)', 'Dashboard (KPIs + summary table)', 'Split view (matched vs unmatched)'],
+    category: 'Output Layout',
+  },
+  {
+    stage: 5,
+    question: "Here's the output preview with sample data. Ready to run the reconciliation?",
+    options: ['Run now', 'Save as workflow template first', 'Customize columns before running'],
+    category: 'Confirm & Run',
+  },
+];
+
 // ─── Dashboard Widgets ───
 export const DASHBOARD_WIDGETS = [
   { id: "dw-001", type: "kpi", title: "Total Risks", value: 12, change: "+2", trend: "up" },
@@ -456,4 +490,219 @@ export const SOP_AI_RECOMMENDATIONS: Record<string, Array<{ type: 'improve' | 'a
     { type: 'add', text: 'Add inter-company elimination check for cross-subsidiary entries', impact: 'high' },
     { type: 'improve', text: 'Replace threshold-based variance detection with AI anomaly detection', impact: 'medium' },
   ],
+};
+
+// ─── Workflow Type Configurations (for unified canvas) ───
+export type WorkflowTypeId = 'detection' | 'monitoring' | 'reconciliation' | 'compliance';
+
+export interface WorkflowInputSource {
+  id: string;
+  name: string;
+  type: string;
+  format: string;
+  fields: string[];
+  frozen: boolean;
+  frozenDate: string | null;
+  records: string | null;
+}
+
+export interface WorkflowOutputColumn {
+  id: string;
+  name: string;
+  type: 'text' | 'number' | 'badge' | 'percent';
+  enabled: boolean;
+  frozen: boolean;
+}
+
+export interface WorkflowPreviewRow {
+  cells: string[];
+  status: 'matched' | 'variance' | 'unmatched' | 'flagged' | 'ok' | 'warning';
+}
+
+export interface WorkflowTypeConfig {
+  id: WorkflowTypeId;
+  name: string;
+  description: string;
+  color: string;
+  inputSources: WorkflowInputSource[];
+  matchSettings: { toleranceDefault: string; logicOptions: string[]; defaultLogic: string };
+  outputColumns: WorkflowOutputColumn[];
+  layoutOptions: string[];
+  previewStats: Array<{ label: string; value: string; color: string }>;
+  previewRows: WorkflowPreviewRow[];
+  kpiOptions: Array<{ id: string; label: string; enabled: boolean }>;
+}
+
+export const WORKFLOW_TYPE_CONFIGS: Record<WorkflowTypeId, WorkflowTypeConfig> = {
+  detection: {
+    id: 'detection',
+    name: 'Duplicate Invoice Detection',
+    description: 'Detect duplicate invoices across vendor payments',
+    color: '#6a12cd',
+    inputSources: [
+      { id: 'invoices', name: 'Invoice Data', type: 'SAP ERP — AP Module', format: 'SQL', fields: ['Invoice Number', 'Vendor ID', 'Amount', 'Date', 'PO Reference'], frozen: false, frozenDate: null, records: null },
+      { id: 'history', name: 'Historical Invoices', type: 'Invoice Archive', format: 'CSV', fields: ['Invoice Number', 'Vendor', 'Amount', 'Payment Date', 'Status'], frozen: false, frozenDate: null, records: null },
+      { id: 'master', name: 'Vendor Master Data', type: 'System Reference', format: 'SQL', fields: ['Vendor ID', 'Name', 'Bank Account', 'Payment Terms', 'Status'], frozen: true, frozenDate: 'Mar 20, 2026', records: '892 vendors' },
+    ],
+    matchSettings: { toleranceDefault: '5%', logicOptions: ['Exact Match', 'Fuzzy Match', 'AI-Powered'], defaultLogic: 'Fuzzy Match' },
+    outputColumns: [
+      { id: 'invoice_no', name: 'Invoice Number', type: 'text', enabled: true, frozen: false },
+      { id: 'vendor', name: 'Vendor', type: 'text', enabled: true, frozen: false },
+      { id: 'amount', name: 'Amount', type: 'number', enabled: true, frozen: false },
+      { id: 'original', name: 'Original Invoice', type: 'text', enabled: true, frozen: false },
+      { id: 'match_score', name: 'Match Score', type: 'percent', enabled: true, frozen: true },
+      { id: 'status', name: 'Status', type: 'badge', enabled: true, frozen: true },
+      { id: 'action', name: 'Recommended Action', type: 'text', enabled: false, frozen: false },
+    ],
+    layoutOptions: ['Table', 'Dashboard', 'Split View'],
+    previewStats: [
+      { label: 'Records Scanned', value: '12,450', color: 'text-primary' },
+      { label: 'Duplicates Found', value: '8', color: 'text-red-600' },
+      { label: 'Amount at Risk', value: '\u20b96.16L', color: 'text-orange-600' },
+      { label: 'Confidence', value: '94%', color: 'text-emerald-600' },
+    ],
+    previewRows: [
+      { cells: ['INV-4521', 'Acme Corp', '\u20b945,200', 'INV-3102', '96%', 'Duplicate'], status: 'flagged' },
+      { cells: ['INV-4533', 'Global Supplies', '\u20b91,28,750', 'INV-2987', '92%', 'Likely Duplicate'], status: 'warning' },
+      { cells: ['INV-4558', 'TechVendor', '\u20b967,400', 'INV-3241', '88%', 'Review'], status: 'warning' },
+      { cells: ['INV-4571', 'Acme Corp', '\u20b923,100', '\u2014', '12%', 'Clean'], status: 'ok' },
+      { cells: ['INV-4589', 'Pinnacle', '\u20b989,600', 'INV-3012', '78%', 'Review'], status: 'warning' },
+    ],
+    kpiOptions: [
+      { id: 'total_scanned', label: 'Total Records Scanned', enabled: true },
+      { id: 'duplicates', label: 'Duplicates Found', enabled: true },
+      { id: 'amount_risk', label: 'Amount at Risk', enabled: true },
+      { id: 'run_comparison', label: 'Comparison vs Last Run', enabled: false },
+      { id: 'trend', label: 'Duplicate Trend (30 days)', enabled: false },
+    ],
+  },
+  reconciliation: {
+    id: 'reconciliation',
+    name: 'Three-Way PO Match',
+    description: 'Match Purchase Orders, GRN, and Invoices',
+    color: '#7c3aed',
+    inputSources: [
+      { id: 'po', name: 'Purchase Orders', type: 'SAP ERP Export', format: 'CSV', fields: ['PO Number', 'Vendor ID', 'Amount', 'Date', 'Currency'], frozen: false, frozenDate: null, records: null },
+      { id: 'grn', name: 'Goods Receipt Notes', type: 'SAP ERP Export', format: 'CSV', fields: ['GRN Number', 'PO Reference', 'Quantity', 'Receipt Date', 'Warehouse'], frozen: false, frozenDate: null, records: null },
+      { id: 'inv', name: 'Vendor Invoices', type: 'Upload / AP Module', format: 'PDF/CSV', fields: ['Invoice Number', 'Vendor', 'Amount', 'Due Date', 'Tax'], frozen: false, frozenDate: null, records: null },
+      { id: 'master', name: 'Vendor Master Data', type: 'System Reference', format: 'SQL', fields: ['Vendor ID', 'Name', 'Bank Account', 'Payment Terms', 'Status'], frozen: true, frozenDate: 'Mar 20, 2026', records: '892 vendors' },
+    ],
+    matchSettings: { toleranceDefault: '5%', logicOptions: ['Exact Match', 'Fuzzy Match', 'AI-Powered'], defaultLogic: 'Fuzzy Match' },
+    outputColumns: [
+      { id: 'po_number', name: 'PO Number', type: 'text', enabled: true, frozen: false },
+      { id: 'grn_ref', name: 'GRN Reference', type: 'text', enabled: true, frozen: false },
+      { id: 'invoice_no', name: 'Invoice Number', type: 'text', enabled: true, frozen: false },
+      { id: 'vendor', name: 'Vendor Name', type: 'text', enabled: true, frozen: false },
+      { id: 'po_amount', name: 'PO Amount', type: 'number', enabled: true, frozen: false },
+      { id: 'inv_amount', name: 'Invoice Amount', type: 'number', enabled: true, frozen: false },
+      { id: 'variance', name: 'Variance', type: 'number', enabled: true, frozen: true },
+      { id: 'match_status', name: 'Match Status', type: 'badge', enabled: true, frozen: true },
+      { id: 'match_score', name: 'Match Score', type: 'percent', enabled: true, frozen: false },
+    ],
+    layoutOptions: ['Table', 'Dashboard', 'Split View'],
+    previewStats: [
+      { label: 'Total Records', value: '1,247', color: 'text-primary' },
+      { label: 'Matched', value: '1,089 (87%)', color: 'text-emerald-600' },
+      { label: 'Variance', value: '98 (8%)', color: 'text-amber-600' },
+      { label: 'Unmatched', value: '60 (5%)', color: 'text-red-600' },
+    ],
+    previewRows: [
+      { cells: ['PO-001', 'GRN-4521', 'INV-4521', 'Acme Corp', '\u20b945,200', '\u20b945,200', '\u20b90', 'Matched', '100%'], status: 'matched' },
+      { cells: ['PO-002', 'GRN-4533', 'INV-4533', 'Global Supplies', '\u20b91,28,750', '\u20b91,31,200', '\u20b92,450', 'Variance', '96%'], status: 'variance' },
+      { cells: ['PO-003', '\u2014', 'INV-4558', 'TechVendor', '\u20b967,400', '\u20b967,400', '\u2014', 'No GRN', '0%'], status: 'unmatched' },
+      { cells: ['PO-004', 'GRN-4571', '\u2014', 'Acme Corp', '\u20b923,100', '\u2014', '\u2014', 'No Invoice', '0%'], status: 'unmatched' },
+      { cells: ['PO-005', 'GRN-4589', 'INV-4589', 'Pinnacle', '\u20b989,600', '\u20b989,600', '\u20b90', 'Matched', '100%'], status: 'matched' },
+    ],
+    kpiOptions: [
+      { id: 'total', label: 'Total Records Processed', enabled: true },
+      { id: 'match_rate', label: 'Match Rate', enabled: true },
+      { id: 'variance_amount', label: 'Total Variance Amount', enabled: true },
+      { id: 'run_comparison', label: 'Comparison vs Last Run', enabled: false },
+      { id: 'aging', label: 'Unmatched Aging Analysis', enabled: false },
+    ],
+  },
+  monitoring: {
+    id: 'monitoring',
+    name: 'Vendor Master Change Monitor',
+    description: 'Track unauthorized changes to vendor master data',
+    color: '#0284c7',
+    inputSources: [
+      { id: 'changelog', name: 'Change Log', type: 'SAP Change Documents', format: 'SQL', fields: ['Change ID', 'Table', 'Field', 'Old Value', 'New Value', 'User', 'Timestamp'], frozen: false, frozenDate: null, records: null },
+      { id: 'master', name: 'Vendor Master Data', type: 'System Reference', format: 'SQL', fields: ['Vendor ID', 'Name', 'Bank Account', 'Payment Terms', 'Status'], frozen: true, frozenDate: 'Mar 20, 2026', records: '892 vendors' },
+      { id: 'auth', name: 'Authorization Matrix', type: 'HR/Access Module', format: 'CSV', fields: ['User ID', 'Role', 'Permissions', 'Department', 'Active'], frozen: true, frozenDate: 'Mar 15, 2026', records: '145 users' },
+    ],
+    matchSettings: { toleranceDefault: 'N/A', logicOptions: ['Rule-Based', 'AI Anomaly Detection', 'Threshold-Based'], defaultLogic: 'Rule-Based' },
+    outputColumns: [
+      { id: 'change_id', name: 'Change ID', type: 'text', enabled: true, frozen: false },
+      { id: 'vendor', name: 'Vendor', type: 'text', enabled: true, frozen: false },
+      { id: 'field', name: 'Changed Field', type: 'text', enabled: true, frozen: false },
+      { id: 'old_value', name: 'Old Value', type: 'text', enabled: true, frozen: false },
+      { id: 'new_value', name: 'New Value', type: 'text', enabled: true, frozen: false },
+      { id: 'user', name: 'Changed By', type: 'text', enabled: true, frozen: false },
+      { id: 'authorized', name: 'Authorized?', type: 'badge', enabled: true, frozen: true },
+      { id: 'risk_level', name: 'Risk Level', type: 'badge', enabled: true, frozen: true },
+    ],
+    layoutOptions: ['Timeline', 'Table', 'Alert Dashboard'],
+    previewStats: [
+      { label: 'Changes Detected', value: '24', color: 'text-primary' },
+      { label: 'Unauthorized', value: '3', color: 'text-red-600' },
+      { label: 'High Risk', value: '5', color: 'text-orange-600' },
+      { label: 'Auto-Approved', value: '16', color: 'text-emerald-600' },
+    ],
+    previewRows: [
+      { cells: ['CHG-101', 'Acme Corp', 'Bank Account', 'HDFC-****1234', 'ICICI-****5678', 'admin_user', 'Unauthorized', 'Critical'], status: 'flagged' },
+      { cells: ['CHG-102', 'Global Supplies', 'Payment Terms', 'Net 30', 'Net 60', 'ap_manager', 'Authorized', 'Low'], status: 'ok' },
+      { cells: ['CHG-103', 'TechVendor', 'Bank Account', 'SBI-****9012', 'BOB-****3456', 'unknown_user', 'Unauthorized', 'Critical'], status: 'flagged' },
+      { cells: ['CHG-104', 'Pinnacle', 'Address', '123 Main St', '456 Oak Ave', 'procurement', 'Authorized', 'Low'], status: 'ok' },
+      { cells: ['CHG-105', 'Atlas Mfg', 'Status', 'Active', 'Blocked', 'compliance', 'Authorized', 'Medium'], status: 'warning' },
+    ],
+    kpiOptions: [
+      { id: 'total_changes', label: 'Total Changes', enabled: true },
+      { id: 'unauthorized', label: 'Unauthorized Changes', enabled: true },
+      { id: 'response_time', label: 'Avg Response Time', enabled: false },
+      { id: 'run_comparison', label: 'Comparison vs Last Run', enabled: false },
+    ],
+  },
+  compliance: {
+    id: 'compliance',
+    name: 'SOD Violation Detector',
+    description: 'Detect segregation of duties conflicts',
+    color: '#7c3aed',
+    inputSources: [
+      { id: 'roles', name: 'Role Assignments', type: 'SAP GRC Module', format: 'SQL', fields: ['User ID', 'Role', 'Transaction Code', 'Authorization Object', 'Profile'], frozen: false, frozenDate: null, records: null },
+      { id: 'matrix', name: 'SOD Rule Matrix', type: 'Compliance Config', format: 'CSV', fields: ['Rule ID', 'Conflict Pair', 'Risk Level', 'Business Process', 'Mitigation'], frozen: true, frozenDate: 'Mar 1, 2026', records: '156 rules' },
+      { id: 'users', name: 'User Directory', type: 'HR Module', format: 'SQL', fields: ['User ID', 'Name', 'Department', 'Manager', 'Status'], frozen: true, frozenDate: 'Mar 18, 2026', records: '2,341 users' },
+    ],
+    matchSettings: { toleranceDefault: 'N/A', logicOptions: ['Rule-Based', 'AI Risk Scoring', 'Custom Matrix'], defaultLogic: 'Rule-Based' },
+    outputColumns: [
+      { id: 'user', name: 'User', type: 'text', enabled: true, frozen: false },
+      { id: 'conflict', name: 'Conflict Pair', type: 'text', enabled: true, frozen: false },
+      { id: 'roles', name: 'Conflicting Roles', type: 'text', enabled: true, frozen: false },
+      { id: 'risk', name: 'Risk Level', type: 'badge', enabled: true, frozen: true },
+      { id: 'process', name: 'Business Process', type: 'text', enabled: true, frozen: false },
+      { id: 'mitigation', name: 'Mitigation', type: 'badge', enabled: true, frozen: true },
+      { id: 'last_activity', name: 'Last Activity', type: 'text', enabled: false, frozen: false },
+    ],
+    layoutOptions: ['Risk Matrix', 'Table', 'Scorecard'],
+    previewStats: [
+      { label: 'Users Scanned', value: '2,341', color: 'text-primary' },
+      { label: 'Violations', value: '12', color: 'text-red-600' },
+      { label: 'High Risk', value: '4', color: 'text-orange-600' },
+      { label: 'Mitigated', value: '8', color: 'text-emerald-600' },
+    ],
+    previewRows: [
+      { cells: ['USR-042', 'Create PO + Approve PO', 'Purchaser, Approver', 'Critical', 'P2P', 'None'], status: 'flagged' },
+      { cells: ['USR-078', 'Create Vendor + Pay Vendor', 'AP Clerk, AP Manager', 'High', 'P2P', 'Compensating'], status: 'warning' },
+      { cells: ['USR-103', 'Post JE + Approve JE', 'Accountant, Supervisor', 'Medium', 'R2R', 'Dual Approval'], status: 'ok' },
+      { cells: ['USR-156', 'Create PO + Receive Goods', 'Buyer, Warehouse', 'High', 'P2P', 'None'], status: 'flagged' },
+      { cells: ['USR-201', 'Edit Master + Pay Vendor', 'Admin, AP Clerk', 'Critical', 'P2P', 'None'], status: 'flagged' },
+    ],
+    kpiOptions: [
+      { id: 'users_scanned', label: 'Users Scanned', enabled: true },
+      { id: 'violations', label: 'SOD Violations', enabled: true },
+      { id: 'mitigated', label: 'Mitigated Controls', enabled: true },
+      { id: 'run_comparison', label: 'Comparison vs Last Run', enabled: false },
+      { id: 'trend', label: 'Violation Trend (quarterly)', enabled: false },
+    ],
+  },
 };

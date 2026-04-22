@@ -1,25 +1,51 @@
 import { useState, useCallback } from 'react';
+import type { WorkflowTypeId } from '../data/mockData';
 
 export type View =
   | 'home'
   | 'chat'
-  | 'workflow-builder'
   | 'workflow-templates'
   | 'workflow-detail'
   | 'workflow-library'
+  | 'workflow-executor'
+  // Governance
   | 'business-processes'
   | 'bp-detail'
+  | 'governance-racm'
+  | 'governance-racm-detail'
+  | 'governance-racm-generate'
+  | 'governance-controls'
+  | 'governance-control-detail'
   | 'audit-risk-register'
+  | 'audit-planning'
+  // Execution
   | 'audit-execution'
-  | 'data-sources'
+  | 'execution-testing'
+  | 'execution-evidence'
+  // Intelligence
   | 'dashboards'
   | 'reports'
   | 'report-history'
   | 'report-builder'
-  | 'audit-planning';
+  | 'ai-concierge'
+  | 'ai-concierge-forensics'
+  | 'ai-concierge-table-extractor'
+  | 'findings'
+  // System
+  | 'configuration'
+  | 'data-sources'
+  | 'admin-users'
+  | 'admin-roles'
+  | 'admin-settings'
+  | 'admin-integrations'
+  | 'admin-logs'
+  // One-Click Audit
+  | 'one-click-audit'
+  // Chat trash
+  | 'chat-trash';
 
-export type ChatMode = 'chat' | 'builder';
-export type ArtifactTab = 'plan' | 'code' | 'sources' | 'result';
+export type ChatMode = 'chat' | 'workflow';
+export type ArtifactTab = 'plan' | 'code' | 'sources' | 'result' | 'flow' | 'preview';
 export type ArtifactMode = 'query' | 'workflow';
 
 export interface AppState {
@@ -43,11 +69,14 @@ export interface AppState {
   emailPreviewRecipient: string | null;
   // Report builder
   reportBuilderContext: 'new' | 'action-report' | 'from-template' | null;
-  // Workflow build stage (0=none, 1-5=progressive build)
-  workflowBuildStage: number;
-  workflowUiEnhancements: string[];
-  // Chat initial query (from Ask AI actions)
+  // Unified workflow canvas
+  workflowCanvasStage: number; // 0=waiting, 1=input, 2=output, 3=preview
+  workflowType: WorkflowTypeId | null;
+  // Chat initial context (for workflow mode entry)
   chatInitialQuery: string | null;
+  chatWorkflowContext: { templateId?: string; workflowId?: string } | null;
+  // Query assumptions
+  queryAssumptions: string[];
 }
 
 const INITIAL_STATE: AppState = {
@@ -69,9 +98,11 @@ const INITIAL_STATE: AppState = {
   shareContext: null,
   emailPreviewRecipient: null,
   reportBuilderContext: null,
-  workflowBuildStage: 0,
-  workflowUiEnhancements: [],
+  workflowCanvasStage: 0,
+  workflowType: null,
   chatInitialQuery: null,
+  chatWorkflowContext: null,
+  queryAssumptions: [],
 };
 
 export function useAppState() {
@@ -134,16 +165,36 @@ export function useAppState() {
     setState(prev => ({ ...prev, view: 'report-builder', reportBuilderContext: context }));
   }, []);
 
-  const setWorkflowBuildStage = useCallback((stage: number) => {
-    setState(prev => ({ ...prev, workflowBuildStage: stage }));
+  // Unified workflow canvas
+  const setWorkflowCanvasStage = useCallback((stage: number) => {
+    setState(prev => ({ ...prev, workflowCanvasStage: stage }));
   }, []);
 
-  const setWorkflowUiEnhancements = useCallback((enhancements: string[]) => {
-    setState(prev => ({ ...prev, workflowUiEnhancements: enhancements }));
+  const setWorkflowType = useCallback((type: WorkflowTypeId | null) => {
+    setState(prev => ({ ...prev, workflowType: type }));
   }, []);
 
   const setChatInitialQuery = useCallback((query: string | null) => {
     setState(prev => ({ ...prev, chatInitialQuery: query }));
+  }, []);
+
+  const setQueryAssumptions = useCallback((assumptions: string[]) => {
+    setState(prev => ({ ...prev, queryAssumptions: assumptions }));
+  }, []);
+
+  const enterWorkflowMode = useCallback((context?: { templateId?: string; workflowId?: string }) => {
+    setState(prev => ({
+      ...prev,
+      view: 'chat' as View,
+      chatMode: 'workflow' as ChatMode,
+      artifactMode: 'workflow' as ArtifactMode,
+      showArtifacts: true,
+      chatWorkflowContext: context ?? null,
+    }));
+  }, []);
+
+  const openWorkflowExecutor = useCallback((workflowId: string) => {
+    setState(prev => ({ ...prev, view: 'workflow-executor' as View, selectedWorkflowId: workflowId }));
   }, []);
 
   return {
@@ -162,8 +213,11 @@ export function useAppState() {
     setShowShareModal,
     setShowPowerBIWizard,
     openReportBuilder,
-    setWorkflowBuildStage,
-    setWorkflowUiEnhancements,
+    setWorkflowCanvasStage,
+    setWorkflowType,
     setChatInitialQuery,
+    setQueryAssumptions,
+    enterWorkflowMode,
+    openWorkflowExecutor,
   };
 }

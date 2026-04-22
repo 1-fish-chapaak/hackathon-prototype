@@ -473,12 +473,13 @@ function RACMWorkflowPanel({ bpId }: { bpId: string }) {
 function BPDetailView({ bp, onBack }: {
   bp: typeof BUSINESS_PROCESSES[0]; onBack: () => void;
 }) {
-  const [tab, setTab] = useState<'overview' | 'sops' | 'racm' | 'workflows'>('overview');
+  const [tab, setTab] = useState<'sop' | 'racm' | 'workflows' | 'risks'>('sop');
   const [linkModal, setLinkModal] = useState<typeof RISKS[0] | null>(null);
   const [uploadModal, setUploadModal] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedWorkflows, setSelectedWorkflows] = useState<Set<string>>(new Set());
   const [sopVisuals, setSopVisuals] = useState<Record<string, 'flow' | 'map' | null>>({});
+  const [racmFilterTag, setRacmFilterTag] = useState<string>('all');
   const { addToast } = useToast();
 
   const toggleSopVisual = (sopId: string, type: 'flow' | 'map') => {
@@ -512,10 +513,10 @@ function BPDetailView({ bp, onBack }: {
   const bpRisks = RISKS.filter(r => r.bpId === bp.id);
 
   const tabs = [
-    { id: 'overview' as const, label: 'Overview' },
-    { id: 'sops' as const, label: 'SOPs', count: bpSops.length },
+    { id: 'sop' as const, label: 'SOP', count: bpSops.length },
     { id: 'racm' as const, label: 'RACM', count: bpRacms.length },
     { id: 'workflows' as const, label: 'Workflows', count: bpWfs.length },
+    { id: 'risks' as const, label: 'Risks', count: bpRisks.length },
   ];
 
   return (
@@ -531,15 +532,15 @@ function BPDetailView({ bp, onBack }: {
           Business Processes
         </button>
 
-        {/* BP Header */}
+        {/* BP Header — metadata always visible above tabs */}
         <div className="bg-white rounded-2xl border border-border-light p-6 mb-6 ai-card">
-          <div className="flex items-center gap-4 mb-5">
+          <div className="flex items-center gap-4 mb-4">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: bp.color + '1a' }}>
               <span className="text-sm font-bold" style={{ color: bp.color }}>{bp.abbr}</span>
             </div>
             <div className="flex-1">
               <h1 className="text-xl font-bold text-text">{bp.name}</h1>
-              <p className="text-[12px] text-text-muted">Business Process · FY 2025–26</p>
+              <p className="text-[12px] text-text-muted">Business Process · FY 2025--26</p>
             </div>
             <div className="flex gap-2">
               <button onClick={() => setUploadModal(true)} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-gray-50 transition-colors">
@@ -553,31 +554,59 @@ function BPDetailView({ bp, onBack }: {
             </div>
           </div>
 
-          <div className="grid grid-cols-6 gap-5">
+          {/* Process Metadata — always visible */}
+          <div className="flex items-center gap-6 mb-4 pb-4 border-b border-border-light">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Owner:</span>
+              <span className="text-[12px] font-medium text-text">Tushar Goel</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Status:</span>
+              <span className="inline-flex items-center gap-1.5 bg-success-bg text-green-800 px-2.5 py-0.5 rounded-full text-[11px] font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-success" />
+                Active
+              </span>
+            </div>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider shrink-0">Description:</span>
+              <span className="text-[12px] text-text-secondary truncate">End-to-end {bp.name.toLowerCase()} process covering all related risks, controls, and compliance workflows.</span>
+            </div>
+          </div>
+
+          {/* Clickable metric cards */}
+          <div className="grid grid-cols-4 gap-4">
             {[
-              { l: 'Risks', v: bp.risks },
-              { l: 'Controls', v: bp.controls },
-              { l: 'Coverage', v: `${bp.coverage}%` },
-              { l: 'SOPs', v: bp.sops },
-              { l: 'Workflows', v: bp.workflows },
-              { l: 'RACMs', v: bpRacms.length },
-            ].map(s => (
-              <div key={s.l}>
-                <div className="text-xl font-bold text-text" style={s.l === 'Coverage' ? { color: bp.color } : {}}>{s.v}</div>
-                <div className="text-[10px] text-text-muted uppercase tracking-wider mt-0.5">{s.l}</div>
-              </div>
+              { l: 'RACMs', v: bpRacms.length, tab: 'racm' as const },
+              { l: 'Risks', v: bp.risks, tab: 'risks' as const },
+              { l: 'Controls', v: bp.controls, tab: 'racm' as const },
+              { l: 'Engagements', v: bpWfs.length, tab: 'workflows' as const },
+            ].map((s, i) => (
+              <motion.div
+                key={s.l}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                onClick={() => setTab(s.tab)}
+                className="text-center p-4 rounded-xl bg-surface-2/80 border border-border-light/50 cursor-pointer hover:border-primary/20 hover:shadow-sm transition-all"
+              >
+                <div className="text-xl font-bold text-text leading-none mb-1">{s.v}</div>
+                <div className="text-[10px] text-text-muted uppercase tracking-wider font-medium">{s.l}</div>
+              </motion.div>
             ))}
           </div>
 
           {/* Coverage bar */}
-          <div className="mt-4 h-2 bg-border-light rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${bp.coverage}%` }}
-              transition={{ duration: 0.8 }}
-              className="h-full rounded-full"
-              style={{ background: bp.color }}
-            />
+          <div className="mt-4 flex items-center gap-3">
+            <div className="flex-1 h-2 bg-border-light rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${bp.coverage}%` }}
+                transition={{ duration: 0.8 }}
+                className="h-full rounded-full"
+                style={{ background: bp.color }}
+              />
+            </div>
+            <span className="text-[12px] font-bold font-mono shrink-0" style={{ color: bp.color }}>{bp.coverage}% coverage</span>
           </div>
         </div>
 
@@ -605,103 +634,8 @@ function BPDetailView({ bp, onBack }: {
           ))}
         </div>
 
-        {/* Overview Tab */}
-        {tab === 'overview' && (
-          <div className="grid grid-cols-5 gap-5">
-            <div className="col-span-3 space-y-5">
-              {/* Control Coverage */}
-              <div className="bg-white rounded-xl border border-border-light p-5 ai-card">
-                <h3 className="text-sm font-semibold text-text mb-4 flex items-center gap-2">
-                  <Shield size={14} className="text-primary" />
-                  Control Coverage
-                </h3>
-                <div className="flex items-center gap-6">
-                  <div className="relative">
-                    <svg width="100" height="100" viewBox="0 0 100 100">
-                      <circle cx="50" cy="50" r="40" fill="none" stroke="#f1edf9" strokeWidth="10" />
-                      <circle cx="50" cy="50" r="40" fill="none" stroke={bp.color} strokeWidth="10"
-                        strokeDasharray={`${bp.coverage * 2.51} ${251 - bp.coverage * 2.51}`}
-                        strokeLinecap="round" transform="rotate(-90 50 50)" />
-                      <text x="50" y="48" textAnchor="middle" fontSize="18" fontWeight="700" fill="#0e0b1e">{bp.coverage}%</text>
-                      <text x="50" y="62" textAnchor="middle" fontSize="9" fill="#9e96b8">covered</text>
-                    </svg>
-                  </div>
-                  <div className="flex-1 space-y-3">
-                    {[{ l: 'Mapped', v: bp.controls, pct: 100, c: bp.color }, { l: 'Tested', v: Math.round(bp.controls * 0.6), pct: 60, c: '#16a34a' }, { l: 'Gaps', v: Math.round(bp.risks * 0.3), pct: 30, c: '#dc2626' }].map(r => (
-                      <div key={r.l}>
-                        <div className="flex justify-between mb-1">
-                          <span className="text-[12px] text-text-secondary">{r.l}</span>
-                          <span className="text-[12px] font-bold text-text">{r.v}</span>
-                        </div>
-                        <div className="h-1.5 bg-border-light rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all" style={{ width: `${r.pct}%`, background: r.c }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* RACMs */}
-              <div className="bg-white rounded-xl border border-border-light p-5 ai-card">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-text">RACMs ({bpRacms.length})</h3>
-                  <button onClick={() => setTab('racm')} className="text-[11px] text-primary font-medium hover:underline flex items-center gap-1">
-                    View All <ChevronRight size={11} />
-                  </button>
-                </div>
-                {bpRacms.map(r => (
-                  <div key={r.id} className="flex items-center gap-3 py-3 border-b border-border-light last:border-0 hover:bg-primary-xlight/30 transition-colors duration-200 rounded-lg px-2 -mx-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[13px] font-medium text-text truncate">{r.name}</div>
-                      <div className="text-[11px] text-text-muted mt-0.5">{r.id} · <FrameworkBadge fw={r.fw} /></div>
-                    </div>
-                    <StatusBadge status={r.status} />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="col-span-2 space-y-5">
-              {/* AI Insight Card */}
-              <div className="bg-gradient-to-br from-primary-xlight to-white rounded-xl border border-primary/10 p-5 ai-shimmer">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles size={14} className="text-primary" />
-                  <span className="text-[12px] font-bold text-primary">AI Insight</span>
-                </div>
-                <p className="text-[12.5px] text-text leading-relaxed">
-                  <strong>{bp.abbr}</strong> has <strong>{bpRisks.filter(r => r.ctls === 0).length} risks</strong> with no controls mapped.
-                  Coverage is at <strong>{bp.coverage}%</strong> — below the 80% benchmark. Consider prioritizing {bp.abbr} risk mitigation.
-                </p>
-                <button onClick={() => addToast({ message: 'Loading AI recommendations...', type: 'info' })} className="mt-3 text-[11px] text-primary font-semibold flex items-center gap-1 hover:underline">
-                  View recommendations <ChevronRight size={10} />
-                </button>
-              </div>
-
-              {/* Recent Activity */}
-              <div className="bg-white rounded-xl border border-border-light p-5 ai-card">
-                <h3 className="text-sm font-semibold text-text mb-3">Recent Activity</h3>
-                {[
-                  { t: 'RACM validated', d: 'Vendor Payment — Draft → Active', time: '2h ago' },
-                  { t: 'SOP uploaded', d: 'Purchase Order SOP v1.3', time: '1d ago' },
-                  { t: 'Workflow run', d: 'Duplicate Invoice Detector', time: '2d ago' },
-                ].map((a, i) => (
-                  <div key={i} className="flex items-start gap-2.5 py-2.5 border-b border-border-light last:border-0">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                    <div className="flex-1">
-                      <div className="text-[12px] font-medium text-text">{a.t}</div>
-                      <div className="text-[11px] text-text-muted">{a.d}</div>
-                    </div>
-                    <span className="text-[10px] text-text-muted shrink-0">{a.time}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* SOPs Tab */}
-        {tab === 'sops' && (
+        {/* SOP Tab */}
+        {tab === 'sop' && (
           <div>
             <div onClick={() => setUploadModal(true)} className="border-2 border-dashed border-primary/20 rounded-2xl p-6 text-center cursor-pointer mb-6 bg-primary-xlight/20 hover:bg-primary-xlight/40 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
@@ -935,8 +869,31 @@ function BPDetailView({ bp, onBack }: {
         {/* Workflows Tab */}
         {tab === 'workflows' && (
           <div>
+            {/* RACM tag filter chips */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider shrink-0">RACM Filter:</span>
+              <button
+                onClick={() => setRacmFilterTag('all')}
+                className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all cursor-pointer ${
+                  racmFilterTag === 'all' ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
+                }`}
+              >
+                All
+              </button>
+              {bpRacms.map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => setRacmFilterTag(racmFilterTag === r.id ? 'all' : r.id)}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all cursor-pointer ${
+                    racmFilterTag === r.id ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
+                  }`}
+                >
+                  {r.id}
+                </button>
+              ))}
+            </div>
             <div className="flex items-center justify-between mb-4">
-              <p className="text-[13px] text-text-secondary">Independent workflows for {bp.name}</p>
+              <p className="text-[13px] text-text-secondary">Workflows for {bp.name}{racmFilterTag !== 'all' ? ` (filtered by ${racmFilterTag})` : ''}</p>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => { setBulkMode(!bulkMode); setSelectedWorkflows(new Set()); }}
@@ -1036,6 +993,62 @@ function BPDetailView({ bp, onBack }: {
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+        )}
+
+        {/* Risks Tab */}
+        {tab === 'risks' && (
+          <div>
+            <p className="text-[13px] text-text-secondary mb-4">Risks identified for {bp.name}</p>
+            <div className="bg-white rounded-xl border border-border-light overflow-hidden">
+              <table className="w-full text-[12.5px]">
+                <thead>
+                  <tr className="bg-surface-2 border-b border-border-light">
+                    <th className="text-left px-4 py-3 font-semibold text-text-secondary">Risk ID</th>
+                    <th className="text-left px-3 py-3 font-semibold text-text-secondary">Description</th>
+                    <th className="text-left px-3 py-3 font-semibold text-text-secondary">Severity</th>
+                    <th className="text-left px-3 py-3 font-semibold text-text-secondary">Controls</th>
+                    <th className="text-left px-3 py-3 font-semibold text-text-secondary">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bpRisks.map((risk, i) => (
+                    <motion.tr
+                      key={risk.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: i * 0.04 }}
+                      className="border-b border-border-light last:border-0 hover:bg-primary-xlight/50 transition-colors cursor-pointer"
+                    >
+                      <td className="px-4 py-3 font-mono text-text-muted text-[11px]">{risk.id}</td>
+                      <td className="px-3 py-3">
+                        <div className="text-[13px] font-medium text-text truncate max-w-[280px]">{risk.name}</div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <SeverityBadge severity={risk.severity} />
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className="text-[12px] text-text">{risk.ctls} <span className="text-text-muted">({risk.keyCtls} key)</span></span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <StatusBadge status={risk.status} />
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {bpRisks.filter(r => r.ctls === 0).length > 0 && (
+              <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-primary-xlight via-white to-primary-xlight border border-primary/10">
+                <div className="flex items-center gap-2 mb-1">
+                  <Sparkles size={13} className="text-primary" />
+                  <span className="text-[12px] font-bold text-text">AI Insight</span>
+                </div>
+                <p className="text-[11.5px] text-text-secondary">
+                  {bpRisks.filter(r => r.ctls === 0).length} risks have no controls mapped. Consider auto-suggesting controls for these risks.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
