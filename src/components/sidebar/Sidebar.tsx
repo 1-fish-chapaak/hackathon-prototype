@@ -46,6 +46,7 @@ function NavItem({ icon: Icon, label, active, expanded, onClick, badge }: {
             exit={{ opacity: 0, width: 0 }}
             transition={{ duration: 0.15 }}
             className="text-[13px] truncate overflow-hidden whitespace-nowrap"
+            style={{ fontWeight: active ? 600 : 520 }}
           >
             {label}
           </motion.span>
@@ -370,6 +371,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
                 <div className="text-[12px] font-medium text-sidebar-text truncate">John Doe</div>
                 <div className="text-[10px] text-sidebar-text-muted truncate">Lead Auditor</div>
               </div>
+              <span className="text-white/[0.45] text-[14px]">⋯</span>
             </motion.div>
           )}
         </AnimatePresence>

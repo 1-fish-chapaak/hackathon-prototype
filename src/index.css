@@ -163,7 +163,11 @@ h1, h2, h3 { letter-spacing: -0.02em; line-height: 1.2; }
   background: var(--color-brand-600);
   color: white;
   font-weight: 600;
+  font-size: 15px;
+  height: 40px;
+  padding: 0 16px;
   border: none;
+  border-radius: 8px;
   cursor: pointer;
   transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1);
 }

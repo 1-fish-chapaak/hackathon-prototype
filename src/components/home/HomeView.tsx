@@ -106,13 +106,13 @@ export default function HomeView({ setView }: Props) {
             </div>
             <div className="flex items-center gap-2.5">
               <div className="relative" data-customize-panel>
-                <button onClick={(e) => { e.stopPropagation(); setShowCustomize(p => !p); }} className="p-2.5 rounded-xl border border-border/60 bg-white/60 backdrop-blur text-text-muted hover:text-primary hover:border-primary/20 transition-all cursor-pointer">
+                <button onClick={(e) => { e.stopPropagation(); setShowCustomize(p => !p); }} className="p-2.5 rounded-lg border border-canvas-border bg-canvas-elevated text-ink-400 hover:text-brand-600 hover:border-brand-200 transition-all cursor-pointer">
                   <Settings2 size={14} />
                 </button>
                 <AnimatePresence>
                   {showCustomize && (
                     <motion.div initial={{ opacity: 0, y: -4, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.98 }} transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-full mt-1 bg-white/90 backdrop-blur-xl border border-border-light rounded-xl shadow-lg overflow-hidden z-20 w-[260px]"
+                      className="absolute right-0 top-full mt-1 bg-canvas-elevated border border-canvas-border rounded-lg shadow-md overflow-hidden z-20 w-[260px]"
                       onClick={(e) => e.stopPropagation()}>
                       <div className="px-4 pt-3.5 pb-2 border-b border-border-light/60">
                         <div className="text-[13px] font-semibold text-text">Customize Dashboard</div>
@@ -149,13 +149,13 @@ export default function HomeView({ setView }: Props) {
                 </AnimatePresence>
               </div>
               <div className="relative">
-                <button onClick={(e) => { e.stopPropagation(); setDateDropdownOpen(p => !p); }} className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-white/80 backdrop-blur-sm text-[12px] text-text-secondary hover:border-primary/30 transition-all cursor-pointer">
+                <button onClick={(e) => { e.stopPropagation(); setDateDropdownOpen(p => !p); }} className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-canvas-border bg-canvas-elevated text-[12px] text-ink-500 hover:border-brand-200 transition-all cursor-pointer">
                   {dateRange}
                   <ChevronDown size={12} className={`transition-transform ${dateDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 <AnimatePresence>
                   {dateDropdownOpen && (
-                    <motion.div initial={{ opacity: 0, y: -4, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.98 }} transition={{ duration: 0.12 }} className="absolute right-0 top-full mt-1 bg-white/90 backdrop-blur-xl border border-border-light rounded-xl shadow-lg overflow-hidden z-20 min-w-[140px]">
+                    <motion.div initial={{ opacity: 0, y: -4, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.98 }} transition={{ duration: 0.12 }} className="absolute right-0 top-full mt-1 bg-canvas-elevated border border-canvas-border rounded-lg shadow-md overflow-hidden z-20 min-w-[140px]">
                       {['This week', 'This month', 'This quarter', 'This year'].map(opt => (
                         <button key={opt} onClick={() => { setDateRange(opt); setDateDropdownOpen(false); }} className={`w-full text-left px-3 py-2 text-[12px] transition-colors cursor-pointer ${dateRange === opt ? 'bg-primary/10 text-primary font-semibold' : 'text-text-secondary hover:bg-surface-2'}`}>{opt}</button>
                       ))}
@@ -176,8 +176,7 @@ export default function HomeView({ setView }: Props) {
           {/* ── Large: Compliance trend chart (spans 5 cols, 2 rows) ── */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
             onClick={() => setView('dashboards')}
-            className="col-span-5 row-span-2 rounded-3xl p-6 cursor-pointer group relative overflow-hidden transition-all duration-300 hover:scale-[1.01]"
-            style={{ background: 'linear-gradient(145deg, #ffffff 0%, #f8f5ff 100%)', border: '1px solid rgba(106,18,205,0.15)', boxShadow: '0 2px 20px rgba(106,18,205,0.04), inset 0 1px 0 rgba(255,255,255,0.8)' }}>
+            className="col-span-5 row-span-2 rounded-xl p-6 cursor-pointer group relative overflow-hidden transition-all duration-150 bg-canvas-elevated border border-canvas-border hover:border-paper-300">
             <button onClick={e => { e.stopPropagation(); addToast({ message: 'Widget removed from dashboard', type: 'info' }); }} className="absolute top-3 right-3 p-1 rounded-lg text-text-muted/20 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-10" title="Remove widget"><X size={12} /></button>
             <div className="flex items-center justify-between mb-1">
               <span className="text-[12px] text-text-muted font-medium tracking-wide">FY26</span>
@@ -185,7 +184,7 @@ export default function HomeView({ setView }: Props) {
                 <TrendingUp size={10} /> +12.4%
               </div>
             </div>
-            <div className="text-[42px] font-extrabold text-text leading-none tracking-tighter mb-2">94.2%</div>
+            <div className="text-[42px] leading-none tracking-tighter mb-2 numeric" style={{ fontFamily: 'var(--font-display)', fontWeight: 420, color: 'var(--color-ink-900)' }}>94.2%</div>
             <p className="text-[12px] text-text-muted leading-relaxed mb-5">Compliance score driven by automated controls and continuous monitoring across 4 business processes.</p>
             {/* Area chart */}
             <svg width="100%" height="120" viewBox="0 0 400 120" preserveAspectRatio="none" className="opacity-80">
@@ -210,14 +209,13 @@ export default function HomeView({ setView }: Props) {
           {/* ── Money at Risk (dark card) ── */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
             onClick={() => setView('chat')}
-            className="col-span-4 rounded-3xl p-5 cursor-pointer group relative overflow-hidden transition-all duration-300 hover:scale-[1.01]"
-            style={{ background: 'linear-gradient(145deg, #fff5f5 0%, #fff0f0 100%)', border: '1px solid rgba(220,38,38,0.08)', boxShadow: '0 2px 16px rgba(220,38,38,0.03), inset 0 1px 0 rgba(255,255,255,0.8)' }}>
+            className="col-span-4 rounded-xl p-5 cursor-pointer group relative overflow-hidden transition-all duration-150 bg-canvas-elevated border border-canvas-border hover:border-paper-300">
             <button onClick={e => { e.stopPropagation(); addToast({ message: 'Widget removed from dashboard', type: 'info' }); }} className="absolute top-3 right-3 p-1 rounded-lg text-text-muted/20 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-10" title="Remove widget"><X size={12} /></button>
             <div className="flex items-center gap-2 mb-3">
               <div className="p-1.5 rounded-lg bg-red-100"><DollarSign size={13} className="text-red-600" /></div>
               <span className="text-[11px] text-text-muted font-medium">Money at Risk</span>
             </div>
-            <div className="text-[28px] font-extrabold text-text leading-none tracking-tight mb-1">₹6.16L</div>
+            <div className="text-[28px] leading-none tracking-tight mb-1 numeric" style={{ fontFamily: 'var(--font-display)', fontWeight: 480, color: 'var(--color-ink-900)' }}>₹6.16L</div>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-[11px] text-green-600 font-semibold flex items-center gap-0.5"><TrendingDown size={10} /> -₹2.1L</span>
               <span className="text-[10px] text-text-muted/70">vs last quarter</span>
@@ -234,15 +232,14 @@ export default function HomeView({ setView }: Props) {
           {/* ── Audit Days Left (accent card) ── */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
             onClick={() => setView('audit-planning')}
-            className="col-span-3 rounded-3xl p-5 cursor-pointer group transition-all duration-300 hover:scale-[1.01]"
-            style={{ background: 'linear-gradient(145deg, #f5f0ff 0%, #ede5fb 100%)', border: '1px solid rgba(106,18,205,0.08)', boxShadow: '0 2px 16px rgba(106,18,205,0.04), inset 0 1px 0 rgba(255,255,255,0.8)' }}>
+            className="col-span-3 rounded-xl p-5 cursor-pointer group transition-all duration-150 bg-canvas-elevated border border-canvas-border hover:border-paper-300">
             <button onClick={e => { e.stopPropagation(); addToast({ message: 'Widget removed from dashboard', type: 'info' }); }} className="absolute top-3 right-3 p-1 rounded-lg text-text-muted/20 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-10" title="Remove widget"><X size={12} /></button>
             <div className="flex items-center gap-2 mb-2">
               <Clock size={13} className="text-primary/60" />
               <span className="text-[11px] text-primary/50 font-medium">SOX Deadline</span>
             </div>
-            <div className="text-[36px] font-extrabold text-primary leading-none tracking-tighter">6</div>
-            <div className="text-[12px] text-primary/60 font-medium mt-0.5">Days remaining</div>
+            <div className="text-[36px] leading-none tracking-tighter" style={{ fontFamily: 'var(--font-display)', fontWeight: 420, color: 'var(--color-brand-600)' }}>6</div>
+            <div className="text-[12px] text-brand-600/60 font-medium mt-0.5">Days remaining</div>
             {/* Dot grid pattern */}
             <div className="grid grid-cols-6 gap-1 mt-4">
               {Array.from({ length: 30 }).map((_, i) => (
@@ -254,15 +251,14 @@ export default function HomeView({ setView }: Props) {
           {/* ── Open Exceptions (dark card) ── */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             onClick={() => setView('reports')}
-            className="col-span-4 rounded-3xl p-5 cursor-pointer group relative overflow-hidden transition-all duration-300 hover:scale-[1.01]"
-            style={{ background: 'linear-gradient(145deg, #fffbf5 0%, #fff7ed 100%)', border: '1px solid rgba(234,88,12,0.08)', boxShadow: '0 2px 16px rgba(234,88,12,0.03), inset 0 1px 0 rgba(255,255,255,0.8)' }}>
+            className="col-span-4 rounded-xl p-5 cursor-pointer group relative overflow-hidden transition-all duration-150 bg-canvas-elevated border border-canvas-border hover:border-paper-300">
             <button onClick={e => { e.stopPropagation(); addToast({ message: 'Widget removed from dashboard', type: 'info' }); }} className="absolute top-3 right-3 p-1 rounded-lg text-text-muted/20 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-10" title="Remove widget"><X size={12} /></button>
             <div className="flex items-center gap-2 mb-2">
               <div className="p-1.5 rounded-lg bg-orange-100"><FileWarning size={13} className="text-orange-600" /></div>
               <span className="text-[11px] text-text-muted font-medium">Open Exceptions</span>
               <span className="ml-auto text-[10px] text-text-muted/70 bg-surface-2 px-2 py-0.5 rounded-full">This week</span>
             </div>
-            <div className="text-[28px] font-extrabold text-text leading-none tracking-tight">7</div>
+            <div className="text-[28px] leading-none tracking-tight numeric" style={{ fontFamily: 'var(--font-display)', fontWeight: 480, color: 'var(--color-ink-900)' }}>7</div>
             <div className="text-[11px] text-text-muted mt-1">3 unassigned, 4 in progress</div>
             <div className="flex items-center gap-1 mt-1">
               <span className="text-[11px] text-red-600 font-semibold flex items-center gap-0.5"><TrendingUp size={10} /> +2</span>
@@ -273,15 +269,14 @@ export default function HomeView({ setView }: Props) {
           {/* ── Automation Savings (accent card) ── */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}
             onClick={() => setView('workflow-templates')}
-            className="col-span-3 rounded-3xl p-5 cursor-pointer group transition-all duration-300 hover:scale-[1.01] relative overflow-hidden"
-            style={{ background: 'linear-gradient(145deg, #f0fdf4 0%, #e8fce8 100%)', border: '1px solid rgba(22,163,74,0.08)', boxShadow: '0 2px 16px rgba(22,163,74,0.03), inset 0 1px 0 rgba(255,255,255,0.8)' }}>
+            className="col-span-3 rounded-xl p-5 cursor-pointer group transition-all duration-150 relative overflow-hidden bg-canvas-elevated border border-canvas-border hover:border-paper-300">
             <button onClick={e => { e.stopPropagation(); addToast({ message: 'Widget removed from dashboard', type: 'info' }); }} className="absolute top-3 right-3 p-1 rounded-lg text-text-muted/20 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all z-10" title="Remove widget"><X size={12} /></button>
             <div className="flex items-center gap-2 mb-2">
               <Zap size={13} className="text-green-600" />
               <span className="text-[11px] text-green-600/60 font-medium">Savings YTD</span>
             </div>
-            <div className="text-[32px] font-extrabold text-green-700 leading-none tracking-tighter">₹24L</div>
-            <div className="text-[11px] text-green-600/50 mt-1">Cost avoided via AI workflows</div>
+            <div className="text-[32px] leading-none tracking-tighter" style={{ fontFamily: 'var(--font-display)', fontWeight: 420, color: 'var(--color-compliant)' }}>₹24L</div>
+            <div className="text-[11px] text-compliant/60 mt-1">Cost avoided via AI workflows</div>
             {/* Bar chart */}
             <div className="flex items-end gap-1 mt-3 h-10">
               {[20, 35, 45, 55, 70, 80, 90, 100].map((h, i) => (

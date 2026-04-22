@@ -1,4 +1,8 @@
-import { motion } from 'motion/react';
+/**
+ * GlassCard — Editorial GRC card component.
+ * Flat: white bg, canvas-border, 12px radius. No glass, no shadow, no hover-bounce.
+ * Border darkens on hover for interactive cards.
+ */
 
 interface GlassCardProps {
   children: React.ReactNode;
@@ -9,16 +13,14 @@ interface GlassCardProps {
 }
 
 export default function GlassCard({ children, className = '', intensity = 'medium', onClick, hover = true }: GlassCardProps) {
-  const intensityClass = intensity === 'strong' ? 'glass-card-strong' : 'glass-card';
+  const base = intensity === 'strong' ? 'glass-card-strong' : 'glass-card';
 
   return (
-    <motion.div
-      whileHover={hover ? { y: -2, scale: 1.005 } : undefined}
-      transition={{ duration: 0.2 }}
+    <div
       onClick={onClick}
-      className={`${intensityClass} rounded-2xl ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      className={`${base} rounded-xl ${onClick ? 'cursor-pointer' : ''} ${hover ? '' : ''} ${className}`}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }

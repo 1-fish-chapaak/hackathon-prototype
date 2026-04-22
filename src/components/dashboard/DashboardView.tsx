@@ -468,7 +468,7 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
                 {/* Generate button */}
                 {!emailGenerated && !emailGenerating && (
                   <button onClick={handleGenerateEmail}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary text-white rounded-xl text-[13px] font-semibold transition-all cursor-pointer shadow-md shadow-primary/20">
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white rounded-lg text-[13px] font-semibold transition-all cursor-pointer">
                     <Sparkles size={15} /> Generate AI Email
                   </button>
                 )}
@@ -519,7 +519,7 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
                     Regenerate
                   </button>
                   <button onClick={handleSendEmail}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary text-white rounded-xl text-[13px] font-semibold transition-all cursor-pointer shadow-md shadow-primary/20">
+                    className="flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white rounded-lg text-[13px] font-semibold transition-all cursor-pointer">
                     <Send size={13} /> Send Email
                   </button>
                 </div>
@@ -569,7 +569,7 @@ function DonutChart({ title, segments, centerLabel, onExpand }: { title: string;
   });
 
   return (
-    <div className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
+    <div className="glass-card rounded-xl p-5 transition-all duration-150 group">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-text">{title}</h3>
         <button onClick={onExpand} className="p-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
@@ -627,7 +627,7 @@ function BarChart({ title, data, color, onExpand }: { title: string; data: BarDa
   const max = Math.max(...data.map(d => d.value));
 
   return (
-    <div className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
+    <div className="glass-card rounded-xl p-5 transition-all duration-150 group">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-text">{title}</h3>
         <button onClick={onExpand} className="p-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
@@ -664,7 +664,7 @@ function BarChart({ title, data, color, onExpand }: { title: string; data: BarDa
 
 function ProgressChart({ title, data, onExpand }: { title: string; data: ProgressDatum[]; onExpand?: () => void }) {
   return (
-    <div className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
+    <div className="glass-card rounded-xl p-5 transition-all duration-150 group">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-text">{title}</h3>
         <button onClick={onExpand} className="p-1.5 rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
@@ -698,7 +698,7 @@ function ProgressChart({ title, data, onExpand }: { title: string; data: Progres
 
 function MiniTable({ title, headers, rows }: { title: string; headers: string[]; rows: TableRow[] }) {
   return (
-    <div className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
+    <div className="glass-card rounded-xl p-5 transition-all duration-150 group">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-text">{title}</h3>
         <button className="text-[11px] text-primary font-medium hover:underline cursor-pointer">View all</button>
@@ -798,7 +798,7 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
   const dashboard = DASHBOARDS.find(d => d.id === activeId)!;
 
   return (
-    <div className="h-full flex bg-white bg-mesh-gradient relative overflow-hidden">
+    <div className="h-full flex bg-canvas relative overflow-hidden">
       <Orb hoverIntensity={0.09} rotateOnHover hue={dashboard.accentHue} opacity={0.08} />
 
       {/* Sidebar */}
@@ -892,7 +892,7 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 + i * 0.05 }}
-                    className={`${colSpan} rounded-2xl p-5 bg-white border border-border-light cursor-default transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/15`}
+                    className={`${colSpan} rounded-xl p-5 bg-canvas-elevated border border-canvas-border cursor-default transition-all duration-150 hover:border-paper-300`}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
