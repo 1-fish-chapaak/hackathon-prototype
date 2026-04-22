@@ -18,17 +18,17 @@ interface ProgressiveLoaderProps {
 }
 
 const ACCENT_COLORS: Record<LoadingStep['type'], string> = {
-  plan: 'bg-primary',       // purple
-  code: 'bg-blue-500',      // blue
-  sources: 'bg-emerald-500', // green
-  result: 'bg-primary',     // purple
+  plan:    'bg-brand-600',
+  code:    'bg-evidence',
+  sources: 'bg-compliant',
+  result:  'bg-brand-600',
 };
 
 const ACCENT_TEXT: Record<LoadingStep['type'], string> = {
-  plan: 'text-primary',
-  code: 'text-blue-500',
-  sources: 'text-emerald-500',
-  result: 'text-primary',
+  plan:    'text-brand-700',
+  code:    'text-evidence',
+  sources: 'text-compliant',
+  result:  'text-brand-700',
 };
 
 const STEP_DELAY_MS = 2000;
@@ -105,7 +105,7 @@ export default function ProgressiveLoader({
           >
             {isActive ? (
               /* Currently loading step */
-              <div className="rounded-xl border border-border-light bg-white/70 backdrop-blur-sm overflow-hidden shadow-sm">
+              <div className="rounded-xl border border-canvas-border bg-canvas-elevated overflow-hidden">
                 <div className="flex">
                   <div className={`w-1 shrink-0 ${ACCENT_COLORS[step.type]}`} />
                   <div className="flex-1 p-4">
@@ -147,11 +147,11 @@ export default function ProgressiveLoader({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, ease: 'easeOut' }}
                   onClick={() => onTabClick?.(step.type)}
-                  className={`rounded-xl border overflow-hidden transition-all ${
+                  className={`rounded-xl border overflow-hidden transition-colors ${
                     activeArtifactTab === step.type
-                      ? 'border-primary/20 shadow-sm'
-                      : 'border-border-light'
-                  } bg-white/70 backdrop-blur-sm cursor-pointer hover:shadow-sm`}
+                      ? 'border-brand-200'
+                      : 'border-canvas-border'
+                  } bg-canvas-elevated cursor-pointer hover:border-brand-200`}
                 >
                   <div className="flex">
                     <div
@@ -169,10 +169,10 @@ export default function ProgressiveLoader({
                             {step.title}
                           </span>
                         </div>
-                        <div className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100">
+                        <div className="flex items-center justify-center w-5 h-5 rounded-full bg-compliant-50">
                           <Check
                             size={11}
-                            className="text-emerald-600"
+                            className="text-compliant"
                             strokeWidth={3}
                           />
                         </div>

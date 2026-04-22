@@ -106,9 +106,9 @@ export default function App() {
         <div className="h-full flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-              <Sparkles size={24} className="text-primary" />
+              <Sparkles size={24} className="text-brand-600" />
             </motion.div>
-            <span className="text-[13px] text-text-muted">Loading...</span>
+            <span className="text-[13px] text-ink-500">Loading…</span>
           </div>
         </div>
       );
@@ -281,7 +281,7 @@ export default function App() {
 
   return (
     <ToastProvider>
-      <div className="flex h-screen w-full bg-white overflow-hidden">
+      <div className="flex h-screen w-full bg-canvas overflow-hidden">
         <Sidebar
           view={state.view}
           setView={setView}

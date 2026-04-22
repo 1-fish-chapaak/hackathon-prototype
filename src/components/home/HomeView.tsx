@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
 import Orb from '../shared/Orb';
-import FloatingLines from '../shared/FloatingLines';
 import { useToast } from '../shared/Toast';
 
 interface Props {
@@ -85,18 +84,17 @@ export default function HomeView({ setView }: Props) {
   }, []);
 
   return (
-    <div className="h-full overflow-y-auto relative" style={{ background: 'linear-gradient(180deg, #f8f5ff 0%, #fafafa 300px)' }}>
-      {/* Hero banner — premium, breathing space */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#f3ecff] via-[#faf8ff] to-[#eee8f9]" />
-        <FloatingLines enabledWaves={['top', 'middle']} lineCount={4} lineDistance={6} bendRadius={4} bendStrength={-0.3} interactive={true} parallax={true} color="#6a12cd" opacity={0.04} />
-        <div className="relative max-w-6xl mx-auto px-10 pt-10 pb-8">
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} className="flex items-end justify-between">
+    <div className="h-full overflow-y-auto relative bg-canvas">
+      {/* Page header — Editorial: breadcrumb → serif title → context → actions. No hero banner. */}
+      <div className="relative overflow-hidden border-b border-canvas-border bg-canvas-elevated">
+        <div className="relative max-w-6xl mx-auto px-8 pt-8 pb-6">
+          <div className="font-mono text-[11px] text-ink-500 mb-2 tracking-tight">Home</div>
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }} className="flex items-end justify-between">
             <div>
-              <h1 className="text-[28px] font-extrabold tracking-tight mb-1">
-                <span className="ai-gradient-text">Good morning, Auditor</span>
+              <h1 className="font-display text-[40px] font-[420] tracking-tight text-ink-900 leading-[1.1] mb-2">
+                Good morning, Auditor.
               </h1>
-              <p className="text-[14px] text-text-secondary leading-relaxed">Here&apos;s your FY26 audit landscape at a glance</p>
+              <p className="text-[14px] text-ink-500 leading-relaxed">Here is your FY26 audit landscape at a glance.</p>
               <AnimatePresence>
                 {showProTip && (
                   <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-2 flex items-center gap-2 text-[11px] text-text-muted">

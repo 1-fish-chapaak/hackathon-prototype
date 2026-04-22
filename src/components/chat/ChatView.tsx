@@ -1023,11 +1023,8 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                 <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className="max-w-[85%]">
                     {msg.role === 'assistant' && !msg.richType && (
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <div className="w-5 h-5 rounded-md bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center">
-                          <Sparkles size={10} className="text-white" />
-                        </div>
-                        <span className="text-[11px] font-semibold text-text-muted">Auditify Copilot</span>
+                      <div className="mb-1.5 font-mono text-[11px] text-ink-500 tabular-nums">
+                        IRA · responding
                       </div>
                     )}
                     {msg.role === 'assistant' && msg.thinking && (
@@ -1130,9 +1127,16 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                         </div>
                       </div>
                     ) : msg.text ? (
-                      <div className={`px-4 py-3 rounded-2xl text-[13.5px] leading-relaxed ${msg.role === 'user' ? 'bg-gradient-to-r from-primary to-primary-medium text-white rounded-br-sm shadow-md' : 'bg-white border border-border-light text-text rounded-bl-sm shadow-sm ml-7'}`}>
-                        {msg.text}
-                      </div>
+                      msg.role === 'user' ? (
+                        <div className="px-4 py-3 rounded-2xl rounded-br-sm bg-brand-600 text-white text-[13.5px] leading-relaxed">
+                          {msg.text}
+                        </div>
+                      ) : (
+                        // Editorial: AI response is prose, not a bubble. No border, no shadow, no avatar gutter.
+                        <div className="text-[15px] leading-[1.65] text-ink-800 max-w-[66ch]">
+                          {msg.text}
+                        </div>
+                      )
                     ) : null}
 
                     {msg.hasArtifact && (
@@ -1228,11 +1232,11 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                       )}
 
                       {thinkingSteps.length === 0 && (
-                        <div className="bg-white border border-border-light rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm ai-shimmer">
+                        <div className="inline-flex items-center gap-1.5 px-1 py-2">
                           <div className="flex gap-1.5 items-center h-5">
-                            <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} className="w-2 h-2 rounded-full bg-primary/30" />
-                            <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }} className="w-2 h-2 rounded-full bg-primary/30" />
-                            <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }} className="w-2 h-2 rounded-full bg-primary/30" />
+                            <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} className="w-1.5 h-1.5 rounded-full bg-brand-400" />
+                            <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }} className="w-1.5 h-1.5 rounded-full bg-brand-400" />
+                            <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }} className="w-1.5 h-1.5 rounded-full bg-brand-400" />
                           </div>
                         </div>
                       )}

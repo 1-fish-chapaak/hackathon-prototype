@@ -815,59 +815,54 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
             transition={{ duration: 0.25 }}
             className="max-w-6xl mx-auto px-8 py-8"
           >
-            {/* Header */}
-            <div className="flex items-end justify-between mb-6">
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <div className={`p-1.5 rounded-lg bg-gradient-to-br ${dashboard.accent} text-white`}>
-                    <dashboard.icon size={16} />
-                  </div>
-                  <h1 className="text-xl font-bold text-text tracking-tight">{dashboard.name}</h1>
+            {/* Page header — Editorial: breadcrumb · serif title · context · actions */}
+            <div className="mb-6">
+              <div className="font-mono text-[11px] text-ink-500 mb-2 tracking-tight">Dashboards · {dashboard.name}</div>
+              <div className="flex items-end justify-between">
+                <div>
+                  <h1 className="font-display text-[34px] font-[420] tracking-tight text-ink-900 leading-[1.15]">{dashboard.name}</h1>
+                  <p className="text-[13px] text-ink-500 mt-1">{dashboard.subtitle}</p>
                 </div>
-                <p className="text-sm text-text-secondary mt-1 ml-9">{dashboard.subtitle}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {onImportPowerBI && (
-                  <button onClick={onImportPowerBI} className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white hover:border-primary/30 transition-colors cursor-pointer">
-                    <Maximize2 size={14} />
-                    Import from Power BI
-                  </button>
-                )}
-                {onShare && (
-                  <button onClick={onShare} className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white hover:border-primary/30 transition-colors cursor-pointer">
+                <div className="flex items-center gap-2">
+                  {onImportPowerBI && (
+                    <button onClick={onImportPowerBI} className="flex items-center gap-2 px-3 h-10 border border-canvas-border bg-canvas-elevated rounded-md text-[13px] text-ink-700 hover:border-brand-200 transition-colors cursor-pointer">
+                      <Maximize2 size={14} />
+                      Import from Power BI
+                    </button>
+                  )}
+                  {onShare && (
+                    <button onClick={onShare} className="flex items-center gap-2 px-3 h-10 border border-canvas-border bg-canvas-elevated rounded-md text-[13px] text-ink-700 hover:border-brand-200 transition-colors cursor-pointer">
+                      <Settings size={14} />
+                      Share
+                    </button>
+                  )}
+                  <button onClick={() => addToast({ message: 'Dashboard customization panel opening.', type: 'info' })} className="flex items-center gap-2 px-3 h-10 border border-canvas-border bg-canvas-elevated rounded-md text-[13px] text-ink-700 hover:border-brand-200 transition-colors cursor-pointer">
                     <Settings size={14} />
-                    Share
+                    Customize
                   </button>
-                )}
-                <button onClick={() => addToast({ message: 'Dashboard customization panel opening...', type: 'info' })} className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white transition-colors cursor-pointer">
-                  <Settings size={14} />
-                  Customize
-                </button>
-                <button onClick={() => addToast({ message: 'Widget picker opening...', type: 'info' })} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
-                  <Plus size={14} />
-                  Add Widget
-                </button>
+                  <button onClick={() => addToast({ message: 'Widget picker opening.', type: 'info' })} className="flex items-center gap-2 px-4 h-10 bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white rounded-md text-[13px] font-semibold transition-colors cursor-pointer">
+                    <Plus size={14} />
+                    Add widget
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* AI Insight */}
+            {/* AI Insight — editorial prose surface */}
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.05 }}
-              className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-2xl border border-primary/10 p-4 mb-6 flex items-center gap-4 ai-shimmer hover:shadow-md transition-shadow duration-300"
+              transition={{ duration: 0.2 }}
+              className="bg-canvas-elevated rounded-xl border border-brand-200 p-5 mb-6"
             >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shrink-0">
-                <Sparkles size={16} className="text-white" />
-              </div>
+              <div className="font-mono text-[11px] text-ink-500 mb-2 tabular-nums">IRA · insight · {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
               <div className="flex-1">
-                <div className="text-[12.5px] font-semibold text-text">AI Insight</div>
-                <div className="text-[11.5px] text-text-secondary mt-0.5">
+                <div className="text-[15px] leading-[1.6] text-ink-800 max-w-[66ch]">
                   {dashboard.id === 'p2p' && '23 potential duplicate invoices detected this month. 3 vendors show spend anomalies exceeding 2-sigma threshold.'}
                   {dashboard.id === 'o2c' && 'DSO improved by 2 days. 5 customers account for 65% of outstanding receivables. Dispute rate trending upward in APAC region.'}
                   {dashboard.id === 's2c' && '12 contracts expire within 30 days. Vendor TechParts Ltd compliance score dropped below 75% threshold.'}
                   {dashboard.id === 'grc' && '2 critical risks in P2P have zero controls mapped. SOD violation detected in AP module.'}
-                  <span className="text-primary font-semibold cursor-pointer hover:underline ml-1">Take action</span>
+                  <a className="text-brand-700 font-semibold cursor-pointer hover:underline ml-1">Take action.</a>
                 </div>
               </div>
             </motion.div>

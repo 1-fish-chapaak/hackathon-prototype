@@ -26,14 +26,17 @@ function NavItem({ icon: Icon, label, active, expanded, onClick, badge }: {
       onClick={onClick}
       title={!expanded ? label : undefined}
       className={`
-        w-full flex items-center gap-2.5 rounded-lg transition-all duration-150 relative group cursor-pointer
+        w-full flex items-center gap-2.5 rounded-md transition-colors duration-200 relative group cursor-pointer
         ${expanded ? 'px-3 py-2' : 'px-0 py-2.5 justify-center'}
         ${active
-          ? 'bg-white/10 text-white font-semibold'
-          : 'text-white/50 hover:bg-white/5 hover:text-white/80'
+          ? 'bg-sidebar-surface-active text-sidebar-accent font-semibold'
+          : 'text-sidebar-text-dim hover:bg-sidebar-surface-hover hover:text-sidebar-text'
         }
       `}
     >
+      {active && expanded && (
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-sidebar-accent rounded-r-full" />
+      )}
       <Icon size={17} className="shrink-0" />
       <AnimatePresence>
         {expanded && (
@@ -51,18 +54,18 @@ function NavItem({ icon: Icon, label, active, expanded, onClick, badge }: {
       <AnimatePresence>
         {expanded && badge && (
           <motion.span
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
+            exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.12 }}
-            className="ml-auto text-[10px] font-bold bg-white/10 text-white/70 px-1.5 py-0.5 rounded-full"
+            className="ml-auto text-[10px] font-semibold bg-sidebar-surface text-sidebar-text-dim px-1.5 py-0.5 rounded-full tabular-nums"
           >
             {badge}
           </motion.span>
         )}
       </AnimatePresence>
       {!expanded && active && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-white rounded-r-full" />
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-sidebar-accent rounded-r-full" />
       )}
     </button>
   );
@@ -76,8 +79,8 @@ function SubNavItem({ label, active, onClick, icon: Icon }: {
       onClick={onClick}
       className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12.5px] transition-colors cursor-pointer ${
         active
-          ? 'text-white font-semibold bg-white/10'
-          : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+          ? 'text-sidebar-accent font-semibold bg-sidebar-surface-active'
+          : 'text-sidebar-text-muted hover:text-sidebar-text hover:bg-sidebar-surface-hover'
       }`}
     >
       {Icon && <Icon size={13} />}
@@ -87,10 +90,10 @@ function SubNavItem({ label, active, onClick, icon: Icon }: {
 }
 
 function SectionLabel({ label, expanded }: { label: string; expanded: boolean }) {
-  if (!expanded) return <div className="h-px bg-white/5 my-2 mx-2" />;
+  if (!expanded) return <div className="h-px bg-sidebar-border my-2 mx-2" />;
   return (
     <div className="px-3 pt-4 pb-1">
-      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/25">{label}</span>
+      <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-text-muted">{label}</span>
     </div>
   );
 }
@@ -108,11 +111,16 @@ function ExpandableSection({ icon: Icon, label, active, expanded, open, onToggle
         }}
         title={!expanded ? label : undefined}
         className={`
-          w-full flex items-center gap-2.5 rounded-lg transition-all duration-150 cursor-pointer
+          w-full flex items-center gap-2.5 rounded-md transition-colors duration-200 cursor-pointer relative
           ${expanded ? 'px-3 py-2' : 'px-0 py-2.5 justify-center'}
-          ${active ? 'bg-white/10 text-white font-semibold' : 'text-white/50 hover:bg-white/5 hover:text-white/80'}
+          ${active
+            ? 'bg-sidebar-surface-active text-sidebar-accent font-semibold'
+            : 'text-sidebar-text-dim hover:bg-sidebar-surface-hover hover:text-sidebar-text'}
         `}
       >
+        {active && expanded && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-sidebar-accent rounded-r-full" />
+        )}
         <Icon size={17} className="shrink-0" />
         <AnimatePresence>
           {expanded && (
@@ -129,7 +137,7 @@ function ExpandableSection({ icon: Icon, label, active, expanded, open, onToggle
           )}
         </AnimatePresence>
         {!expanded && active && (
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-white rounded-r-full" />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-sidebar-accent rounded-r-full" />
         )}
       </button>
       <AnimatePresence>
@@ -141,7 +149,7 @@ function ExpandableSection({ icon: Icon, label, active, expanded, open, onToggle
             transition={{ duration: 0.15 }}
             className="overflow-hidden"
           >
-            <div className="ml-5 pl-3 border-l border-white/10 space-y-0.5 py-1">
+            <div className="ml-5 pl-3 border-l border-sidebar-border space-y-0.5 py-1">
               {children}
             </div>
           </motion.div>
@@ -187,16 +195,16 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
   return (
     <motion.div
       animate={{ width: isExpanded ? 256 : 64 }}
-      transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-      className="h-full bg-gradient-to-b from-[#1e0c35] via-[#1a0a2e] to-[#140820] noise-texture flex flex-col shrink-0 overflow-hidden z-50"
+      transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+      className="h-full bg-sidebar-bg noise-texture flex flex-col shrink-0 overflow-hidden z-50"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {/* Brand */}
-      <div className={`border-b border-white/10 shrink-0 ${isExpanded ? 'px-4 py-4' : 'px-2 py-3'}`}>
+      <div className={`border-b border-sidebar-border shrink-0 ${isExpanded ? 'px-4 py-4' : 'px-2 py-3'}`}>
         <div className={`flex items-center ${isExpanded ? 'gap-3' : 'justify-center'}`}>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shrink-0 shadow-sm">
-            <Sparkles size={15} className="text-white" />
+          <div className="w-8 h-8 rounded-md bg-sidebar-surface-active flex items-center justify-center shrink-0">
+            <Sparkles size={15} className="text-sidebar-accent" />
           </div>
           <AnimatePresence>
             {isExpanded && (
@@ -207,8 +215,8 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
                 transition={{ duration: 0.15 }}
                 className="overflow-hidden"
               >
-                <div className="text-[14px] font-bold text-white leading-tight tracking-tight whitespace-nowrap">IRAME.AI</div>
-                <div className="text-[10.5px] text-white/40 font-medium whitespace-nowrap">Audit Intelligence</div>
+                <div className="text-[14px] font-semibold text-sidebar-accent leading-tight tracking-tight whitespace-nowrap">IRAME.AI</div>
+                <div className="text-[10.5px] text-sidebar-text-muted whitespace-nowrap">Audit Intelligence</div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -224,22 +232,24 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
             exit={{ opacity: 0, height: 0 }}
             className="px-3 pt-3 pb-1"
           >
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/5 text-white/30 text-[12px] cursor-pointer hover:bg-white/8 hover:text-white/50 transition-colors">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-sidebar-surface text-sidebar-text-muted text-[12px] cursor-pointer hover:bg-sidebar-surface-hover hover:text-sidebar-text transition-colors">
               <Command size={13} />
-              <span className="flex-1">Search or ask IRA...</span>
-              <kbd className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
+              <span className="flex-1">Search or ask IRA…</span>
+              <kbd className="text-[10px] bg-sidebar-surface-active px-1.5 py-0.5 rounded font-mono text-sidebar-text-dim">⌘K</kbd>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* New Chat button */}
+      {/* New Chat — primary signal */}
       <div className={`shrink-0 ${isExpanded ? 'px-3 pt-2 pb-1' : 'px-1.5 pt-3 pb-1'}`}>
         <button
           onClick={() => setView('chat')}
-          className={`w-full flex items-center gap-2 rounded-lg transition-all cursor-pointer ${
-            isExpanded ? 'px-3 py-2.5 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary text-white text-[13px] font-semibold shadow-lg shadow-primary/20' : 'justify-center py-2.5 bg-primary/20 hover:bg-primary/30 text-primary-medium'
-          }`}
+          className={`w-full flex items-center gap-2 rounded-md transition-colors cursor-pointer text-[13px] font-semibold
+            ${isExpanded
+              ? 'px-3 py-2.5 bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white'
+              : 'justify-center py-2.5 bg-brand-600 hover:bg-brand-500 text-white'}
+          `}
         >
           <Plus size={15} />
           <AnimatePresence>
@@ -259,16 +269,15 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
       </div>
 
       {/* Navigation */}
-      <nav className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-white/10 ${isExpanded ? 'px-2.5 py-2' : 'px-1.5 py-3'}`}>
+      <nav className={`flex-1 overflow-y-auto overflow-x-hidden ${isExpanded ? 'px-2.5 py-2' : 'px-1.5 py-3'}`}>
         <div className="space-y-0.5">
-          {/* ─── PRIMARY ─── */}
+          {/* Primary */}
           <NavItem icon={Home} label="Home" active={view === 'home'} expanded={isExpanded} onClick={() => setView('home')} />
           <NavItem icon={MessageSquare} label="IRA AI" active={view === 'chat' || view === 'chat-trash'} expanded={isExpanded} onClick={() => setView('chat')} />
 
-          {/* ─── AUDIT LIFECYCLE ─── */}
+          {/* Audit Lifecycle */}
           <SectionLabel label="Audit Lifecycle" expanded={isExpanded} />
 
-          {/* Governance */}
           <ExpandableSection
             icon={Shield}
             label="Governance"
@@ -285,7 +294,6 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
             <SubNavItem icon={Calendar} label="Audit Planning" active={view === 'audit-planning'} onClick={() => setView('audit-planning')} />
           </ExpandableSection>
 
-          {/* Execution */}
           <ExpandableSection
             icon={Zap}
             label="Execution"
@@ -301,16 +309,14 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
             <SubNavItem icon={AlertOctagon} label="Findings" active={view === 'findings'} onClick={() => setView('findings')} />
           </ExpandableSection>
 
-          {/* Workflows */}
           <NavItem icon={Workflow} label="Workflows" active={isWorkflowView} expanded={isExpanded} onClick={() => setView('workflow-templates')} badge="8" />
 
-          {/* ─── INTELLIGENCE ─── */}
+          {/* Intelligence */}
           <SectionLabel label="Intelligence" expanded={isExpanded} />
 
           <NavItem icon={LayoutDashboard} label="Dashboards" active={view === 'dashboards'} expanded={isExpanded} onClick={() => setView('dashboards')} />
           <NavItem icon={FileBarChart} label="Reports" active={view === 'reports' || view === 'report-history' || view === 'report-builder'} expanded={isExpanded} onClick={() => setView('reports')} />
 
-          {/* AI Concierge */}
           <ExpandableSection
             icon={Wand2}
             label="AI Concierge"
@@ -324,12 +330,11 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
             <SubNavItem icon={Table2} label="Table Extractor" active={view === 'ai-concierge-table-extractor'} onClick={() => setView('ai-concierge-table-extractor')} />
           </ExpandableSection>
 
-          {/* ─── SYSTEM ─── */}
+          {/* System */}
           <SectionLabel label="System" expanded={isExpanded} />
 
           <NavItem icon={Database} label="Configuration" active={view === 'data-sources' || view === 'configuration'} expanded={isExpanded} onClick={() => setView('data-sources')} />
 
-          {/* Admin */}
           <ExpandableSection
             icon={Settings}
             label="Admin"
@@ -349,21 +354,21 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
       </nav>
 
       {/* User Profile + Footer */}
-      <div className={`border-t border-white/10 shrink-0 ${isExpanded ? 'px-3 py-3' : 'px-2 py-2'}`}>
+      <div className={`border-t border-sidebar-border shrink-0 ${isExpanded ? 'px-3 py-3' : 'px-2 py-2'}`}>
         <AnimatePresence>
           {isExpanded && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="flex items-center gap-2.5 px-2 py-2 mb-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
+              className="flex items-center gap-2.5 px-2 py-2 mb-2 rounded-md hover:bg-sidebar-surface-hover cursor-pointer transition-colors"
             >
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
+              <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center text-[11px] font-semibold text-white shrink-0">
                 JD
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[12px] font-medium text-white/80 truncate">John Doe</div>
-                <div className="text-[10px] text-white/30 truncate">Lead Auditor</div>
+                <div className="text-[12px] font-medium text-sidebar-text truncate">John Doe</div>
+                <div className="text-[10px] text-sidebar-text-muted truncate">Lead Auditor</div>
               </div>
             </motion.div>
           )}
@@ -371,7 +376,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar, setSid
 
         <button
           onClick={toggleSidebar}
-          className="w-full flex items-center justify-center gap-2 text-white/30 hover:text-white/60 transition-colors p-1.5 rounded-lg hover:bg-white/5 cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 text-sidebar-text-muted hover:text-sidebar-text transition-colors p-1.5 rounded-md hover:bg-sidebar-surface-hover cursor-pointer"
           title={isExpanded ? 'Collapse' : 'Expand'}
           aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
         >
