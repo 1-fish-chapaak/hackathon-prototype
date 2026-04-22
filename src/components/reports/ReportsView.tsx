@@ -4,7 +4,7 @@ import {
   FileText, Shield, AlertTriangle, CheckCircle2, BarChart3,
   TrendingUp, Download, Share2, ArrowRight, ArrowLeft, ChevronDown,
   Sparkles, Eye, Settings, Palette, Type,
-  Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2
+  Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2, Trash2
 } from 'lucide-react';
 import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/mockData';
 import { StatusBadge } from '../shared/StatusBadge';
@@ -1382,9 +1382,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
   const [editingTemplate, setEditingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [previewingTemplate, setPreviewingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [reportAppliedTemplates, setReportAppliedTemplates] = useState<Record<string, typeof REPORT_TEMPLATES[0]>>({});
-  const [applyingForReport, setApplyingForReport] = useState<string | null>(null);
-  const [showApplyDropdown, setShowApplyDropdown] = useState<string | null>(null);
+  const [reportAppliedTemplates] = useState<Record<string, typeof REPORT_TEMPLATES[0]>>({});
   const [showNewReportTemplateSelector, setShowNewReportTemplateSelector] = useState(false);
   const { addToast } = useToast();
 
@@ -1399,16 +1397,6 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
     if (status === 'Approved') return 'text-emerald-700 bg-emerald-50';
     if (status === 'Pending Approval') return 'text-amber-700 bg-amber-50';
     return 'text-gray-600 bg-gray-100';
-  };
-
-  const handleApplyTemplateToReport = (reportId: string, template: typeof REPORT_TEMPLATES[0]) => {
-    setApplyingForReport(reportId);
-    setShowApplyDropdown(null);
-    setTimeout(() => {
-      setReportAppliedTemplates(prev => ({ ...prev, [reportId]: template }));
-      setApplyingForReport(null);
-      addToast({ type: 'success', message: `Template "${template.name}" applied!` });
-    }, 800);
   };
 
   if (viewingReport) {
@@ -1522,35 +1510,11 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                 const approval = REPORT_APPROVAL[String(item.id)] || 'Draft';
                 return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${approvalColor(approval)}`}>{approval}</span>;
               }},
-              { key: 'actions', label: '', width: '160px', sortable: false, align: 'right', render: (item) => (
-                <div className="flex items-center justify-end gap-1 relative">
-                  <div className="relative">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowApplyDropdown(showApplyDropdown === String(item.id) ? null : String(item.id)); }}
-                      className={`p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer ${applyingForReport === String(item.id) ? 'pointer-events-none' : ''}`}
-                      title="Apply Template"
-                    >
-                      {applyingForReport === String(item.id) ? (
-                        <Loader2 size={14} className="animate-spin text-primary" />
-                      ) : (
-                        <Layout size={14} />
-                      )}
-                    </button>
-                    <AnimatePresence>
-                      {showApplyDropdown === String(item.id) && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setShowApplyDropdown(null)} />
-                          <ApplyTemplateDropdown
-                            onSelect={(template) => handleApplyTemplateToReport(String(item.id), template)}
-                            onClose={() => setShowApplyDropdown(null)}
-                          />
-                        </>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                  <button onClick={() => { const r = GENERATED_REPORTS.find(rr => rr.id === item.id); if (r) setViewingReport(r); }} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="View"><Eye size={14} /></button>
+              { key: 'actions', label: '', width: '110px', sortable: false, align: 'right', render: (item) => (
+                <div className="flex items-center justify-end gap-1">
                   <button onClick={() => addToast({ type: 'success', message: `Downloading ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={14} /></button>
-                  {onShare && <button onClick={() => onShare(String(item.id))} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={14} /></button>}
+                  <button onClick={() => onShare ? onShare(String(item.id)) : addToast({ type: 'info', message: `Sharing ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={14} /></button>
+                  <button onClick={() => addToast({ type: 'success', message: `${item.name} deleted.` })} className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
                 </div>
               )},
             ]}
@@ -1587,10 +1551,11 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                 <span className="text-text-muted text-[12px]">{String(item.sharedAt)}</span>
               )},
               { key: 'status', label: 'Status', width: '100px', render: (item) => <StatusBadge status={String(item.status)} /> },
-              { key: 'actions', label: '', width: '100px', sortable: false, align: 'right', render: (item) => (
+              { key: 'actions', label: '', width: '110px', sortable: false, align: 'right', render: (item) => (
                 <div className="flex items-center justify-end gap-1">
-                  <button onClick={() => addToast({ type: 'info', message: `Opening ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="View"><Eye size={14} /></button>
                   <button onClick={() => addToast({ type: 'success', message: `Downloading ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={14} /></button>
+                  <button onClick={() => addToast({ type: 'info', message: `Sharing ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={14} /></button>
+                  <button onClick={() => addToast({ type: 'success', message: `${item.name} deleted.` })} className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
                 </div>
               )},
             ]}
