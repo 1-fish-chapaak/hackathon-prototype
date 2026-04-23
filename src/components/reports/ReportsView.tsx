@@ -5,7 +5,7 @@ import {
   TrendingUp, Download, Share2, ArrowRight, ArrowLeft, ChevronDown,
   Sparkles, Settings, Palette, Type,
   Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2, Trash2,
-  List, LayoutGrid, ExternalLink, GripVertical, Plus, StickyNote, PanelLeftClose, PanelLeftOpen
+  List, LayoutGrid, ExternalLink, GripVertical, GripHorizontal, Plus, StickyNote, PanelLeftClose, PanelLeftOpen, RefreshCw
 } from 'lucide-react';
 import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS, EXCEPTION_DATA } from '../../data/mockData';
 import { StatusBadge } from '../shared/StatusBadge';
@@ -1138,6 +1138,43 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
   );
 }
 
+// ─── Reorderable query card (drag handle reveals on hover) ───
+type QuerySection = {
+  id: string;
+  kind: 'query';
+  title: string;
+  query: { id: string; status: string; risk: string; severity: string; title: string; addedBy: string; kpis: { label: string; value: string; color: string }[]; summary: string; findings: string[]; observations: string[]; chartData: number[] };
+};
+
+function ReorderableQueryCard({ section, index }: { section: QuerySection; index: number }) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item
+      id={`section-${section.id}`}
+      value={section}
+      dragListener={false}
+      dragControls={controls}
+      whileDrag={{
+        scale: 1.01,
+        boxShadow: '0 16px 40px -12px rgba(15, 23, 42, 0.18), 0 4px 12px -4px rgba(15, 23, 42, 0.08)',
+        zIndex: 5,
+      }}
+      className="list-none relative group/reorder scroll-mt-4"
+    >
+      <button
+        type="button"
+        onPointerDown={(e) => controls.start(e)}
+        aria-label="Drag to reorder query"
+        title="Drag to reorder"
+        className="absolute left-1/2 -translate-x-1/2 -top-2 z-10 opacity-0 group-hover/reorder:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-text-muted hover:text-primary px-2 py-1 rounded-md bg-white border border-border-light shadow-sm hover:border-primary/30"
+      >
+        <GripHorizontal size={14} />
+      </button>
+      <QueryCard query={section.query} index={index} />
+    </Reorder.Item>
+  );
+}
+
 // ─── TOC row (per-item useDragControls so only the grip handle triggers drag) ───
 type TocSection = { id: string; kind: 'cover' | 'summary' | 'stats' | 'query' | 'note'; title: string; [k: string]: unknown };
 
@@ -1655,11 +1692,8 @@ function ReportView({ report, onBack, onShare }: {
             </AnimatePresence>
           </>
         ) : (
-          <div
-            className="grid gap-6 items-start transition-[grid-template-columns] duration-300 ease-out"
-            style={{ gridTemplateColumns: indexCollapsed ? '44px 1fr' : '240px 1fr' }}
-          >
-            {/* Left: Report Index (TOC) */}
+          <div className="items-start">
+            {/* Report Index (TOC) — commented out
             <aside className="sticky top-4 self-start">
               {indexCollapsed ? (
                 <motion.button
@@ -1709,7 +1743,6 @@ function ReportView({ report, onBack, onShare }: {
                     ))}
                   </Reorder.Group>
 
-                  {/* Add section */}
                   <div className="mt-2 border-t border-border-light pt-2 relative">
                     <button
                       onClick={() => setShowAddMenu(p => !p)}
@@ -1739,8 +1772,9 @@ function ReportView({ report, onBack, onShare }: {
                 </motion.div>
               )}
             </aside>
+            */}
 
-            {/* Right: Sections rendered in current order */}
+            {/* Sections rendered in current order */}
             <main className="min-w-0">
               <AnimatePresence initial={false}>
                 {sections.map((section, i) => {
@@ -1794,9 +1828,19 @@ function ReportView({ report, onBack, onShare }: {
                     return (
                       <motion.div {...sectionProps}>
                         <div className="rounded-2xl border border-border-light bg-white p-6 mb-5">
-                          <div className="flex items-center gap-2 mb-8">
-                            <FileText size={16} className="text-primary" />
-                            <h3 className="text-[15px] leading-[20px] font-bold text-text">{section.title}</h3>
+                          <div className="flex items-center justify-between gap-3 mb-8">
+                            <div className="flex items-center gap-2">
+                              <FileText size={16} className="text-primary" />
+                              <h3 className="text-[15px] leading-[20px] font-bold text-text">{section.title}</h3>
+                            </div>
+                            <button
+                              onClick={() => addToast({ type: 'success', message: 'Regenerating summary…' })}
+                              className="flex items-center gap-1.5 px-3 py-1.5 border border-border-light bg-white text-[12px] font-medium text-ink-600 hover:border-primary/30 hover:text-primary hover:bg-primary/[0.02] transition-all cursor-pointer shrink-0"
+                              style={{ borderRadius: '8px' }}
+                            >
+                              <RefreshCw size={13} />
+                              Regenerate summary
+                            </button>
                           </div>
                           <div className="grid grid-cols-4 gap-3 pb-5 border-b border-border-light mb-5">
                             {activeStats.map(stat => (
@@ -1834,10 +1878,28 @@ function ReportView({ report, onBack, onShare }: {
                   }
 
                   if (section.kind === 'query') {
+                    // Render all query cards once as a single Reorder.Group at the first query position
+                    const firstQueryIdx = sections.findIndex(s => s.kind === 'query');
+                    if (i !== firstQueryIdx) return null;
+
+                    const querySections = sections.filter((s): s is QuerySection => s.kind === 'query');
+                    const reorderQueries = (newOrder: QuerySection[]) => {
+                      let qi = 0;
+                      setSections(prev => prev.map(s => s.kind === 'query' ? newOrder[qi++] : s));
+                    };
+
                     return (
-                      <motion.div {...sectionProps}>
-                        <QueryCard query={section.query} index={i} />
-                      </motion.div>
+                      <Reorder.Group
+                        key="query-group"
+                        axis="y"
+                        values={querySections}
+                        onReorder={reorderQueries}
+                        className="list-none p-0 m-0"
+                      >
+                        {querySections.map((qs, qi) => (
+                          <ReorderableQueryCard key={qs.id} section={qs} index={qi} />
+                        ))}
+                      </Reorder.Group>
                     );
                   }
 
@@ -1866,8 +1928,17 @@ function ReportView({ report, onBack, onShare }: {
 }
 
 // ─── Main Reports View ───
+type ReportsTabId = 'my-reports' | 'shared-reports' | 'manage-exceptions' | 'templates';
+
+const REPORTS_TABS: { id: ReportsTabId; label: string; icon: React.ElementType }[] = [
+  { id: 'my-reports',        label: 'My Reports',        icon: BookOpen },
+  { id: 'shared-reports',    label: 'Shared Reports',    icon: Share2 },
+  { id: 'manage-exceptions', label: 'Manage Exceptions', icon: AlertTriangle },
+  { id: 'templates',         label: 'Templates',         icon: FileText },
+];
+
 export default function ReportsView({ onShare }: ReportsViewProps = {}) {
-  const [activeTab, setActiveTab] = useState<'templates' | 'my-reports' | 'shared-reports' | 'manage-exceptions'>(() => {
+  const [activeTab, setActiveTab] = useState<ReportsTabId>(() => {
     if (typeof window === 'undefined') return 'my-reports';
     const t = new URLSearchParams(window.location.search).get('tab');
     if (t === 'manage-exceptions' || t === 'shared-reports' || t === 'templates' || t === 'my-reports') return t;
@@ -1944,70 +2015,73 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
-      <div className="max-w-5xl mx-auto px-8 py-8 relative">
-        {/* Header */}
-        <div className="flex items-end justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-bold text-text tracking-tight">Reports</h1>
-            <p className="text-sm text-text-secondary mt-1">Generate, manage, and export compliance reports</p>
+    <div className="h-full overflow-y-auto bg-canvas">
+      {/* Page header */}
+      <div className="border-b border-canvas-border bg-canvas-elevated">
+        <div className="max-w-6xl mx-auto px-8 pt-8 pb-0">
+          <div className="flex items-start justify-between gap-6">
+            <div>
+              <div className="font-mono text-[11px] text-ink-500 mb-2 tracking-tight">
+                Reports · {REPORTS_TABS.find(t => t.id === activeTab)!.label}
+              </div>
+              <h1 className="font-display text-[34px] font-[420] tracking-tight text-ink-900 leading-[1.15]">Reports</h1>
+              <p className="text-[14px] text-ink-500 mt-1 mb-6">Generate, manage, and export compliance reports.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 pt-1">
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="flex items-center gap-2 px-4 py-2 border border-canvas-border hover:border-brand-200 text-ink-700 hover:text-brand-700 bg-canvas-elevated text-[13px] font-medium transition-colors cursor-pointer"
+                style={{ borderRadius: '8px' }}
+              >
+                <Upload size={14} /> Upload Template
+              </button>
+              <button
+                onClick={openNewReportModal}
+                className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-[13px] font-semibold transition-colors cursor-pointer"
+                style={{ borderRadius: '8px' }}
+              >
+                <FileText size={14} /> Create Report
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-border-light hover:border-primary/30 text-text-secondary hover:text-primary bg-white text-[13px] font-medium transition-colors cursor-pointer" style={{ borderRadius: '8px' }}
-            >
-              <Upload size={14} /> Upload Template
-            </button>
-            <button onClick={openNewReportModal} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold transition-colors cursor-pointer" style={{ borderRadius: '8px' }}>
-              <FileText size={14} /> Create Report
-            </button>
-          </div>
-        </div>
 
-        {/* Tabs */}
-        <div className="flex gap-0 border-b border-border mb-6">
-          <button
-            onClick={() => setActiveTab('my-reports')}
-            className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors cursor-pointer ${activeTab === 'my-reports' ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
-          >
-            <span className="flex items-center gap-2">
-              <BookOpen size={14} />
-              My Reports
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'my-reports' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{GENERATED_REPORTS.length}</span>
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('shared-reports')}
-            className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors cursor-pointer ${activeTab === 'shared-reports' ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
-          >
-            <span className="flex items-center gap-2">
-              <Share2 size={14} />
-              Shared Reports
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'shared-reports' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{SHARED_REPORTS.length}</span>
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('manage-exceptions')}
-            className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors cursor-pointer ${activeTab === 'manage-exceptions' ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
-          >
-            <span className="flex items-center gap-2">
-              <AlertTriangle size={14} />
-              Manage Exceptions
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'manage-exceptions' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{EXCEPTION_DATA.length}</span>
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('templates')}
-            className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors cursor-pointer ${activeTab === 'templates' ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
-          >
-            <span className="flex items-center gap-2">
-              <FileText size={14} />
-              Templates
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'templates' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{REPORT_TEMPLATES.length}</span>
-            </span>
-          </button>
+          {/* Tabs */}
+          <div className="flex items-center gap-0 border-b border-transparent -mb-px">
+            {REPORTS_TABS.map(t => {
+              const Icon = t.icon;
+              const isActive = activeTab === t.id;
+              const count =
+                t.id === 'my-reports'        ? GENERATED_REPORTS.length :
+                t.id === 'shared-reports'    ? SHARED_REPORTS.length    :
+                t.id === 'manage-exceptions' ? EXCEPTION_DATA.length    :
+                                               REPORT_TEMPLATES.length;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setActiveTab(t.id)}
+                  className={`relative flex items-center gap-2 px-4 h-11 text-[13px] font-medium transition-colors cursor-pointer ${
+                    isActive ? 'text-brand-700' : 'text-ink-500 hover:text-ink-700'
+                  }`}
+                >
+                  <Icon size={14} />
+                  {t.label}
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? 'bg-brand-50 text-brand-700' : 'bg-paper-50 text-ink-500'}`}>{count}</span>
+                  {isActive && (
+                    <motion.div
+                      layoutId="reports-tab-bar"
+                      className="absolute left-0 right-0 -bottom-px h-[2px] bg-brand-600"
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
+      </div>
+
+      {/* Body */}
+      <div className="max-w-6xl mx-auto px-8 py-8 relative">
 
         {/* My Reports */}
         {activeTab === 'my-reports' && viewMode === 'list' && (
