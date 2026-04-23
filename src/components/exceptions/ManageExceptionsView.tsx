@@ -8,21 +8,13 @@ import {
   CheckCircle2,
   Bell,
   Activity,
-  Eye,
   FlaskConical,
   ChevronDown,
   FileBarChart,
   Layers,
   Columns3,
 } from 'lucide-react';
-import {
-  GRC_EXCEPTIONS,
-  type GrcException,
-  type GrcExceptionSeverity,
-  type GrcExceptionStatus,
-  type GrcExceptionClassification,
-  type GrcReviewStatus,
-} from '../../data/mockData';
+import { GRC_EXCEPTIONS } from '../../data/mockData';
 import type { ExceptionRole } from '../../hooks/useAppState';
 import {
   ReviewClassificationDrawer,
@@ -31,6 +23,7 @@ import {
   ClassifyExceptionDrawer,
 } from './ReviewDrawers';
 import ActionHubView from './ActionHubView';
+import ExceptionsTable from './ExceptionsTable';
 
 type DrawerState =
   | { type: 'classification'; exceptionId: string }
@@ -42,42 +35,6 @@ interface ManageExceptionsViewProps {
   role: ExceptionRole;
   setRole: (role: ExceptionRole) => void;
   onBack: () => void;
-}
-
-const SEVERITY_STYLE: Record<GrcExceptionSeverity, string> = {
-  High:   'bg-high-50 text-high-700',
-  Medium: 'bg-mitigated-50 text-mitigated-700',
-  Low:    'bg-compliant-50 text-compliant-700',
-};
-
-const STATUS_STYLE: Record<GrcExceptionStatus, string> = {
-  Open:           'bg-evidence-50 text-evidence-700',
-  'Under Review': 'bg-mitigated-50 text-mitigated-700',
-  Closed:         'bg-compliant-50 text-compliant-700',
-};
-
-const CLASSIFICATION_STYLE: Record<GrcExceptionClassification, string> = {
-  Unclassified:                'bg-[#F4F2F7] text-ink-600',
-  'Design Deficiency':         'bg-high-50 text-high-700',
-  'System Deficiency':         'bg-risk-50 text-risk-700',
-  'Procedural Non-Compliance': 'bg-brand-50 text-brand-700',
-  'Business as Usual':         'bg-compliant-50 text-compliant-700',
-  'False Positive':            'bg-[#EEEEF1] text-ink-600',
-};
-
-const REVIEW_STYLE: Record<GrcReviewStatus, string> = {
-  Pending:     'bg-mitigated-50 text-mitigated-700',
-  Approved:    'bg-compliant-50 text-compliant-700',
-  Rejected:    'bg-risk-50 text-risk-700',
-  Implemented: 'bg-compliant-50 text-compliant-700',
-};
-
-function Pill({ children, className }: { children: React.ReactNode; className: string }) {
-  return (
-    <span className={`inline-flex items-center h-6 px-2.5 text-[11px] font-medium rounded-full whitespace-nowrap ${className}`}>
-      {children}
-    </span>
-  );
 }
 
 function StatCard({
@@ -165,9 +122,6 @@ export default function ManageExceptionsView({ role, setRole, onBack }: ManageEx
     });
   };
 
-  const toggleAll = () => {
-    setSelected(prev => (prev.size === exceptions.length ? new Set() : new Set(exceptions.map(e => e.id))));
-  };
 
   const notificationCount = role === 'risk-owner' ? 5 : 3;
 
@@ -274,70 +228,42 @@ export default function ManageExceptionsView({ role, setRole, onBack }: ManageEx
             </div>
 
             {/* Table card */}
-            <div className="bg-canvas-elevated border border-canvas-border rounded-[12px] overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-3 border-b border-canvas-border">
-                <span className="text-[13px] font-medium text-ink-700 tabular-nums">{exceptions.length} Exceptions</span>
-                <div className="flex items-center gap-2">
-                  <button className="flex items-center gap-1.5 h-8 px-2.5 text-[12px] text-ink-600 bg-canvas-elevated border border-canvas-border rounded-[8px] hover:border-brand-200 cursor-pointer">
-                    <Eye size={13} />
-                    Columns
-                  </button>
-                  <button className="flex items-center gap-1.5 h-8 px-2.5 text-[12px] text-ink-600 bg-canvas-elevated border border-canvas-border rounded-[8px] hover:border-brand-200 cursor-pointer">
-                    <Columns3 size={13} />
-                    Comfortable
-                  </button>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-[12.5px]">
-                  <thead>
-                    <tr className="bg-[#FAFAFB] border-b border-canvas-border text-left text-ink-500 uppercase tracking-wider">
-                      <th className="w-10 px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selected.size === exceptions.length}
-                          onChange={toggleAll}
-                          className="accent-brand-600 cursor-pointer"
-                          aria-label="Select all exceptions"
-                        />
-                      </th>
-                      <th className="px-3 py-3 font-medium text-[10.5px]">Exception ID</th>
-                      <th className="px-3 py-3 font-medium text-[10.5px]">Risk Category</th>
-                      <th className="px-3 py-3 font-medium text-[10.5px]">Severity</th>
-                      <th className="px-3 py-3 font-medium text-[10.5px]">Status</th>
-                      <th className="px-3 py-3 font-medium text-[10.5px]">Classification</th>
-                      <th className="px-3 py-3 font-medium text-[10.5px]">Class. Review</th>
-                      <th className="px-3 py-3 font-medium text-[10.5px]">Action Review</th>
-                      <th className="px-3 py-3 font-medium text-[10.5px]">Last Updated</th>
-                      <th className="px-3 py-3 font-medium text-[10.5px] text-center">Classify</th>
-                      {role === 'auditor' && (
-                        <th className="px-3 py-3 font-medium text-[10.5px] text-center">Action</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {exceptions.map((ex) => (
-                      <ExceptionRow
-                        key={ex.id}
-                        ex={ex}
-                        role={role}
-                        selected={selected.has(ex.id)}
-                        onToggle={() => toggleSelect(ex.id)}
-                        onOpenClassification={() => {
-                          if (role === 'risk-owner' && ex.classification === 'Unclassified') {
-                            setDrawer({ type: 'classify', exceptionId: ex.id });
-                          } else {
-                            setDrawer({ type: 'classification', exceptionId: ex.id });
-                          }
-                        }}
-                        onOpenAction={() => setDrawer({ type: 'action', exceptionId: ex.id })}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <ExceptionsTable
+              exceptions={exceptions}
+              role={role}
+              selected={selected}
+              onToggleSelect={toggleSelect}
+              onToggleAll={(ids) => {
+                const allSelected = ids.every(id => selected.has(id));
+                if (allSelected) {
+                  setSelected(prev => {
+                    const next = new Set(prev);
+                    ids.forEach(id => next.delete(id));
+                    return next;
+                  });
+                } else {
+                  setSelected(prev => {
+                    const next = new Set(prev);
+                    ids.forEach(id => next.add(id));
+                    return next;
+                  });
+                }
+              }}
+              onOpenClassification={(ex) => {
+                if (role === 'risk-owner' && ex.classification === 'Unclassified') {
+                  setDrawer({ type: 'classify', exceptionId: ex.id });
+                } else {
+                  setDrawer({ type: 'classification', exceptionId: ex.id });
+                }
+              }}
+              onOpenAction={(ex) => setDrawer({ type: 'action', exceptionId: ex.id })}
+              headerExtras={
+                <button className="flex items-center gap-1.5 h-8 px-2.5 text-[12px] text-ink-600 bg-canvas-elevated border border-canvas-border rounded-[8px] hover:border-brand-200 cursor-pointer">
+                  <Columns3 size={13} />
+                  Comfortable
+                </button>
+              }
+            />
           </div>
         </motion.div>
       )}
@@ -382,122 +308,3 @@ export default function ManageExceptionsView({ role, setRole, onBack }: ManageEx
   );
 }
 
-function ExceptionRow({
-  ex,
-  role,
-  selected,
-  onToggle,
-  onOpenClassification,
-  onOpenAction,
-}: {
-  ex: GrcException;
-  role: ExceptionRole;
-  selected: boolean;
-  onToggle: () => void;
-  onOpenClassification: () => void;
-  onOpenAction: () => void;
-}) {
-  const isOverdue = ex.flags?.includes('Overdue');
-  const isBulk = ex.flags?.includes('Bulk');
-
-  // Risk Owner rules: can Classify if Unclassified, else View.
-  // Auditor rules: Review Classification if class. review Pending, else View.
-  //                Review Action if action review Pending AND exception classified, else View.
-  const rowBg = isOverdue ? 'bg-risk-50/40' : selected ? 'bg-brand-50/60' : 'hover:bg-[#FAFAFB]';
-
-  const classifyButton = (() => {
-    if (role === 'risk-owner') {
-      return ex.classification === 'Unclassified' ? (
-        <PrimaryButton icon={<Tag size={12} />} onClick={onOpenClassification}>Classify</PrimaryButton>
-      ) : (
-        <GhostButton icon={<Eye size={12} />} onClick={onOpenClassification}>View</GhostButton>
-      );
-    }
-    // Auditor
-    return ex.classificationReview === 'Pending' && ex.classification !== 'Unclassified' ? (
-      <PrimaryButton icon={<Tag size={12} />} onClick={onOpenClassification}>Review Classification</PrimaryButton>
-    ) : (
-      <GhostButton icon={<Eye size={12} />} onClick={onOpenClassification}>View</GhostButton>
-    );
-  })();
-
-  const actionButton = (() => {
-    if (role === 'risk-owner') {
-      return <GhostButton icon={<Eye size={12} />} onClick={onOpenAction}>View</GhostButton>;
-    }
-    return ex.actionReview === 'Pending' && ex.classification !== 'Unclassified' ? (
-      <PrimaryButton icon={<ArrowLeft size={12} className="rotate-180" />} onClick={onOpenAction}>Review Action</PrimaryButton>
-    ) : (
-      <GhostButton icon={<Eye size={12} />} onClick={onOpenAction}>View</GhostButton>
-    );
-  })();
-
-  return (
-    <tr className={`border-b border-canvas-border last:border-b-0 transition-colors ${rowBg}`}>
-      <td className="px-4 py-3 align-top">
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={onToggle}
-          className="accent-brand-600 cursor-pointer"
-          aria-label={`Select ${ex.id}`}
-        />
-      </td>
-      <td className="px-3 py-3 align-top">
-        <div className="flex flex-col gap-1">
-          <button className="text-brand-700 font-medium text-[12.5px] font-mono hover:underline cursor-pointer text-left">
-            {ex.id}
-          </button>
-          <div className="flex items-center gap-1">
-            {isOverdue && (
-              <span className="inline-flex items-center gap-1 h-5 px-2 text-[10px] font-medium bg-risk-50 text-risk-700 rounded-full">
-                <AlertTriangle size={9} />
-                Overdue
-              </span>
-            )}
-            {isBulk && (
-              <span className="inline-flex items-center h-5 px-2 text-[10px] font-medium bg-brand-50 text-brand-700 rounded-full">
-                Bulk
-              </span>
-            )}
-          </div>
-        </div>
-      </td>
-      <td className="px-3 py-3 align-middle text-ink-800 text-[12.5px]">{ex.riskCategory}</td>
-      <td className="px-3 py-3 align-middle"><Pill className={SEVERITY_STYLE[ex.severity]}>{ex.severity}</Pill></td>
-      <td className="px-3 py-3 align-middle"><Pill className={STATUS_STYLE[ex.status]}>{ex.status}</Pill></td>
-      <td className="px-3 py-3 align-middle"><Pill className={CLASSIFICATION_STYLE[ex.classification]}>{ex.classification}</Pill></td>
-      <td className="px-3 py-3 align-middle"><Pill className={REVIEW_STYLE[ex.classificationReview]}>{ex.classificationReview}</Pill></td>
-      <td className="px-3 py-3 align-middle"><Pill className={REVIEW_STYLE[ex.actionReview]}>{ex.actionReview}</Pill></td>
-      <td className="px-3 py-3 align-middle text-ink-500 text-[11.5px] tabular-nums whitespace-nowrap">{ex.lastUpdated}</td>
-      <td className="px-3 py-3 align-middle text-center">{classifyButton}</td>
-      {role === 'auditor' && (
-        <td className="px-3 py-3 align-middle text-center">{actionButton}</td>
-      )}
-    </tr>
-  );
-}
-
-function PrimaryButton({ children, icon, onClick }: { children: React.ReactNode; icon?: React.ReactNode; onClick?: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="inline-flex items-center gap-1.5 h-7 px-3 text-[11.5px] font-semibold text-white bg-brand-600 rounded-[7px] hover:bg-brand-500 transition-colors cursor-pointer whitespace-nowrap"
-    >
-      {icon}
-      {children}
-    </button>
-  );
-}
-
-function GhostButton({ children, icon, onClick }: { children: React.ReactNode; icon?: React.ReactNode; onClick?: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="inline-flex items-center gap-1.5 h-7 px-3 text-[11.5px] font-medium text-ink-700 bg-canvas-elevated border border-canvas-border rounded-[7px] hover:border-brand-200 hover:text-brand-700 transition-colors cursor-pointer whitespace-nowrap"
-    >
-      {icon}
-      {children}
-    </button>
-  );
-}
