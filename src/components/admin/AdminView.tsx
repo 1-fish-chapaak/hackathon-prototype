@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, Shield, Settings, ScrollText,
   UserPlus, Plus, Download, Filter,
-  Construction, MoreVertical, X, Eye, ChevronDown, Search, Pencil, Copy, CopyPlus, Info,
+  Construction, X, Eye, ChevronDown, Search, Pencil, Copy, CopyPlus, Info, Trash2,
 } from 'lucide-react';
 import SmartTable, { type Column } from '../shared/SmartTable';
 import { StatusBadge } from '../shared/StatusBadge';
@@ -49,43 +49,7 @@ const STATUS_MAP: Record<UserStatus, string> = {
 
 const AVATAR_COLORS = ['#6A12CD', '#0369A1', '#15803D', '#B45309', '#B42318', '#3B0B72', '#0891B2', '#9333EA', '#C2410C', '#1D4ED8', '#059669', '#7C3AED'];
 
-function RowActionMenu({ onView, onEdit, onCopyId }: { onView?: () => void; onEdit?: () => void; onCopyId?: () => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [open]);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button onClick={() => setOpen(p => !p)} className="p-1.5 rounded-md hover:bg-paper-100 transition-colors cursor-pointer text-text-muted hover:text-text">
-        <MoreVertical size={16} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg py-1.5 z-30" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05)' }}>
-          {[
-            { icon: Eye, label: 'View User', action: onView },
-            { icon: Pencil, label: 'Edit User', action: onEdit },
-            { icon: Copy, label: 'Copy User ID', action: onCopyId },
-          ].map(item => (
-            <button
-              key={item.label}
-              onClick={() => { setOpen(false); item.action?.(); }}
-              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[13px] text-text hover:bg-primary-light transition-colors cursor-pointer"
-            >
-              <item.icon size={15} className="text-primary" />
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+/* RowActionMenu removed — user actions are now inline icons */
 
 /* ── View User Modal ── */
 function ViewUserModal({ user, onClose }: { user: MockUser; onClose: () => void }) {
@@ -163,6 +127,7 @@ function ViewUserModal({ user, onClose }: { user: MockUser; onClose: () => void 
 
 /* ── Edit User Modal ── */
 function EditUserModal({ user, onClose }: { user: MockUser; onClose: () => void }) {
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const color = AVATAR_COLORS[user.name.charCodeAt(0) % AVATAR_COLORS.length];
 
   return (
@@ -241,13 +206,36 @@ function EditUserModal({ user, onClose }: { user: MockUser; onClose: () => void 
           </div>
         </div>
 
-        <div className="px-6 py-3 border-t border-border-light flex items-center justify-between shrink-0">
-          <button onClick={onClose} className="px-4 h-8 rounded-md border border-border text-[13px] font-medium text-text-secondary hover:bg-gray-50 transition-colors cursor-pointer">
-            Cancel
-          </button>
-          <button onClick={onClose} className="px-5 h-8 rounded-md bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold transition-colors cursor-pointer">
-            Save Changes
-          </button>
+        <div className="px-6 py-3 border-t border-border-light shrink-0">
+          {deleteConfirm ? (
+            <div>
+              <p className="text-[13px] text-text mb-3">Are you sure you want to remove <span className="font-semibold">{user.name}</span>? This action cannot be undone.</p>
+              <div className="flex items-center justify-end gap-2">
+                <button onClick={() => setDeleteConfirm(false)} className="px-4 h-8 rounded-md border border-border text-[13px] font-medium text-text-secondary hover:bg-gray-50 transition-colors cursor-pointer">
+                  Cancel
+                </button>
+                <button onClick={onClose} className="flex items-center gap-1.5 px-4 h-8 rounded-md bg-red-600 hover:bg-red-700 text-white text-[13px] font-semibold transition-colors cursor-pointer">
+                  <Trash2 size={13} />
+                  Remove User
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <button onClick={() => setDeleteConfirm(true)} className="flex items-center gap-1.5 px-3 h-8 rounded-md text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer">
+                <Trash2 size={13} />
+                Remove User
+              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={onClose} className="px-4 h-8 rounded-md border border-border text-[13px] font-medium text-text-secondary hover:bg-gray-50 transition-colors cursor-pointer">
+                  Cancel
+                </button>
+                <button onClick={onClose} className="px-5 h-8 rounded-md bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold transition-colors cursor-pointer">
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       </motion.div>
@@ -318,13 +306,13 @@ const userColumns: Column<MockUser & Record<string, unknown>>[] = [
 ];
 
 const AVAILABLE_ROLES = [
-  { name: 'test manik role', desc: 'report not share' },
-  { name: 'report', desc: 'dsg' },
-  { name: 'last role', desc: 'nmmm' },
-  { name: 'Team Edit UI Test', desc: 'TEUT' },
-  { name: 'Test invite user final', desc: 'tests' },
-  { name: '2test role per final', desc: 'final test' },
-  { name: 'test role per final67', desc: 'final tests' },
+  { name: 'test manik role', desc: 'report not share', perms: 8, access: ['View', 'Create', 'Edit'] },
+  { name: 'report', desc: 'dsg', perms: 6, access: ['View', 'Export'] },
+  { name: 'last role', desc: 'nmmm', perms: 3, access: ['View'] },
+  { name: 'Team Edit UI Test', desc: 'TEUT', perms: 5, access: ['View', 'Edit'] },
+  { name: 'Test invite user final', desc: 'tests', perms: 4, access: ['View', 'Create'] },
+  { name: '2test role per final', desc: 'final test', perms: 2, access: ['View'] },
+  { name: 'test role per final67', desc: 'final tests', perms: 10, access: ['View', 'Create', 'Edit', 'Delete'] },
 ];
 
 function InviteUserModal({ onClose }: { onClose: () => void }) {
@@ -378,35 +366,36 @@ function InviteUserModal({ onClose }: { onClose: () => void }) {
           <div className="h-px bg-paper-200" />
 
           {/* Role selection */}
-          <div className="px-6 py-6">
-            <h3 className="text-[14px] text-ink-900 mb-1" style={{ fontWeight: 600 }}>Initial Role</h3>
-            <p className="text-[13px] text-ink-500 mb-5">You can assign only one role to a user.</p>
+          <div className="px-6 py-5">
+            <h3 className="text-[14px] text-text mb-1" style={{ fontWeight: 600 }}>Initial Role</h3>
+            <p className="text-[13px] text-text-muted mb-4">You can assign only one role to a user.</p>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {AVAILABLE_ROLES.map(role => {
                 const isSelected = selectedRole === role.name;
                 return (
                   <div
                     key={role.name}
                     onClick={() => setSelectedRole(role.name)}
-                    className={`flex items-center gap-3 px-4 py-3.5 rounded-lg border cursor-pointer transition-colors ${
-                      isSelected ? 'border-brand-600 bg-brand-50' : 'border-paper-200 hover:border-paper-300'
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${
+                      isSelected ? 'border-primary bg-primary-light' : 'border-border hover:border-primary/30'
                     }`}
                   >
                     <div className={`w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                      isSelected ? 'border-brand-600' : 'border-ink-300'
+                      isSelected ? 'border-primary' : 'border-gray-300'
                     }`}>
-                      {isSelected && <div className="w-2 h-2 rounded-full bg-brand-600" />}
+                      {isSelected && <div className="w-2 h-2 rounded-full bg-primary" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[13px] text-ink-800" style={{ fontWeight: 600 }}>{role.name}</div>
-                      <div className="text-[12px] text-ink-500">{role.desc}</div>
+                      <div className="text-[13px] text-text" style={{ fontWeight: 600 }}>{role.name}</div>
+                      <div className="text-[12px] text-text-muted">{role.desc}</div>
                     </div>
-                    <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-paper-200 text-[12px] text-ink-500 hover:bg-paper-50 transition-colors cursor-pointer" onClick={e => e.stopPropagation()}>
-                      <Eye size={12} />
-                      Permission
-                      <ChevronDown size={10} />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {role.access.map(a => (
+                        <span key={a} className="px-1.5 py-0.5 rounded text-[12px] bg-gray-100 text-text-muted">{a}</span>
+                      ))}
+                      <span className="text-[12px] text-text-muted tabular-nums ml-1">{role.perms}</span>
+                    </div>
                   </div>
                 );
               })}
@@ -558,21 +547,121 @@ function UsersTab({ onInvite, onCreateTeam }: { onInvite: () => void; onCreateTe
   const tableData = mockUsers.map(u => ({ ...u } as MockUser & Record<string, unknown>));
   const [viewUser, setViewUser] = useState<MockUser | null>(null);
   const [editUser, setEditUser] = useState<MockUser | null>(null);
+  const [teamDropdown, setTeamDropdown] = useState<string | null>(null);
+  const teamDropdownRef = useRef<HTMLDivElement>(null);
 
-  const columnsWithAction = userColumns.map(col =>
-    col.key === 'action'
-      ? {
-          ...col,
-          render: (item: MockUser & Record<string, unknown>) => (
-            <RowActionMenu
-              onView={() => setViewUser(item as unknown as MockUser)}
-              onEdit={() => setEditUser(item as unknown as MockUser)}
-              onCopyId={() => navigator.clipboard.writeText(item.email as string)}
-            />
-          ),
-        }
-      : col
-  );
+  useEffect(() => {
+    if (!teamDropdown) return;
+    const close = (e: MouseEvent) => { if (teamDropdownRef.current && !teamDropdownRef.current.contains(e.target as Node)) setTeamDropdown(null); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [teamDropdown]);
+
+  type UserRow = MockUser & Record<string, unknown>;
+
+  const columnsWithAction: Column<UserRow>[] = userColumns.map(col => {
+    if (col.key === 'name') {
+      return {
+        ...col,
+        render: (item: UserRow, i: number) => {
+          const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+          return (
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold text-white shrink-0" style={{ background: color }}>
+                {item.initials as string}
+              </div>
+              <div>
+                <button onClick={() => setViewUser(item as unknown as MockUser)} className="text-[13px] font-semibold text-text hover:text-primary cursor-pointer text-left">{item.name as string}</button>
+                <div className="text-[12px] text-text-muted mt-0.5">{item.email as string}</div>
+              </div>
+            </div>
+          );
+        },
+      };
+    }
+    if (col.key === 'role') {
+      return {
+        ...col,
+        render: (item: UserRow) => (
+          <button onClick={() => setEditUser(item as unknown as MockUser)} className="inline-flex items-center gap-1 text-[13px] text-text-secondary hover:text-primary cursor-pointer group">
+            {item.role as string}
+            <Pencil size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+          </button>
+        ),
+      };
+    }
+    if (col.key === 'team') {
+      return {
+        ...col,
+        render: (item: UserRow) => {
+          const teamName = item.team as string;
+          const rowId = item.email as string;
+          const isOpen = teamDropdown === rowId;
+          const teams = ['SOX Audit', 'IFC Team', 'Engineering', 'Management'];
+
+          return (
+            <div className="relative" ref={isOpen ? teamDropdownRef : undefined}>
+              <button
+                onClick={() => setTeamDropdown(isOpen ? null : rowId)}
+                className={`inline-flex items-center gap-1 text-[13px] cursor-pointer transition-colors ${
+                  teamName === '\u2014' ? 'text-text-muted hover:text-primary' : 'text-text-secondary hover:text-primary'
+                }`}
+              >
+                {teamName === '\u2014' ? 'Assign team' : teamName}
+                <ChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180 text-primary' : 'opacity-0 group-hover:opacity-100'}`} />
+              </button>
+              {isOpen && (
+                <div className="absolute left-0 top-full mt-1 w-40 bg-white rounded-md py-1 z-30" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05)' }}>
+                  {teams.map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setTeamDropdown(null)}
+                      className={`w-full text-left px-3 py-1.5 text-[13px] cursor-pointer transition-colors ${
+                        t === teamName ? 'text-primary font-semibold bg-primary-light' : 'text-text hover:bg-gray-50'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                  {teamName !== '\u2014' && (
+                    <>
+                      <div className="h-px bg-border-light my-1" />
+                      <button
+                        onClick={() => setTeamDropdown(null)}
+                        className="w-full text-left px-3 py-1.5 text-[13px] text-red-600 hover:bg-red-50 cursor-pointer transition-colors"
+                      >
+                        Remove from team
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        },
+      };
+    }
+    if (col.key === 'action') {
+      return {
+        ...col,
+        width: '130px',
+        label: '',
+        render: (item: UserRow) => (
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => setViewUser(item as unknown as MockUser)} className="flex items-center gap-1 px-2.5 h-7 rounded-md border border-border text-[12px] font-medium text-text-secondary bg-white hover:border-primary hover:text-primary transition-colors cursor-pointer">
+              <Eye size={12} />
+              View
+            </button>
+            <button onClick={() => setEditUser(item as unknown as MockUser)} className="flex items-center gap-1 px-2.5 h-7 rounded-md border border-border text-[12px] font-medium text-text-secondary bg-white hover:border-primary hover:text-primary transition-colors cursor-pointer">
+              <Pencil size={12} />
+              Edit
+            </button>
+          </div>
+        ),
+      };
+    }
+    return col;
+  });
 
   const [subTab, setSubTab] = useState<'users' | 'teams'>('users');
   const [editTeam, setEditTeam] = useState<{ name: string; members: string[] } | null>(null);
@@ -672,7 +761,8 @@ function UsersTab({ onInvite, onCreateTeam }: { onInvite: () => void; onCreateTe
                   <h3 className="text-[14px] font-semibold text-text">{team.name}</h3>
                   <button
                     onClick={e => { e.stopPropagation(); setEditTeam(team); }}
-                    className="p-1 rounded hover:bg-gray-100 transition-colors cursor-pointer text-text-muted"
+                    className="p-1 rounded hover:bg-gray-100 transition-colors cursor-pointer text-text-muted hover:text-primary"
+                    title="Edit team"
                   >
                     <Pencil size={13} />
                   </button>
@@ -709,6 +799,7 @@ function UsersTab({ onInvite, onCreateTeam }: { onInvite: () => void; onCreateTe
 
 function EditTeamModal({ team, onClose }: { team: { name: string; members: string[] }; onClose: () => void }) {
   const [memberSearch, setMemberSearch] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const allUsers = mockUsers.map(u => u.name);
   const [members, setMembers] = useState<Set<string>>(new Set(team.members));
@@ -790,13 +881,36 @@ function EditTeamModal({ team, onClose }: { team: { name: string; members: strin
           </div>
         </div>
 
-        <div className="px-6 py-3 border-t border-border-light flex items-center justify-between shrink-0">
-          <button onClick={onClose} className="px-4 h-8 rounded-md border border-border text-[13px] font-medium text-text-secondary hover:bg-gray-50 transition-colors cursor-pointer">
-            Cancel
-          </button>
-          <button onClick={onClose} className="px-5 h-8 rounded-md bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold transition-colors cursor-pointer">
-            Save Changes
-          </button>
+        <div className="px-6 py-3 border-t border-border-light shrink-0">
+          {deleteConfirm ? (
+            <div>
+              <p className="text-[13px] text-text mb-3">Are you sure you want to delete team <span className="font-semibold">{team.name}</span>? Members will be unassigned.</p>
+              <div className="flex items-center justify-end gap-2">
+                <button onClick={() => setDeleteConfirm(false)} className="px-4 h-8 rounded-md border border-border text-[13px] font-medium text-text-secondary hover:bg-gray-50 transition-colors cursor-pointer">
+                  Cancel
+                </button>
+                <button onClick={onClose} className="flex items-center gap-1.5 px-4 h-8 rounded-md bg-red-600 hover:bg-red-700 text-white text-[13px] font-semibold transition-colors cursor-pointer">
+                  <Trash2 size={13} />
+                  Delete Team
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <button onClick={() => setDeleteConfirm(true)} className="flex items-center gap-1.5 px-3 h-8 rounded-md text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer">
+                <Trash2 size={13} />
+                Delete Team
+              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={onClose} className="px-4 h-8 rounded-md border border-border text-[13px] font-medium text-text-secondary hover:bg-gray-50 transition-colors cursor-pointer">
+                  Cancel
+                </button>
+                <button onClick={onClose} className="px-5 h-8 rounded-md bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold transition-colors cursor-pointer">
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       </motion.div>
@@ -811,44 +925,6 @@ interface MockRole {
   type: 'System' | 'Custom';
   permissions: number;
   lastModified: string;
-}
-
-function RoleActionMenu({ onView, onDuplicate, onCopyId }: { onView?: () => void; onDuplicate?: () => void; onCopyId?: () => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [open]);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button onClick={() => setOpen(p => !p)} className="p-1.5 rounded-md hover:bg-gray-100 transition-colors cursor-pointer text-text-muted hover:text-text">
-        <MoreVertical size={16} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg py-1.5 z-30" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05)' }}>
-          {[
-            { icon: Eye, label: 'View Role', action: onView },
-            { icon: CopyPlus, label: 'Duplicate Role', action: onDuplicate },
-            { icon: Copy, label: 'Copy Role ID', action: onCopyId },
-          ].map(item => (
-            <button
-              key={item.label}
-              onClick={() => { setOpen(false); item.action?.(); }}
-              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[13px] text-text hover:bg-primary-light transition-colors cursor-pointer"
-            >
-              <item.icon size={15} className="text-primary" />
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 /* ── View Role Modal ── */
@@ -1029,10 +1105,10 @@ const roleColumns: Column<MockRole & Record<string, unknown>>[] = [
   },
   {
     key: 'action',
-    label: '',
+    label: 'Quick Actions',
     sortable: false,
     align: 'right' as const,
-    width: '48px',
+    width: '140px',
   },
 ];
 
@@ -1041,20 +1117,45 @@ function RolesTab({ onCreateRole }: { onCreateRole: () => void }) {
   const [viewRole, setViewRole] = useState<MockRole | null>(null);
   const [duplicateRole, setDuplicateRole] = useState(false);
 
-  const columnsWithAction = roleColumns.map(col =>
-    col.key === 'action'
-      ? {
-          ...col,
-          render: (item: MockRole & Record<string, unknown>) => (
-            <RoleActionMenu
-              onView={() => setViewRole(item as unknown as MockRole)}
-              onDuplicate={() => { setDuplicateRole(true); onCreateRole(); }}
-              onCopyId={() => navigator.clipboard.writeText(item.name as string)}
-            />
-          ),
-        }
-      : col
-  );
+  type RoleRow = MockRole & Record<string, unknown>;
+
+  const columnsWithAction = roleColumns.map(col => {
+    if (col.key === 'name') {
+      return {
+        ...col,
+        render: (item: RoleRow) => (
+          <div className="flex items-center gap-2.5">
+            <div className={`w-7 h-7 rounded flex items-center justify-center shrink-0 ${item.type === 'System' ? 'bg-primary-light' : 'bg-gray-100'}`}>
+              <Shield size={13} className={item.type === 'System' ? 'text-primary' : 'text-text-muted'} />
+            </div>
+            <button onClick={() => setViewRole(item as unknown as MockRole)} className="text-[13px] font-medium text-text hover:text-primary cursor-pointer text-left">{item.name as string}</button>
+          </div>
+        ),
+      };
+    }
+    if (col.key === 'action') {
+      return {
+        ...col,
+        width: '190px',
+        render: (item: RoleRow) => (
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => setViewRole(item as unknown as MockRole)} className="flex items-center gap-1 px-2.5 h-7 rounded-md border border-border text-[12px] font-medium text-text-secondary bg-white hover:border-primary hover:text-primary transition-colors cursor-pointer">
+              <Eye size={12} />
+              View
+            </button>
+            <button onClick={() => { setDuplicateRole(true); onCreateRole(); }} className="flex items-center gap-1 px-2.5 h-7 rounded-md border border-border text-[12px] font-medium text-text-secondary bg-white hover:border-primary hover:text-primary transition-colors cursor-pointer">
+              <CopyPlus size={12} />
+              Duplicate
+            </button>
+            <button onClick={() => navigator.clipboard.writeText(item.name as string)} title="Copy Role ID" className="flex items-center justify-center w-7 h-7 rounded-md border border-border text-text-muted bg-white hover:border-primary hover:text-primary transition-colors cursor-pointer">
+              <Copy size={12} />
+            </button>
+          </div>
+        ),
+      };
+    }
+    return col;
+  });
 
   void duplicateRole;
 

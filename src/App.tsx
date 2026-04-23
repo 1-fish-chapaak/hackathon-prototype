@@ -13,6 +13,7 @@ import BusinessProcesses from './components/audit/BusinessProcesses';
 import RiskRegister from './components/audit/RiskRegister';
 import AuditExecution from './components/audit/AuditExecution';
 import DashboardView from './components/dashboard/DashboardView';
+import DashboardListPage from './components/dashboard/DashboardListPage';
 import ReportsView from './components/reports/ReportsView';
 import HomeView from './components/home/HomeView';
 import RecentsView from './components/recents/RecentsView';
@@ -59,6 +60,7 @@ export default function App() {
     openWorkflowExecutor,
     openChat,
     setSelectedChatId,
+    openDashboard,
   } = useAppState();
 
   const mainScrollRef = useRef<HTMLDivElement>(null);
@@ -207,9 +209,19 @@ export default function App() {
 
       case 'dashboards':
         return (
-          <DashboardView
+          <DashboardListPage
+            onDashboardClick={(id) => openDashboard(id)}
             onImportPowerBI={() => setShowPowerBIWizard(true)}
-            onShare={() => setShowShareModal(true, { type: 'dashboard', id: 'dash-1' })}
+          />
+        );
+
+      case 'dashboard-detail':
+        return (
+          <DashboardView
+            initialDashboardId={state.selectedDashboardId}
+            onBack={() => setView('dashboards')}
+            onImportPowerBI={() => setShowPowerBIWizard(true)}
+            onShare={() => setShowShareModal(true, { type: 'dashboard', id: state.selectedDashboardId || 'dash-1' })}
           />
         );
 

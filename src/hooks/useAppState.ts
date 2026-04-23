@@ -25,6 +25,7 @@ export type View =
   | 'execution-evidence'
   // Intelligence
   | 'dashboards'
+  | 'dashboard-detail'
   | 'reports'
   | 'report-history'
   | 'report-builder'
@@ -82,6 +83,8 @@ export interface AppState {
   selectedChatId: string | null;
   // Query assumptions
   queryAssumptions: string[];
+  // Dashboard detail
+  selectedDashboardId: string | null;
 }
 
 const INITIAL_STATE: AppState = {
@@ -109,6 +112,7 @@ const INITIAL_STATE: AppState = {
   chatWorkflowContext: null,
   selectedChatId: null,
   queryAssumptions: [],
+  selectedDashboardId: null,
 };
 
 export function useAppState() {
@@ -211,6 +215,10 @@ export function useAppState() {
     setState(prev => ({ ...prev, view: 'workflow-executor' as View, selectedWorkflowId: workflowId }));
   }, []);
 
+  const openDashboard = useCallback((dashboardId: string) => {
+    setState(prev => ({ ...prev, view: 'dashboard-detail' as View, selectedDashboardId: dashboardId }));
+  }, []);
+
   return {
     state,
     setView,
@@ -235,5 +243,6 @@ export function useAppState() {
     openWorkflowExecutor,
     openChat,
     setSelectedChatId,
+    openDashboard,
   };
 }
