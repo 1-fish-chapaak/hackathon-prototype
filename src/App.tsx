@@ -50,7 +50,6 @@ export default function App() {
     toggleChatHistory,
     setSelectedWorkflow,
     setSelectedBP,
-    openAuditExecution,
     setShowExceptionModal,
     setShowEmailPreviewModal,
     setShowShareModal,
@@ -249,7 +248,7 @@ export default function App() {
         );
 
       case 'audit-planning':
-        return <AuditPlanningView onNavigateToExecution={openAuditExecution} />;
+        return <AuditPlanningView />;
 
       case 'knowledge-hub':
         return <KnowledgeHubView />;

@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import {
   X, FileText, ChevronDown, ChevronRight, CheckCircle2,
   Clock, AlertTriangle, MessageSquare, Shield, Workflow,
-  Lock, Plus, Send
+  Lock, Send
 } from 'lucide-react';
 
 interface WorkingPaperRound {

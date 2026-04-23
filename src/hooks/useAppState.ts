@@ -254,6 +254,7 @@ export function useAppState() {
     toggleChatHistory,
     setSelectedWorkflow,
     setSelectedBP,
+    setSelectedEngagement,
     setShowExceptionModal,
     setShowEmailPreviewModal,
     setShowShareModal,

@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import {
-  Search, Filter, ChevronRight, MessageSquare,
-  CheckCircle2, Clock, AlertTriangle, Circle,
-  ShieldCheck, XCircle, ArrowRight, Workflow,
-  FileText, Shield, Eye, Database, Target
+  Search, Filter, ChevronRight,
+  ArrowRight, Workflow,
+  Shield, Database,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Orb from '../shared/Orb';
@@ -144,7 +143,7 @@ function ActionButton({ label, type, onClick }: { label: string; type: string; o
   );
 }
 
-export default function ControlTestingView({ onAskAI, onOpenWorkingPaper, onOpenWorkflow, onOpenTrace }: Props) {
+export default function ControlTestingView({ onOpenWorkingPaper, onOpenWorkflow, onOpenTrace }: Props) {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [search, setSearch] = useState('');
 

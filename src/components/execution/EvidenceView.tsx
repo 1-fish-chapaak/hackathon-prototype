@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import {
   Search, Upload, FileSpreadsheet, FileText, File,
-  Download, Eye, Sparkles, Shield, TableProperties,
+  Download, Eye, Sparkles, Shield,
   ChevronRight, CloudUpload, X, CheckCircle2,
-  Clock, XCircle, Workflow, Database, ExternalLink
+  Clock, XCircle, Workflow, Database
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Orb from '../shared/Orb';

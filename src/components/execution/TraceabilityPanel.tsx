@@ -2,7 +2,7 @@ import { motion } from 'motion/react';
 import {
   X, ChevronRight, CheckCircle2, Clock, AlertTriangle,
   FileText, Workflow, Shield, Database, Zap, Target,
-  ArrowDown, ExternalLink, Eye, Filter, Upload, BarChart3
+  ArrowDown, ExternalLink, Filter, BarChart3
 } from 'lucide-react';
 
 interface TraceNode {
@@ -109,9 +109,6 @@ export default function TraceabilityPanel({ onClose, onOpenWorkingPaper, onOpenW
         <div className="space-y-0">
           {MOCK_TRACE.map((node, i) => {
             const prevLevel = i > 0 ? MOCK_TRACE[i - 1].level : -1;
-            const nextLevel = i < MOCK_TRACE.length - 1 ? MOCK_TRACE[i + 1].level : -1;
-            const showConnector = i < MOCK_TRACE.length - 1;
-            const isChild = node.level > prevLevel && node.level === (i > 0 ? MOCK_TRACE[i - 1].level + 1 : 0);
             const isSibling = node.level === prevLevel;
 
             return (
