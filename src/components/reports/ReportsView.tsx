@@ -5,9 +5,10 @@ import {
   TrendingUp, Download, Share2, ArrowRight, ArrowLeft, ChevronDown,
   Sparkles, Settings, Palette, Type,
   Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2, Trash2,
-  List, LayoutGrid, ExternalLink, GripVertical, Plus, StickyNote, PanelLeftClose, PanelLeftOpen
+  List, LayoutGrid, GripVertical, Plus, StickyNote, PanelLeftClose, PanelLeftOpen,
+  ShieldAlert, MoreVertical, Eye, Database
 } from 'lucide-react';
-import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS, EXCEPTION_DATA } from '../../data/mockData';
+import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/mockData';
 import { StatusBadge } from '../shared/StatusBadge';
 import SmartTable from '../shared/SmartTable';
 import { useToast } from '../shared/Toast';
@@ -51,6 +52,7 @@ const SECTION_ICONS: Record<string, React.ElementType> = {
 interface ReportsViewProps {
   onOpenBuilder?: () => void;
   onShare?: (id: string) => void;
+  onManageExceptions?: () => void;
 }
 
 // ─── Upload Template Modal ───
@@ -906,11 +908,12 @@ function AnimatedNumber({ value, delay = 0, durationMs = 900, className = '' }: 
   return <span ref={ref} className={className} style={{ fontVariantNumeric: 'tabular-nums' }}>{isNumeric ? '0' + suffix : value}</span>;
 }
 
-function QueryCard({ query, index }: { query: { id: string; status: string; risk: string; severity: string; title: string; addedBy: string; kpis: { label: string; value: string; color: string }[]; summary: string; findings: string[]; observations: string[]; chartData: number[] }; index: number }) {
+function QueryCard({ query, index, onManageExceptions }: { query: { id: string; status: string; risk: string; severity: string; title: string; addedBy: string; kpis: { label: string; value: string; color: string }[]; summary: string; findings: string[]; observations: string[]; chartData: number[] }; index: number; onManageExceptions?: () => void }) {
   const [expanded, setExpanded] = useState(index === 0);
   const [hovered, setHovered] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const accentColor = query.severity === 'Critical' ? '#B42318' : '#C2410C';
-  const initials = query.addedBy.split(' ').map(n => n[0]).join('').slice(0, 2);
   const baseDelay = index * 0.08;
   const sparkW = 100;
 
@@ -921,6 +924,15 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
   const severityStyle = query.severity === 'Critical'
     ? { pill: 'bg-risk-50 text-risk-700', dot: 'bg-risk-500' }
     : { pill: 'bg-high-50 text-high-700', dot: 'bg-high-500' };
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (ev: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(ev.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
 
   return (
     <motion.div
@@ -979,11 +991,58 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
               <span className={`w-1 h-1 rounded-full ${statusStyle.dot}`} />
               {query.status}
             </span>
-            <div className="flex items-center gap-1.5 text-[11.5px]">
-              <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[9px] tracking-wide">
-                {initials}
-              </span>
-              <span className="text-text-muted">{query.addedBy}</span>
+            <button
+              onClick={onManageExceptions}
+              title="Triage and act on every exception flagged in this query"
+              className="group relative inline-flex items-center gap-1.5 h-8 pl-3 pr-2.5 text-[12px] font-semibold text-white rounded-[8px] cursor-pointer transition-all hover:-translate-y-[1px] active:translate-y-0 shadow-[0_2px_8px_rgba(106,18,205,0.25)] hover:shadow-[0_4px_14px_rgba(106,18,205,0.35)]"
+              style={{ background: 'linear-gradient(135deg, #6A12CD 0%, #A366F0 100%)' }}
+            >
+              <ShieldAlert size={13} className="shrink-0" />
+              Manage Exceptions
+              <ArrowRight size={13} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
+            </button>
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen(o => !o)}
+                title="More options"
+                aria-label="More options"
+                className="w-8 h-8 flex items-center justify-center rounded-[8px] text-text-muted hover:text-primary hover:bg-primary-xlight transition-colors cursor-pointer"
+              >
+                <MoreVertical size={15} />
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 top-10 z-10 w-[200px] bg-white border border-border-light rounded-[10px] shadow-xl py-1">
+                  <button
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-primary-xlight hover:text-primary cursor-pointer"
+                  >
+                    <Eye size={13} />
+                    Open Query
+                  </button>
+                  <button
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-primary-xlight hover:text-primary cursor-pointer"
+                  >
+                    <Database size={13} />
+                    Data Source Files
+                  </button>
+                  <button
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-primary-xlight hover:text-primary cursor-pointer"
+                  >
+                    <Download size={13} />
+                    Download Exceptions
+                  </button>
+                  <div className="my-1 border-t border-border-light" />
+                  <button
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-risk-700 hover:bg-risk-50 cursor-pointer"
+                  >
+                    <Trash2 size={13} />
+                    Delete Query Card
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
@@ -1067,32 +1126,22 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
           {query.summary}
         </motion.p>
 
-        {/* Action row */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setExpanded(p => !p)}
-            className="flex items-center gap-1.5 text-[13px] font-semibold text-primary cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 group"
+        {/* Bottom row: expand toggle */}
+        <button
+          onClick={() => setExpanded(p => !p)}
+          className="flex items-center gap-1.5 text-[13px] font-semibold text-primary cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 group"
+        >
+          <motion.span
+            animate={{ rotate: expanded ? 0 : -90 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="inline-flex"
           >
-            <motion.span
-              animate={{ rotate: expanded ? 0 : -90 }}
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="inline-flex"
-            >
-              <ChevronDown size={14} />
-            </motion.span>
-            <span className="transition-colors group-hover:text-primary-hover">
-              {expanded ? 'Hide findings & observations' : 'Show findings & observations'}
-            </span>
-          </button>
-          <button
-            onClick={() => window.open(`${window.location.origin}${window.location.pathname}?view=reports&tab=manage-exceptions`, '_blank')}
-            className="group flex items-center gap-1.5 px-3 py-1.5 border border-border-light bg-white text-[12px] font-medium text-ink-600 hover:border-primary/30 hover:text-primary hover:bg-primary/[0.02] transition-all cursor-pointer"
-            style={{ borderRadius: '8px' }}
-          >
-            Manage Exceptions
-            <ExternalLink size={13} className="transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-          </button>
-        </div>
+            <ChevronDown size={14} />
+          </motion.span>
+          <span className="transition-colors group-hover:text-primary-hover">
+            {expanded ? 'Hide findings & observations' : 'Show findings & observations'}
+          </span>
+        </button>
       </div>
 
       {/* Expandable details */}
@@ -1196,10 +1245,11 @@ function SectionTocRow({
 }
 
 // ─── Report View (with multiple queries) ───
-function ReportView({ report, onBack, onShare }: {
+function ReportView({ report, onBack, onShare, onManageExceptions }: {
   report: typeof GENERATED_REPORTS[0];
   onBack: () => void;
   onShare?: () => void;
+  onManageExceptions?: () => void;
 }) {
   const { addToast } = useToast();
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
@@ -1456,8 +1506,8 @@ function ReportView({ report, onBack, onShare }: {
     : [
         { label: 'Total Exceptions', value: '187', icon: AlertTriangle, color: 'text-high-700 bg-high-50' },
         { label: 'Resolved', value: '38', icon: CheckCircle2, color: 'text-compliant-700 bg-compliant-50' },
-        { label: 'Critical Items', value: '12', icon: Shield, color: 'text-risk-700 bg-risk-50' },
-        { label: 'Compliance Score', value: '78%', icon: TrendingUp, color: 'text-evidence-700 bg-evidence-50' },
+        { label: 'High Risk', value: '12', icon: Shield, color: 'text-risk-700 bg-risk-50' },
+        { label: 'Report Health', value: '78%', icon: TrendingUp, color: 'text-evidence-700 bg-evidence-50' },
       ];
 
   // Sections — reorderable / add / remove
@@ -1836,7 +1886,7 @@ function ReportView({ report, onBack, onShare }: {
                   if (section.kind === 'query') {
                     return (
                       <motion.div {...sectionProps}>
-                        <QueryCard query={section.query} index={i} />
+                        <QueryCard query={section.query} index={i} onManageExceptions={onManageExceptions} />
                       </motion.div>
                     );
                   }
@@ -1866,11 +1916,11 @@ function ReportView({ report, onBack, onShare }: {
 }
 
 // ─── Main Reports View ───
-export default function ReportsView({ onShare }: ReportsViewProps = {}) {
-  const [activeTab, setActiveTab] = useState<'templates' | 'my-reports' | 'shared-reports' | 'manage-exceptions'>(() => {
+export default function ReportsView({ onShare, onManageExceptions }: ReportsViewProps = {}) {
+  const [activeTab, setActiveTab] = useState<'templates' | 'my-reports' | 'shared-reports'>(() => {
     if (typeof window === 'undefined') return 'my-reports';
     const t = new URLSearchParams(window.location.search).get('tab');
-    if (t === 'manage-exceptions' || t === 'shared-reports' || t === 'templates' || t === 'my-reports') return t;
+    if (t === 'shared-reports' || t === 'templates' || t === 'my-reports') return t;
     return 'my-reports';
   });
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -1939,6 +1989,7 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
         report={viewingReport}
         onBack={() => setViewingReport(null)}
         onShare={onShare ? () => onShare(viewingReport.id) : undefined}
+        onManageExceptions={onManageExceptions}
       />
     );
   }
@@ -1985,16 +2036,6 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
               <Share2 size={14} />
               Shared Reports
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'shared-reports' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{SHARED_REPORTS.length}</span>
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('manage-exceptions')}
-            className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors cursor-pointer ${activeTab === 'manage-exceptions' ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
-          >
-            <span className="flex items-center gap-2">
-              <AlertTriangle size={14} />
-              Manage Exceptions
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'manage-exceptions' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{EXCEPTION_DATA.length}</span>
             </span>
           </button>
           <button
@@ -2190,39 +2231,6 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
               ))}
             </div>
           </div>
-        )}
-
-        {/* Templates Grid */}
-        {/* Manage Exceptions */}
-        {activeTab === 'manage-exceptions' && (
-          <SmartTable
-            data={EXCEPTION_DATA as unknown as Record<string, unknown>[]}
-            keyField="id"
-            searchPlaceholder="Search exceptions..."
-            searchKeys={['id', 'vendor', 'invoiceNo', 'status', 'assignee']}
-            paginated={false}
-            columns={[
-              { key: 'id', label: 'Exception ID', width: '110px' },
-              { key: 'invoiceNo', label: 'Invoice No', width: '140px' },
-              { key: 'vendor', label: 'Vendor' },
-              { key: 'amount', label: 'Amount', align: 'right', width: '110px', render: (item) => `$${Number(item.amount).toLocaleString()}` },
-              { key: 'matchScore', label: 'Match %', align: 'center', width: '90px', render: (item) => (
-                <span className={`font-semibold ${Number(item.matchScore) >= 90 ? 'text-risk-700' : 'text-mitigated-700'}`}>{String(item.matchScore)}%</span>
-              )},
-              { key: 'status', label: 'Status', width: '120px', render: (item) => {
-                const map: Record<string, string> = {
-                  unassigned: 'bg-gray-100 text-gray-600',
-                  assigned: 'bg-evidence-50 text-evidence-700',
-                  'in-progress': 'bg-mitigated-50 text-mitigated-700',
-                  notified: 'bg-purple-50 text-purple-700',
-                  resolved: 'bg-compliant-50 text-compliant-700',
-                };
-                const label = String(item.status).replace('-', ' ');
-                return <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize ${map[String(item.status)] ?? 'bg-gray-100 text-gray-600'}`}>{label}</span>;
-              }},
-              { key: 'assignee', label: 'Assignee', render: (item) => item.assignee ? String(item.assignee) : <span className="text-text-muted">—</span> },
-            ]}
-          />
         )}
 
         {activeTab === 'templates' && (
