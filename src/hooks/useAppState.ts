@@ -101,7 +101,7 @@ const INITIAL_STATE: AppState = {
   view: getInitialView(),
   sidebarExpanded: false,
   chatMode: 'chat',
-  activeArtifactTab: 'result',
+  activeArtifactTab: 'plan',
   artifactMode: 'query',
   showArtifacts: false,
   showChatHistory: false,
