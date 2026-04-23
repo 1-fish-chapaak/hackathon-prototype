@@ -6,7 +6,9 @@ import {
   XCircle, Clock, Sparkles, RefreshCw, ChevronDown,
   ShoppingCart, CreditCard, BarChart3,
   Package, Receipt, Handshake, ShieldCheck,
-  Send, X, Mail, Copy, CheckCircle2, ArrowLeft
+  Send, X, Mail, Copy, CheckCircle2, ArrowLeft,
+  Download, Filter, Share2, Loader2,
+  MoreVertical, Edit, Trash2, ChevronUp, Eye, EyeOff
 } from 'lucide-react';
 import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
@@ -319,6 +321,120 @@ const SHARE_EMAIL_TEMPLATES: Record<DashboardId, { subject: string; body: string
 
 // ─── Alerts Panel Component ─────────────────────────────────────────────────
 
+function IRAInlineSummary({ dashboardId }: { dashboardId: DashboardId }) {
+  const [summary, setSummary] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedText, setEditedText] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerate = () => {
+    setIsGenerating(true);
+    setTimeout(() => {
+      const text = AI_SUMMARIES[dashboardId];
+      setSummary(text);
+      setEditedText(text);
+      setIsGenerating(false);
+    }, 1500);
+  };
+
+  const handleTextClick = () => {
+    if (!isGenerating) {
+      setIsEditing(true);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    if (editedText !== summary) {
+      setSummary(editedText);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleBlur(); }
+    if (e.key === 'Escape') { setEditedText(summary); setIsEditing(false); }
+  };
+
+  // Empty / generate state
+  if (!summary && !isGenerating) {
+    return (
+      <div className="px-5 pt-4 pb-3">
+        <div className="p-4 rounded-xl border border-brand-100 bg-canvas-elevated">
+          <button
+            onClick={handleGenerate}
+            className="flex items-center gap-2 text-brand-600 hover:text-brand-700 transition-colors cursor-pointer text-[13px] font-medium"
+          >
+            <Sparkles size={14} className="text-brand-500" />
+            Generate AI Summary
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Generating state
+  if (isGenerating) {
+    return (
+      <div className="px-5 pt-4 pb-3">
+        <div className="p-4 rounded-xl border border-brand-200 bg-canvas-elevated">
+          <div className="flex items-center gap-3">
+            <Sparkles size={14} className="text-brand-500 animate-pulse" />
+            <div className="flex items-center gap-2">
+              <div className="h-1 w-32 bg-brand-100 rounded-full overflow-hidden">
+                <motion.div className="h-full bg-brand-500 rounded-full" initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ duration: 1.5, ease: 'easeInOut' }} />
+              </div>
+              <span className="text-[12px] text-ink-500">Generating summary...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Generated — IRA SUMMARY card
+  return (
+    <div className="px-5 pt-4 pb-3">
+      <div className="p-5 rounded-xl border border-brand-200 bg-canvas-elevated">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-brand-50">
+              <Sparkles size={13} className="text-brand-600" />
+            </div>
+            <span className="text-[12px] font-bold text-brand-700 uppercase tracking-wide">IRA Summary</span>
+          </div>
+          <button onClick={handleGenerate} className="p-1.5 rounded-lg hover:bg-brand-50 transition-colors cursor-pointer" title="Regenerate">
+            <Sparkles size={13} className="text-brand-500" />
+          </button>
+        </div>
+        {isEditing ? (
+          <textarea
+            value={editedText}
+            onChange={(e) => setEditedText(e.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            autoFocus
+            className="w-full text-[13px] leading-[1.65] text-ink-800 bg-transparent border border-brand-200 rounded-lg p-2 resize-none outline-none focus:border-brand-400 transition-colors"
+            rows={3}
+          />
+        ) : (
+          <p onClick={handleTextClick} className="text-[13px] leading-[1.65] text-ink-800 cursor-text hover:bg-brand-50/50 rounded-lg transition-colors">
+            {summary}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── IRA Summary texts per dashboard ────────────────────────────────────────
+
+const AI_SUMMARIES: Record<DashboardId, string> = {
+  p2p: 'P2P saw 3 new duplicate flags overnight (Acme Corp & Global Supplies), but compliance rate improved to 94.2% after vendor master cleanup. Processing time is trending down to 1.8 days. One new vendor (Atlas Manufacturing) is pending KYC — recommend expediting before next payment batch.',
+  o2c: 'DSO improved by 2 days to 38 days. 5 customers account for 65% of outstanding receivables totalling ₹4.2Cr. Dispute rate trending upward in APAC region — 12 new disputes this week. Cash application automation rate hit 91%.',
+  s2c: '12 contracts expire within 30 days across 3 business units. Vendor TechParts Ltd compliance score dropped below 75% threshold. 4 contracts pending legal review — recommend prioritizing the ₹2.1Cr IT services renewal.',
+  grc: '2 critical risks in P2P have zero controls mapped. SOD violation detected in AP module — user JSmith has both invoice approval and payment release access. 3 audit findings from Q1 remain open past remediation deadline.',
+};
+
 function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
   const { addToast } = useToast();
   const [expanded, setExpanded] = useState(true);
@@ -390,16 +506,8 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
         <AnimatePresence>
           {expanded && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
-              {/* AI Summary */}
-              <div className="px-5 pt-4 pb-3">
-                <div className="p-4 rounded-xl bg-gradient-to-r from-primary-xlight/60 via-white to-primary-xlight/40 border border-primary/10">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <Sparkles size={11} className="text-primary" />
-                    <span className="text-[12px] font-bold text-primary">AI Summary</span>
-                  </div>
-                  <p className="text-[12px] text-text leading-relaxed">{summary}</p>
-                </div>
-              </div>
+              {/* IRA Summary — matches Working folder design */}
+              <IRAInlineSummary dashboardId={dashboardId} />
 
               {/* Alert items */}
               <div className="px-5 pb-4 space-y-2">
@@ -550,6 +658,495 @@ function DashboardSkeleton() {
           {[1, 2].map(i => <div key={i} className="h-56 skeleton skeleton-card" />)}
         </div>
         <div className="h-48 skeleton skeleton-card" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Filter Panel ───────────────────────────────────────────────────────────
+
+const DATE_OPTIONS = [
+  { value: 'today', label: 'Today' },
+  { value: 'last-7-days', label: 'Last 7 Days' },
+  { value: 'last-30-days', label: 'Last 30 Days' },
+  { value: 'last-quarter', label: 'Last Quarter' },
+  { value: 'last-year', label: 'Last Year' },
+];
+
+const STATUS_FILTER_OPTIONS = ['Compliant', 'Non-Compliant', 'Under Review', 'Pending', 'Flagged'];
+const RISK_FILTER_OPTIONS = ['Critical', 'High', 'Medium', 'Low'];
+const DEPT_FILTER_OPTIONS = ['Finance', 'Procurement', 'IT', 'Legal', 'Operations', 'HR', 'Sales'];
+
+function FilterSection({ title, icon, isActive, onClear, children, defaultOpen = true }: {
+  title: string;
+  icon: React.ReactNode;
+  isActive?: boolean;
+  onClear?: () => void;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className={`rounded-xl border transition-all overflow-hidden ${isActive ? 'border-brand-200 bg-brand-50/50' : 'border-canvas-border bg-canvas-elevated'}`}>
+      <button
+        onClick={() => setOpen(p => !p)}
+        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-surface-2 transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-2">
+          <span className={isActive ? 'text-brand-600' : 'text-ink-400'}>{icon}</span>
+          <span className={`text-[11px] font-bold uppercase tracking-wider ${isActive ? 'text-brand-700' : 'text-ink-500'}`}>{title}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {isActive && onClear && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onClear(); }}
+              className="text-[11px] font-semibold text-ink-400 hover:text-brand-600 px-1.5 py-0.5 rounded hover:bg-brand-50 transition-colors cursor-pointer"
+            >Clear</button>
+          )}
+          <ChevronDown size={13} className={`text-ink-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-3 pt-1">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function CheckboxItem({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      onClick={onChange}
+      className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer text-left"
+    >
+      <div className={`size-4 rounded border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${
+        checked ? 'border-brand-600 bg-brand-600' : 'border-ink-300 bg-white'
+      }`}>
+        {checked && (
+          <svg viewBox="0 0 12 12" fill="none" className="size-2.5">
+            <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </div>
+      <span className={`text-[12px] ${checked ? 'text-ink-900 font-medium' : 'text-ink-600'}`}>{label}</span>
+    </button>
+  );
+}
+
+function FilterPanel({
+  open, onClose,
+  dateRange, onDateRangeChange,
+  status, onStatusChange,
+  risk, onRiskChange,
+  department, onDepartmentChange,
+  onResetAll,
+}: {
+  open: boolean;
+  onClose: () => void;
+  dateRange: string;
+  onDateRangeChange: (v: string) => void;
+  status: string[];
+  onStatusChange: (v: string[]) => void;
+  risk: string[];
+  onRiskChange: (v: string[]) => void;
+  department: string[];
+  onDepartmentChange: (v: string[]) => void;
+  onResetAll: () => void;
+}) {
+  const toggleItem = (arr: string[], item: string) =>
+    arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item];
+
+  const hasAny = dateRange !== 'last-30-days' || status.length > 0 || risk.length > 0 || department.length > 0;
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-black/10"
+            onClick={onClose}
+          />
+          {/* Panel */}
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            className="fixed top-0 right-0 h-full w-[340px] z-50 bg-canvas border-l border-canvas-border shadow-2xl flex flex-col"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-canvas-border shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-brand-50">
+                  <Filter size={14} className="text-brand-600" />
+                </div>
+                <span className="text-[14px] font-semibold text-ink-900">Filters</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {hasAny && (
+                  <button onClick={onResetAll} className="text-[11px] font-semibold text-ink-400 hover:text-brand-600 px-2 py-1 rounded-lg hover:bg-brand-50 transition-colors cursor-pointer">
+                    Reset all
+                  </button>
+                )}
+                <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
+                  <X size={16} className="text-ink-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+              {/* Date Range */}
+              <FilterSection
+                title="Date Range"
+                icon={<Clock size={14} />}
+                isActive={dateRange !== 'last-30-days'}
+                onClear={() => onDateRangeChange('last-30-days')}
+              >
+                <div className="space-y-0.5">
+                  {DATE_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => onDateRangeChange(opt.value)}
+                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[12px] transition-colors cursor-pointer ${
+                        dateRange === opt.value
+                          ? 'bg-brand-600 text-white font-medium'
+                          : 'text-ink-600 hover:bg-surface-2'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </FilterSection>
+
+              {/* Status */}
+              <FilterSection
+                title="Status"
+                icon={<Shield size={14} />}
+                isActive={status.length > 0}
+                onClear={() => onStatusChange([])}
+              >
+                <div className="space-y-0.5">
+                  {STATUS_FILTER_OPTIONS.map(opt => (
+                    <CheckboxItem
+                      key={opt}
+                      label={opt}
+                      checked={status.includes(opt)}
+                      onChange={() => onStatusChange(toggleItem(status, opt))}
+                    />
+                  ))}
+                </div>
+              </FilterSection>
+
+              {/* Risk Level */}
+              <FilterSection
+                title="Risk Level"
+                icon={<AlertTriangle size={14} />}
+                isActive={risk.length > 0}
+                onClear={() => onRiskChange([])}
+              >
+                <div className="space-y-0.5">
+                  {RISK_FILTER_OPTIONS.map(opt => (
+                    <CheckboxItem
+                      key={opt}
+                      label={opt}
+                      checked={risk.includes(opt)}
+                      onChange={() => onRiskChange(toggleItem(risk, opt))}
+                    />
+                  ))}
+                </div>
+              </FilterSection>
+
+              {/* Department */}
+              <FilterSection
+                title="Department"
+                icon={<Package size={14} />}
+                isActive={department.length > 0}
+                onClear={() => onDepartmentChange([])}
+                defaultOpen={false}
+              >
+                <div className="space-y-0.5">
+                  {DEPT_FILTER_OPTIONS.map(opt => (
+                    <CheckboxItem
+                      key={opt}
+                      label={opt}
+                      checked={department.includes(opt)}
+                      onChange={() => onDepartmentChange(toggleItem(department, opt))}
+                    />
+                  ))}
+                </div>
+              </FilterSection>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ─── Drill Icons ────────────────────────────────────────────────────────────
+
+function IconDrillUp() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="size-4">
+      <path d="M8 12V4" /><path d="M5 7L8 4L11 7" />
+    </svg>
+  );
+}
+
+function IconDrillDown() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="size-4">
+      <path d="M8 4V12" /><path d="M5 9L8 12L11 9" />
+    </svg>
+  );
+}
+
+// ─── Widget Toolbar Button ──────────────────────────────────────────────────
+
+function ToolbarBtn({ children, onClick, disabled = false, active = false, tip }: {
+  children: React.ReactNode;
+  onClick: (e: React.MouseEvent) => void;
+  disabled?: boolean;
+  active?: boolean;
+  tip: string;
+}) {
+  return (
+    <button
+      onClick={disabled ? undefined : (e) => { e.stopPropagation(); onClick(e); }}
+      disabled={disabled}
+      title={tip}
+      className={`flex items-center justify-center size-[28px] rounded-md transition-all duration-100 cursor-pointer
+        ${disabled ? 'text-ink-300 cursor-not-allowed' : active ? 'bg-brand-600 text-white' : 'text-ink-400 hover:bg-brand-50 hover:text-brand-600'}
+      `}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── Expanded Widget Modal ──────────────────────────────────────────────────
+
+function ExpandedWidgetModal({ open, onClose, title, subtitle, children }: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  if (!open) return null;
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.2 }}
+            className="bg-canvas-elevated rounded-xl border border-canvas-border shadow-xl w-[90vw] max-w-[900px] max-h-[85vh] overflow-hidden flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-canvas-border">
+              <div>
+                <h2 className="text-[15px] font-semibold text-ink-900">{title}</h2>
+                {subtitle && <p className="text-[12px] text-ink-500 mt-0.5">{subtitle}</p>}
+              </div>
+              <button
+                onClick={onClose}
+                className="flex items-center justify-center size-8 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                <X size={16} className="text-ink-500" />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex items-center gap-1 px-6 pt-3 border-b border-canvas-border">
+              {['Visualization', 'Records', 'Summary'].map((tab, i) => (
+                <button
+                  key={tab}
+                  className={`px-3 py-2 text-[12px] font-medium border-b-2 transition-colors cursor-pointer ${
+                    i === 0
+                      ? 'border-brand-600 text-brand-700'
+                      : 'border-transparent text-ink-500 hover:text-ink-700'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-6">
+              {children}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ─── Widget Card ────────────────────────────────────────────────────────────
+
+function WidgetCard({
+  title,
+  subtitle,
+  children,
+  onExpand,
+  onEdit,
+  onDelete,
+  onFilter,
+  addToast,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  onExpand?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onFilter?: () => void;
+  addToast: (t: { message: string; type: string }) => void;
+}) {
+  const [showMenu, setShowMenu] = useState(false);
+  const [drillLevel, setDrillLevel] = useState(0);
+  const [drillModeActive, setDrillModeActive] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
+  const handleDrillUp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (drillLevel <= 0) {
+      addToast({ message: 'Already at top level', type: 'info' });
+      return;
+    }
+    setDrillLevel(prev => prev - 1);
+    setDrillModeActive(false);
+    addToast({ message: 'Drilled up', type: 'success' });
+  };
+
+  const handleDrillDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (drillLevel >= 2) {
+      addToast({ message: 'Already at deepest level', type: 'info' });
+      return;
+    }
+    if (!drillModeActive) {
+      setDrillModeActive(true);
+      addToast({ message: 'Drill mode ON — click a data point to drill', type: 'success' });
+    } else {
+      setDrillModeActive(false);
+      addToast({ message: 'Drill mode OFF', type: 'info' });
+    }
+  };
+
+  return (
+    <div
+      className="glass-card rounded-xl transition-all duration-150 group relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => { setHovered(false); setShowMenu(false); }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 pt-5 pb-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold text-ink-900 truncate">{title}</h3>
+          {subtitle && <p className="text-[11px] text-ink-500 mt-0.5 truncate">{subtitle}</p>}
+        </div>
+
+        {/* Toolbar — visible on hover */}
+        <div
+          className={`flex items-center gap-0.5 bg-canvas-elevated border border-canvas-border rounded-lg px-0.5 py-0.5 transition-opacity duration-150 ${
+            hovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
+        >
+          {/* Drill Up */}
+          <ToolbarBtn onClick={handleDrillUp} disabled={drillLevel <= 0} tip="Drill up">
+            <IconDrillUp />
+          </ToolbarBtn>
+
+          {/* Drill Down */}
+          <ToolbarBtn onClick={handleDrillDown} active={drillModeActive} disabled={drillLevel >= 2} tip={drillLevel >= 2 ? 'Already at deepest level' : 'Drill down'}>
+            <IconDrillDown />
+          </ToolbarBtn>
+
+          {/* Filter */}
+          <ToolbarBtn onClick={(e) => { e.stopPropagation(); onFilter?.(); }} tip="Widget filters">
+            <Filter size={13} />
+          </ToolbarBtn>
+
+          {/* 3-dot menu */}
+          <div className="relative">
+            <ToolbarBtn
+              onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+              active={showMenu}
+              tip="More options"
+            >
+              <MoreVertical size={13} />
+            </ToolbarBtn>
+
+            {showMenu && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} />
+                <div className="absolute top-full right-0 z-40 mt-1 w-[140px] bg-canvas-elevated border border-canvas-border rounded-lg shadow-xl py-1">
+                  {onExpand && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowMenu(false); onExpand(); }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] text-ink-700 hover:bg-brand-50 hover:text-brand-600 transition-colors text-left cursor-pointer"
+                    >
+                      <Maximize2 size={13} />
+                      Expand
+                    </button>
+                  )}
+                  {onEdit && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEdit(); }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] text-ink-700 hover:bg-brand-50 hover:text-brand-600 transition-colors text-left cursor-pointer"
+                    >
+                      <Edit size={13} />
+                      Edit Widget
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete(); }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] text-ink-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left cursor-pointer"
+                    >
+                      <Trash2 size={13} />
+                      Delete Widget
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Chart content */}
+      <div className="px-5 pb-5">
+        {children}
       </div>
     </div>
   );
@@ -790,6 +1387,49 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
       : 'p2p'
   );
 
+  // Action bar state
+  const [lastRefreshTime, setLastRefreshTime] = useState('2 mins ago');
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [activeFiltersCount, setActiveFiltersCount] = useState(0);
+
+  // Recalculate active filter count
+  useEffect(() => {
+    let n = 0;
+    if (filterDateRange !== 'last-30-days') n++;
+    if (filterStatus.length > 0) n++;
+    if (filterRisk.length > 0) n++;
+    if (filterDepartment.length > 0) n++;
+    setActiveFiltersCount(n);
+  }, [filterDateRange, filterStatus, filterRisk, filterDepartment]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [expandedWidget, setExpandedWidget] = useState<{ title: string; subtitle?: string } | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterDateRange, setFilterDateRange] = useState('last-30-days');
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterRisk, setFilterRisk] = useState<string[]>([]);
+  const [filterDepartment, setFilterDepartment] = useState<string[]>([]);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+      setLastRefreshTime('Just now');
+      addToast({ message: 'Dashboard refreshed', type: 'success' });
+      setTimeout(() => setLastRefreshTime('1 min ago'), 60000);
+    }, 800);
+  };
+
+  const handleExport = () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    setTimeout(() => {
+      setIsExporting(false);
+      addToast({ message: 'Exported as PDF', type: 'success' });
+    }, 2000);
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 600);
     return () => clearTimeout(timer);
@@ -807,8 +1447,7 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
     <div className="h-full flex bg-canvas relative overflow-hidden">
       <Orb hoverIntensity={0.09} rotateOnHover hue={dashboard.accentHue} opacity={0.08} />
 
-      {/* Sidebar */}
-      <Sidebar dashboards={DASHBOARDS} activeId={activeId} onSelect={handleSelect} />
+      {/* Sidebar removed — dashboard switching handled via list page */}
 
       {/* Main content */}
       <div className="flex-1 overflow-y-auto relative">
@@ -840,204 +1479,98 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
                   <p className="text-[13px] text-ink-500 mt-1">{dashboard.subtitle}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {onImportPowerBI && (
-                    <button onClick={onImportPowerBI} className="flex items-center gap-2 px-3 h-10 border border-canvas-border bg-canvas-elevated rounded-md text-[13px] text-ink-700 hover:border-brand-200 transition-colors cursor-pointer">
-                      <Maximize2 size={14} />
-                      Import from Power BI
-                    </button>
-                  )}
-                  {onShare && (
-                    <button onClick={onShare} className="flex items-center gap-2 px-3 h-10 border border-canvas-border bg-canvas-elevated rounded-md text-[13px] text-ink-700 hover:border-brand-200 transition-colors cursor-pointer">
-                      <Settings size={14} />
-                      Share
-                    </button>
-                  )}
-                  <button onClick={() => addToast({ message: 'Dashboard customization panel opening.', type: 'info' })} className="flex items-center gap-2 px-3 h-10 border border-canvas-border bg-canvas-elevated rounded-md text-[13px] text-ink-700 hover:border-brand-200 transition-colors cursor-pointer">
-                    <Settings size={14} />
-                    Customize
+                  {/* Refreshed indicator */}
+                  <button
+                    onClick={handleRefresh}
+                    className="flex items-center gap-1.5 px-3 h-9 border border-canvas-border bg-canvas-elevated rounded-lg text-[12px] text-ink-500 hover:border-brand-200 transition-colors cursor-pointer"
+                    title="Click to refresh"
+                  >
+                    <RefreshCw size={13} className={isRefreshing ? 'animate-spin text-brand-600' : ''} />
+                    <span className="tabular-nums">Refreshed {lastRefreshTime}</span>
                   </button>
-                  <button onClick={() => addToast({ message: 'Widget picker opening.', type: 'info' })} className="flex items-center gap-2 px-4 h-10 bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white rounded-md text-[13px] font-semibold transition-colors cursor-pointer">
+
+                  {/* Auto refresh toggle */}
+                  <button
+                    onClick={() => {
+                      setAutoRefresh(!autoRefresh);
+                      addToast({ message: `Auto refresh ${!autoRefresh ? 'enabled' : 'disabled'}`, type: 'info' });
+                    }}
+                    className={`flex items-center gap-1.5 px-3 h-9 rounded-lg text-[12px] font-medium transition-colors cursor-pointer border ${
+                      autoRefresh
+                        ? 'border-brand-200 bg-brand-50 text-brand-700'
+                        : 'border-canvas-border bg-canvas-elevated text-ink-500 hover:border-brand-200'
+                    }`}
+                  >
+                    <Clock size={13} />
+                    Auto refresh: {autoRefresh ? 'On' : 'Off'}
+                  </button>
+
+                  {/* Divider */}
+                  <div className="w-px h-5 bg-canvas-border" />
+
+                  {/* + Add Widget — primary CTA */}
+                  <button
+                    onClick={() => addToast({ message: 'Widget picker opening.', type: 'info' })}
+                    className="flex items-center gap-1.5 px-4 h-9 bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
+                  >
                     <Plus size={14} />
-                    Add widget
+                    Add Widget
+                  </button>
+
+                  {/* Download */}
+                  <button
+                    onClick={handleExport}
+                    disabled={isExporting}
+                    className="flex items-center justify-center size-9 border border-canvas-border bg-canvas-elevated rounded-lg text-ink-500 hover:text-brand-600 hover:border-brand-200 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    title="Export as PDF"
+                  >
+                    {isExporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                  </button>
+
+                  {/* Filter */}
+                  <button
+                    onClick={() => setFiltersOpen(!filtersOpen)}
+                    className={`flex items-center gap-1.5 px-2.5 h-9 rounded-lg text-[12px] font-medium transition-colors cursor-pointer border ${
+                      activeFiltersCount > 0
+                        ? 'border-brand-200 bg-brand-50 text-brand-700'
+                        : 'border-canvas-border bg-canvas-elevated text-ink-500 hover:text-brand-600 hover:border-brand-200'
+                    }`}
+                    title="Filters"
+                  >
+                    <Filter size={15} />
+                    {activeFiltersCount > 0 && <span className="tabular-nums">{activeFiltersCount}</span>}
+                  </button>
+
+                  {/* Share */}
+                  <button
+                    onClick={() => onShare ? onShare() : addToast({ message: 'Share dialog opening.', type: 'info' })}
+                    className="flex items-center gap-1.5 px-2.5 h-9 border border-canvas-border bg-canvas-elevated rounded-lg text-ink-500 hover:text-brand-600 hover:border-brand-200 transition-colors cursor-pointer text-[12px] font-medium"
+                    title="Share"
+                  >
+                    <Share2 size={15} />
+                    <span className="hidden sm:inline">Share</span>
+                  </button>
+
+                  {/* Fullscreen */}
+                  <button
+                    onClick={() => {
+                      setIsFullScreen(!isFullScreen);
+                      addToast({ message: isFullScreen ? 'Exited fullscreen' : 'Entered fullscreen', type: 'info' });
+                    }}
+                    className="flex items-center justify-center size-9 border border-canvas-border bg-canvas-elevated rounded-lg text-ink-500 hover:text-brand-600 hover:border-brand-200 transition-colors cursor-pointer"
+                    title={isFullScreen ? 'Exit fullscreen' : 'Fullscreen'}
+                  >
+                    <Maximize2 size={15} />
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* AI Insight — editorial prose surface */}
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-              className="bg-canvas-elevated rounded-xl border border-brand-200 p-5 mb-6"
-            >
-              <div className="font-mono text-[12px] text-ink-500 mb-2 tabular-nums">IRA · insight · {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-              <div className="flex-1">
-                <div className="text-[15px] leading-[1.6] text-ink-800 max-w-[66ch]">
-                  {dashboard.id === 'p2p' && '23 potential duplicate invoices detected this month. 3 vendors show spend anomalies exceeding 2-sigma threshold.'}
-                  {dashboard.id === 'o2c' && 'DSO improved by 2 days. 5 customers account for 65% of outstanding receivables. Dispute rate trending upward in APAC region.'}
-                  {dashboard.id === 's2c' && '12 contracts expire within 30 days. Vendor TechParts Ltd compliance score dropped below 75% threshold.'}
-                  {dashboard.id === 'grc' && '2 critical risks in P2P have zero controls mapped. SOD violation detected in AP module.'}
-                  <a className="text-brand-700 font-semibold cursor-pointer hover:underline ml-1">Take action.</a>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* AI Daily Digest */}
+            {/* AI Summary — Generate / View / Edit */}
+            {/* Alerts & Daily Digest */}
             <AlertsPanel dashboardId={activeId} />
 
-            {/* KPIs — Colorful Bento Grid */}
-            {(() => {
-              const COMPLIANCE_DATA = [88, 89, 87, 90, 91, 89, 92, 91, 93, 92, 94, 94.2];
-              const compMax = Math.max(...COMPLIANCE_DATA);
-              const compMin = Math.min(...COMPLIANCE_DATA);
-              const RISK_BARS = [45, 52, 48, 55, 50, 60, 65];
-              const riskMax = Math.max(...RISK_BARS);
-              const SAVINGS_BARS = [8, 12, 10, 15, 18, 20, 24];
-              const savMax = Math.max(...SAVINGS_BARS);
-              return (
-                <div className="grid grid-cols-12 grid-rows-2 gap-3 mb-6" style={{ gridAutoRows: 'minmax(0, 1fr)' }}>
-                  {/* ── FY26 Compliance Score — spans left 5 cols, 2 rows ── */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                    className="col-span-5 row-span-2 rounded-2xl p-6 flex flex-col justify-between cursor-default border border-canvas-border bg-white relative overflow-hidden"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[12px] font-semibold text-brand-600">FY26</span>
-                        <div className="flex items-center gap-1 text-[12px] font-semibold text-compliant">
-                          <TrendingUp size={11} />
-                          +12.4%
-                        </div>
-                      </div>
-                      <div className="text-[48px] font-extrabold leading-none text-text">94.2%</div>
-                      <p className="text-[13px] text-text-muted mt-2 leading-relaxed max-w-[280px]">
-                        Compliance score driven by automated controls and continuous monitoring across 4 business processes.
-                      </p>
-                    </div>
-                    {/* Purple area chart */}
-                    <svg width="100%" height="120" viewBox="0 0 240 120" preserveAspectRatio="none" className="mt-4">
-                      <defs>
-                        <linearGradient id="compFill" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#8838DE" stopOpacity="0.25" />
-                          <stop offset="100%" stopColor="#8838DE" stopOpacity="0.02" />
-                        </linearGradient>
-                      </defs>
-                      <polyline
-                        points={`0,120 ${COMPLIANCE_DATA.map((v, j) => `${j * (240 / (COMPLIANCE_DATA.length - 1))},${120 - ((v - compMin) / (compMax - compMin)) * 100}`).join(' ')} 240,120`}
-                        fill="url(#compFill)" stroke="none"
-                      />
-                      <polyline
-                        points={COMPLIANCE_DATA.map((v, j) => `${j * (240 / (COMPLIANCE_DATA.length - 1))},${120 - ((v - compMin) / (compMax - compMin)) * 100}`).join(' ')}
-                        fill="none" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                      />
-                    </svg>
-                  </motion.div>
-
-                  {/* ── Money at Risk — top middle ── */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-                    className="col-span-4 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
-                    style={{ background: '#FFF9EB', borderColor: '#F5E6C0' }}
-                  >
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#F59E0B' }}>
-                          <DollarSign size={13} className="text-white" />
-                        </div>
-                        <span className="text-[12px] font-semibold" style={{ color: '#92400E' }}>Money at Risk</span>
-                      </div>
-                      <div className="text-[32px] font-extrabold leading-none" style={{ color: '#1C1917' }}>{'\u20B9'}6.16L</div>
-                      <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold text-risk-700">
-                        <TrendingDown size={10} />
-                        -{'\u20B9'}2.1L <span className="text-text-muted font-normal">vs last quarter</span>
-                      </div>
-                    </div>
-                    {/* Mini bar chart */}
-                    <div className="flex items-end gap-1.5 h-7 mt-3">
-                      {RISK_BARS.map((v, j) => (
-                        <motion.div key={j} initial={{ height: 0 }} animate={{ height: `${(v / riskMax) * 100}%` }} transition={{ delay: 0.25 + j * 0.04, duration: 0.3 }}
-                          className="flex-1 rounded-sm min-h-[3px]" style={{ background: j >= RISK_BARS.length - 1 ? '#7C3AED' : 'rgba(124,58,237,0.2)' }} />
-                      ))}
-                    </div>
-                  </motion.div>
-
-                  {/* ── SOX Deadline — top right ── */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                    className="col-span-3 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
-                    style={{ background: '#F3EAFF', borderColor: '#DBC4F7' }}
-                  >
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#8838DE' }}>
-                          <Clock size={13} className="text-white" />
-                        </div>
-                        <span className="text-[12px] font-semibold text-brand-700">SOX Deadline</span>
-                      </div>
-                      <div className="text-[40px] font-extrabold leading-none text-brand-700">6</div>
-                      <div className="text-[13px] font-semibold text-brand-600 mt-1">Days remaining</div>
-                    </div>
-                    {/* Dot grid */}
-                    <div className="grid grid-cols-6 gap-1.5 mt-3">
-                      {Array.from({ length: 24 }).map((_, j) => (
-                        <div key={j} className="w-2 h-2 rounded-full" style={{ background: j < 18 ? '#A366F0' : 'rgba(163,102,240,0.2)' }} />
-                      ))}
-                    </div>
-                  </motion.div>
-
-                  {/* ── Open Exceptions — bottom middle ── */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-                    className="col-span-4 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
-                    style={{ background: '#FFF9EB', borderColor: '#F5E6C0' }}
-                  >
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#EF4444' }}>
-                          <AlertTriangle size={13} className="text-white" />
-                        </div>
-                        <span className="text-[12px] font-semibold" style={{ color: '#92400E' }}>Open Exceptions</span>
-                        <span className="ml-auto text-[12px] text-text-muted font-medium">This week</span>
-                      </div>
-                      <div className="text-[40px] font-extrabold leading-none" style={{ color: '#1C1917' }}>7</div>
-                      <div className="text-[12px] text-text-muted mt-1.5">3 unassigned, 4 in progress</div>
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold text-risk-700">
-                      <TrendingUp size={10} />
-                      +2 <span className="text-text-muted font-normal">this week</span>
-                    </div>
-                  </motion.div>
-
-                  {/* ── Savings YTD — bottom right ── */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                    className="col-span-3 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
-                    style={{ background: '#ECFDF5', borderColor: '#A7F3D0' }}
-                  >
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#16A34A' }}>
-                          <Activity size={13} className="text-white" />
-                        </div>
-                        <span className="text-[12px] font-semibold text-compliant-700">Savings YTD</span>
-                      </div>
-                      <div className="text-[36px] font-extrabold leading-none text-compliant-700">{'\u20B9'}24L</div>
-                      <div className="text-[12px] text-compliant/70 mt-1.5">Cost avoided via AI workflows</div>
-                    </div>
-                    {/* Green bar chart */}
-                    <div className="flex items-end gap-1.5 h-8 mt-2">
-                      {SAVINGS_BARS.map((v, j) => (
-                        <motion.div key={j} initial={{ height: 0 }} animate={{ height: `${(v / savMax) * 100}%` }} transition={{ delay: 0.35 + j * 0.04, duration: 0.3 }}
-                          className="flex-1 rounded-sm min-h-[3px]" style={{ background: j >= SAVINGS_BARS.length - 2 ? '#16A34A' : 'rgba(22,163,74,0.18)' }} />
-                      ))}
-                    </div>
-                  </motion.div>
-                </div>
-              );
-            })()}
-
-            {/* Charts row */}
+            {/* Charts row — Interactive Widget Cards */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1053,45 +1586,325 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
               }`}
             >
               {dashboard.donut && (
-                <DonutChart
+                <WidgetCard
                   title={dashboard.donut.title}
-                  segments={dashboard.donut.segments}
-                  centerLabel={dashboard.donut.centerLabel}
-                  onExpand={() => addToast({ message: 'Chart expanded to fullscreen', type: 'info' })}
-                />
+                  subtitle="Distribution breakdown"
+                  addToast={addToast}
+                  onExpand={() => setExpandedWidget({ title: dashboard.donut!.title, subtitle: 'Distribution breakdown' })}
+                  onEdit={() => addToast({ message: 'Edit widget opening.', type: 'info' })}
+                  onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
+                  onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                >
+                  {/* Donut chart content */}
+                  <div className="flex items-center gap-6">
+                    <div className="relative shrink-0">
+                      <svg width="110" height="110" viewBox="0 0 100 100">
+                        {(() => {
+                          const segs = dashboard.donut!.segments;
+                          const total = segs.reduce((a, s) => a + s.value, 0);
+                          let offset = 0;
+                          return segs.map(s => {
+                            const pct = (s.value / total) * 100;
+                            const dashArray = `${pct * 2.51327} ${251.327 - pct * 2.51327}`;
+                            const dashOffset = -offset * 2.51327;
+                            offset += pct;
+                            return (
+                              <motion.circle
+                                key={s.label}
+                                cx="50" cy="50" r="40" fill="none"
+                                stroke={s.color} strokeWidth="10"
+                                strokeDasharray={dashArray} strokeDashoffset={dashOffset}
+                                strokeLinecap="round" transform="rotate(-90 50 50)"
+                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}
+                              />
+                            );
+                          });
+                        })()}
+                        {dashboard.donut!.centerLabel && (
+                          <>
+                            <text x="50" y="48" textAnchor="middle" className="fill-ink-900 font-bold" fontSize="16">{dashboard.donut!.centerLabel}</text>
+                            <text x="50" y="62" textAnchor="middle" className="fill-ink-500" fontSize="9">Total</text>
+                          </>
+                        )}
+                      </svg>
+                    </div>
+                    <div className="space-y-2 flex-1 min-w-0">
+                      {dashboard.donut!.segments.map(s => (
+                        <div key={s.label} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                            <span className="text-[12px] text-ink-600 truncate">{s.label}</span>
+                          </div>
+                          <span className="text-[12px] font-semibold text-ink-900 shrink-0 ml-2">
+                            {dashboard.donut!.segments.reduce((a, s) => a + s.value, 0) > 100 ? s.value : `${s.value}%`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </WidgetCard>
               )}
               {dashboard.bars && (
-                <BarChart
+                <WidgetCard
                   title={dashboard.bars.title}
-                  data={dashboard.bars.data}
-                  color={dashboard.bars.color}
-                  onExpand={() => addToast({ message: 'Chart expanded to fullscreen', type: 'info' })}
-                />
+                  subtitle="Trend analysis"
+                  addToast={addToast}
+                  onExpand={() => setExpandedWidget({ title: dashboard.bars!.title, subtitle: 'Trend analysis' })}
+                  onEdit={() => addToast({ message: 'Edit widget opening.', type: 'info' })}
+                  onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
+                  onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                >
+                  {/* Bar chart content */}
+                  <div className="flex items-end gap-2 h-36">
+                    {dashboard.bars!.data.map((d, i) => {
+                      const max = Math.max(...dashboard.bars!.data.map(dd => dd.value));
+                      const height = (d.value / max) * 100;
+                      return (
+                        <div key={d.label} className="flex-1 flex flex-col items-center gap-1">
+                          <span className="text-[12px] text-ink-500 font-medium">
+                            {d.value >= 1000 ? `${(d.value / 1000).toFixed(1)}K` : d.value}
+                          </span>
+                          <motion.div
+                            className="w-full rounded-t-md min-h-[4px]"
+                            style={{ background: dashboard.bars!.color }}
+                            initial={{ height: 0 }}
+                            animate={{ height: `${height}%` }}
+                            transition={{ duration: 0.5, delay: i * 0.06, ease: 'easeOut' }}
+                          />
+                          <span className="text-[12px] text-ink-500">{d.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </WidgetCard>
               )}
               {dashboard.progress && (
-                <ProgressChart
+                <WidgetCard
                   title={dashboard.progress.title}
-                  data={dashboard.progress.data}
-                  onExpand={() => addToast({ message: 'Chart expanded to fullscreen', type: 'info' })}
-                />
+                  subtitle="Completion rates"
+                  addToast={addToast}
+                  onExpand={() => setExpandedWidget({ title: dashboard.progress!.title, subtitle: 'Completion rates' })}
+                  onEdit={() => addToast({ message: 'Edit widget opening.', type: 'info' })}
+                  onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
+                  onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                >
+                  {/* Progress chart content */}
+                  <div className="space-y-3">
+                    {dashboard.progress!.data.map((d, i) => (
+                      <div key={d.label}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[12px] text-ink-600">{d.label}</span>
+                          <span className="text-[12px] font-semibold text-ink-900">{d.value}%</span>
+                        </div>
+                        <div className="h-2 bg-surface-3 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${d.value}%` }}
+                            transition={{ duration: 0.6, delay: 0.15 + i * 0.08 }}
+                            className="h-full rounded-full"
+                            style={{ background: d.color }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </WidgetCard>
               )}
             </motion.div>
 
-            {/* Table */}
+            {/* Table — wrapped in WidgetCard */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.35 }}
             >
-              <MiniTable
+              <WidgetCard
                 title={dashboard.table.title}
-                headers={dashboard.table.headers}
-                rows={dashboard.table.rows}
-              />
+                subtitle="Detailed records"
+                addToast={addToast}
+                onExpand={() => setExpandedWidget({ title: dashboard.table.title, subtitle: 'Detailed records' })}
+                onEdit={() => addToast({ message: 'Edit widget opening.', type: 'info' })}
+                onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
+                onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+              >
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-canvas-border">
+                        {dashboard.table.headers.map(h => (
+                          <th key={h} className="text-[12px] text-ink-500 font-medium pb-2 pr-4">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dashboard.table.rows.map((row, i) => (
+                        <motion.tr
+                          key={i}
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3 + i * 0.04 }}
+                          className="border-b border-canvas-border/50 last:border-0 hover:bg-brand-50/50 transition-colors cursor-pointer"
+                        >
+                          {row.cells.map((cell, j) => (
+                            <td key={j} className={`text-[12.5px] py-2.5 pr-4 ${j === 0 ? 'font-medium text-ink-900' : 'text-ink-600'}`}>
+                              {cell}
+                            </td>
+                          ))}
+                        </motion.tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </WidgetCard>
             </motion.div>
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Expanded Widget Modal */}
+      <ExpandedWidgetModal
+        open={!!expandedWidget}
+        onClose={() => setExpandedWidget(null)}
+        title={expandedWidget?.title ?? ''}
+        subtitle={expandedWidget?.subtitle}
+      >
+        {/* Visualization tab content — show the same chart type enlarged */}
+        {expandedWidget && dashboard.bars && expandedWidget.title === dashboard.bars.title && (
+          <div className="flex items-end gap-3 h-64">
+            {dashboard.bars.data.map((d, i) => {
+              const max = Math.max(...dashboard.bars!.data.map(dd => dd.value));
+              const height = (d.value / max) * 100;
+              return (
+                <div key={d.label} className="flex-1 flex flex-col items-center gap-1.5">
+                  <span className="text-[13px] text-ink-500 font-medium">
+                    {d.value >= 1000 ? `${(d.value / 1000).toFixed(1)}K` : d.value}
+                  </span>
+                  <motion.div
+                    className="w-full rounded-t-md min-h-[4px]"
+                    style={{ background: dashboard.bars!.color }}
+                    initial={{ height: 0 }}
+                    animate={{ height: `${height}%` }}
+                    transition={{ duration: 0.5, delay: i * 0.06, ease: 'easeOut' }}
+                  />
+                  <span className="text-[13px] text-ink-500">{d.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {expandedWidget && dashboard.donut && expandedWidget.title === dashboard.donut.title && (
+          <div className="flex items-center justify-center gap-10 py-6">
+            <svg width="200" height="200" viewBox="0 0 100 100">
+              {(() => {
+                const segs = dashboard.donut!.segments;
+                const total = segs.reduce((a, s) => a + s.value, 0);
+                let offset = 0;
+                return segs.map(s => {
+                  const pct = (s.value / total) * 100;
+                  const dashArray = `${pct * 2.51327} ${251.327 - pct * 2.51327}`;
+                  const dashOffset = -offset * 2.51327;
+                  offset += pct;
+                  return (
+                    <motion.circle
+                      key={s.label} cx="50" cy="50" r="40" fill="none"
+                      stroke={s.color} strokeWidth="10"
+                      strokeDasharray={dashArray} strokeDashoffset={dashOffset}
+                      strokeLinecap="round" transform="rotate(-90 50 50)"
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}
+                    />
+                  );
+                });
+              })()}
+              {dashboard.donut!.centerLabel && (
+                <>
+                  <text x="50" y="48" textAnchor="middle" className="fill-ink-900 font-bold" fontSize="16">{dashboard.donut!.centerLabel}</text>
+                  <text x="50" y="62" textAnchor="middle" className="fill-ink-500" fontSize="9">Total</text>
+                </>
+              )}
+            </svg>
+            <div className="space-y-3">
+              {dashboard.donut!.segments.map(s => (
+                <div key={s.label} className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full shrink-0" style={{ background: s.color }} />
+                  <span className="text-[13px] text-ink-600">{s.label}</span>
+                  <span className="text-[13px] font-semibold text-ink-900 ml-auto">{s.value}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {expandedWidget && dashboard.progress && expandedWidget.title === dashboard.progress.title && (
+          <div className="space-y-4 py-4">
+            {dashboard.progress.data.map((d, i) => (
+              <div key={d.label}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[13px] text-ink-600">{d.label}</span>
+                  <span className="text-[13px] font-semibold text-ink-900">{d.value}%</span>
+                </div>
+                <div className="h-3 bg-surface-3 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${d.value}%` }}
+                    transition={{ duration: 0.6, delay: i * 0.08 }}
+                    className="h-full rounded-full"
+                    style={{ background: d.color }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {expandedWidget && expandedWidget.title === dashboard.table.title && (
+          <div className="overflow-x-auto py-2">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-canvas-border">
+                  {dashboard.table.headers.map(h => (
+                    <th key={h} className="text-[13px] text-ink-500 font-medium pb-3 pr-4">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {dashboard.table.rows.map((row, i) => (
+                  <motion.tr
+                    key={i}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.03 }}
+                    className="border-b border-canvas-border/50 last:border-0 hover:bg-brand-50/50 transition-colors cursor-pointer"
+                  >
+                    {row.cells.map((cell, j) => (
+                      <td key={j} className={`text-[13px] py-3 pr-4 ${j === 0 ? 'font-medium text-ink-900' : 'text-ink-600'}`}>
+                        {cell}
+                      </td>
+                    ))}
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </ExpandedWidgetModal>
+
+      {/* Filter Panel */}
+      <FilterPanel
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        dateRange={filterDateRange}
+        onDateRangeChange={setFilterDateRange}
+        status={filterStatus}
+        onStatusChange={setFilterStatus}
+        risk={filterRisk}
+        onRiskChange={setFilterRisk}
+        department={filterDepartment}
+        onDepartmentChange={setFilterDepartment}
+        onResetAll={() => {
+          setFilterDateRange('last-30-days');
+          setFilterStatus([]);
+          setFilterRisk([]);
+          setFilterDepartment([]);
+        }}
+      />
     </div>
   );
 }
