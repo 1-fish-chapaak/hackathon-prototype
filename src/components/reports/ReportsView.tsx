@@ -125,7 +125,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
               </div>
               <button
                 onClick={() => setStep('converting')}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary to-primary-medium text-white rounded-xl text-[13px] font-semibold hover:from-primary-hover hover:to-primary transition-all cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary to-primary-medium text-white text-[13px] font-semibold hover:from-primary-hover hover:to-primary transition-all cursor-pointer" style={{ borderRadius: '8px' }}
               >
                 <Sparkles size={14} /> Convert to Template
               </button>
@@ -190,7 +190,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
                 <input
                   value={templateName}
                   onChange={e => setTemplateName(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-border-light text-[13px] focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
+                  className="w-full px-3 py-2.5 border border-border-light text-[13px] focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10" style={{ borderRadius: '8px' }}
                 />
               </div>
             </motion.div>
@@ -199,12 +199,12 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
 
         {step === 'converted' && (
           <div className="px-6 py-4 border-t border-border-light flex justify-end gap-2 shrink-0">
-            <button onClick={onClose} className="px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-paper-50 rounded-lg transition-colors cursor-pointer">Cancel</button>
+            <button onClick={onClose} className="px-4 py-2 text-[12px] font-medium text-text-secondary border border-border hover:bg-paper-50 transition-colors cursor-pointer" style={{ borderRadius: '8px' }}>Cancel</button>
             <button
               onClick={() => { addToast({ type: 'success', message: `"${templateName}" saved to template library!` }); onClose(); }}
-              className="px-5 py-2 bg-primary text-white rounded-xl text-[12px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer"
+              className="px-5 py-2 bg-primary text-white text-[12px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer" style={{ borderRadius: '8px' }}
             >
-              Save to Library
+              Save Template
             </button>
           </div>
         )}
@@ -1000,6 +1000,7 @@ function ReportView({ report, onBack, onShare }: {
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
   const [appliedTemplate, setAppliedTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
+  const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
 
   const handleApplyTemplate = (template: typeof REPORT_TEMPLATES[0]) => {
     setApplyingTemplate(true);
@@ -1287,9 +1288,32 @@ function ReportView({ report, onBack, onShare }: {
                 <Share2 size={13} /> Share
               </button>
             )}
-            <button onClick={() => addToast({ type: 'success', message: `Downloading ${report.name}.pdf...` })} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-white hover:border-primary/30 transition-colors cursor-pointer bg-white">
-              <Download size={13} /> Download PDF
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowDownloadDropdown(p => !p)}
+                className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-white hover:border-primary/30 transition-colors cursor-pointer bg-white"
+              >
+                <Download size={13} /> Download <ChevronDown size={11} className={`transition-transform ${showDownloadDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              {showDownloadDropdown && (
+                <div className="absolute right-0 top-full mt-1 bg-white border border-border-light shadow-xl z-50 py-1 w-36" style={{ borderRadius: '8px' }}>
+                  {[
+                    { label: 'PDF', ext: 'pdf' },
+                    { label: 'Word (DOC)', ext: 'doc' },
+                    { label: 'PowerPoint', ext: 'ppt' },
+                    { label: 'Excel', ext: 'xlsx' },
+                  ].map(({ label, ext }) => (
+                    <button
+                      key={ext}
+                      onClick={() => { addToast({ type: 'success', message: `Downloading ${report.name}.${ext}...` }); setShowDownloadDropdown(false); }}
+                      className="w-full text-left px-3 py-2 text-[12px] text-text-secondary hover:bg-primary-xlight hover:text-primary transition-colors cursor-pointer"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1590,14 +1614,14 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
                     onClick={() => setViewingReport(r)}
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center justify-center w-8 h-8 shrink-0" style={{ background: 'rgba(106,18,205,0.04)', borderRadius: '8px' }}><FileText size={16} style={{ color: '#6a12cd' }} /></div>
+                      <div className="flex items-center justify-center shrink-0" style={{ width: '42px', height: '42px', background: 'rgba(106,18,205,0.04)', borderRadius: '8px' }}><FileText size={20} style={{ color: '#6a12cd' }} /></div>
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Download"><Download size={15} /></button>
                         <button onClick={(e) => { e.stopPropagation(); onShare ? onShare(r.id) : addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Share"><Share2 size={15} /></button>
                         <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="hover:text-red-500 transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Delete"><Trash2 size={15} /></button>
                       </div>
                     </div>
-                    <div className="font-medium text-[13px] text-text group-hover:text-primary transition-colors leading-snug mb-1">{r.name}</div>
+                    <div className="font-medium text-text group-hover:text-primary transition-colors mb-1" style={{ fontSize: '14px', lineHeight: '20px' }}>{r.name}</div>
                     <div className="text-[11px] text-text-muted mb-3">{r.pages} pages · {r.generatedAt}</div>
                     <div className="mt-auto">
                       {r.tag && (
@@ -1668,27 +1692,29 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
                 <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
               </div>
             </div>
-            <div className="p-4 grid grid-cols-3 gap-4">
+            <div className="p-4 grid grid-cols-3 gap-4 items-start">
               {SHARED_REPORTS.map((r, i) => (
                 <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                  className="glass-card rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all group"
+                  className="glass-card rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all group cursor-pointer flex flex-col"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="p-2 bg-primary/10 text-primary rounded-lg"><FileText size={16} /></div>
-                    <StatusBadge status={r.status} />
-                  </div>
-                  <div className="font-medium text-[13px] text-text mb-1 group-hover:text-primary transition-colors leading-snug">{r.name}</div>
-                  <div className="text-[11px] text-text-muted mb-3">{r.pages} pages · {r.sharedAt} · {r.sharedWith}</div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
-                      {r.sharedBy.split(' ').map(n => n[0]).join('')}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center justify-center shrink-0" style={{ width: '42px', height: '42px', background: 'rgba(106,18,205,0.04)', borderRadius: '8px' }}><FileText size={20} style={{ color: '#6a12cd' }} /></div>
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Download"><Download size={15} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Share"><Share2 size={15} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="hover:text-red-500 transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Delete"><Trash2 size={15} /></button>
                     </div>
-                    <span className="text-[11px] text-text-secondary">{r.sharedBy}</span>
                   </div>
-                  <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border-light opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={13} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={13} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="p-1 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={13} /></button>
+                  <div className="font-medium text-[13px] text-text group-hover:text-primary transition-colors leading-snug mb-1">{r.name}</div>
+                  <div className="text-[11px] text-text-muted mb-3">{r.pages} pages · {r.sharedAt}</div>
+                  <div className="mt-auto flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center px-2 h-5 text-[10px] font-semibold whitespace-nowrap" style={{ borderRadius: '8px', background: 'rgba(106,18,205,0.08)', color: '#6a12cd' }}>{r.sharedWith}</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold" style={{ background: 'rgba(106,18,205,0.12)', color: '#6a12cd' }}>
+                        {r.sharedBy.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <span className="text-[11px] text-text-secondary truncate">{r.sharedBy}</span>
+                    </div>
                   </div>
                 </motion.div>
               ))}
@@ -1743,26 +1769,27 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
                   className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.98] transition-all duration-300 group cursor-pointer"
                   onClick={() => setPreviewingTemplate(rt)}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className={`p-2.5 ${color} group-hover:scale-110 transition-transform duration-300`} style={{ borderRadius: '8px' }}><Icon size={18} /></div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }}
-                      className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
-                    >
-                      <Edit3 size={10} /> Edit
-                    </button>
+                  <div className="mb-3">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className={`p-2.5 shrink-0 ${color} group-hover:scale-110 transition-transform duration-300`} style={{ borderRadius: '8px' }}><Icon size={18} /></div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }}
+                        className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer shrink-0"
+                      >
+                        <Edit3 size={10} /> Edit
+                      </button>
+                    </div>
+                    <h3 className="font-semibold text-text mb-1 group-hover:text-primary transition-colors" style={{ fontSize: '14px', lineHeight: '20px' }}>{rt.name}</h3>
+                    <p className="text-[12px] text-text-secondary leading-relaxed">{rt.desc}</p>
                   </div>
-                  <h3 className="text-[14px] font-semibold text-text mb-1 group-hover:text-primary transition-colors">{rt.name}</h3>
-                  <p className="text-[12px] text-text-secondary leading-relaxed mb-3">{rt.desc}</p>
-                  <div className="flex items-center justify-between pt-3 border-t border-border-light">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${color.split(' ')[0]}`}>{rt.category}</span>
+                  <div className="flex items-center justify-start pt-3 border-t border-border-light">
                     <div className="flex gap-1">
-                      <button onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }} className="text-[10px] text-text-muted hover:text-primary font-medium flex items-center gap-0.5 cursor-pointer">
-                        <Settings size={9} /> Customize
+                      <button onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }} className="text-text-muted hover:text-primary font-medium flex items-center gap-0.5 cursor-pointer" style={{ fontSize: '12px', lineHeight: '20px' }}>
+                        <Settings size={11} /> Customize
                       </button>
                       <span className="text-border-light mx-1">|</span>
-                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: 'Generating PDF download...' }); }} className="text-[10px] text-primary font-semibold flex items-center gap-0.5 cursor-pointer">
-                        Generate <ArrowRight size={9} />
+                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: 'Generating PDF download...' }); }} className="text-primary font-semibold flex items-center gap-0.5 cursor-pointer" style={{ fontSize: '12px', lineHeight: '20px' }}>
+                        Generate <ArrowRight size={11} />
                       </button>
                     </div>
                   </div>

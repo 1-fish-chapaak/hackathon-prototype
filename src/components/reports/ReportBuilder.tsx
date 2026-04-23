@@ -142,8 +142,81 @@ export default function ReportBuilder({ context, onBack }: Props) {
           </button>
         </div>
 
+        {/* Preview Mode */}
+        {showPreview && (
+          <div className="flex-1 overflow-y-auto py-5 px-6">
+            <div className="bg-white rounded-xl border border-border-light overflow-hidden shadow-sm">
+              {/* Report Header */}
+              <div className="px-8 py-4 flex items-center justify-between" style={{ background: `${templateThemeColor}15` }}>
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-widest mb-0.5" style={{ color: templateThemeColor }}>{templateCategory}</div>
+                  <div className="text-[18px] font-bold text-text">{title}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] text-text-muted">{templateHeader}</div>
+                  <div className="text-[10px] text-text-muted mt-0.5">{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                </div>
+              </div>
+              <div className="h-1 w-full" style={{ background: templateThemeColor }} />
+
+              {/* Section Placeholders */}
+              <div className="px-8 py-5 flex flex-col gap-5">
+                {sections.length === 0 ? (
+                  <div className="text-center py-10 text-[12px] text-text-muted">No sections added yet. Add report sections to see them here.</div>
+                ) : sections.map(section => (
+                  <div key={section.id}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-3 w-1 rounded-full" style={{ background: templateThemeColor }} />
+                      <span className="text-[12px] font-bold text-text">{section.title}</span>
+                    </div>
+                    {section.type === 'text' && (
+                      <div className="space-y-1.5 pl-3">
+                        <div className="h-2 bg-text-muted/10 rounded w-full" />
+                        <div className="h-2 bg-text-muted/10 rounded w-5/6" />
+                        <div className="h-2 bg-text-muted/10 rounded w-4/5" />
+                        <div className="h-2 bg-text-muted/10 rounded w-3/4" />
+                      </div>
+                    )}
+                    {section.type === 'chart' && (
+                      <div className="pl-3 h-20 rounded-lg border border-dashed border-border flex items-center justify-center gap-2" style={{ background: `${templateThemeColor}05` }}>
+                        <PieChart size={16} style={{ color: templateThemeColor }} />
+                        <span className="text-[11px] font-medium" style={{ color: templateThemeColor }}>Chart / Visualization</span>
+                      </div>
+                    )}
+                    {section.type === 'exception-summary' && (
+                      <div className="pl-3 space-y-1.5">
+                        {[100, 80, 60, 90].map((w, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <div className="h-2 rounded" style={{ width: `${w}%`, background: `${templateThemeColor}20` }} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {section.type === 'action-taken' && (
+                      <div className="pl-3 space-y-1.5">
+                        {[1,2,3].map(i => (
+                          <div key={i} className="h-6 rounded border border-border-light flex items-center px-2 gap-2" style={{ background: `${templateThemeColor}05` }}>
+                            <div className="w-2 h-2 rounded-full" style={{ background: templateThemeColor }} />
+                            <div className="h-1.5 rounded bg-text-muted/15 flex-1" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Report Footer */}
+              <div className="px-8 py-3 border-t border-border-light flex items-center justify-between" style={{ background: `${templateThemeColor}08` }}>
+                <span className="text-[9px] text-text-muted">{templateFooter}</span>
+                <span className="text-[9px] text-text-muted">Page 1 of 1</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Canvas Area */}
-        <div className="flex-1 overflow-y-auto py-5 px-6">
+        {!showPreview && <div className="flex-1 overflow-y-auto py-5 px-6">
           <div className="space-y-4">
             {/* Template Configuration Section */}
             <div className="mb-2">
@@ -345,7 +418,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
             </AnimatePresence>
 
           </div>
-        </div>
+        </div>}
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-border-light bg-white shrink-0 flex items-center justify-between">
