@@ -6,8 +6,16 @@ import {
   Check,
   ShieldCheck,
   ChevronRight,
+  SlidersHorizontal,
+  BookOpenText,
+  DollarSign,
+  CalendarDays,
+  Type as TypeIcon,
+  Lightbulb,
+  Plus,
+  X,
 } from 'lucide-react';
-import type { WorkflowDraft } from './types';
+import type { WorkflowDraft, ToleranceRule, InputNote } from './types';
 
 type Tab = 'plan' | 'input' | 'output';
 
@@ -260,48 +268,312 @@ function RACMSection() {
   );
 }
 
+const SEVERITY_BADGE: Record<ToleranceRule['severity'], string> = {
+  Strict: 'bg-risk-50 text-risk-700',
+  Moderate: 'bg-mitigated-50 text-mitigated-700',
+  Relaxed: 'bg-compliant-50 text-compliant-700',
+};
+
+const DEFAULT_TOLERANCE_RULES: ToleranceRule[] = [
+  { id: 'amount', label: 'Amount', description: '±5%', severity: 'Moderate', enabled: false },
+  { id: 'date', label: 'Date', description: '±3 calendar days', severity: 'Moderate', enabled: false },
+  { id: 'text', label: 'Text similarity', description: '≥80% fuzzy match', severity: 'Moderate', enabled: false },
+];
+
+const TOLERANCE_ICON: Record<ToleranceRule['id'], typeof DollarSign> = {
+  amount: DollarSign,
+  date: CalendarDays,
+  text: TypeIcon,
+};
+
+const DEFAULT_NOTES: InputNote[] = [
+  {
+    id: 'n1',
+    name: 'Rate Card Reference',
+    description: 'Standard rate card with approved vendor pricing tiers',
+    aiSuggested: true,
+    enabled: true,
+  },
+  {
+    id: 'n2',
+    name: 'Audit Policy Guide',
+    description: 'Internal audit thresholds and escalation criteria',
+    aiSuggested: true,
+    enabled: false,
+  },
+];
+
+const DEFAULT_AI_SUGGESTIONS = [
+  'Historical benchmark data for trend comparison',
+  'Approval matrix for authority validation',
+];
+
+let _noteIdCounter = 1000;
+function nextNoteId(): string {
+  return `n-${++_noteIdCounter}`;
+}
+
 function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
-  if (!workflow) return <PlanSection workflow={null} />;
+  const [rules, setRules] = useState<ToleranceRule[]>(DEFAULT_TOLERANCE_RULES);
+  const [notes, setNotes] = useState<InputNote[]>(DEFAULT_NOTES);
+  const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_AI_SUGGESTIONS);
+  const [addingNote, setAddingNote] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+
+  const toggleRule = (id: ToleranceRule['id']) =>
+    setRules((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)));
+
+  const toggleNote = (id: string) =>
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, enabled: !n.enabled } : n)));
+
+  const activeRuleCount = rules.filter((r) => r.enabled).length;
+
+  const acceptSuggestion = (idx: number) => {
+    const text = suggestions[idx];
+    const id = nextNoteId();
+    setNotes((prev) => [
+      ...prev,
+      { id, name: text, description: 'AI-suggested reference note', aiSuggested: true, enabled: true },
+    ]);
+    setSuggestions((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const addNote = () => {
+    if (!newName.trim()) return;
+    const id = nextNoteId();
+    setNotes((prev) => [
+      ...prev,
+      {
+        id,
+        name: newName.trim(),
+        description: newDesc.trim() || 'User note',
+        aiSuggested: false,
+        enabled: true,
+      },
+    ]);
+    setNewName('');
+    setNewDesc('');
+    setAddingNote(false);
+  };
+
   return (
-    <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-ink-400 mb-3">
-        Input Configuration
+    <div className="space-y-3">
+      {/* Tolerance rules */}
+      <div className="rounded-xl border border-canvas-border bg-canvas-elevated">
+        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-canvas-border">
+          <SlidersHorizontal size={13} className="text-ink-400" />
+          <span className="text-[12px] font-semibold text-ink-700 flex-1">
+            Tolerance rules
+          </span>
+          <span className="text-[10.5px] font-semibold text-ink-400">
+            {activeRuleCount} active
+          </span>
+        </div>
+        <div className="p-2 space-y-1.5">
+          {rules.map((r) => {
+            const Icon = TOLERANCE_ICON[r.id];
+            return (
+              <div
+                key={r.id}
+                className={`rounded-lg transition-opacity ${r.enabled ? '' : 'opacity-55'} flex items-center gap-2.5 px-2.5 py-2 hover:bg-brand-50/40`}
+              >
+                <div className="w-7 h-7 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
+                  <Icon size={12} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] font-semibold text-ink-800">{r.label}</div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-[10.5px] text-ink-400">{r.description}</span>
+                    <span
+                      className={`text-[9.5px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 ${SEVERITY_BADGE[r.severity]}`}
+                    >
+                      {r.severity}
+                    </span>
+                  </div>
+                </div>
+                <Toggle enabled={r.enabled} onToggle={() => toggleRule(r.id)} />
+              </div>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[11.5px] font-semibold text-ink-400 hover:text-brand-700 hover:bg-brand-50/40 border-t border-dashed border-canvas-border transition-colors cursor-pointer"
+        >
+          <Plus size={12} />
+          Add tolerance parameter
+        </button>
       </div>
-      <ul className="space-y-2">
-        {workflow.inputs.map((input) => (
-          <li
-            key={input.id}
-            className="rounded-lg border border-canvas-border bg-canvas p-2.5"
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[11.5px] font-semibold text-ink-800 truncate">
-                {input.name}
-              </span>
-              <span className="text-[9.5px] uppercase tracking-wider font-bold rounded-full px-1.5 py-0.5 bg-brand-50 text-brand-700">
-                {input.type}
-              </span>
-              {input.required ? (
-                <span className="text-[9.5px] uppercase tracking-wider font-bold rounded-full px-1.5 py-0.5 bg-risk-50 text-risk-700">
-                  Required
-                </span>
-              ) : null}
+
+      {/* Notes */}
+      <div className="rounded-xl border border-canvas-border bg-canvas-elevated">
+        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-canvas-border">
+          <BookOpenText size={13} className="text-ink-400" />
+          <span className="text-[12px] font-semibold text-ink-700 flex-1">Notes</span>
+          <span className="text-[10.5px] font-semibold text-ink-400">
+            {notes.length} ref{notes.length === 1 ? '' : 's'}
+          </span>
+        </div>
+
+        <div className="p-2 space-y-2">
+          {notes.map((n) => (
+            <div
+              key={n.id}
+              className={`rounded-lg border p-2.5 transition-colors ${
+                n.enabled
+                  ? 'border-brand-200 bg-brand-50/20'
+                  : 'border-canvas-border bg-canvas'
+              }`}
+            >
+              <div className="flex items-start gap-2.5">
+                <div
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
+                    n.enabled
+                      ? 'bg-brand-50 border-brand-200 text-brand-600'
+                      : 'bg-white border-canvas-border text-ink-400'
+                  }`}
+                >
+                  <BookOpenText size={12} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[12px] font-semibold text-ink-800 truncate">
+                      {n.name}
+                    </span>
+                    {n.aiSuggested && (
+                      <span className="text-[9.5px] font-bold leading-none bg-brand-50 text-brand-700 border border-brand-200 rounded px-1 py-0.5">
+                        AI
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10.5px] text-ink-400 mt-0.5 leading-relaxed">
+                    {n.description}
+                  </p>
+                </div>
+                <Toggle enabled={n.enabled} onToggle={() => toggleNote(n.id)} />
+              </div>
             </div>
-            {input.columns && input.columns.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {input.columns.map((c) => (
-                  <span
-                    key={c}
-                    className="text-[10px] text-ink-600 bg-white border border-canvas-border rounded px-1.5 py-0.5"
+          ))}
+
+          {suggestions.length > 0 && (
+            <div className="rounded-lg border border-brand-200 bg-brand-50/40 p-2.5">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Lightbulb size={11} className="text-brand-600" />
+                <span className="text-[10.5px] font-bold text-brand-700 uppercase tracking-wider">
+                  AI Suggestions
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {suggestions.map((s, i) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => acceptSuggestion(i)}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/70 border border-brand-100 hover:bg-white hover:border-brand-300 transition-colors cursor-pointer group"
                   >
-                    {c}
-                  </span>
+                    <Plus size={11} className="text-brand-400 group-hover:text-brand-700" />
+                    <span className="text-[11.5px] text-brand-700 text-left flex-1">{s}</span>
+                  </button>
                 ))}
               </div>
-            )}
-          </li>
-        ))}
-      </ul>
+            </div>
+          )}
+
+          {addingNote ? (
+            <div className="rounded-lg border border-brand-200 bg-brand-50/20 p-2.5 space-y-1.5">
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Note title"
+                autoFocus
+                className="w-full rounded-md border border-canvas-border bg-canvas-elevated px-2 py-1.5 text-[12px] font-semibold text-ink-800 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/30 transition-all"
+              />
+              <input
+                type="text"
+                value={newDesc}
+                onChange={(e) => setNewDesc(e.target.value)}
+                placeholder="Short description (optional)"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') addNote();
+                  if (e.key === 'Escape') {
+                    setAddingNote(false);
+                    setNewName('');
+                    setNewDesc('');
+                  }
+                }}
+                className="w-full rounded-md border border-canvas-border bg-canvas-elevated px-2 py-1.5 text-[11.5px] text-ink-600 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/30 transition-all"
+              />
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <button
+                  type="button"
+                  onClick={addNote}
+                  disabled={!newName.trim()}
+                  className={`inline-flex items-center gap-1 rounded-md text-[11px] font-semibold px-2 py-1 transition-colors ${
+                    newName.trim()
+                      ? 'bg-brand-600 hover:bg-brand-500 text-white cursor-pointer'
+                      : 'bg-brand-100 text-brand-300 cursor-not-allowed'
+                  }`}
+                >
+                  <Check size={10} />
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddingNote(false);
+                    setNewName('');
+                    setNewDesc('');
+                  }}
+                  className="inline-flex items-center gap-1 rounded-md text-[11px] font-semibold px-2 py-1 text-ink-500 hover:bg-canvas transition-colors cursor-pointer"
+                >
+                  <X size={10} />
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAddingNote(true)}
+              className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-canvas-border bg-canvas hover:border-brand-300 hover:text-brand-700 text-ink-400 text-[11.5px] font-semibold px-3 py-2 transition-colors cursor-pointer"
+            >
+              <Plus size={12} />
+              Add Note
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Context: which workflow */}
+      {workflow && (
+        <div className="text-center text-[10px] uppercase tracking-wider text-ink-400 font-semibold">
+          For {workflow.name}
+        </div>
+      )}
     </div>
+  );
+}
+
+function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={[
+        'relative w-8 h-[18px] rounded-full transition-colors shrink-0 cursor-pointer',
+        enabled ? 'bg-brand-600' : 'bg-canvas-border',
+      ].join(' ')}
+      aria-pressed={enabled}
+    >
+      <span
+        className={[
+          'absolute top-[2px] w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-transform',
+          enabled ? 'translate-x-[16px]' : 'translate-x-[2px]',
+        ].join(' ')}
+      />
+    </button>
   );
 }
 

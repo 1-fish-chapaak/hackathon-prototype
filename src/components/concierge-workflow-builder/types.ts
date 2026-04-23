@@ -61,3 +61,49 @@ export interface RunResult {
   columns: string[];
   rows: { cells: string[]; status: 'flagged' | 'warning' | 'ok' }[];
 }
+
+// ── Column alignment (Step 3: Map Data) ────────────────────────────────
+
+export type ColumnDType = 'STRING' | 'DECIMAL' | 'INT' | 'TIMESTAMP' | 'BOOL';
+
+export interface ColumnTypePair {
+  name: string;
+  dtype: ColumnDType;
+}
+
+export interface ColumnAlignment {
+  id: string;
+  source: ColumnTypePair;
+  target: ColumnTypePair | null;
+  confidence: number; // 0-100
+  breakdown: {
+    nameSimilarity: number;
+    typeCompatibility: number;
+    statisticalProfile: number;
+    semanticSimilarity: number;
+  };
+  explanation: string;
+  reason: 'unmapped' | 'low_confidence' | 'type_mismatch' | null;
+}
+
+export type JourneyAlignments = Record<string, ColumnAlignment[]>;
+
+// ── Right-panel Input Config state (tolerance rules + notes) ───────────
+
+export type ToleranceRuleId = 'amount' | 'date' | 'text';
+
+export interface ToleranceRule {
+  id: ToleranceRuleId;
+  label: string;
+  description: string;
+  severity: 'Strict' | 'Moderate' | 'Relaxed';
+  enabled: boolean;
+}
+
+export interface InputNote {
+  id: string;
+  name: string;
+  description: string;
+  aiSuggested: boolean;
+  enabled: boolean;
+}

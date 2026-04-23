@@ -18,8 +18,14 @@ import AIAssistantPanel, { type ChatMessage, type QuickReply } from './AIAssista
 import PlanPanel from './PlanPanel';
 import GuideMeModal from './GuideMeModal';
 import { SAMPLE_WORKFLOWS } from './sampleWorkflows';
-import { generateWorkflow, runWorkflow } from './mockApi';
-import type { JourneyFiles, JourneyMappings, RunResult, WorkflowDraft } from './types';
+import { generateWorkflow, runWorkflow, seedAlignments } from './mockApi';
+import type {
+  JourneyAlignments,
+  JourneyFiles,
+  JourneyMappings,
+  RunResult,
+  WorkflowDraft,
+} from './types';
 
 interface Props {
   onBack: () => void;
@@ -31,7 +37,7 @@ const STEP_META: Record<
 > = {
   1: { icon: Pencil, title: 'Describe your workflow', action: 'Generate' },
   2: { icon: CloudUpload, title: 'Upload Data Files', action: 'Verify with Ira' },
-  3: { icon: Link2, title: 'Map Data', action: 'Continue' },
+  3: { icon: Link2, title: 'Data Mapping', action: 'Confirm & Proceed' },
   4: { icon: Play, title: 'Review & Run', action: 'Run Workflow' },
 };
 
@@ -44,6 +50,7 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
   const [workflow, setWorkflow] = useState<WorkflowDraft | null>(null);
   const [files, setFiles] = useState<JourneyFiles>({});
   const [mappings, setMappings] = useState<JourneyMappings>({});
+  const [alignments, setAlignments] = useState<JourneyAlignments>({});
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<RunResult | null>(null);
   const [guideMeOpen, setGuideMeOpen] = useState(false);
@@ -80,6 +87,7 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
       setWorkflow(draft);
       setFiles({});
       setMappings({});
+      setAlignments(seedAlignments(draft));
       setResult(null);
       const intro =
         howArrived === 'guide'
@@ -285,8 +293,9 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
               {step === 3 && workflow && (
                 <StepMapData
                   workflow={workflow}
-                  mappings={mappings}
-                  setMappings={setMappings}
+                  files={files}
+                  alignments={alignments}
+                  setAlignments={setAlignments}
                 />
               )}
               {step === 4 && workflow && (

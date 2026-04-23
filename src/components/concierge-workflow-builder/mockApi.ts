@@ -1,5 +1,123 @@
-import type { RunResult, WorkflowDraft, JourneyFiles, JourneyMappings } from './types';
+import type {
+  RunResult,
+  WorkflowDraft,
+  JourneyFiles,
+  JourneyMappings,
+  ColumnAlignment,
+  ColumnDType,
+  InputSpec,
+  JourneyAlignments,
+} from './types';
 import { SAMPLE_WORKFLOWS } from './sampleWorkflows';
+
+// ── Deterministic mock helpers for column alignment ─────────────────────
+
+function hashString(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+function seededRand(seed: number): number {
+  let t = (seed + 0x6d2b79f5) | 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+function inferType(columnName: string): ColumnDType {
+  const lc = columnName.toLowerCase();
+  if (/(date|time|timestamp|\bdt\b)/.test(lc)) return 'TIMESTAMP';
+  if (/(amount|price|value|total|cost|rate|variance|cap|balance|debit|credit)/.test(lc))
+    return 'DECIMAL';
+  if (/(qty|quantity|count|num|records)/.test(lc)) return 'INT';
+  if (/(is[_ ]|has[_ ]|active|flag|enabled)/.test(lc)) return 'BOOL';
+  return 'STRING';
+}
+
+function snakeCase(s: string): string {
+  return s
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/([a-z])([A-Z])/g, '$1_$2')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .toLowerCase();
+}
+
+export function autoAlignColumns(input: InputSpec): ColumnAlignment[] {
+  const cols = input.columns ?? [];
+  return cols.map((col, idx) => {
+    const seed = hashString(`${input.id}:${col}:${idx}`);
+    const base = 52 + Math.floor(seededRand(seed) * 43); // 52–95
+    const inferred = inferType(col);
+
+    // Introduce some type drift to generate realistic "needs attention" rows
+    const typeVariation = seededRand(seed + 11);
+    let sourceDtype: ColumnDType = inferred;
+    if (typeVariation < 0.18 && inferred !== 'STRING') sourceDtype = 'STRING';
+    else if (typeVariation > 0.85 && inferred === 'STRING') sourceDtype = 'DECIMAL';
+
+    const targetDtype = inferred;
+    const typeMatch = sourceDtype === targetDtype;
+
+    const nameSimilarity = Math.max(
+      28,
+      Math.min(100, base - 8 + Math.floor(seededRand(seed + 2) * 22)),
+    );
+    const typeCompatibility = typeMatch
+      ? Math.min(100, base + 14)
+      : Math.max(38, base - 26);
+    const statisticalProfile = Math.max(
+      38,
+      Math.min(100, base + Math.floor(seededRand(seed + 3) * 16) - 6),
+    );
+    const semanticSimilarity = Math.max(
+      34,
+      Math.min(100, base - 7 + Math.floor(seededRand(seed + 4) * 14)),
+    );
+
+    const overall = Math.round(
+      nameSimilarity * 0.35 +
+        typeCompatibility * 0.25 +
+        statisticalProfile * 0.2 +
+        semanticSimilarity * 0.2,
+    );
+
+    let reason: ColumnAlignment['reason'] = null;
+    if (!typeMatch) reason = 'type_mismatch';
+    else if (overall < 60) reason = 'low_confidence';
+
+    const explanation =
+      overall >= 88
+        ? 'Strong match — name, type, and data profile all align cleanly.'
+        : overall >= 72
+          ? 'Partial match — field names share some overlap but data patterns show divergence. Review recommended.'
+          : 'Weak match — significant differences in name or data shape. Adjust the target or the source.';
+
+    return {
+      id: `${input.id}:${idx}`,
+      source: { name: col, dtype: sourceDtype },
+      target: { name: snakeCase(col), dtype: targetDtype },
+      confidence: overall,
+      breakdown: {
+        nameSimilarity,
+        typeCompatibility,
+        statisticalProfile,
+        semanticSimilarity,
+      },
+      explanation,
+      reason,
+    };
+  });
+}
+
+export function seedAlignments(workflow: WorkflowDraft): JourneyAlignments {
+  const out: JourneyAlignments = {};
+  workflow.inputs.forEach((i) => {
+    out[i.id] = autoAlignColumns(i);
+  });
+  return out;
+}
 
 // Pick the sample that best matches the prompt, then override logicPrompt with
 // the user's actual text so the downstream UI shows their intent.
