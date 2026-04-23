@@ -33,6 +33,9 @@ import WorkflowBuilderJourney from './components/concierge-workflow-builder/Work
 import AdminView from './components/admin/AdminView';
 import FindingsView from './components/execution/FindingsView';
 import WorkflowExecutor from './components/workflow/WorkflowExecutor';
+import WorkingPaperPanel from './components/execution/WorkingPaperPanel';
+import WorkflowExecutionPanel from './components/execution/WorkflowExecutionPanel';
+import TraceabilityPanel from './components/execution/TraceabilityPanel';
 
 export default function App() {
   const {
@@ -46,6 +49,7 @@ export default function App() {
     toggleChatHistory,
     setSelectedWorkflow,
     setSelectedBP,
+    openAuditExecution,
     setShowExceptionModal,
     setShowEmailPreviewModal,
     setShowShareModal,
@@ -59,6 +63,8 @@ export default function App() {
     openWorkflowExecutor,
     openChat,
     setSelectedChatId,
+    openExecutionPanel,
+    closeExecutionPanel,
   } = useAppState();
 
   const mainScrollRef = useRef<HTMLDivElement>(null);
@@ -231,7 +237,7 @@ export default function App() {
         );
 
       case 'audit-planning':
-        return <AuditPlanningView />;
+        return <AuditPlanningView onNavigateToExecution={openAuditExecution} />;
 
       case 'knowledge-hub':
         return <KnowledgeHubView />;
@@ -254,10 +260,22 @@ export default function App() {
 
       // Execution — new pages
       case 'execution-testing':
-        return <ControlTestingView />;
+        return (
+          <ControlTestingView
+            onOpenWorkingPaper={(id) => openExecutionPanel('working-paper', id)}
+            onOpenWorkflow={(id) => openExecutionPanel('workflow-execution', id)}
+            onOpenTrace={(id) => openExecutionPanel('traceability', id)}
+          />
+        );
 
       case 'execution-evidence':
-        return <EvidenceView />;
+        return (
+          <EvidenceView
+            onOpenWorkingPaper={(id) => openExecutionPanel('working-paper', id)}
+            onOpenWorkflow={(id) => openExecutionPanel('workflow-execution', id)}
+            onOpenTrace={(id) => openExecutionPanel('traceability', id)}
+          />
+        );
 
       // Intelligence — AI Concierge
       case 'ai-concierge':
@@ -270,7 +288,13 @@ export default function App() {
 
       // Execution — Findings
       case 'findings':
-        return <FindingsView />;
+        return (
+          <FindingsView
+            onOpenWorkingPaper={(id) => openExecutionPanel('working-paper', id)}
+            onOpenWorkflow={(id) => openExecutionPanel('workflow-execution', id)}
+            onOpenTrace={(id) => openExecutionPanel('traceability', id)}
+          />
+        );
 
       // Admin
       case 'admin-users':
@@ -342,6 +366,34 @@ export default function App() {
           )}
           {state.showPowerBIWizard && (
             <PowerBIImportWizard onClose={() => setShowPowerBIWizard(false)} />
+          )}
+        </AnimatePresence>
+
+        {/* Execution Panels */}
+        <AnimatePresence>
+          {state.executionPanel === 'working-paper' && (
+            <WorkingPaperPanel
+              controlId={state.executionPanelControlId ?? undefined}
+              onClose={closeExecutionPanel}
+              onViewWorkflow={() => openExecutionPanel('workflow-execution', state.executionPanelControlId ?? undefined)}
+              onViewTrace={() => openExecutionPanel('traceability', state.executionPanelControlId ?? undefined)}
+            />
+          )}
+          {state.executionPanel === 'workflow-execution' && (
+            <WorkflowExecutionPanel
+              controlId={state.executionPanelControlId ?? undefined}
+              onClose={closeExecutionPanel}
+              onViewWorkingPaper={() => openExecutionPanel('working-paper', state.executionPanelControlId ?? undefined)}
+              onViewTrace={() => openExecutionPanel('traceability', state.executionPanelControlId ?? undefined)}
+            />
+          )}
+          {state.executionPanel === 'traceability' && (
+            <TraceabilityPanel
+              controlId={state.executionPanelControlId ?? undefined}
+              onClose={closeExecutionPanel}
+              onOpenWorkingPaper={() => openExecutionPanel('working-paper', state.executionPanelControlId ?? undefined)}
+              onOpenWorkflow={() => openExecutionPanel('workflow-execution', state.executionPanelControlId ?? undefined)}
+            />
           )}
         </AnimatePresence>
       </div>

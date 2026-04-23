@@ -5,7 +5,8 @@ import {
   FileBarChart, ChevronDown, PanelLeft,
   AlertTriangle, Sparkles, Building2, Home, Calendar,
   Shield, Search as SearchIcon, Settings, Clock, Check,
-  Wand2, MoreHorizontal, LogOut, HelpCircle, ExternalLink
+  Wand2, MoreHorizontal, LogOut, HelpCircle, ExternalLink,
+  ClipboardCheck, FileText, Target
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
 
@@ -250,6 +251,13 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
           <NavItem icon={Building2} label="Process Hub" active={view === 'business-processes' || view === 'bp-detail'} expanded={isExpanded} onClick={() => setView('business-processes')} />
           <NavItem icon={AlertTriangle} label="Risk Register" active={view === 'audit-risk-register'} expanded={isExpanded} onClick={() => setView('audit-risk-register')} badge="14" />
           <NavItem icon={Shield} label="Control Library" active={view === 'governance-controls' || view === 'governance-control-detail'} expanded={isExpanded} onClick={() => setView('governance-controls')} />
+
+          {/* ── EXECUTION ── */}
+          <Divider label="Execution" expanded={isExpanded} />
+
+          <NavItem icon={ClipboardCheck} label="Control Testing" active={view === 'execution-testing'} expanded={isExpanded} onClick={() => setView('execution-testing')} />
+          <NavItem icon={FileText} label="Evidence & Workpapers" active={view === 'execution-evidence'} expanded={isExpanded} onClick={() => setView('execution-evidence')} />
+          <NavItem icon={Target} label="Findings" active={view === 'findings'} expanded={isExpanded} onClick={() => setView('findings')} badge="5" />
 
           {/* ── GLOBAL ── */}
           <Divider label="Global" expanded={isExpanded} />
