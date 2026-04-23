@@ -17,16 +17,17 @@ import {
 import { useToast } from '../shared/Toast';
 interface Props {
   onCreateWorkflow: () => void;
+  onSelectWorkflow: (id: string) => void;
 }
 
-type LibraryWorkflow = {
+export type LibraryWorkflow = {
   id: string;
   name: string;
   description: string;
   tags: string[];
 };
 
-const LIBRARY_WORKFLOWS: LibraryWorkflow[] = [
+export const LIBRARY_WORKFLOWS: LibraryWorkflow[] = [
   {
     id: 'lw-001',
     name: 'Identify Higher Share of Business Awarded to Higher Price Vendors (Monthly Analysis)',
@@ -91,7 +92,7 @@ const LIBRARY_WORKFLOWS: LibraryWorkflow[] = [
 
 const TOTAL_PAGES = 144;
 
-export default function WorkflowLibraryView({ onCreateWorkflow }: Props) {
+export default function WorkflowLibraryView({ onCreateWorkflow, onSelectWorkflow }: Props) {
   const { addToast } = useToast();
   const [search, setSearch] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -176,7 +177,8 @@ export default function WorkflowLibraryView({ onCreateWorkflow }: Props) {
                   return (
                     <tr
                       key={wf.id}
-                      className="border-t border-border-light transition-colors hover:bg-surface-2/50"
+                      onClick={() => onSelectWorkflow(wf.id)}
+                      className="border-t border-border-light transition-colors hover:bg-surface-2/50 cursor-pointer"
                     >
                       <td className="pl-0 pr-4 py-4 align-top text-[13px] text-text font-medium max-w-[320px]">
                         {wf.name}
@@ -302,7 +304,7 @@ function ActionIconButton({
       type="button"
       aria-label={label}
       title={label}
-      onClick={onClick}
+      onClick={e => { e.stopPropagation(); onClick(); }}
       className="w-8 h-8 rounded-md flex items-center justify-center text-text-muted hover:bg-surface-2 hover:text-text cursor-pointer transition-colors"
     >
       {children}

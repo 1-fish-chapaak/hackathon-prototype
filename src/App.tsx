@@ -168,22 +168,25 @@ export default function App() {
           />
         );
 
-      case 'workflow-detail':
+      case 'workflow-detail': {
+        const fromLibrary = state.selectedWorkflowId?.startsWith('lw-');
         return (
           <WorkflowDetail
             workflowId={state.selectedWorkflowId!}
-            onBack={() => setSelectedWorkflow(null)}
+            onBack={() => fromLibrary ? setView('workflow-library') : setSelectedWorkflow(null)}
             onViewDashboard={() => setView('dashboards')}
             onGenerateReport={() => openReportBuilder('new')}
             onOpenExecutor={() => openWorkflowExecutor(state.selectedWorkflowId!)}
             onEditInChat={() => enterWorkflowMode({ workflowId: state.selectedWorkflowId! })}
           />
         );
+      }
 
       case 'workflow-library':
         return (
           <WorkflowLibraryView
             onCreateWorkflow={() => enterWorkflowMode()}
+            onSelectWorkflow={(id) => setSelectedWorkflow(id)}
           />
         );
 
