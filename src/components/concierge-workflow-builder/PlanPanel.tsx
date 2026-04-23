@@ -20,6 +20,9 @@ import {
   Database,
   Globe,
   FileSpreadsheet,
+  Percent,
+  CalendarDays,
+  SlidersHorizontal,
 } from 'lucide-react';
 import type { WorkflowDraft, InputNote } from './types';
 import ToleranceSection from './ToleranceSection';
@@ -82,11 +85,22 @@ const MAPPED_RISKS: MappedRisk[] = [
   },
 ];
 
+export interface ExecutorParameters {
+  threshold: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
 interface Props {
   workflow: WorkflowDraft | null;
   step?: number;
   open: boolean;
   onToggleOpen: () => void;
+  activeTab?: Tab;
+  onTabChange?: (t: Tab) => void;
+  parameters?: ExecutorParameters;
+  onParametersChange?: (next: ExecutorParameters) => void;
+  visibleTabs?: Tab[];
 }
 
 const TABS: { key: Tab; label: string; icon: typeof ListChecks }[] = [
@@ -95,8 +109,29 @@ const TABS: { key: Tab; label: string; icon: typeof ListChecks }[] = [
   { key: 'output', label: 'Output Config', icon: FileOutput },
 ];
 
-export default function PlanPanel({ workflow, step, open, onToggleOpen }: Props) {
-  const [tab, setTab] = useState<Tab>(step === 3 ? 'input' : 'plan');
+export default function PlanPanel({
+  workflow,
+  step,
+  open,
+  onToggleOpen,
+  activeTab,
+  onTabChange,
+  parameters,
+  onParametersChange,
+  visibleTabs,
+}: Props) {
+  const shownTabs = visibleTabs
+    ? TABS.filter((t) => visibleTabs.includes(t.key))
+    : TABS;
+  const [internalTab, setInternalTab] = useState<Tab>(step === 3 ? 'input' : 'plan');
+  const requestedTab = activeTab ?? internalTab;
+  const tab: Tab = shownTabs.some((t) => t.key === requestedTab)
+    ? requestedTab
+    : (shownTabs[0]?.key ?? 'plan');
+  const setTab = (t: Tab) => {
+    setInternalTab(t);
+    onTabChange?.(t);
+  };
 
   // Switch to input config tab when entering step 3
   const prevStepRef = useRef(step);
@@ -111,7 +146,7 @@ export default function PlanPanel({ workflow, step, open, onToggleOpen }: Props)
     return (
       <aside className="flex flex-col h-full bg-canvas-elevated border-l border-canvas-border min-h-0 w-12 shrink-0">
         <div className="flex flex-col items-center pt-3 gap-1">
-          {TABS.map((t) => {
+          {shownTabs.map((t) => {
             const active = tab === t.key;
             return (
               <button
@@ -150,7 +185,7 @@ export default function PlanPanel({ workflow, step, open, onToggleOpen }: Props)
     <aside className="flex flex-col h-full bg-canvas-elevated border-l border-canvas-border min-h-0">
       {/* Tabs */}
       <div className="h-14 border-b border-canvas-border flex items-end px-2 shrink-0">
-        {TABS.map((t) => {
+        {shownTabs.map((t) => {
           const active = tab === t.key;
           return (
             <button
@@ -187,7 +222,13 @@ export default function PlanPanel({ workflow, step, open, onToggleOpen }: Props)
             <RACMSection />
           </>
         )}
-        {tab === 'input' && <InputConfigSection workflow={workflow} />}
+        {tab === 'input' && (
+          <InputConfigSection
+            workflow={workflow}
+            parameters={parameters}
+            onParametersChange={onParametersChange}
+          />
+        )}
         {tab === 'output' && <OutputConfigSection workflow={workflow} />}
       </div>
     </aside>
@@ -361,12 +402,25 @@ function nextNoteId(): string {
   return `n-${++_noteIdCounter}`;
 }
 
-function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
+function InputConfigSection({
+  workflow,
+  parameters,
+  onParametersChange,
+}: {
+  workflow: WorkflowDraft | null;
+  parameters?: ExecutorParameters;
+  onParametersChange?: (next: ExecutorParameters) => void;
+}) {
   const [notes, setNotes] = useState<InputNote[]>(DEFAULT_NOTES);
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_AI_SUGGESTIONS);
   const [addingNote, setAddingNote] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
+
+  const updateParam = <K extends keyof ExecutorParameters>(key: K, value: ExecutorParameters[K]) => {
+    if (!parameters || !onParametersChange) return;
+    onParametersChange({ ...parameters, [key]: value });
+  };
 
   const toggleNote = (id: string) =>
     setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, enabled: !n.enabled } : n)));
@@ -401,6 +455,57 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
 
   return (
     <div className="space-y-3">
+      {parameters && onParametersChange && (
+        <div className="rounded-xl border border-canvas-border bg-canvas-elevated">
+          <div className="flex items-center gap-2 px-3 py-2.5 border-b border-canvas-border">
+            <SlidersHorizontal size={13} className="text-ink-400" />
+            <span className="text-[12px] font-semibold text-ink-700 flex-1">Parameters</span>
+            <span className="text-[10px] font-semibold text-brand-700 bg-brand-50 border border-brand-100 rounded-full px-1.5 py-0.5">
+              LIVE
+            </span>
+          </div>
+          <div className="p-3 space-y-3">
+            <div>
+              <label className="text-[11px] font-semibold text-ink-600 flex items-center gap-1.5 mb-1">
+                <Percent size={11} className="text-brand-600" />
+                Match Threshold
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={parameters.threshold}
+                  onChange={(e) => updateParam('threshold', e.target.value)}
+                  className="w-full rounded-lg border border-canvas-border bg-canvas-elevated pl-2.5 pr-7 py-1.5 text-[12px] font-mono text-ink-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/30 transition-all"
+                />
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-ink-400">%</span>
+              </div>
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-ink-600 flex items-center gap-1.5 mb-1">
+                <CalendarDays size={11} className="text-brand-600" />
+                Date Range
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                <input
+                  type="date"
+                  value={parameters.dateFrom}
+                  onChange={(e) => updateParam('dateFrom', e.target.value)}
+                  className="rounded-lg border border-canvas-border bg-canvas-elevated px-2 py-1.5 text-[11.5px] font-mono text-ink-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/30 transition-all"
+                />
+                <input
+                  type="date"
+                  value={parameters.dateTo}
+                  onChange={(e) => updateParam('dateTo', e.target.value)}
+                  className="rounded-lg border border-canvas-border bg-canvas-elevated px-2 py-1.5 text-[11.5px] font-mono text-ink-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/30 transition-all"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ToleranceSection />
 
       {/* Notes */}
