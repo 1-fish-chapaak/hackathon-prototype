@@ -9,6 +9,7 @@ import ArtifactPanel from './components/artifacts/ArtifactPanel';
 import WorkflowBuilderCanvas from './components/artifacts/WorkflowBuilderCanvas';
 import WorkflowTemplates from './components/workflow/WorkflowTemplates';
 import WorkflowDetail from './components/workflow/WorkflowDetail';
+import WorkflowLibraryView from './components/workflow/WorkflowLibraryView';
 import BusinessProcesses from './components/audit/BusinessProcesses';
 import RiskRegister from './components/audit/RiskRegister';
 import AuditExecution from './components/audit/AuditExecution';
@@ -181,9 +182,8 @@ export default function App() {
 
       case 'workflow-library':
         return (
-          <WorkflowTemplates
-            onSelectWorkflow={(id) => setSelectedWorkflow(id)}
-            onBuildNew={() => enterWorkflowMode()}
+          <WorkflowLibraryView
+            onCreateWorkflow={() => enterWorkflowMode()}
           />
         );
 

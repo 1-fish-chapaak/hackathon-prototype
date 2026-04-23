@@ -89,8 +89,16 @@ export interface AppState {
   executionPanelControlId: string | null;
 }
 
+const getInitialView = (): View => {
+  if (typeof window === 'undefined') return 'home';
+  const params = new URLSearchParams(window.location.search);
+  const v = params.get('view');
+  if (v === 'reports') return 'reports';
+  return 'home';
+};
+
 const INITIAL_STATE: AppState = {
-  view: 'home',
+  view: getInitialView(),
   sidebarExpanded: false,
   chatMode: 'chat',
   activeArtifactTab: 'result',
