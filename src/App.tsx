@@ -57,6 +57,8 @@ export default function App() {
     setQueryAssumptions,
     enterWorkflowMode,
     openWorkflowExecutor,
+    openChat,
+    setSelectedChatId,
   } = useAppState();
 
   const mainScrollRef = useRef<HTMLDivElement>(null);
@@ -121,7 +123,7 @@ export default function App() {
         return <HomeView setView={setView} />;
 
       case 'recents':
-        return <RecentsView setView={setView} />;
+        return <RecentsView setView={setView} openChat={openChat} openWorkflowExecutor={openWorkflowExecutor} />;
 
       case 'chat':
         return (
@@ -137,6 +139,9 @@ export default function App() {
               setQueryAssumptions={setQueryAssumptions}
               initialQuery={state.chatInitialQuery ?? undefined}
               onInitialQueryProcessed={() => setChatInitialQuery(null)}
+              selectedChatId={state.selectedChatId}
+              onChatLoaded={() => setSelectedChatId(null)}
+              setView={setView}
             />
             <AnimatePresence>
               {renderArtifactPanel()}

@@ -1,13 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  MessageSquare, Workflow, Star, Search, Filter, Plus, Clock,
+  MessageSquare, Workflow, Star, Search, Plus, Clock,
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
 import { CHAT_HISTORY, WORKFLOWS } from '../../data/mockData';
 
 interface Props {
   setView: (v: View) => void;
+  openChat: (chatId: string | null) => void;
+  openWorkflowExecutor: (workflowId: string) => void;
 }
 
 type TabId = 'chats' | 'workflows' | 'favourites';
@@ -163,7 +165,7 @@ function RecentRow({ icon: Icon, title, meta, trailing, ts, onClick, fav, onTogg
 
 // ─── RecentsView ─────────────────────────────────────────────────────────────
 
-export default function RecentsView({ setView }: Props) {
+export default function RecentsView({ setView, openChat, openWorkflowExecutor }: Props) {
   const [tab, setTab] = useState<TabId>('chats');
   const [search, setSearch] = useState('');
 
@@ -195,7 +197,7 @@ export default function RecentsView({ setView }: Props) {
 
   const newButtonLabel = tab === 'chats' ? 'New chat' : tab === 'workflows' ? 'New run' : null;
   const onNewClick = () => {
-    if (tab === 'chats') setView('chat');
+    if (tab === 'chats') openChat(null);
     if (tab === 'workflows') setView('workflow-templates');
   };
 
@@ -216,12 +218,6 @@ export default function RecentsView({ setView }: Props) {
             </div>
 
             <div className="flex items-center gap-2">
-              <button className="p-2 rounded-md border border-canvas-border bg-canvas-elevated text-ink-500 hover:text-ink-800 hover:border-brand-200 transition-colors cursor-pointer" title="Filter">
-                <Filter size={14} />
-              </button>
-              <button className="p-2 rounded-md border border-canvas-border bg-canvas-elevated text-ink-500 hover:text-ink-800 hover:border-brand-200 transition-colors cursor-pointer" title="Search">
-                <Search size={14} />
-              </button>
               {newButtonLabel && (
                 <button
                   onClick={onNewClick}
@@ -299,7 +295,7 @@ export default function RecentsView({ setView }: Props) {
                   icon={MessageSquare}
                   title={c.title}
                   ts={c.ts}
-                  onClick={() => setView('chat')}
+                  onClick={() => openChat(c.id)}
                   fav={favourites.has(c.id)}
                   onToggleFav={toggleFav(c.id)}
                 />
@@ -331,7 +327,7 @@ export default function RecentsView({ setView }: Props) {
                       </span>
                     }
                     ts={w.ts}
-                    onClick={() => setView('workflow-templates')}
+                    onClick={() => openWorkflowExecutor(w.wfId)}
                     fav={favourites.has(w.id)}
                     onToggleFav={toggleFav(w.id)}
                   />
@@ -365,7 +361,7 @@ export default function RecentsView({ setView }: Props) {
                       icon={MessageSquare}
                       title={e.row.title}
                       ts={e.row.ts}
-                      onClick={() => setView('chat')}
+                      onClick={() => openChat(e.row.id)}
                       fav={true}
                       onToggleFav={toggleFav(e.row.id)}
                     />
@@ -384,7 +380,7 @@ export default function RecentsView({ setView }: Props) {
                       </span>
                     }
                     ts={e.row.ts}
-                    onClick={() => setView('workflow-templates')}
+                    onClick={() => openWorkflowExecutor(e.row.wfId)}
                     fav={true}
                     onToggleFav={toggleFav(e.row.id)}
                   />

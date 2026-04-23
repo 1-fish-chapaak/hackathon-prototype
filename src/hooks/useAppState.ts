@@ -77,6 +77,8 @@ export interface AppState {
   // Chat initial context (for workflow mode entry)
   chatInitialQuery: string | null;
   chatWorkflowContext: { templateId?: string; workflowId?: string } | null;
+  // Selected chat to load into ChatView (e.g. from Recents); null = fresh chat
+  selectedChatId: string | null;
   // Query assumptions
   queryAssumptions: string[];
 }
@@ -104,6 +106,7 @@ const INITIAL_STATE: AppState = {
   workflowType: null,
   chatInitialQuery: null,
   chatWorkflowContext: null,
+  selectedChatId: null,
   queryAssumptions: [],
 };
 
@@ -180,6 +183,14 @@ export function useAppState() {
     setState(prev => ({ ...prev, chatInitialQuery: query }));
   }, []);
 
+  const openChat = useCallback((chatId: string | null) => {
+    setState(prev => ({ ...prev, view: 'chat' as View, selectedChatId: chatId, showChatHistory: false }));
+  }, []);
+
+  const setSelectedChatId = useCallback((id: string | null) => {
+    setState(prev => ({ ...prev, selectedChatId: id }));
+  }, []);
+
   const setQueryAssumptions = useCallback((assumptions: string[]) => {
     setState(prev => ({ ...prev, queryAssumptions: assumptions }));
   }, []);
@@ -221,5 +232,7 @@ export function useAppState() {
     setQueryAssumptions,
     enterWorkflowMode,
     openWorkflowExecutor,
+    openChat,
+    setSelectedChatId,
   };
 }

@@ -43,6 +43,12 @@ interface ChatViewProps {
   setQueryAssumptions?: (assumptions: string[]) => void;
   initialQuery?: string;
   onInitialQueryProcessed?: () => void;
+  /** When set, ChatView loads CHAT_CONVERSATIONS[selectedChatId] on mount/change. */
+  selectedChatId?: string | null;
+  /** Called once the selected chat has been loaded so the parent can clear the id. */
+  onChatLoaded?: () => void;
+  /** Optional view router so the slide-out can deep-link to /recents. */
+  setView?: (v: import('../../hooks/useAppState').View) => void;
 }
 
 type DetailedQueryType = 'duplicate-invoice' | 'workflow' | 'reconciliation' | 'sox-compliance' | 'vendor-spend' | 'uncontrolled-risks' | 'control-effectiveness' | 'generic';
@@ -270,7 +276,7 @@ function SaveWorkflowButton() {
   );
 }
 
-export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowType, setQueryAssumptions, initialQuery, onInitialQueryProcessed }: ChatViewProps) {
+export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowType, setQueryAssumptions, initialQuery, onInitialQueryProcessed, selectedChatId, onChatLoaded, setView }: ChatViewProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -343,6 +349,37 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     const t = setTimeout(fn, ms);
     timersRef.current.push(t);
   };
+
+  // ─── Load a saved conversation by id (used by slide-out + Recents) ───
+  const loadChatById = useCallback((chatId: string) => {
+    const convo = CHAT_CONVERSATIONS[chatId];
+    if (!convo) return false;
+    const msgs: ChatMessage[] = convo.map((m, idx) => ({
+      id: `history-${chatId}-${idx}`,
+      role: m.role,
+      text: m.text,
+      timestamp: new Date(),
+    }));
+    setMessages(msgs);
+    setShowClarificationCard(false);
+    setShowAssumptions(false);
+    setShowProgressiveLoader(false);
+    setIsTyping(false);
+    setThinkingSteps([]);
+    setWorkflowBuildPhase(0);
+    setCurrentWorkflowType(null);
+    clearTimers();
+    return true;
+  }, []);
+
+  // Honor selectedChatId from app state (Recents → Chats deep-link).
+  // Always clear the selection after the effect runs — even when the id has
+  // no matching CHAT_CONVERSATIONS entry — so a stale id never sticks.
+  useEffect(() => {
+    if (!selectedChatId) return;
+    loadChatById(selectedChatId);
+    onChatLoaded?.();
+  }, [selectedChatId, loadChatById, onChatLoaded]);
 
   // ─── Query Clarification Complete Handler ───
   const handleQueryClarificationComplete = (answers: Record<number, string>) => {
@@ -748,32 +785,12 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
               New Chat
             </button>
           </div>
-          <div className="overflow-y-auto flex-1" style={{ height: 'calc(100% - 110px)' }}>
+          <div className="overflow-y-auto flex-1" style={{ height: 'calc(100% - 150px)' }}>
             {CHAT_HISTORY.map(chat => (
               <button
                 key={chat.id}
                 className="w-full text-left px-4 py-3 border-b border-border-light hover:bg-primary-xlight/50 transition-colors group cursor-pointer"
-                onClick={() => {
-                  const convo = CHAT_CONVERSATIONS[chat.id];
-                  if (convo) {
-                    const msgs: ChatMessage[] = convo.map((m, idx) => ({
-                      id: `history-${chat.id}-${idx}`,
-                      role: m.role,
-                      text: m.text,
-                      timestamp: new Date(),
-                    }));
-                    setMessages(msgs);
-                    // Reset any active flows
-                    setShowClarificationCard(false);
-                    setShowAssumptions(false);
-                    setShowProgressiveLoader(false);
-                    setIsTyping(false);
-                    setThinkingSteps([]);
-                    setWorkflowBuildPhase(0);
-                    setCurrentWorkflowType(null);
-                    clearTimers();
-                  }
-                }}
+                onClick={() => loadChatById(chat.id)}
               >
                 <div className="flex items-start gap-2.5">
                   <div className="w-6 h-6 rounded-md bg-primary/5 flex items-center justify-center shrink-0 mt-0.5">
@@ -788,6 +805,18 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
               </button>
             ))}
           </div>
+          {/* Slide-out is a quick switcher for the last 5; canonical browser is /recents. */}
+          {setView && (
+            <div className="border-t border-border-light p-3">
+              <button
+                onClick={() => { toggleChatHistory(); setView('recents'); }}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-[12px] font-semibold text-brand-700 hover:bg-brand-50 transition-colors cursor-pointer"
+              >
+                Browse all in Recents
+                <ArrowRight size={12} />
+              </button>
+            </div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>
