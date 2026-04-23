@@ -21,6 +21,7 @@ export type View =
   | 'audit-planning'
   // Execution
   | 'audit-execution'
+  | 'engagement-detail'
   | 'execution-testing'
   | 'execution-evidence'
   // Intelligence
@@ -50,6 +51,7 @@ export type View =
 export type ChatMode = 'chat' | 'workflow';
 export type ArtifactTab = 'plan' | 'code' | 'sources' | 'result' | 'flow' | 'preview';
 export type ArtifactMode = 'query' | 'workflow';
+export type ExecutionPanel = 'working-paper' | 'workflow-execution' | 'traceability' | null;
 
 export interface AppState {
   view: View;
@@ -82,10 +84,21 @@ export interface AppState {
   selectedChatId: string | null;
   // Query assumptions
   queryAssumptions: string[];
+  // Execution panels
+  executionPanel: ExecutionPanel;
+  executionPanelControlId: string | null;
 }
 
+const getInitialView = (): View => {
+  if (typeof window === 'undefined') return 'home';
+  const params = new URLSearchParams(window.location.search);
+  const v = params.get('view');
+  if (v === 'reports') return 'reports';
+  return 'home';
+};
+
 const INITIAL_STATE: AppState = {
-  view: 'home',
+  view: getInitialView(),
   sidebarExpanded: false,
   chatMode: 'chat',
   activeArtifactTab: 'result',
@@ -109,6 +122,8 @@ const INITIAL_STATE: AppState = {
   chatWorkflowContext: null,
   selectedChatId: null,
   queryAssumptions: [],
+  executionPanel: null,
+  executionPanelControlId: null,
 };
 
 export function useAppState() {
@@ -148,6 +163,14 @@ export function useAppState() {
 
   const setSelectedBP = useCallback((id: string | null) => {
     setState(prev => ({ ...prev, selectedBPId: id, view: id ? 'bp-detail' : 'business-processes' }));
+  }, []);
+
+  const setSelectedEngagement = useCallback((id: string | null) => {
+    setState(prev => ({ ...prev, selectedEngagementId: id }));
+  }, []);
+
+  const openAuditExecution = useCallback((engagementId: string) => {
+    setState(prev => ({ ...prev, view: 'audit-execution' as View, selectedEngagementId: engagementId }));
   }, []);
 
   // Modal controls
@@ -211,6 +234,14 @@ export function useAppState() {
     setState(prev => ({ ...prev, view: 'workflow-executor' as View, selectedWorkflowId: workflowId }));
   }, []);
 
+  const openExecutionPanel = useCallback((panel: ExecutionPanel, controlId?: string) => {
+    setState(prev => ({ ...prev, executionPanel: panel, executionPanelControlId: controlId ?? null }));
+  }, []);
+
+  const closeExecutionPanel = useCallback(() => {
+    setState(prev => ({ ...prev, executionPanel: null, executionPanelControlId: null }));
+  }, []);
+
   return {
     state,
     setView,
@@ -233,7 +264,10 @@ export function useAppState() {
     setQueryAssumptions,
     enterWorkflowMode,
     openWorkflowExecutor,
+    openAuditExecution,
     openChat,
     setSelectedChatId,
+    openExecutionPanel,
+    closeExecutionPanel,
   };
 }

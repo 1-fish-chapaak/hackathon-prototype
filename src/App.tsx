@@ -9,6 +9,7 @@ import ArtifactPanel from './components/artifacts/ArtifactPanel';
 import WorkflowBuilderCanvas from './components/artifacts/WorkflowBuilderCanvas';
 import WorkflowTemplates from './components/workflow/WorkflowTemplates';
 import WorkflowDetail from './components/workflow/WorkflowDetail';
+import WorkflowLibraryView from './components/workflow/WorkflowLibraryView';
 import BusinessProcesses from './components/audit/BusinessProcesses';
 import RiskRegister from './components/audit/RiskRegister';
 import AuditExecution from './components/audit/AuditExecution';
@@ -33,6 +34,11 @@ import WorkflowBuilderJourney from './components/concierge-workflow-builder/Work
 import AdminView from './components/admin/AdminView';
 import FindingsView from './components/execution/FindingsView';
 import WorkflowExecutor from './components/workflow/WorkflowExecutor';
+import WorkingPaperPanel from './components/execution/WorkingPaperPanel';
+import WorkflowExecutionPanel from './components/execution/WorkflowExecutionPanel';
+import TraceabilityPanel from './components/execution/TraceabilityPanel';
+import EngagementDetailView from './components/engagement/EngagementDetailView';
+import ControlDetailDrawer from './components/engagement/ControlDetailDrawer';
 
 export default function App() {
   const {
@@ -46,6 +52,7 @@ export default function App() {
     toggleChatHistory,
     setSelectedWorkflow,
     setSelectedBP,
+    openAuditExecution,
     setShowExceptionModal,
     setShowEmailPreviewModal,
     setShowShareModal,
@@ -59,10 +66,13 @@ export default function App() {
     openWorkflowExecutor,
     openChat,
     setSelectedChatId,
+    openExecutionPanel,
+    closeExecutionPanel,
   } = useAppState();
 
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [controlDrawerId, setControlDrawerId] = useState<string | null>(null);
 
   useEffect(() => {
     if (mainScrollRef.current) {
@@ -172,9 +182,8 @@ export default function App() {
 
       case 'workflow-library':
         return (
-          <WorkflowTemplates
-            onSelectWorkflow={(id) => setSelectedWorkflow(id)}
-            onBuildNew={() => enterWorkflowMode()}
+          <WorkflowLibraryView
+            onCreateWorkflow={() => enterWorkflowMode()}
           />
         );
 
@@ -205,6 +214,15 @@ export default function App() {
       case 'audit-execution':
         return <AuditExecution />;
 
+      case 'engagement-detail':
+        return (
+          <EngagementDetailView
+            engagementId={state.selectedEngagementId ?? undefined}
+            onBack={() => setView('audit-planning')}
+            onOpenControl={(controlId) => setControlDrawerId(controlId)}
+          />
+        );
+
       case 'dashboards':
         return (
           <DashboardView
@@ -231,7 +249,10 @@ export default function App() {
         );
 
       case 'audit-planning':
-        return <AuditPlanningView />;
+        return <AuditPlanningView onNavigateToExecution={(engId) => {
+          openAuditExecution(engId);
+          setView('engagement-detail' as any);
+        }} />;
 
       case 'knowledge-hub':
         return <KnowledgeHubView />;
@@ -254,10 +275,22 @@ export default function App() {
 
       // Execution — new pages
       case 'execution-testing':
-        return <ControlTestingView />;
+        return (
+          <ControlTestingView
+            onOpenWorkingPaper={(id) => openExecutionPanel('working-paper', id)}
+            onOpenWorkflow={(id) => openExecutionPanel('workflow-execution', id)}
+            onOpenTrace={(id) => openExecutionPanel('traceability', id)}
+          />
+        );
 
       case 'execution-evidence':
-        return <EvidenceView />;
+        return (
+          <EvidenceView
+            onOpenWorkingPaper={(id) => openExecutionPanel('working-paper', id)}
+            onOpenWorkflow={(id) => openExecutionPanel('workflow-execution', id)}
+            onOpenTrace={(id) => openExecutionPanel('traceability', id)}
+          />
+        );
 
       // Intelligence — AI Concierge
       case 'ai-concierge':
@@ -270,7 +303,13 @@ export default function App() {
 
       // Execution — Findings
       case 'findings':
-        return <FindingsView />;
+        return (
+          <FindingsView
+            onOpenWorkingPaper={(id) => openExecutionPanel('working-paper', id)}
+            onOpenWorkflow={(id) => openExecutionPanel('workflow-execution', id)}
+            onOpenTrace={(id) => openExecutionPanel('traceability', id)}
+          />
+        );
 
       // Admin
       case 'admin-users':
@@ -342,6 +381,44 @@ export default function App() {
           )}
           {state.showPowerBIWizard && (
             <PowerBIImportWizard onClose={() => setShowPowerBIWizard(false)} />
+          )}
+        </AnimatePresence>
+
+        {/* Execution Panels */}
+        <AnimatePresence>
+          {state.executionPanel === 'working-paper' && (
+            <WorkingPaperPanel
+              controlId={state.executionPanelControlId ?? undefined}
+              onClose={closeExecutionPanel}
+              onViewWorkflow={() => openExecutionPanel('workflow-execution', state.executionPanelControlId ?? undefined)}
+              onViewTrace={() => openExecutionPanel('traceability', state.executionPanelControlId ?? undefined)}
+            />
+          )}
+          {state.executionPanel === 'workflow-execution' && (
+            <WorkflowExecutionPanel
+              controlId={state.executionPanelControlId ?? undefined}
+              onClose={closeExecutionPanel}
+              onViewWorkingPaper={() => openExecutionPanel('working-paper', state.executionPanelControlId ?? undefined)}
+              onViewTrace={() => openExecutionPanel('traceability', state.executionPanelControlId ?? undefined)}
+            />
+          )}
+          {state.executionPanel === 'traceability' && (
+            <TraceabilityPanel
+              controlId={state.executionPanelControlId ?? undefined}
+              onClose={closeExecutionPanel}
+              onOpenWorkingPaper={() => openExecutionPanel('working-paper', state.executionPanelControlId ?? undefined)}
+              onOpenWorkflow={() => openExecutionPanel('workflow-execution', state.executionPanelControlId ?? undefined)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Control Detail Drawer */}
+        <AnimatePresence>
+          {controlDrawerId && (
+            <ControlDetailDrawer
+              controlId={controlDrawerId}
+              onClose={() => setControlDrawerId(null)}
+            />
           )}
         </AnimatePresence>
       </div>
