@@ -33,6 +33,7 @@ import WorkflowBuilderJourney from './components/concierge-workflow-builder/Work
 import AdminView from './components/admin/AdminView';
 import FindingsView from './components/execution/FindingsView';
 import WorkflowExecutor from './components/workflow/WorkflowExecutor';
+import ManageExceptionsView from './components/exceptions/ManageExceptionsView';
 
 export default function App() {
   const {
@@ -59,6 +60,7 @@ export default function App() {
     openWorkflowExecutor,
     openChat,
     setSelectedChatId,
+    setExceptionRole,
   } = useAppState();
 
   const mainScrollRef = useRef<HTMLDivElement>(null);
@@ -219,6 +221,16 @@ export default function App() {
           <ReportsView
             onOpenBuilder={() => openReportBuilder('new')}
             onShare={(id) => setShowShareModal(true, { type: 'report', id })}
+            onManageExceptions={() => setView('manage-exceptions')}
+          />
+        );
+
+      case 'manage-exceptions':
+        return (
+          <ManageExceptionsView
+            role={state.exceptionRole}
+            setRole={setExceptionRole}
+            onBack={() => setView('reports')}
           />
         );
 
