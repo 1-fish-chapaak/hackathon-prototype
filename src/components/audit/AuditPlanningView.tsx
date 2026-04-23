@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Lock, CheckCircle2, Flag, Target, Calendar,
   Users, ShieldCheck, ClipboardList, LayoutGrid,
-  X, ChevronDown, Plus, Edit3, Trash2, AlertTriangle,
-  DollarSign, BarChart3, Grid3X3, UserCheck,
+  X, ChevronDown, Plus, Edit3, AlertTriangle,
+  DollarSign, BarChart3, Grid3X3,
   TrendingUp, Clock, Zap
 } from 'lucide-react';
 import Orb from '../shared/Orb';
@@ -12,18 +12,27 @@ import { useToast } from '../shared/Toast';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type AuditStatus = 'planned' | 'active' | 'completed' | 'on-hold';
+type AuditStatus = 'draft' | 'planned' | 'frozen' | 'signed-off' | 'active' | 'in-progress' | 'pending-review' | 'closed';
 type AuditType = 'SOX' | 'IFC' | 'ITGC' | 'Internal' | 'Risk';
 type ProcessType = 'P2P' | 'O2C' | 'R2R' | 'S2C' | 'Cross';
 type PriorityLevel = 'Critical' | 'High' | 'Medium' | 'Low';
+type FrameworkType = 'COSO' | 'COBIT' | 'ISO 27001' | 'NIST' | 'Custom';
 type TabId = 'timeline' | 'resources' | 'risk-matrix' | 'budget';
 
 interface AuditEngagement {
   id: string;
   name: string;
-  process: ProcessType;
   type: AuditType;
+  framework: FrameworkType;
+  auditPeriodStart: string;
+  auditPeriodEnd: string;
+  plannedStartDate: string;
+  plannedEndDate: string;
   owner: string;
+  reviewer: string;
+  businessProcess: string;
+  racmVersion: string;
+  description: string;
   start: number;
   duration: number;
   color: string;
@@ -32,7 +41,6 @@ interface AuditEngagement {
   plannedHours: number;
   priority: PriorityLevel;
   riskScore: number;
-  notes: string;
 }
 
 interface TeamMember {
@@ -56,8 +64,7 @@ const MONTHS = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', '
 
 const PROCESSES: ProcessType[] = ['P2P', 'O2C', 'R2R', 'S2C', 'Cross'];
 const AUDIT_TYPES: AuditType[] = ['SOX', 'IFC', 'ITGC', 'Internal', 'Risk'];
-const STATUSES: AuditStatus[] = ['planned', 'active', 'completed', 'on-hold'];
-const PRIORITIES: PriorityLevel[] = ['Critical', 'High', 'Medium', 'Low'];
+const FRAMEWORKS: FrameworkType[] = ['COSO', 'COBIT', 'ISO 27001', 'NIST', 'Custom'];
 
 const TEAM_MEMBERS: TeamMember[] = [
   { id: 'tm-1', name: 'Tushar Goel', role: 'Senior Auditor', avatar: 'TG', capacity: 160, skills: ['P2P', 'SOX', 'AP'] },
@@ -70,14 +77,14 @@ const TEAM_MEMBERS: TeamMember[] = [
 ];
 
 const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
-  { id: 'ap-1', name: 'P2P — SOX Audit', process: 'P2P', type: 'SOX', owner: 'Tushar Goel', start: 0, duration: 3, color: '#6a12cd', status: 'active', controls: 24, plannedHours: 480, priority: 'Critical', riskScore: 85, notes: 'Covers AP, PO, and vendor master controls.' },
-  { id: 'ap-2', name: 'O2C — SOX Audit', process: 'O2C', type: 'SOX', owner: 'Neha Joshi', start: 1, duration: 3, color: '#0284c7', status: 'active', controls: 18, plannedHours: 360, priority: 'High', riskScore: 72, notes: 'Revenue recognition and AR controls.' },
-  { id: 'ap-3', name: 'R2R — SOX Audit', process: 'R2R', type: 'SOX', owner: 'Karan Mehta', start: 0, duration: 4, color: '#d97706', status: 'active', controls: 31, plannedHours: 520, priority: 'Critical', riskScore: 90, notes: 'Journal entries, reconciliations, close process.' },
-  { id: 'ap-4', name: 'S2C — Contract Review', process: 'S2C', type: 'Internal', owner: 'Rohan Patel', start: 3, duration: 3, color: '#059669', status: 'planned', controls: 14, plannedHours: 240, priority: 'Medium', riskScore: 45, notes: 'New contract lifecycle review.' },
-  { id: 'ap-5', name: 'P2P — IFC Assessment', process: 'P2P', type: 'IFC', owner: 'Sneha Desai', start: 4, duration: 3, color: '#6a12cd', status: 'planned', controls: 18, plannedHours: 300, priority: 'High', riskScore: 68, notes: 'Internal financial controls assessment for P2P.' },
-  { id: 'ap-6', name: 'IT General Controls', process: 'Cross', type: 'ITGC', owner: 'Deepak Bansal', start: 2, duration: 6, color: '#7c3aed', status: 'active', controls: 15, plannedHours: 640, priority: 'Critical', riskScore: 82, notes: 'Access mgmt, change mgmt, operations, SDLC.' },
-  { id: 'ap-7', name: 'Vendor Risk Assessment', process: 'P2P', type: 'Risk', owner: 'Priya Singh', start: 6, duration: 2, color: '#dc2626', status: 'planned', controls: 8, plannedHours: 160, priority: 'Medium', riskScore: 55, notes: 'Third-party vendor risk evaluation.' },
-  { id: 'ap-8', name: 'Year-End Close Review', process: 'R2R', type: 'SOX', owner: 'Karan Mehta', start: 9, duration: 2, color: '#d97706', status: 'planned', controls: 12, plannedHours: 200, priority: 'High', riskScore: 60, notes: 'Year-end closing procedures and adjustments.' },
+  { id: 'ap-1', name: 'P2P — SOX Audit', businessProcess: 'P2P', type: 'SOX', framework: 'COSO', auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31', plannedStartDate: '2025-04-01', plannedEndDate: '2025-06-30', owner: 'Tushar Goel', reviewer: 'Karan Mehta', racmVersion: 'v2.1', description: 'Comprehensive SOX audit covering AP, PO, and vendor master controls with focus on segregation of duties and transaction authorization.', start: 0, duration: 3, color: '#6a12cd', status: 'active', controls: 24, plannedHours: 480, priority: 'Critical', riskScore: 85 },
+  { id: 'ap-2', name: 'O2C — SOX Audit', businessProcess: 'O2C', type: 'SOX', framework: 'COSO', auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31', plannedStartDate: '2025-05-01', plannedEndDate: '2025-07-31', owner: 'Neha Joshi', reviewer: 'Sneha Desai', racmVersion: 'v2.1', description: 'SOX compliance audit for Order-to-Cash process including revenue recognition and AR controls.', start: 1, duration: 3, color: '#0284c7', status: 'active', controls: 18, plannedHours: 360, priority: 'High', riskScore: 72 },
+  { id: 'ap-3', name: 'R2R — SOX Audit', businessProcess: 'R2R', type: 'SOX', framework: 'COSO', auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31', plannedStartDate: '2025-04-01', plannedEndDate: '2025-08-31', owner: 'Karan Mehta', reviewer: 'Abhinav S', racmVersion: 'v2.1', description: 'Record-to-Report SOX audit covering journal entries, reconciliations, and financial close processes.', start: 0, duration: 4, color: '#d97706', status: 'active', controls: 31, plannedHours: 520, priority: 'Critical', riskScore: 90 },
+  { id: 'ap-4', name: 'S2C — Contract Review', businessProcess: 'S2C', type: 'Internal', framework: 'Custom', auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31', plannedStartDate: '2025-07-01', plannedEndDate: '2025-09-30', owner: 'Rohan Patel', reviewer: 'Priya Singh', racmVersion: 'v1.8', description: 'Internal audit of Source-to-Contract process focusing on new contract lifecycle and vendor management.', start: 3, duration: 3, color: '#059669', status: 'planned', controls: 14, plannedHours: 240, priority: 'Medium', riskScore: 45 },
+  { id: 'ap-5', name: 'P2P — IFC Assessment', businessProcess: 'P2P', type: 'IFC', framework: 'COBIT', auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31', plannedStartDate: '2025-08-01', plannedEndDate: '2025-10-31', owner: 'Sneha Desai', reviewer: 'Karan Mehta', racmVersion: 'v2.0', description: 'Internal Financial Controls assessment for Procure-to-Pay process using COBIT framework.', start: 4, duration: 3, color: '#6a12cd', status: 'planned', controls: 18, plannedHours: 300, priority: 'High', riskScore: 68 },
+  { id: 'ap-6', name: 'IT General Controls', businessProcess: 'Cross', type: 'ITGC', framework: 'ISO 27001', auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31', plannedStartDate: '2025-06-01', plannedEndDate: '2026-01-31', owner: 'Deepak Bansal', reviewer: 'Tushar Goel', racmVersion: 'v2.1', description: 'IT General Controls audit covering access management, change management, operations, and SDLC controls.', start: 2, duration: 6, color: '#7c3aed', status: 'active', controls: 15, plannedHours: 640, priority: 'Critical', riskScore: 82 },
+  { id: 'ap-7', name: 'Vendor Risk Assessment', businessProcess: 'P2P', type: 'Risk', framework: 'NIST', auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31', plannedStartDate: '2025-10-01', plannedEndDate: '2025-11-30', owner: 'Priya Singh', reviewer: 'Neha Joshi', racmVersion: 'v1.9', description: 'Third-party vendor risk assessment focusing on vendor master data and procurement controls.', start: 6, duration: 2, color: '#dc2626', status: 'planned', controls: 8, plannedHours: 160, priority: 'Medium', riskScore: 55 },
+  { id: 'ap-8', name: 'Year-End Close Review', businessProcess: 'R2R', type: 'SOX', framework: 'COSO', auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31', plannedStartDate: '2026-01-01', plannedEndDate: '2026-02-28', owner: 'Karan Mehta', reviewer: 'Abhinav S', racmVersion: 'v2.1', description: 'Year-end closing procedures and adjustments review for SOX compliance.', start: 9, duration: 2, color: '#d97706', status: 'planned', controls: 12, plannedHours: 200, priority: 'High', riskScore: 60 },
 ];
 
 const MILESTONES = [
@@ -202,6 +209,8 @@ function Dropdown<T extends string>({
   );
 }
 
+// ─── Get Valid Status Options ─────────────────────────────────────────────────
+
 // ─── KPI Card ────────────────────────────────────────────────────────────────
 
 function KpiCard({ label, value, icon: Icon, color, index }: {
@@ -248,6 +257,10 @@ function GanttTooltip({ item, position }: { item: AuditEngagement; position: { x
             <span className="text-text font-medium">{item.owner}</span>
           </div>
           <div className="flex justify-between text-[12px]">
+            <span className="text-text-muted">Framework</span>
+            <span className="text-text font-medium">{item.framework}</span>
+          </div>
+          <div className="flex justify-between text-[12px]">
             <span className="text-text-muted">Duration</span>
             <span className="text-text font-medium">{item.duration} months ({startMonth} — {endMonth})</span>
           </div>
@@ -258,11 +271,15 @@ function GanttTooltip({ item, position }: { item: AuditEngagement; position: { x
           <div className="flex justify-between text-[12px]">
             <span className="text-text-muted">Status</span>
             <span className={`font-bold px-1.5 py-0.5 rounded-full ${
-              item.status === 'active' ? 'bg-compliant-50 text-compliant-700' :
-              item.status === 'completed' ? 'bg-evidence-50 text-evidence-700' :
-              item.status === 'on-hold' ? 'bg-high-50 text-high-700' :
-              'bg-paper-50 text-ink-500'
-            }`}>{item.status}</span>
+              item.status === 'draft' ? 'bg-paper-50 text-ink-500' :
+              item.status === 'planned' ? 'bg-mitigated-50 text-mitigated-700' :
+              item.status === 'frozen' ? 'bg-evidence-50 text-evidence-700' :
+              item.status === 'signed-off' ? 'bg-compliant-50 text-compliant-700' :
+              item.status === 'active' ? 'bg-primary-50 text-primary-700' :
+              item.status === 'in-progress' ? 'bg-high-50 text-high-700' :
+              item.status === 'pending-review' ? 'bg-risk-50 text-risk-700' :
+              'bg-evidence-50 text-evidence-700'
+            }`}>{item.status.replace('-', ' ')}</span>
           </div>
           <div className="flex justify-between text-[12px]">
             <span className="text-text-muted">Priority</span>
@@ -286,22 +303,37 @@ function GanttTooltip({ item, position }: { item: AuditEngagement; position: { x
 // ─── Gantt Chart ─────────────────────────────────────────────────────────────
 
 function GanttChart({
-  items, frozen, onClickEngagement, processFilter, statusFilter,
+  items, frozen, onClickEngagement, processFilter, statusFilter, canDragBars,
 }: {
   items: AuditEngagement[];
   frozen: boolean;
   onClickEngagement: (item: AuditEngagement) => void;
   processFilter: string;
   statusFilter: string;
+  canDragBars: boolean;
 }) {
   const totalMonths = 12;
   const currentMonth = getCurrentMonth();
   const [hoveredItem, setHoveredItem] = useState<AuditEngagement | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [draggingItem, setDraggingItem] = useState<AuditEngagement | null>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
 
   const filtered = items.filter(item => {
-    if (processFilter !== 'All' && item.process !== processFilter) return false;
-    if (statusFilter !== 'All' && item.status !== statusFilter.toLowerCase()) return false;
+    if (processFilter !== 'All' && item.businessProcess !== processFilter) return false;
+    if (statusFilter !== 'All') {
+      const statusMap: Record<string, AuditStatus> = {
+        'Draft': 'draft',
+        'Planned': 'planned',
+        'Frozen': 'frozen',
+        'Signed Off': 'signed-off',
+        'Active': 'active',
+        'In Progress': 'in-progress',
+        'Pending Review': 'pending-review',
+        'Closed': 'closed'
+      };
+      if (item.status !== statusMap[statusFilter]) return false;
+    }
     return true;
   });
 
@@ -310,8 +342,46 @@ function GanttChart({
     setHoveredItem(item);
   }, []);
 
+  const handleMouseDown = useCallback((e: React.MouseEvent, item: AuditEngagement) => {
+    if (!canDragBars || frozen) return;
+    e.preventDefault();
+    setDraggingItem(item);
+  }, [canDragBars, frozen]);
+
+  const handleMouseMoveDrag = useCallback((e: React.MouseEvent) => {
+    if (!draggingItem || !chartRef.current) return;
+    
+    const chartRect = chartRef.current.getBoundingClientRect();
+    const timelineWidth = chartRect.width - 280; // Subtract label width
+    const monthWidth = timelineWidth / 12;
+    const relativeX = e.clientX - chartRect.left - 280;
+    const newMonth = Math.max(0, Math.min(11, Math.round(relativeX / monthWidth)));
+    
+    // Update the item's start month (simplified - in real app would update state)
+    console.log(`Dragging ${draggingItem.name} to month ${newMonth}`);
+  }, [draggingItem]);
+
+  const handleMouseUp = useCallback(() => {
+    setDraggingItem(null);
+  }, []);
+
+  useEffect(() => {
+    if (draggingItem) {
+      document.addEventListener('mousemove', handleMouseMoveDrag as any);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMoveDrag as any);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [draggingItem, handleMouseMoveDrag, handleMouseUp]);
+
   return (
-    <div className="glass-card rounded-2xl overflow-hidden relative">
+    <div 
+      ref={chartRef}
+      className="glass-card rounded-2xl overflow-hidden relative"
+      onMouseMove={draggingItem ? handleMouseMoveDrag : undefined}
+    >
       {frozen && (
         <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2 py-1 bg-evidence-50/80 backdrop-blur-sm border border-evidence rounded-md">
           <Lock size={10} className="text-evidence-700" />
@@ -360,12 +430,16 @@ function GanttChart({
             </div>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[12px] text-text-muted">{item.owner}</span>
-              <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${
-                item.status === 'active' ? 'bg-compliant-50 text-compliant-700' :
-                item.status === 'completed' ? 'bg-evidence-50 text-evidence-700' :
-                item.status === 'on-hold' ? 'bg-high-50 text-high-700' :
-                'bg-paper-50 text-ink-500'
-              }`}>{item.status}</span>
+              <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
+                item.status === 'draft' ? 'bg-gray-100 text-gray-700 border border-gray-300' :
+                item.status === 'planned' ? 'bg-blue-100 text-blue-700 border border-blue-300' :
+                item.status === 'frozen' ? 'bg-orange-100 text-orange-700 border border-orange-300' :
+                item.status === 'signed-off' ? 'bg-green-100 text-green-700 border border-green-300' :
+                item.status === 'active' ? 'bg-primary-50 text-primary-700 border border-primary-300' :
+                item.status === 'in-progress' ? 'bg-high-50 text-high-700 border border-high-300' :
+                item.status === 'pending-review' ? 'bg-risk-50 text-risk-700 border border-risk-300' :
+                'bg-evidence-50 text-evidence-700 border border-evidence-300'
+              }`}>{item.status.replace('-', ' ')}</span>
               <span className="text-[12px] text-text-muted">{item.controls} controls</span>
             </div>
           </div>
@@ -381,16 +455,27 @@ function GanttChart({
               initial={{ width: 0 }}
               animate={{ width: `${(item.duration / totalMonths) * 100}%` }}
               transition={{ duration: 0.6, delay: 0.2 + idx * 0.05 }}
-              className="absolute h-7 rounded-lg shadow-sm flex items-center px-2 cursor-pointer hover:shadow-md hover:brightness-110 transition-all"
+              className={`absolute h-7 rounded-lg shadow-sm flex items-center px-2 transition-all ${
+                canDragBars && !frozen ? 'cursor-move hover:shadow-md hover:brightness-110' : 'cursor-pointer'
+              } ${draggingItem?.id === item.id ? 'ring-2 ring-primary shadow-lg z-20' : ''}`}
               style={{
                 left: `${(item.start / totalMonths) * 100}%`,
                 background: `linear-gradient(135deg, ${item.color}dd, ${item.color}99)`,
+                opacity: draggingItem?.id === item.id ? 0.8 : 1,
               }}
-              onClick={() => onClickEngagement(item)}
-              onMouseMove={(e) => handleMouseMove(e, item)}
-              onMouseLeave={() => setHoveredItem(null)}
+              onClick={() => !draggingItem && onClickEngagement(item)}
+              onMouseDown={(e) => handleMouseDown(e, item)}
+              onMouseMove={(e) => !draggingItem && handleMouseMove(e, item)}
+              onMouseLeave={() => !draggingItem && setHoveredItem(null)}
             >
-              <span className="text-[12px] font-bold text-white truncate">{item.type}</span>
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <span className="text-[11px] font-bold text-white truncate">{item.type}</span>
+                {item.framework !== 'Custom' && (
+                  <span className="text-[10px] font-medium text-white/80 bg-black/20 px-1 py-0.5 rounded">
+                    {item.framework}
+                  </span>
+                )}
+              </div>
             </motion.div>
           </div>
         </motion.div>
@@ -845,24 +930,46 @@ function BudgetTab() {
 
 // ─── Engagement Drawer ───────────────────────────────────────────────────────
 
-function EngagementDrawer({
-  engagement, isCreate, frozen, onClose, onSave, onDelete,
+function PlanningDetailModal({
+  engagement, onClose, onEdit, onFreeze, onSignOff, onActivate, planFrozen, signedOff,
 }: {
   engagement: AuditEngagement;
-  isCreate: boolean;
-  frozen: boolean;
   onClose: () => void;
-  onSave: (updated: AuditEngagement) => void;
-  onDelete: (id: string) => void;
+  onEdit: () => void;
+  onFreeze: () => void;
+  onSignOff: () => void;
+  onActivate: () => void;
+  planFrozen: boolean;
+  signedOff: boolean;
 }) {
-  const [form, setForm] = useState<AuditEngagement>({ ...engagement });
-  const [assignDropdownOpen, setAssignDropdownOpen] = useState(false);
-
-  const update = <K extends keyof AuditEngagement>(key: K, value: AuditEngagement[K]) => {
-    setForm(prev => ({ ...prev, [key]: value }));
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return 'Not set';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
-  const readOnly = frozen && !isCreate;
+  const getStatusColor = (status: AuditStatus) => {
+    switch (status) {
+      case 'draft': return 'bg-gray-100 text-gray-700 border-gray-300';
+      case 'planned': return 'bg-blue-100 text-blue-700 border-blue-300';
+      case 'frozen': return 'bg-orange-100 text-orange-700 border-orange-300';
+      case 'signed-off': return 'bg-green-100 text-green-700 border-green-300';
+      case 'active': return 'bg-primary-100 text-primary-700 border-primary-300';
+      default: return 'bg-gray-100 text-gray-700 border-gray-300';
+    }
+  };
+
+  const canActivate = engagement.status === 'signed-off';
+  const teamCount = new Set([engagement.owner, engagement.reviewer]).size;
+  const milestoneSteps = [
+    { label: 'Scope defined', active: engagement.status !== 'draft' && engagement.status !== 'planned', note: formatDate(engagement.plannedStartDate) },
+    { label: 'Plan freeze', active: planFrozen || signedOff || engagement.status === 'frozen' || engagement.status === 'signed-off' || engagement.status === 'active', note: planFrozen ? 'Completed' : 'Pending' },
+    { label: 'Sign-off', active: signedOff || engagement.status === 'signed-off' || engagement.status === 'active', note: signedOff ? 'Completed' : 'Pending' },
+    { label: 'Execution ready', active: engagement.status === 'active', note: engagement.status === 'active' ? 'Available' : 'Awaiting' },
+  ];
 
   return (
     <>
@@ -872,265 +979,236 @@ function EngagementDrawer({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm"
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
         onClick={onClose}
       />
-      {/* Drawer */}
+      {/* Modal */}
       <motion.div
-        initial={{ x: 420 }}
-        animate={{ x: 0 }}
-        exit={{ x: 420 }}
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed right-0 top-0 bottom-0 w-[400px] z-50 glass-card-strong border-l border-border-light shadow-2xl overflow-y-auto"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="fixed inset-4 md:inset-8 lg:inset-16 z-50 glass-card-strong border border-border-light shadow-2xl overflow-y-auto"
       >
-        <div className="p-6">
+        <div className="p-6 lg:p-8">
           {/* Header */}
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-[15px] font-bold text-text">
-              {isCreate ? 'Add Engagement' : 'Edit Engagement'}
-            </h3>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
-              <X size={16} className="text-text-muted" />
+          <div className="flex items-start justify-between mb-8">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div
+                  className="w-4 h-4 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: engagement.color }}
+                />
+                <h1 className="text-2xl font-bold text-text">{engagement.name}</h1>
+                <span className={`px-3 py-1 text-sm font-semibold rounded-full border ${getStatusColor(engagement.status)}`}>
+                  {engagement.status.replace('-', ' ')}
+                </span>
+              </div>
+              <p className="text-text-muted">{engagement.description}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer ml-4"
+            >
+              <X size={20} className="text-text-muted" />
             </button>
           </div>
 
-          {/* Frozen banner */}
-          {readOnly && (
-            <div className="flex items-center gap-2.5 p-3 bg-evidence-50 rounded-xl mb-5 border border-evidence">
-              <Lock size={14} className="text-evidence-700 shrink-0" />
-              <span className="text-[12px] text-evidence-700 font-medium">Plan is frozen — fields are read-only.</span>
+          {/* Key Details Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div className="glass-card p-4">
+              <div className="text-sm font-semibold text-text-muted uppercaser mb-2">Audit Type</div>
+              <div className="text-lg font-semibold text-text">{engagement.type}</div>
             </div>
-          )}
-
-          {/* Fields */}
-          <div className="space-y-0">
-            {/* Name */}
-            <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Engagement Name</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => update('name', e.target.value)}
-                disabled={readOnly}
-                className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${
-                  readOnly ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'
-                }`}
-              />
+            <div className="glass-card p-4">
+              <div className="text-sm font-semibold text-text-muted uppercaser mb-2">Framework</div>
+              <div className="text-lg font-semibold text-text">{engagement.framework}</div>
             </div>
-
-            <Dropdown<ProcessType>
-              label="Process"
-              value={form.process}
-              options={PROCESSES}
-              onChange={(v) => update('process', v)}
-              disabled={readOnly}
-            />
-
-            <Dropdown<AuditType>
-              label="Audit Type"
-              value={form.type}
-              options={AUDIT_TYPES}
-              onChange={(v) => update('type', v)}
-              disabled={readOnly}
-            />
-
-            <Dropdown<AuditStatus>
-              label="Status"
-              value={form.status}
-              options={STATUSES}
-              onChange={(v) => update('status', v)}
-              disabled={readOnly}
-            />
-
-            <Dropdown<string>
-              label="Lead Auditor"
-              value={form.owner}
-              options={TEAM_MEMBERS.map(m => m.name)}
-              onChange={(v) => update('owner', v)}
-              disabled={readOnly}
-            />
-
-            <Dropdown<string>
-              label="Start Month"
-              value={MONTHS[form.start]}
-              options={MONTHS}
-              onChange={(v) => update('start', MONTHS.indexOf(v))}
-              disabled={readOnly}
-            />
-
-            {/* Duration */}
-            <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Duration (months)</label>
-              <input
-                type="number"
-                min={1}
-                max={12}
-                value={form.duration}
-                onChange={(e) => update('duration', Math.max(1, Math.min(12, parseInt(e.target.value) || 1)))}
-                disabled={readOnly}
-                className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${
-                  readOnly ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'
-                }`}
-              />
+            <div className="glass-card p-4">
+              <div className="text-sm font-semibold text-text-muted uppercaser mb-2">Business Process</div>
+              <div className="text-lg font-semibold text-text">{engagement.businessProcess}</div>
             </div>
-
-            {/* Planned Hours */}
-            <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Planned Hours</label>
-              <input
-                type="number"
-                min={0}
-                value={form.plannedHours}
-                onChange={(e) => update('plannedHours', Math.max(0, parseInt(e.target.value) || 0))}
-                disabled={readOnly}
-                className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${
-                  readOnly ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'
-                }`}
-              />
+            <div className="glass-card p-4">
+              <div className="text-sm font-semibold text-text-muted uppercaser mb-2">Audit Period</div>
+              <div className="text-base font-medium text-text">
+                {formatDate(engagement.auditPeriodStart)} — {formatDate(engagement.auditPeriodEnd)}
+              </div>
             </div>
-
-            <Dropdown<PriorityLevel>
-              label="Priority"
-              value={form.priority}
-              options={PRIORITIES}
-              onChange={(v) => update('priority', v)}
-              disabled={readOnly}
-              renderOption={(opt) => (
-                <span className={`font-semibold ${
-                  opt === 'Critical' ? 'text-risk-700' :
-                  opt === 'High' ? 'text-high-700' :
-                  opt === 'Medium' ? 'text-mitigated-700' :
-                  'text-compliant-700'
-                }`}>{opt}</span>
-              )}
-            />
-
-            {/* Risk Score */}
-            <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Risk Score (1-100)</label>
-              <input
-                type="number"
-                min={1}
-                max={100}
-                value={form.riskScore}
-                onChange={(e) => update('riskScore', Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                disabled={readOnly}
-                className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${
-                  readOnly ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'
-                }`}
-              />
+            <div className="glass-card p-4">
+              <div className="text-sm font-semibold text-text-muted uppercaser mb-2">Planned Dates</div>
+              <div className="text-base font-medium text-text">
+                {formatDate(engagement.plannedStartDate)} — {formatDate(engagement.plannedEndDate)}
+              </div>
             </div>
-
-            {/* Notes */}
-            <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Notes</label>
-              <textarea
-                value={form.notes}
-                onChange={(e) => update('notes', e.target.value)}
-                disabled={readOnly}
-                placeholder="Additional notes..."
-                className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all resize-none h-20 ${
-                  readOnly ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white placeholder:text-text-muted/50'
-                }`}
-              />
-            </div>
-
-            {/* Assign Resource */}
-            {!readOnly && (
-              <div className="mb-3">
-                <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Assign Resource</label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setAssignDropdownOpen(p => !p)}
-                    className="w-full flex items-center justify-between px-3 py-2.5 border border-border rounded-lg text-[13px] text-text hover:border-primary/30 transition-colors cursor-pointer bg-white"
-                  >
-                    <span className="flex items-center gap-2">
-                      <UserCheck size={13} className="text-primary" />
-                      Assign team member...
-                    </span>
-                    <ChevronDown size={14} className={`text-text-muted transition-transform ${assignDropdownOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  <AnimatePresence>
-                    {assignDropdownOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        transition={{ duration: 0.12 }}
-                        className="absolute left-0 right-0 top-full mt-1 bg-white border border-border-light rounded-xl shadow-lg overflow-hidden z-50 max-h-60 overflow-y-auto"
-                      >
-                        {TEAM_MEMBERS.map(member => {
-                          const hasSkillMatch = member.skills.some(s =>
-                            s === form.process || s === form.type ||
-                            form.name.toLowerCase().includes(s.toLowerCase())
-                          );
-                          return (
-                            <button
-                              key={member.id}
-                              type="button"
-                              onClick={() => {
-                                update('owner', member.name);
-                                setAssignDropdownOpen(false);
-                              }}
-                              className={`w-full text-left px-3 py-2.5 text-[12px] transition-colors cursor-pointer hover:bg-surface-2 ${
-                                form.owner === member.name ? 'bg-primary/10' : ''
-                              }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary-medium text-white flex items-center justify-center text-[12px] font-bold">
-                                    {member.avatar}
-                                  </div>
-                                  <div>
-                                    <div className="text-[12px] font-medium text-text">{member.name}</div>
-                                    <div className="text-[12px] text-text-muted">{member.role}</div>
-                                  </div>
-                                </div>
-                                {hasSkillMatch && (
-                                  <span className="text-[12px] font-bold px-1.5 py-0.5 rounded-full bg-compliant-50 text-compliant-700">
-                                    Skill Match
-                                  </span>
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+            <div className="glass-card p-4">
+              <div className="text-sm font-semibold text-text-muted uppercaser mb-2">Team</div>
+              <div className="space-y-1">
+                <div className="text-sm text-text">
+                  <span className="font-medium">Owner:</span> {engagement.owner}
+                </div>
+                <div className="text-sm text-text">
+                  <span className="font-medium">Reviewer:</span> {engagement.reviewer}
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
-          {/* Actions */}
-          {!readOnly && (
-            <div className="mt-6 pt-4 border-t border-border-light">
+          {/* Planning Summary Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="glass-card p-4 text-center">
+              <div className="text-2xl font-bold text-primary mb-1">{engagement.businessProcess}</div>
+              <div className="text-sm font-semibold text-text-muted uppercaser">Process</div>
+            </div>
+            <div className="glass-card p-4 text-center">
+              <div className="text-2xl font-bold text-high-600 mb-1">{engagement.controls}</div>
+              <div className="text-sm font-semibold text-text-muted uppercaser">Controls in Scope</div>
+            </div>
+            <div className="glass-card p-4 text-center">
+              <div className="text-2xl font-bold text-mitigated-600 mb-1">{teamCount}</div>
+              <div className="text-sm font-semibold text-text-muted uppercaser">Team Members</div>
+            </div>
+            <div className="glass-card p-4 text-center">
+              <div className="text-2xl font-bold text-compliant-600 mb-1">{engagement.duration}</div>
+              <div className="text-sm font-semibold text-text-muted uppercaser">Months Duration</div>
+            </div>
+          </div>
+
+          {/* Scope Section */}
+          <div className="glass-card p-6 mb-6">
+            <h3 className="text-lg font-semibold text-text mb-4">Scope & Configuration</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <div className="text-sm font-semibold text-text-muted uppercaser mb-2">RACM Version</div>
+                <div className="text-base font-medium text-text">{engagement.racmVersion}</div>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-text-muted uppercaser mb-2">Process Tags</div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-2 py-1 bg-primary/10 text-primary text-sm rounded-md">
+                    {engagement.businessProcess}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-text-muted uppercaser mb-2">Risk Assessment</div>
+                <div className="text-base font-medium text-text">
+                  {engagement.riskScore}/100 Risk Score
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="glass-card p-6 mb-6">
+            <h3 className="text-lg font-semibold text-text mb-4">Scope Summary</h3>
+            <p className="text-sm leading-6 text-text-secondary">
+              {engagement.description || 'This engagement covers the planned review of key controls and process coverage aligned to the selected framework, with a focus on audit readiness and execution handoff.'}
+            </p>
+          </div>
+
+          {/* Timeline / Milestones */}
+          <div className="glass-card p-6 mb-6">
+            <h3 className="text-lg font-semibold text-text mb-4">Planning Timeline & Milestones</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="p-4 bg-surface-2 rounded-2xl">
+                  <div className="text-sm font-semibold text-text-muted uppercaser mb-2">Plan Window</div>
+                  <div className="text-base font-medium text-text">{formatDate(engagement.plannedStartDate)} — {formatDate(engagement.plannedEndDate)}</div>
+                </div>
+                <div className="p-4 bg-surface-2 rounded-2xl">
+                  <div className="text-sm font-semibold text-text-muted uppercaser mb-2">Audit Period</div>
+                  <div className="text-base font-medium text-text">{formatDate(engagement.auditPeriodStart)} — {formatDate(engagement.auditPeriodEnd)}</div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-surface-2 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${planFrozen ? 'bg-orange-500' : 'bg-gray-300'}`} />
+                  <span className="font-medium text-text">Plan Freeze</span>
+                </div>
+                <span className={`text-sm px-2 py-1 rounded-full ${
+                  planFrozen ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {planFrozen ? 'Completed' : 'Pending'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-surface-2 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${signedOff ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <span className="font-medium text-text">Sign-off</span>
+                </div>
+                <span className={`text-sm px-2 py-1 rounded-full ${
+                  signedOff ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {signedOff ? 'Completed' : 'Pending'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-surface-2 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${engagement.status === 'active' ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                  <span className="font-medium text-text">Execution Ready</span>
+                </div>
+                <span className={`text-sm px-2 py-1 rounded-full ${
+                  engagement.status === 'active' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {engagement.status === 'active' ? 'Active' : 'Planning'}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                {milestoneSteps.map(step => (
+                  <div key={step.label} className="p-4 bg-white rounded-2xl border border-border-light">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-text">{step.label}</span>
+                      <span className={`text-[11px] font-semibold px-2 py-1 rounded-full ${step.active ? 'bg-primary/10 text-primary' : 'bg-surface-2 text-text-muted'}`}>
+                        {step.active ? 'Done' : 'Pending'}
+                      </span>
+                    </div>
+                    <div className="text-sm text-text-secondary">{step.note}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Action Panel */}
+          <div className="glass-card p-6">
+            <h3 className="text-lg font-semibold text-text mb-4">Actions</h3>
+            <div className="flex flex-wrap gap-3">
               <button
-                onClick={() => onSave(form)}
-                className="w-full py-2.5 bg-primary hover:bg-primary-hover text-white rounded-xl text-[13px] font-semibold transition-colors cursor-pointer mb-3"
+                onClick={onEdit}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-medium transition-colors font-medium"
               >
-                {isCreate ? 'Create Engagement' : 'Save Changes'}
+                Edit Details
               </button>
-              {!isCreate && (
+              {!planFrozen && (
                 <button
-                  onClick={() => onDelete(form.id)}
-                  className="w-full py-2 text-risk-700 hover:text-risk-700 hover:bg-risk-50 rounded-xl text-[12px] font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  onClick={onFreeze}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
                 >
-                  <Trash2 size={13} />
-                  Delete Engagement
+                  Freeze Plan
+                </button>
+              )}
+              {planFrozen && !signedOff && (
+                <button
+                  onClick={onSignOff}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                >
+                  Sign Off
+                </button>
+              )}
+              {canActivate && (
+                <button
+                  onClick={onActivate}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Activate for Execution
                 </button>
               )}
             </div>
-          )}
+          </div>
         </div>
       </motion.div>
     </>
   );
 }
-
-// ─── Modal Backdrop ──────────────────────────────────────────────────────────
 
 function ModalBackdrop({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
@@ -1156,6 +1234,117 @@ function ModalBackdrop({ children, onClose }: { children: React.ReactNode; onClo
   );
 }
 
+function EngagementDrawer({
+  engagement, isCreate, frozen, onClose, onSave, onDelete,
+}: {
+  engagement: AuditEngagement;
+  isCreate: boolean;
+  frozen: boolean;
+  onClose: () => void;
+  onSave: (updated: AuditEngagement) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [form, setForm] = useState<AuditEngagement>({ ...engagement });
+
+  const update = <K extends keyof AuditEngagement>(key: K, value: AuditEngagement[K]) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+  };
+
+  const readOnly = frozen && !isCreate;
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ x: 420 }}
+        animate={{ x: 0 }}
+        exit={{ x: 420 }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        className="fixed right-0 top-0 bottom-0 w-[400px] z-50 glass-card-strong border-l border-border-light shadow-2xl overflow-y-auto"
+      >
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-[15px] font-bold text-text">
+              {isCreate ? 'Add Engagement' : 'Edit Engagement'}
+            </h3>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
+              <X size={16} className="text-text-muted" />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Engagement Name</label>
+              <input
+                type="text"
+                value={form.name}
+                onChange={(e) => update('name', e.target.value)}
+                disabled={readOnly}
+                className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${
+                  readOnly ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'
+                }`}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Dropdown<AuditType>
+                label="Audit Type"
+                value={form.type}
+                options={AUDIT_TYPES}
+                onChange={(v) => update('type', v)}
+                disabled={readOnly}
+              />
+              <Dropdown<FrameworkType>
+                label="Framework"
+                value={form.framework}
+                options={FRAMEWORKS}
+                onChange={(v) => update('framework', v)}
+                disabled={readOnly}
+              />
+            </div>
+            <div className="mb-3">
+              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Description</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => update('description', e.target.value)}
+                disabled={readOnly}
+                className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all resize-none h-24 ${
+                  readOnly ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'
+                }`}
+              />
+            </div>
+          </div>
+
+          {!readOnly && (
+            <div className="mt-6 pt-4 border-t border-border-light">
+              <button
+                onClick={() => onSave(form)}
+                className="w-full py-2.5 bg-primary hover:bg-primary-hover text-white rounded-xl text-[13px] font-semibold transition-colors cursor-pointer mb-3"
+              >
+                {isCreate ? 'Create Engagement' : 'Save Changes'}
+              </button>
+              {!isCreate && (
+                <button
+                  onClick={() => onDelete(form.id)}
+                  className="w-full py-2 text-risk-700 hover:text-risk-700 hover:bg-risk-50 rounded-xl text-[12px] font-medium transition-colors cursor-pointer"
+                >
+                  Delete Engagement
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function AuditPlanningView() {
@@ -1173,13 +1362,25 @@ export default function AuditPlanningView() {
   const [processFilter, setProcessFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
 
+  // Mock current user for role-based permissions
+  const currentUser = { name: 'Karan Mehta', role: 'Audit Manager' };
+  const canDragBars = currentUser.role.includes('Manager') || currentUser.role.includes('Director');
+
   // Drawer state
   const [drawerEngagement, setDrawerEngagement] = useState<AuditEngagement | null>(null);
   const [drawerIsCreate, setDrawerIsCreate] = useState(false);
+  const [detailEngagement, setDetailEngagement] = useState<AuditEngagement | null>(null);
 
   const handleFreeze = () => setShowFreezeModal(true);
 
   const confirmFreeze = () => {
+    setPlan(prev => prev.map(engagement => {
+      // Transition planning-phase engagements to frozen
+      if (engagement.status === 'draft' || engagement.status === 'planned') {
+        return { ...engagement, status: 'frozen' as AuditStatus };
+      }
+      return engagement;
+    }));
     setPlanFrozen(true);
     setShowFreezeModal(false);
     addToast({ type: 'success', message: 'Audit plan frozen successfully' });
@@ -1191,6 +1392,13 @@ export default function AuditPlanningView() {
   };
 
   const confirmSignOff = () => {
+    setPlan(prev => prev.map(engagement => {
+      // Transition frozen engagements to signed-off (execution-eligible)
+      if (engagement.status === 'frozen') {
+        return { ...engagement, status: 'signed-off' as AuditStatus };
+      }
+      return engagement;
+    }));
     setSignedOff(true);
     setShowSignOffModal(false);
     setSignOffComment('');
@@ -1198,8 +1406,15 @@ export default function AuditPlanningView() {
   };
 
   const openEditDrawer = (item: AuditEngagement) => {
-    setDrawerEngagement(item);
-    setDrawerIsCreate(false);
+    setDetailEngagement(item);
+  };
+
+  const handleCloseDetail = () => setDetailEngagement(null);
+
+  const handleActivateEngagement = (engagement: AuditEngagement) => {
+    setPlan(prev => prev.map(p => p.id === engagement.id ? { ...p, status: 'active' as AuditStatus } : p));
+    setDetailEngagement(null);
+    addToast({ type: 'success', message: `"${engagement.name}" activated for execution` });
   };
 
   const openCreateDrawer = () => {
@@ -1208,18 +1423,25 @@ export default function AuditPlanningView() {
     setDrawerEngagement({
       id: newId,
       name: '',
-      process: 'P2P',
+      businessProcess: 'P2P',
       type: 'SOX',
+      framework: 'COSO',
+      auditPeriodStart: '2025-04-01',
+      auditPeriodEnd: '2026-03-31',
+      plannedStartDate: '',
+      plannedEndDate: '',
       owner: TEAM_MEMBERS[0].name,
+      reviewer: TEAM_MEMBERS[1]?.name || TEAM_MEMBERS[0].name,
+      racmVersion: 'v2.1',
+      description: '',
       start: 0,
       duration: 3,
       color: COLOR_PALETTE[colorIdx],
-      status: 'planned',
+      status: 'draft',
       controls: 0,
       plannedHours: 0,
       priority: 'Medium',
       riskScore: 50,
-      notes: '',
     });
     setDrawerIsCreate(true);
   };
@@ -1243,7 +1465,7 @@ export default function AuditPlanningView() {
   };
 
   const totalControls = plan.reduce((sum, a) => sum + a.controls, 0);
-  const uniqueProcesses = new Set(plan.map(a => a.process)).size;
+  const uniqueProcesses = new Set(plan.map(a => a.businessProcess)).size;
   const uniqueOwners = new Set(plan.map(a => a.owner)).size;
 
   const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
@@ -1254,7 +1476,7 @@ export default function AuditPlanningView() {
   ];
 
   const processFilterOptions = ['All', ...PROCESSES];
-  const statusFilterOptions = ['All', 'Active', 'Planned', 'Completed'];
+  const statusFilterOptions = ['All', 'Draft', 'Planned', 'Frozen', 'Signed Off', 'Active', 'In Progress', 'Pending Review', 'Closed'];
 
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
@@ -1415,6 +1637,7 @@ export default function AuditPlanningView() {
                 onClickEngagement={openEditDrawer}
                 processFilter={processFilter}
                 statusFilter={statusFilter}
+                canDragBars={canDragBars}
               />
               <MilestonesStrip />
 
@@ -1423,12 +1646,12 @@ export default function AuditPlanningView() {
                 <h2 className="text-[15px] font-semibold text-text mb-3">Current Progress</h2>
                 <div className="glass-card rounded-2xl p-5">
                   <div className="space-y-4">
-                    {plan.filter(p => p.status === 'active' || p.status === 'completed').map((eng, i) => {
+                    {plan.filter(p => p.status === 'active' || p.status === 'in-progress' || p.status === 'pending-review' || p.status === 'closed').map((eng, i) => {
                       // Mock progress based on status and position in year
                       const progressMap: Record<string, number> = {
                         'ap-1': 72, 'ap-2': 44, 'ap-3': 85, 'ap-6': 60,
                       };
-                      const progress = progressMap[eng.id] || (eng.status === 'completed' ? 100 : 0);
+                      const progress = progressMap[eng.id] || (eng.status === 'closed' ? 100 : 0);
                       const tested = Math.round((progress / 100) * eng.controls);
 
                       return (
@@ -1563,6 +1786,22 @@ export default function AuditPlanningView() {
           </div>
         </motion.div>
       </div>
+
+      {/* Planning Detail Modal */}
+      <AnimatePresence>
+        {detailEngagement && (
+          <PlanningDetailModal
+            engagement={detailEngagement}
+            onClose={handleCloseDetail}
+            onEdit={() => setDrawerEngagement(detailEngagement)}
+            onFreeze={handleFreeze}
+            onSignOff={handleSignOff}
+            onActivate={() => handleActivateEngagement(detailEngagement)}
+            planFrozen={planFrozen}
+            signedOff={signedOff}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Engagement Drawer */}
       <AnimatePresence>

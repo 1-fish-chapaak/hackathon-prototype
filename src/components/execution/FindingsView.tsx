@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Search, ChevronDown, ChevronRight, AlertTriangle, Clock,
   CheckCircle2, AlertOctagon, ExternalLink, Bell, ArrowUpRight,
+  Workflow, FileText, Shield, Target, Database, Filter, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Orb from '../shared/Orb';
@@ -24,6 +25,17 @@ interface Finding {
   title: string;
   engagement: string;
   control: string;
+  controlName: string;
+  // Traceability fields
+  testInstanceId: string;
+  workflowName: string;
+  workflowVersion: string;
+  failedAttribute: string;
+  failedSample: string;
+  sampleDetail: string;
+  evidenceRef: string[];
+  workflowLogic: string;
+  // Core fields
   severity: Severity;
   status: Status;
   owner: string;
@@ -31,7 +43,6 @@ interface Finding {
   aging: string;
   remediationPlan: string;
   timeline: string;
-  evidenceLinks: string[];
 }
 
 const FINDINGS: Finding[] = [
@@ -40,6 +51,15 @@ const FINDINGS: Finding[] = [
     title: 'Duplicate vendor payments detected',
     engagement: 'ENG-2026-001',
     control: 'C-003',
+    controlName: '3-Way Match',
+    testInstanceId: 'TI-003',
+    workflowName: '3-Way PO Match',
+    workflowVersion: 'v2.0',
+    failedAttribute: 'Invoice-PO Match',
+    failedSample: 'SMP-005 (Items 12, 27, 33)',
+    sampleDetail: '3 of 40 samples failed — duplicate invoice numbers detected against same PO',
+    evidenceRef: ['DUP-ANALYSIS-Q1.xlsx', 'SAP-CONFIG-CHANGE.pdf', 'UAT-RESULTS-DRAFT.docx'],
+    workflowLogic: 'IF invoice_count_per_po > 1 AND amount_match = FALSE THEN FLAG',
     severity: 'Material Weakness',
     status: 'In Remediation',
     owner: 'Mike Ross',
@@ -47,13 +67,21 @@ const FINDINGS: Finding[] = [
     aging: '12 days',
     remediationPlan: 'Implement automated duplicate detection rules in SAP. Configure 3-way match validation for all payments above $10K threshold.',
     timeline: 'Phase 1 complete (rule definition). Phase 2 in progress (UAT testing). Expected go-live: Apr 10, 2026.',
-    evidenceLinks: ['DUP-ANALYSIS-Q1.xlsx', 'SAP-CONFIG-CHANGE.pdf', 'UAT-RESULTS-DRAFT.docx'],
   },
   {
     id: 'DEF-002',
     title: 'Missing approval for $50K+ payments',
     engagement: 'ENG-2026-001',
     control: 'C-001',
+    controlName: 'Credit Limit Approval',
+    testInstanceId: 'TI-001',
+    workflowName: 'Credit Limit Validation',
+    workflowVersion: 'v2.1',
+    failedAttribute: 'Dual Authorization',
+    failedSample: 'SMP-001 (Item 19)',
+    sampleDetail: '1 of 25 samples lacked Finance Director sign-off',
+    evidenceRef: ['APPROVAL-MATRIX-v2.xlsx', 'PAYMENT-EXCEPTIONS-LOG.pdf'],
+    workflowLogic: 'IF signatory_count < 2 OR signatory_roles NOT INCLUDE ("Finance Director") THEN FAIL',
     severity: 'Significant Deficiency',
     status: 'Open',
     owner: 'Sarah Miller',
@@ -61,13 +89,21 @@ const FINDINGS: Finding[] = [
     aging: '8 days',
     remediationPlan: 'Update workflow approval matrix to enforce dual-approval for payments exceeding $50K. Add system-level block for unapproved transactions.',
     timeline: 'Pending CFO sign-off on updated approval matrix. Target implementation: Apr 15, 2026.',
-    evidenceLinks: ['APPROVAL-MATRIX-v2.xlsx', 'PAYMENT-EXCEPTIONS-LOG.pdf'],
   },
   {
     id: 'DEF-003',
     title: 'Vendor bank details changed without verification',
     engagement: 'ENG-2026-001',
     control: 'C-002',
+    controlName: 'Vendor Review',
+    testInstanceId: 'TI-002',
+    workflowName: 'Vendor Master Validation',
+    workflowVersion: 'v1.3',
+    failedAttribute: 'Verification Callback',
+    failedSample: 'SMP-003 (Items 4, 11, 15, 22)',
+    sampleDetail: '4 of 30 samples had no callback verification recorded before bank detail change',
+    evidenceRef: ['VENDOR-CHANGES-AUDIT.xlsx', 'ESCALATION-EMAIL.msg'],
+    workflowLogic: 'IF bank_detail_changed = TRUE AND callback_verified = FALSE THEN FAIL',
     severity: 'Control Deficiency',
     status: 'Overdue',
     owner: 'Jane Chen',
@@ -75,13 +111,21 @@ const FINDINGS: Finding[] = [
     aging: '45 days',
     remediationPlan: 'Implement callback verification process for all vendor bank detail changes. Require secondary authorization from Treasury team.',
     timeline: 'Originally due Mar 15. Escalated to VP Finance on Mar 25. Revised plan pending.',
-    evidenceLinks: ['VENDOR-CHANGES-AUDIT.xlsx', 'ESCALATION-EMAIL.msg'],
   },
   {
     id: 'DEF-004',
     title: 'SOD violation in payment processing',
     engagement: 'ENG-2026-001',
     control: 'C-005',
+    controlName: 'Access Recertification',
+    testInstanceId: 'TI-005',
+    workflowName: 'Access Review',
+    workflowVersion: 'v1.1',
+    failedAttribute: 'SOD Conflict Check',
+    failedSample: 'SMP-008 (Items 3, 7, 12)',
+    sampleDetail: '3 users with conflicting payment create + approve roles',
+    evidenceRef: ['SOD-CONFLICT-REPORT.pdf', 'ROLE-REDESIGN-PLAN.xlsx', 'ACCESS-REVIEW-Q1.pdf'],
+    workflowLogic: 'IF user_roles INTERSECT ("Payment Create", "Payment Approve") THEN FAIL',
     severity: 'Significant Deficiency',
     status: 'In Remediation',
     owner: 'Alex Kumar',
@@ -89,13 +133,21 @@ const FINDINGS: Finding[] = [
     aging: '5 days',
     remediationPlan: 'Reconfigure SAP role assignments to enforce segregation between payment creation and approval. Remove conflicting access for 3 identified users.',
     timeline: 'Access review complete. Role redesign in progress with IT Security. Go-live scheduled: Apr 25, 2026.',
-    evidenceLinks: ['SOD-CONFLICT-REPORT.pdf', 'ROLE-REDESIGN-PLAN.xlsx', 'ACCESS-REVIEW-Q1.pdf'],
   },
   {
     id: 'DEF-005',
     title: 'Revenue recognized before delivery confirmation',
     engagement: 'ENG-2026-002',
     control: 'C-004',
+    controlName: 'JE Review',
+    testInstanceId: 'TI-004',
+    workflowName: 'Revenue Recognition',
+    workflowVersion: 'v1.0',
+    failedAttribute: 'Delivery Confirmation',
+    failedSample: 'SMP-007 (Items 2, 8)',
+    sampleDetail: '2 journal entries recognized revenue without proof of delivery',
+    evidenceRef: ['REV-REC-ANALYSIS.xlsx'],
+    workflowLogic: 'IF revenue_recognized = TRUE AND delivery_confirmed = FALSE THEN FAIL',
     severity: 'Material Weakness',
     status: 'Open',
     owner: 'Mike Ross',
@@ -103,13 +155,21 @@ const FINDINGS: Finding[] = [
     aging: '3 days',
     remediationPlan: 'Implement system control linking revenue recognition to delivery confirmation in ERP. Add automated hold for shipments without POD.',
     timeline: 'Requirements gathering phase. Business case submitted to Steering Committee.',
-    evidenceLinks: ['REV-REC-ANALYSIS.xlsx'],
   },
   {
     id: 'DEF-006',
     title: 'Access recertification not completed Q4',
     engagement: 'ENG-2026-001',
     control: 'C-005',
+    controlName: 'Access Recertification',
+    testInstanceId: 'TI-005',
+    workflowName: 'Access Review',
+    workflowVersion: 'v1.1',
+    failedAttribute: 'Recertification Completeness',
+    failedSample: '-',
+    sampleDetail: 'Process gap — recertification cycle was not initiated for Q4',
+    evidenceRef: ['ACCESS-RECERT-Q4.pdf', 'AUTOMATED-WORKFLOW-CONFIG.pdf', 'AUDIT-SIGNOFF.pdf'],
+    workflowLogic: 'IF recertification_cycle_complete = FALSE AND quarter_end_passed THEN FAIL',
     severity: 'Control Deficiency',
     status: 'Closed',
     owner: 'John Doe',
@@ -117,7 +177,6 @@ const FINDINGS: Finding[] = [
     aging: '-',
     remediationPlan: 'Completed quarterly access recertification for all critical systems. Implemented automated reminder workflow for future cycles.',
     timeline: 'Recertification completed Feb 26. Automated reminders configured Mar 5. Verified by Internal Audit Mar 10.',
-    evidenceLinks: ['ACCESS-RECERT-Q4.pdf', 'AUTOMATED-WORKFLOW-CONFIG.pdf', 'AUDIT-SIGNOFF.pdf'],
   },
 ];
 
@@ -152,7 +211,13 @@ function StatusBadge({ status }: { status: Status }) {
   );
 }
 
-export default function FindingsView() {
+interface Props {
+  onOpenWorkingPaper?: (controlId: string) => void;
+  onOpenWorkflow?: (controlId: string) => void;
+  onOpenTrace?: (controlId: string) => void;
+}
+
+export default function FindingsView({ onOpenWorkingPaper, onOpenWorkflow, onOpenTrace }: Props) {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [search, setSearch] = useState('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -164,7 +229,9 @@ export default function FindingsView() {
         !f.id.toLowerCase().includes(q) &&
         !f.title.toLowerCase().includes(q) &&
         !f.engagement.toLowerCase().includes(q) &&
-        !f.owner.toLowerCase().includes(q)
+        !f.owner.toLowerCase().includes(q) &&
+        !f.workflowName.toLowerCase().includes(q) &&
+        !f.failedAttribute.toLowerCase().includes(q)
       ) return false;
     }
     if (activeFilter === 'all') return true;
@@ -183,7 +250,7 @@ export default function FindingsView() {
         <div className="flex items-end justify-between mb-6">
           <div>
             <h1 className="text-xl font-bold text-text">Findings & Issues</h1>
-            <p className="text-sm text-text-secondary mt-1">Track audit findings, remediation, and closure across all engagements</p>
+            <p className="text-sm text-text-secondary mt-1">Track audit findings with full workflow traceability</p>
           </div>
         </div>
 
@@ -230,7 +297,7 @@ export default function FindingsView() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
             type="text"
-            placeholder="Search findings by ID, title, engagement, or owner..."
+            placeholder="Search findings by ID, title, workflow, attribute, or owner..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 text-[13px] bg-white border border-border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all placeholder:text-text-muted"
@@ -243,7 +310,7 @@ export default function FindingsView() {
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="border-b border-border-light bg-surface-2/50">
-                  {['', 'Finding ID', 'Title', 'Engagement', 'Control', 'Severity', 'Status', 'Owner', 'Due Date', 'Aging'].map(h => (
+                  {['', 'Finding ID', 'Engagement', 'Control', 'Workflow', 'Failed Attribute', 'Severity', 'Status', 'Aging'].map(h => (
                     <th key={h} className="px-3 py-3 text-left text-[12px] font-semibold text-text-muted uppercaser">
                       {h}
                     </th>
@@ -277,25 +344,31 @@ export default function FindingsView() {
                           <span className="font-mono text-[12px] text-primary font-semibold">{row.id}</span>
                         </td>
                         <td className="px-3 py-3">
-                          <span className="text-text font-medium text-[12px] max-w-[220px] truncate block">{row.title}</span>
-                        </td>
-                        <td className="px-3 py-3">
                           <span className="text-text-secondary font-mono text-[12px] bg-gray-50 px-1.5 py-0.5 rounded">{row.engagement}</span>
                         </td>
                         <td className="px-3 py-3">
-                          <span className="text-text-secondary font-mono text-[12px] bg-gray-50 px-1.5 py-0.5 rounded">{row.control}</span>
+                          <div className="flex flex-col">
+                            <span className="text-text-secondary font-mono text-[11px]">{row.control}</span>
+                            <span className="text-text font-medium text-[12px]">{row.controlName}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-1">
+                            <Workflow size={10} className="text-indigo-500" />
+                            <span className="text-[11px] text-indigo-700 font-medium">{row.workflowName}</span>
+                            <span className="text-[10px] text-text-muted">{row.workflowVersion}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className="text-[12px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-md">
+                            {row.failedAttribute}
+                          </span>
                         </td>
                         <td className="px-3 py-3">
                           <SeverityBadge severity={row.severity} />
                         </td>
                         <td className="px-3 py-3">
                           <StatusBadge status={row.status} />
-                        </td>
-                        <td className="px-3 py-3">
-                          <span className="text-text-secondary text-[12px] font-medium">{row.owner}</span>
-                        </td>
-                        <td className="px-3 py-3">
-                          <span className="text-text-secondary text-[12px]">{row.dueDate}</span>
                         </td>
                         <td className="px-3 py-3">
                           <span className={`text-[12px] font-semibold ${isOverdue ? 'text-red-600' : isClosed ? 'text-gray-400' : 'text-text-secondary'}`}>
@@ -309,7 +382,7 @@ export default function FindingsView() {
               </tbody>
             </table>
 
-            {/* Expanded Row Details - rendered outside table for proper layout */}
+            {/* Expanded Row Details */}
             <AnimatePresence>
               {filtered.map(row => {
                 if (expandedRow !== row.id) return null;
@@ -322,45 +395,105 @@ export default function FindingsView() {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden border-b border-border-light bg-surface-2/30"
                   >
-                    <div className="px-10 py-5 grid grid-cols-3 gap-6">
-                      {/* Remediation Plan */}
-                      <div>
-                        <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-2">Remediation Plan</h4>
-                        <p className="text-[12px] text-text-secondary leading-relaxed">{row.remediationPlan}</p>
-                      </div>
+                    <div className="px-10 py-5">
+                      {/* Title */}
+                      <h3 className="text-[13px] font-bold text-text mb-4">{row.title}</h3>
 
-                      {/* Timeline */}
-                      <div>
-                        <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-2">Timeline</h4>
-                        <p className="text-[12px] text-text-secondary leading-relaxed">{row.timeline}</p>
-                      </div>
-
-                      {/* Evidence & Actions */}
-                      <div>
-                        <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-2">Evidence Links</h4>
-                        <div className="space-y-1.5 mb-4">
-                          {row.evidenceLinks.map(link => (
-                            <div key={link} className="flex items-center gap-1.5 text-[12px] text-primary hover:underline cursor-pointer">
-                              <ExternalLink size={10} />
-                              {link}
-                            </div>
-                          ))}
+                      <div className="grid grid-cols-3 gap-6">
+                        {/* Failure Detail */}
+                        <div className="space-y-3">
+                          <div>
+                            <h4 className="text-[11px] font-bold text-text-muted uppercase mb-1.5 flex items-center gap-1">
+                              <Target size={10} />
+                              Failed Attribute
+                            </h4>
+                            <p className="text-[12px] font-semibold text-red-700 bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-100">
+                              {row.failedAttribute}
+                            </p>
+                          </div>
+                          <div>
+                            <h4 className="text-[11px] font-bold text-text-muted uppercase mb-1.5 flex items-center gap-1">
+                              <Filter size={10} />
+                              Failed Sample
+                            </h4>
+                            <p className="text-[12px] text-text-secondary font-mono bg-gray-50 px-2.5 py-1.5 rounded-lg">{row.failedSample}</p>
+                            <p className="text-[11px] text-text-muted mt-1 leading-relaxed">{row.sampleDetail}</p>
+                          </div>
+                          <div>
+                            <h4 className="text-[11px] font-bold text-text-muted uppercase mb-1.5 flex items-center gap-1">
+                              <Workflow size={10} />
+                              Workflow Logic
+                            </h4>
+                            <p className="text-[11px] font-mono text-indigo-700 bg-indigo-50 px-2.5 py-1.5 rounded-lg border border-indigo-100 leading-relaxed">
+                              {row.workflowLogic}
+                            </p>
+                          </div>
                         </div>
 
-                        <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-2">Actions</h4>
-                        <div className="flex flex-wrap gap-2">
-                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-primary/20 bg-primary/5 text-primary text-[12px] font-semibold hover:bg-primary/10 transition-all cursor-pointer">
-                            <ArrowUpRight size={10} />
-                            View in Engagement
-                          </button>
-                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-[12px] font-semibold hover:bg-amber-100 transition-all cursor-pointer">
-                            <Bell size={10} />
-                            Send Reminder
-                          </button>
-                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 text-red-700 text-[12px] font-semibold hover:bg-red-100 transition-all cursor-pointer">
-                            <AlertTriangle size={10} />
-                            Escalate
-                          </button>
+                        {/* Remediation */}
+                        <div className="space-y-3">
+                          <div>
+                            <h4 className="text-[11px] font-bold text-text-muted uppercase mb-1.5">Remediation Plan</h4>
+                            <p className="text-[12px] text-text-secondary leading-relaxed">{row.remediationPlan}</p>
+                          </div>
+                          <div>
+                            <h4 className="text-[11px] font-bold text-text-muted uppercase mb-1.5">Timeline</h4>
+                            <p className="text-[12px] text-text-secondary leading-relaxed">{row.timeline}</p>
+                          </div>
+                          <div>
+                            <h4 className="text-[11px] font-bold text-text-muted uppercase mb-1.5">Owner</h4>
+                            <p className="text-[12px] text-text-secondary font-medium">{row.owner} &middot; Due {row.dueDate}</p>
+                          </div>
+                        </div>
+
+                        {/* Evidence & Actions */}
+                        <div className="space-y-3">
+                          <div>
+                            <h4 className="text-[11px] font-bold text-text-muted uppercase mb-1.5">Supporting Evidence</h4>
+                            <div className="space-y-1">
+                              {row.evidenceRef.map(link => (
+                                <div key={link} className="flex items-center gap-1.5 text-[12px] text-primary hover:underline cursor-pointer">
+                                  <FileText size={10} />
+                                  {link}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <h4 className="text-[11px] font-bold text-text-muted uppercase mb-1.5">Actions</h4>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onOpenWorkingPaper?.(row.control); }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-[11px] font-semibold hover:bg-indigo-100 transition-all cursor-pointer"
+                              >
+                                <Database size={10} />
+                                Working Paper
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onOpenWorkflow?.(row.control); }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-violet-200 bg-violet-50 text-violet-700 text-[11px] font-semibold hover:bg-violet-100 transition-all cursor-pointer"
+                              >
+                                <Workflow size={10} />
+                                Workflow
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onOpenTrace?.(row.control); }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 text-[11px] font-semibold hover:bg-purple-100 transition-all cursor-pointer"
+                              >
+                                <Shield size={10} />
+                                Full Trace
+                              </button>
+                              <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-[11px] font-semibold hover:bg-amber-100 transition-all cursor-pointer">
+                                <Bell size={10} />
+                                Remind
+                              </button>
+                              <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 text-red-700 text-[11px] font-semibold hover:bg-red-100 transition-all cursor-pointer">
+                                <AlertTriangle size={10} />
+                                Escalate
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
