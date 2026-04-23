@@ -49,7 +49,7 @@ export type View =
   | 'chat-trash';
 
 export type ChatMode = 'chat' | 'workflow';
-export type ArtifactTab = 'plan' | 'code' | 'sources' | 'result' | 'flow' | 'preview';
+export type ArtifactTab = 'plan' | 'code' | 'sources' | 'flow' | 'preview';
 export type ArtifactMode = 'query' | 'workflow';
 export type ExecutionPanel = 'working-paper' | 'workflow-execution' | 'traceability' | null;
 
@@ -101,7 +101,7 @@ const INITIAL_STATE: AppState = {
   view: getInitialView(),
   sidebarExpanded: false,
   chatMode: 'chat',
-  activeArtifactTab: 'result',
+  activeArtifactTab: 'plan',
   artifactMode: 'query',
   showArtifacts: false,
   showChatHistory: false,
