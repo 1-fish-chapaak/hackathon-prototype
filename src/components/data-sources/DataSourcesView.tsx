@@ -73,7 +73,7 @@ const SEED: DataSource[] = [
 type TabId = 'all' | 'file' | 'integrated';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: 'all',        label: 'Data Sources',   icon: Layers },
+  { id: 'all',        label: 'All',            icon: Layers },
   { id: 'file',       label: 'Files',          icon: FileText },
   { id: 'integrated', label: 'Integrated DBs', icon: Database },
 ];
@@ -177,39 +177,29 @@ export default function DataSourcesView() {
 
   return (
     <div className="space-y-6">
-      {/* ── Type tabs (3: Data Sources / Files / Integrated DBs) ── */}
-      <div className="flex items-center gap-0 border-b border-canvas-border">
-        {TABS.map(t => {
-          const Icon = t.icon;
-          const isActive = tab === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`relative flex items-center gap-2 px-4 h-11 text-[13px] font-medium transition-colors cursor-pointer ${
-                isActive ? 'text-brand-700' : 'text-ink-500 hover:text-ink-700'
-              }`}
-            >
-              <Icon size={14} />
-              {t.label}
-              <span className={`tabular-nums text-[11px] ${isActive ? 'text-brand-600' : 'text-ink-400'}`}>{tabCounts[t.id]}</span>
-              {isActive && (
-                <motion.div
-                  layoutId="ds-type-tab-bar"
-                  className="absolute left-0 right-0 -bottom-px h-[2px] bg-brand-600"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                />
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Sub-section: Data Sources ── */}
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h3 className="font-display text-[20px] font-[420] text-ink-900 leading-tight">Data sources</h3>
-          <p className="text-[12px] text-ink-500 mt-0.5">Manage connected databases, files, and integrations.</p>
+      {/* ── Sub-section header: pill-segmented sub-tabs + actions ── */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        {/* Pill-segmented sub-tabs (distinct from the outer Knowledge Hub tabs) */}
+        <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-paper-50 border border-canvas-border">
+          {TABS.map(t => {
+            const Icon = t.icon;
+            const isActive = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`relative flex items-center gap-1.5 px-3 h-8 rounded-md text-[12.5px] font-medium transition-colors cursor-pointer ${
+                  isActive
+                    ? 'bg-canvas-elevated text-brand-700 shadow-sm'
+                    : 'text-ink-500 hover:text-ink-700'
+                }`}
+              >
+                <Icon size={13} />
+                {t.label}
+                <span className={`tabular-nums text-[11px] ${isActive ? 'text-brand-600' : 'text-ink-400'}`}>{tabCounts[t.id]}</span>
+              </button>
+            );
+          })}
         </div>
         <div className="flex items-center gap-2">
           <button

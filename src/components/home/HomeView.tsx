@@ -25,7 +25,7 @@ interface OnboardingStep {
 
 const ONBOARDING_STEPS: OnboardingStep[] = [
   { id: 'team',       label: 'Invite your team',         cta: 'Open Users',   go: 'admin-users' },
-  { id: 'data',       label: 'Connect a data source',    cta: 'Connect',      go: 'data-sources' },
+  { id: 'data',       label: 'Connect a data source',    cta: 'Connect',      go: 'knowledge-hub' },
   { id: 'workflow',   label: 'Run your first workflow',  cta: 'Open library', go: 'workflow-templates' },
   { id: 'engagement', label: 'Create a test engagement', cta: 'Start',        go: 'audit-execution' },
   { id: 'report',     label: 'Export your first report', cta: 'Open builder', go: 'reports' },

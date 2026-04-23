@@ -14,7 +14,6 @@ import RiskRegister from './components/audit/RiskRegister';
 import AuditExecution from './components/audit/AuditExecution';
 import DashboardView from './components/dashboard/DashboardView';
 import ReportsView from './components/reports/ReportsView';
-import DataSourcesView from './components/data-sources/DataSourcesView';
 import HomeView from './components/home/HomeView';
 import RecentsView from './components/recents/RecentsView';
 import KnowledgeHubView from './components/knowledge/KnowledgeHubView';
@@ -239,7 +238,9 @@ export default function App() {
 
       case 'data-sources':
       case 'configuration':
-        return <DataSourcesView />;
+        // Legacy routes — all roads now go through Knowledge Hub so users
+        // never land on a headerless orphan DataSourcesView.
+        return <KnowledgeHubView />;
 
       // Governance — new pages
       case 'governance-racm':
