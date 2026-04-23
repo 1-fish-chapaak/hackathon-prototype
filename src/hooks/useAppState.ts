@@ -49,7 +49,7 @@ export type View =
   | 'chat-trash';
 
 export type ChatMode = 'chat' | 'workflow';
-export type ArtifactTab = 'plan' | 'code' | 'sources' | 'result' | 'flow' | 'preview';
+export type ArtifactTab = 'plan' | 'code' | 'sources' | 'flow' | 'preview';
 export type ArtifactMode = 'query' | 'workflow';
 export type ExecutionPanel = 'working-paper' | 'workflow-execution' | 'traceability' | null;
 

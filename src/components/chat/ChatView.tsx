@@ -4,8 +4,8 @@ import {
   Send, Paperclip, Sparkles, History, X, FileText,
   Workflow, ShieldCheck, BarChart3, ChevronDown, ChevronRight,
   MessageSquare, ArrowRight, Mic, Plus, Lightbulb,
-  Target, Code2, Database, Save, CheckCircle, Maximize2,
-  ExternalLink, Download, MoreHorizontal, Pencil, CornerDownLeft,
+  Save, CheckCircle, Maximize2,
+  ExternalLink, Download, MoreHorizontal, Pencil, CornerDownLeft, ArrowUpRight,
 } from 'lucide-react';
 import { CHAT_HISTORY, CHAT_CONVERSATIONS, CLARIFICATION_STEPS } from '../../data/mockData';
 import { useToast } from '../shared/Toast';
@@ -17,7 +17,6 @@ import BorderGlow from '../shared/BorderGlow';
 import FloatingLines from '../shared/FloatingLines';
 // Persona removed — Rive WebGL crashes in some browsers
 import ClarificationCard from './ClarificationCard';
-import ProgressiveLoader from './ProgressiveLoader';
 
 interface ChatMessage {
   id: string;
@@ -116,11 +115,14 @@ const QUICK_ACTIONS = [
   { icon: ShieldCheck, label: 'Run audit query', color: 'from-blue-500 to-cyan-500' },
 ];
 
-const LOADING_STEPS = [
-  { label: 'Generating execution plan...', title: 'Execution Plan', content: '5-step query plan: Ingest → Normalize → Match → Score → Flag', icon: Target, type: 'plan' as const },
-  { label: 'Writing SQL query...', title: 'Generated Query', content: 'SELECT inv.*, similarity_score(...) AS match_pct FROM invoices inv JOIN ...', icon: Code2, type: 'code' as const },
-  { label: 'Connecting data sources...', title: 'Data Sources', content: 'SAP ERP AP Module (1.2M rows), Vendor Master (892), Invoice Archive (4,521)', icon: Database, type: 'sources' as const },
-  { label: 'Processing 1.2M records...', title: 'Results', content: '8 potential duplicates found totaling ₹6.16L. Highest match: 96%', icon: BarChart3, type: 'result' as const },
+// Step labels for the subtle inline audit loader. The artifact panel renders
+// the full Plan / Code / Sources detail; here we only narrate progress as a
+// single shimmering line and sync the active artifact tab.
+const LOADING_STEPS: { label: string; tab: ArtifactTab | null }[] = [
+  { label: 'Generating execution plan…',  tab: 'plan' },
+  { label: 'Writing SQL query…',          tab: 'code' },
+  { label: 'Connecting data sources…',    tab: 'sources' },
+  { label: 'Processing 1.2M records…',    tab: null },
 ];
 
 const WORKFLOW_TYPE_NAMES: Record<WorkflowTypeId, string> = {
@@ -606,6 +608,55 @@ function ClarificationBlock({
         </div>
         <span className="tabular-nums">{answeredCount} of {total} answered</span>
       </div>
+    </div>
+  );
+}
+
+// ─── Subtle inline audit loader ───────────────────────────────────────────────
+// Single shimmering line that cycles through LOADING_STEPS, syncs the active
+// artifact tab as it advances, and fires onComplete when done. The artifact
+// panel carries the heavy detail (Plan / Code / Sources); inline stays quiet.
+function InlineAuditLoader({
+  steps,
+  onTabSwitch,
+  onComplete,
+  stepDurationMs = 1700,
+}: {
+  steps: { label: string; tab: ArtifactTab | null }[];
+  onTabSwitch?: (tab: ArtifactTab) => void;
+  onComplete: () => void;
+  stepDurationMs?: number;
+}) {
+  const [stepIdx, setStepIdx] = useState(0);
+  const completedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const onTabSwitchRef = useRef(onTabSwitch);
+  onCompleteRef.current = onComplete;
+  onTabSwitchRef.current = onTabSwitch;
+
+  useEffect(() => {
+    if (completedRef.current) return;
+    if (stepIdx >= steps.length) {
+      completedRef.current = true;
+      onCompleteRef.current();
+      return;
+    }
+    const tab = steps[stepIdx].tab;
+    if (tab) onTabSwitchRef.current?.(tab);
+    const t = setTimeout(() => setStepIdx(i => i + 1), stepDurationMs);
+    return () => clearTimeout(t);
+  }, [stepIdx, steps, stepDurationMs]);
+
+  const active = steps[Math.min(stepIdx, steps.length - 1)];
+  return (
+    <div className="flex items-center gap-2 text-[13px] text-ink-600">
+      <span className="relative flex h-1.5 w-1.5 shrink-0" aria-hidden>
+        <span className="absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-60 animate-ping" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-600" />
+      </span>
+      <TextShimmer as="span" duration={2} spread={1.5}>
+        {active.label}
+      </TextShimmer>
     </div>
   );
 }
@@ -1357,21 +1408,30 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                         )}
                       </div>
                     ) : msg.richType === 'audit-loading' ? (
-                      <div className="space-y-3 max-w-[680px]">
+                      <div className="max-w-[680px]">
                         {showProgressiveLoader && msg.id === auditRunMsgIdRef.current && (
-                          <ProgressiveLoader
+                          <InlineAuditLoader
                             steps={LOADING_STEPS}
+                            onTabSwitch={setActiveArtifactTab}
                             onComplete={handleProgressiveLoadingComplete}
-                            onTabClick={(tab) => setActiveArtifactTab(tab as ArtifactTab)}
                           />
                         )}
                       </div>
                     ) : msg.richType === 'audit-result' ? (
-                      <div className="ml-7 space-y-4 max-w-[680px]">
+                      <div className="space-y-4 max-w-[680px]">
                         {/* Body text */}
                         {msg.text && (
                           <div className="text-[15px] leading-[1.65] text-ink-800 max-w-[66ch]">{msg.text}</div>
                         )}
+
+                        {/* Affordance: link inline result to the auto-opened panel */}
+                        <button
+                          onClick={() => setShowArtifacts(true)}
+                          className="inline-flex items-center gap-1.5 text-[12px] text-ink-500 hover:text-brand-700 transition-colors cursor-pointer"
+                        >
+                          <span>Plan, query, and sources are in the artifact panel</span>
+                          <ArrowUpRight size={12} />
+                        </button>
 
                         {/* KPI cards */}
                         <div className="grid grid-cols-4 gap-2">
