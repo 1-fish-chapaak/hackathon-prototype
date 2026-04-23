@@ -7,11 +7,12 @@ import {
   Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2, Trash2,
   List, LayoutGrid, ExternalLink
 } from 'lucide-react';
-import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/mockData';
+import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS, EXCEPTION_DATA } from '../../data/mockData';
 import { StatusBadge } from '../shared/StatusBadge';
 import SmartTable from '../shared/SmartTable';
 import { useToast } from '../shared/Toast';
 import FloatingLines from '../shared/FloatingLines';
+import ReportBuilder from './ReportBuilder';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   shield: Shield,
@@ -1376,17 +1377,32 @@ function ReportView({ report, onBack, onShare }: {
 }
 
 // ─── Main Reports View ───
-export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps = {}) {
-  const [activeTab, setActiveTab] = useState<'templates' | 'my-reports' | 'shared-reports'>('my-reports');
+export default function ReportsView({ onShare }: ReportsViewProps = {}) {
+  const [activeTab, setActiveTab] = useState<'templates' | 'my-reports' | 'shared-reports' | 'manage-exceptions'>('my-reports');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [tagFilter, setTagFilter] = useState<string>('All');
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [viewingReport, setViewingReport] = useState<typeof GENERATED_REPORTS[0] | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [previewingTemplate, setPreviewingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [reportAppliedTemplates] = useState<Record<string, typeof REPORT_TEMPLATES[0]>>({});
   const [showNewReportTemplateSelector, setShowNewReportTemplateSelector] = useState(false);
+  const [showBuilderModal, setShowBuilderModal] = useState(false);
+  const [newReportName, setNewReportName] = useState('');
+  const [newReportDesc, setNewReportDesc] = useState('');
+  const [newReportTemplate, setNewReportTemplate] = useState('');
   const { addToast } = useToast();
+
+  const openNewReportModal = () => {
+    setNewReportName('');
+    setNewReportDesc('');
+    setNewReportTemplate('');
+    setShowNewReportTemplateSelector(true);
+  };
+  const closeNewReportModal = () => {
+    setShowNewReportTemplateSelector(false);
+  };
 
   const filteredReports = tagFilter === 'All'
     ? GENERATED_REPORTS
@@ -1395,14 +1411,31 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
   const TAG_FILTER_OPTIONS = ['All', 'Internal Audit', 'Bulk Audit'];
 
   const TagFilterDropdown = () => (
-    <select
-      value={tagFilter}
-      onChange={e => setTagFilter(e.target.value)}
-      className="h-7 px-2 pr-6 text-[11px] font-medium text-text-secondary bg-paper-50 border border-border-light cursor-pointer appearance-none focus:outline-none focus:ring-1 focus:ring-primary/30"
-      style={{ borderRadius: '8px', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236a12cd' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 6px center' }}
-    >
-      {TAG_FILTER_OPTIONS.map(t => <option key={t} value={t}>{t === 'All' ? 'All Tags' : t}</option>)}
-    </select>
+    <div className="relative">
+      <button
+        onClick={() => setShowTagDropdown(p => !p)}
+        className="h-7 flex items-center gap-1.5 px-2.5 text-[11px] font-medium text-text-secondary bg-paper-50 border border-border-light hover:border-primary/30 transition-colors cursor-pointer"
+        style={{ borderRadius: '8px' }}
+      >
+        {tagFilter === 'All' ? 'All Tags' : tagFilter}
+        <ChevronDown size={10} className={`text-text-muted transition-transform ${showTagDropdown ? 'rotate-180' : ''}`} />
+      </button>
+      {showTagDropdown && (
+        <div className="absolute left-0 top-full mt-1 w-40 bg-white shadow-xl border border-border-light z-50 overflow-hidden py-1" style={{ borderRadius: '8px' }}>
+          {TAG_FILTER_OPTIONS.map(t => (
+            <button
+              key={t}
+              onClick={() => { setTagFilter(t); setShowTagDropdown(false); }}
+              className={`w-full text-left px-3 py-2 text-[12px] hover:bg-primary-xlight transition-colors cursor-pointer flex items-center gap-2 ${tagFilter === t ? 'text-primary font-semibold' : 'text-text-secondary'}`}
+            >
+              {tagFilter === t && <span className="text-primary">✓</span>}
+              {tagFilter !== t && <span className="w-3" />}
+              {t === 'All' ? 'All Tags' : t}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 
 
@@ -1432,8 +1465,8 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             >
               <Upload size={14} /> Upload Template
             </button>
-            <button onClick={() => setShowNewReportTemplateSelector(true)} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold transition-colors cursor-pointer" style={{ borderRadius: '8px' }}>
-              <FileText size={14} /> New Report
+            <button onClick={openNewReportModal} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold transition-colors cursor-pointer" style={{ borderRadius: '8px' }}>
+              <FileText size={14} /> Create Report
             </button>
           </div>
         </div>
@@ -1458,6 +1491,16 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
               <Share2 size={14} />
               Shared Reports
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'shared-reports' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{SHARED_REPORTS.length}</span>
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('manage-exceptions')}
+            className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors cursor-pointer ${activeTab === 'manage-exceptions' ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
+          >
+            <span className="flex items-center gap-2">
+              <AlertTriangle size={14} />
+              Manage Exceptions
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'manage-exceptions' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{EXCEPTION_DATA.length}</span>
             </span>
           </button>
           <button
@@ -1654,6 +1697,38 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
         )}
 
         {/* Templates Grid */}
+        {/* Manage Exceptions */}
+        {activeTab === 'manage-exceptions' && (
+          <SmartTable
+            data={EXCEPTION_DATA as unknown as Record<string, unknown>[]}
+            keyField="id"
+            searchPlaceholder="Search exceptions..."
+            searchKeys={['id', 'vendor', 'invoiceNo', 'status', 'assignee']}
+            paginated={false}
+            columns={[
+              { key: 'id', label: 'Exception ID', width: '110px' },
+              { key: 'invoiceNo', label: 'Invoice No', width: '140px' },
+              { key: 'vendor', label: 'Vendor' },
+              { key: 'amount', label: 'Amount', align: 'right', width: '110px', render: (item) => `$${Number(item.amount).toLocaleString()}` },
+              { key: 'matchScore', label: 'Match %', align: 'center', width: '90px', render: (item) => (
+                <span className={`font-semibold ${Number(item.matchScore) >= 90 ? 'text-red-600' : 'text-amber-600'}`}>{String(item.matchScore)}%</span>
+              )},
+              { key: 'status', label: 'Status', width: '120px', render: (item) => {
+                const map: Record<string, string> = {
+                  unassigned: 'bg-gray-100 text-gray-600',
+                  assigned: 'bg-blue-50 text-blue-700',
+                  'in-progress': 'bg-amber-50 text-amber-700',
+                  notified: 'bg-purple-50 text-purple-700',
+                  resolved: 'bg-green-50 text-green-700',
+                };
+                const label = String(item.status).replace('-', ' ');
+                return <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize ${map[String(item.status)] ?? 'bg-gray-100 text-gray-600'}`}>{label}</span>;
+              }},
+              { key: 'assignee', label: 'Assignee', render: (item) => item.assignee ? String(item.assignee) : <span className="text-text-muted">—</span> },
+            ]}
+          />
+        )}
+
         {activeTab === 'templates' && (
           <div className="grid grid-cols-3 gap-4">
             {REPORT_TEMPLATES.map((rt, i) => {
@@ -1723,67 +1798,104 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
         )}
       </AnimatePresence>
 
-      {/* New Report — Template Selector Modal */}
+      {/* New Report Modal */}
       <AnimatePresence>
         {showNewReportTemplateSelector && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowNewReportTemplateSelector(false)}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center" onClick={closeNewReportModal}>
             <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              role="dialog" aria-modal="true" aria-label="Select Report Template"
-              className="relative bg-white rounded-2xl shadow-2xl w-[560px] max-h-[80vh] overflow-hidden flex flex-col"
+              role="dialog" aria-modal="true" aria-label="New Report"
+              className="relative bg-white shadow-2xl w-[560px] overflow-hidden flex flex-col" style={{ borderRadius: '16px' }}
               onClick={e => e.stopPropagation()}
             >
+              {/* Header */}
               <div className="px-6 py-4 border-b border-border-light flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="p-2 bg-primary/10 text-primary rounded-xl"><FileText size={16} /></div>
                   <div>
                     <h3 className="text-[15px] font-semibold text-text">New Report</h3>
-                    <p className="text-[11px] text-text-muted">Select a template to get started</p>
+                    <p className="text-[11px] text-text-muted">Set up your report</p>
                   </div>
                 </div>
-                <button onClick={() => setShowNewReportTemplateSelector(false)} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
+                <button onClick={closeNewReportModal} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {REPORT_TEMPLATES.map((rt, i) => {
-                  const Icon = ICON_MAP[rt.icon] || FileText;
-                  const color = CATEGORY_COLORS[rt.category] || 'text-ink-500 bg-paper-50';
-                  return (
-                    <motion.button
-                      key={rt.id}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.04 }}
-                      onClick={() => {
-                        setShowNewReportTemplateSelector(false);
-                        addToast({ type: 'success', message: `Creating report from "${rt.name}" template...` });
-                        if (onOpenBuilder) onOpenBuilder();
-                      }}
-                      className="w-full text-left p-4 rounded-xl border border-border-light hover:border-primary/30 hover:bg-primary-xlight/50 hover:shadow-sm transition-all duration-300 cursor-pointer group flex items-start gap-3"
-                    >
-                      <div className={`p-2 ${color} shrink-0 group-hover:scale-110 transition-transform duration-300`} style={{ borderRadius: '8px' }}><Icon size={16} /></div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[13px] font-semibold text-text group-hover:text-primary transition-colors">{rt.name}</span>
-                          <span className={`text-[9px] font-bold uppercase tracking-wider ${color.split(' ')[0]}`}>{rt.category}</span>
-                        </div>
-                        <p className="text-[11px] text-text-muted leading-relaxed">{rt.desc}</p>
-                        {rt.sections && (
-                          <div className="flex gap-1 mt-2 flex-wrap">
-                            {rt.sections.slice(0, 4).map(s => (
-                              <span key={s.name} className="text-[9px] text-text-muted bg-surface-2 px-1.5 py-0.5 rounded">{s.name}</span>
-                            ))}
-                            {rt.sections.length > 4 && <span className="text-[9px] text-text-muted bg-surface-2 px-1.5 py-0.5 rounded">+{rt.sections.length - 4} more</span>}
-                          </div>
-                        )}
-                      </div>
-                      <ArrowRight size={14} className="text-text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1" />
-                    </motion.button>
-                  );
-                })}
+
+              {/* Form */}
+              <div className="p-6 space-y-5">
+                <div>
+                  <label className="block text-[12px] font-semibold text-text mb-1.5">Report <span className="text-red-500">*</span></label>
+                  <input
+                    value={newReportName}
+                    onChange={e => setNewReportName(e.target.value)}
+                    placeholder="Report 01 — April 23, 2026"
+                    className="w-full px-3 py-2.5 border border-border-light text-[13px] text-text placeholder:text-text-muted/60 outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all" style={{ borderRadius: '8px' }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-semibold text-text mb-1.5">Description</label>
+                  <textarea
+                    value={newReportDesc}
+                    onChange={e => setNewReportDesc(e.target.value)}
+                    placeholder="Report Description goes here"
+                    rows={3}
+                    className="w-full px-3 py-2.5 border border-border-light text-[13px] text-text placeholder:text-text-muted/60 outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all resize-none" style={{ borderRadius: '8px' }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-semibold text-text mb-1.5">Template</label>
+                  <select
+                    value={newReportTemplate}
+                    onChange={e => setNewReportTemplate(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-border-light text-[13px] text-text appearance-none outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer bg-white"
+                    style={{ borderRadius: '8px', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236a12cd' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
+                  >
+                    <option value="">Select a template</option>
+                    {REPORT_TEMPLATES.map(rt => (
+                      <option key={rt.id} value={rt.id}>{rt.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-border-light shrink-0 flex justify-end">
+                <button
+                  onClick={() => {
+                    closeNewReportModal();
+                    setShowBuilderModal(true);
+                  }}
+                  disabled={!newReportName.trim()}
+                  className="flex items-center gap-2 px-5 py-2 bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer" style={{ borderRadius: '8px' }}
+                >
+                  Continue <ArrowRight size={14} />
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Report Builder Modal */}
+      <AnimatePresence>
+        {showBuilderModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          >
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 16 }}
+              className="relative bg-white overflow-hidden shadow-2xl flex flex-col w-[560px] max-h-[80vh]" style={{ borderRadius: '16px' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <ReportBuilder context="new" onBack={() => setShowBuilderModal(false)} />
             </motion.div>
           </motion.div>
         )}
