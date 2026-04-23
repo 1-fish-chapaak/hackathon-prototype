@@ -119,18 +119,18 @@ export default function ShareModal({ onClose }: Props) {
 
               {RECENT_SHARES.length > 0 && (
                 <div>
-                  <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2">Shared with</div>
+                  <div className="text-[12px] font-semibold text-text-muted uppercaser mb-2">Shared with</div>
                   <div className="space-y-2">
                     {RECENT_SHARES.map(share => (
                       <div key={share.email} className="flex items-center gap-3 p-2.5 rounded-lg bg-surface-2">
-                        <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-[12px] font-bold flex items-center justify-center">
                           {share.initials}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-[12px] font-medium text-text">{share.name}</div>
-                          <div className="text-[10px] text-text-muted truncate">{share.email}</div>
+                          <div className="text-[12px] text-text-muted truncate">{share.email}</div>
                         </div>
-                        <span className="text-[10px] text-text-muted capitalize bg-white px-2 py-0.5 rounded border border-border-light">
+                        <span className="text-[12px] text-text-muted capitalize bg-white px-2 py-0.5 rounded border border-border-light">
                           {share.permission}
                         </span>
                       </div>
@@ -148,13 +148,13 @@ export default function ShareModal({ onClose }: Props) {
                 </span>
                 <button
                   onClick={handleCopyLink}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-[11px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-[12px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer whitespace-nowrap"
                 >
                   {copied ? <Check size={12} /> : <Copy size={12} />}
                   {copied ? 'Copied!' : 'Copy Link'}
                 </button>
               </div>
-              <div className="text-[11px] text-text-muted">
+              <div className="text-[12px] text-text-muted">
                 Anyone with the link can view this resource. You can change permissions anytime.
               </div>
             </div>

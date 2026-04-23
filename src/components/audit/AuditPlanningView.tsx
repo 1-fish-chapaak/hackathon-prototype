@@ -161,7 +161,7 @@ function Dropdown<T extends string>({
 
   return (
     <div ref={ref} className="mb-3">
-      <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider block mb-1.5">{label}</label>
+      <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">{label}</label>
       <div className="relative">
         <button
           type="button"
@@ -220,7 +220,7 @@ function KpiCard({ label, value, icon: Icon, color, index }: {
         </div>
       </div>
       <div className="text-2xl font-bold text-text">{value}</div>
-      <div className="text-[11px] text-text-muted uppercase tracking-wider mt-1">{label}</div>
+      <div className="text-[12px] text-text-muted uppercaser mt-1">{label}</div>
     </motion.div>
   );
 }
@@ -243,19 +243,19 @@ function GanttTooltip({ item, position }: { item: AuditEngagement; position: { x
       <div className="glass-card-strong rounded-xl p-3 shadow-xl min-w-[220px]">
         <div className="text-[12px] font-bold text-text mb-1.5">{item.name}</div>
         <div className="space-y-1">
-          <div className="flex justify-between text-[10px]">
+          <div className="flex justify-between text-[12px]">
             <span className="text-text-muted">Owner</span>
             <span className="text-text font-medium">{item.owner}</span>
           </div>
-          <div className="flex justify-between text-[10px]">
+          <div className="flex justify-between text-[12px]">
             <span className="text-text-muted">Duration</span>
             <span className="text-text font-medium">{item.duration} months ({startMonth} — {endMonth})</span>
           </div>
-          <div className="flex justify-between text-[10px]">
+          <div className="flex justify-between text-[12px]">
             <span className="text-text-muted">Controls</span>
             <span className="text-text font-medium">{item.controls}</span>
           </div>
-          <div className="flex justify-between text-[10px]">
+          <div className="flex justify-between text-[12px]">
             <span className="text-text-muted">Status</span>
             <span className={`font-bold px-1.5 py-0.5 rounded-full ${
               item.status === 'active' ? 'bg-compliant-50 text-compliant-700' :
@@ -264,7 +264,7 @@ function GanttTooltip({ item, position }: { item: AuditEngagement; position: { x
               'bg-paper-50 text-ink-500'
             }`}>{item.status}</span>
           </div>
-          <div className="flex justify-between text-[10px]">
+          <div className="flex justify-between text-[12px]">
             <span className="text-text-muted">Priority</span>
             <span className={`font-bold ${
               item.priority === 'Critical' ? 'text-risk-700' :
@@ -273,7 +273,7 @@ function GanttTooltip({ item, position }: { item: AuditEngagement; position: { x
               'text-compliant-700'
             }`}>{item.priority}</span>
           </div>
-          <div className="flex justify-between text-[10px]">
+          <div className="flex justify-between text-[12px]">
             <span className="text-text-muted">Risk Score</span>
             <span className="text-text font-medium">{item.riskScore}/100</span>
           </div>
@@ -315,20 +315,20 @@ function GanttChart({
       {frozen && (
         <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2 py-1 bg-evidence-50/80 backdrop-blur-sm border border-evidence rounded-md">
           <Lock size={10} className="text-evidence-700" />
-          <span className="text-[9px] font-semibold text-evidence-700">Locked</span>
+          <span className="text-[12px] font-semibold text-evidence-700">Locked</span>
         </div>
       )}
 
       {/* Header row */}
       <div className="flex border-b border-border-light">
         <div className="w-[280px] shrink-0 px-4 py-3 bg-surface-2 border-r border-border-light">
-          <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Engagement</span>
+          <span className="text-[12px] font-bold text-text-muted uppercaser">Engagement</span>
         </div>
         <div className="flex-1 flex">
           {MONTHS.map((m, i) => (
             <div
               key={m}
-              className={`flex-1 px-2 py-3 text-center text-[10px] font-bold uppercase tracking-wider border-r border-border-light last:border-0 ${
+              className={`flex-1 px-2 py-3 text-center text-[12px] font-bold uppercaser border-r border-border-light last:border-0 ${
                 i === currentMonth ? 'bg-primary/5 text-primary' : 'bg-surface-2 text-text-muted'
               }`}
             >
@@ -340,7 +340,7 @@ function GanttChart({
 
       {/* Rows */}
       {filtered.length === 0 ? (
-        <div className="px-6 py-8 text-center text-[13px] text-text-muted">No engagements match the current filters.</div>
+        <div className="px-10 py-8 text-center text-[13px] text-text-muted">No engagements match the current filters.</div>
       ) : filtered.map((item, idx) => (
         <motion.div
           key={item.id}
@@ -359,14 +359,14 @@ function GanttChart({
               <Edit3 size={10} className="text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-[10px] text-text-muted">{item.owner}</span>
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+              <span className="text-[12px] text-text-muted">{item.owner}</span>
+              <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${
                 item.status === 'active' ? 'bg-compliant-50 text-compliant-700' :
                 item.status === 'completed' ? 'bg-evidence-50 text-evidence-700' :
                 item.status === 'on-hold' ? 'bg-high-50 text-high-700' :
                 'bg-paper-50 text-ink-500'
               }`}>{item.status}</span>
-              <span className="text-[9px] text-text-muted">{item.controls} controls</span>
+              <span className="text-[12px] text-text-muted">{item.controls} controls</span>
             </div>
           </div>
 
@@ -390,7 +390,7 @@ function GanttChart({
               onMouseMove={(e) => handleMouseMove(e, item)}
               onMouseLeave={() => setHoveredItem(null)}
             >
-              <span className="text-[9px] font-bold text-white truncate">{item.type}</span>
+              <span className="text-[12px] font-bold text-white truncate">{item.type}</span>
             </motion.div>
           </div>
         </motion.div>
@@ -403,7 +403,7 @@ function GanttChart({
           left: `calc(280px + ((100% - 280px) * ${getCurrentMonthProgress() / 12}))`,
         }}
       >
-        <div className="absolute -top-0 -translate-x-1/2 bg-red-400 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-b-md">
+        <div className="absolute -top-0 -translate-x-1/2 bg-red-400 text-white text-[12px] font-bold px-1.5 py-0.5 rounded-b-md">
           Today
         </div>
       </div>
@@ -428,7 +428,7 @@ function MilestonesStrip() {
       transition={{ delay: 0.6 }}
       className="glass-card rounded-2xl p-4 mt-4"
     >
-      <div className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-3">Key Milestones</div>
+      <div className="text-[12px] font-bold text-text-muted uppercaser mb-3">Key Milestones</div>
       <div className="relative flex items-center">
         <div className="absolute left-0 right-0 h-px bg-border-light top-1/2" />
         <div className="flex-1 flex justify-between relative">
@@ -449,10 +449,10 @@ function MilestonesStrip() {
                 } transition-colors`}>
                   <ms.icon size={13} />
                 </div>
-                <span className={`text-[10px] font-semibold ${isPast ? 'text-compliant-700' : 'text-text-muted'}`}>
+                <span className={`text-[12px] font-semibold ${isPast ? 'text-compliant-700' : 'text-text-muted'}`}>
                   {ms.label}
                 </span>
-                <span className="text-[9px] text-text-muted">{MONTHS[ms.month]}</span>
+                <span className="text-[12px] text-text-muted">{MONTHS[ms.month]}</span>
               </motion.div>
             );
           })}
@@ -495,22 +495,22 @@ function ResourcesTab() {
                 className="glass-card rounded-2xl p-4 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300"
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary-medium text-white flex items-center justify-center text-[11px] font-bold">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary-medium text-white flex items-center justify-center text-[12px] font-bold">
                     {member.avatar}
                   </div>
                   <div>
                     <div className="text-[12px] font-semibold text-text">{member.name}</div>
-                    <div className="text-[10px] text-text-muted">{member.role}</div>
+                    <div className="text-[12px] text-text-muted">{member.role}</div>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1 mb-3">
                   {member.skills.map(skill => (
-                    <span key={skill} className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                    <span key={skill} className="text-[12px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
                       {skill}
                     </span>
                   ))}
                 </div>
-                <div className="flex items-center justify-between text-[10px] mb-1.5">
+                <div className="flex items-center justify-between text-[12px] mb-1.5">
                   <span className="text-text-muted">{totalHours}h / {totalCapacity}h</span>
                   <span className={`font-bold ${utilization > 100 ? 'text-risk-700' : utilization > 80 ? 'text-mitigated-700' : 'text-compliant-700'}`}>
                     {utilization}%
@@ -536,9 +536,9 @@ function ResourcesTab() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border-light">
-                  <th className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-4 py-3 text-left bg-surface-2 min-w-[160px]">Team Member</th>
+                  <th className="text-[12px] font-bold text-text-muted uppercaser px-4 py-3 text-left bg-surface-2 min-w-[160px]">Team Member</th>
                   {MONTHS.map(m => (
-                    <th key={m} className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-1 py-3 text-center bg-surface-2 min-w-[56px]">{m}</th>
+                    <th key={m} className="text-[12px] font-bold text-text-muted uppercaser px-1 py-3 text-center bg-surface-2 min-w-[56px]">{m}</th>
                   ))}
                 </tr>
               </thead>
@@ -555,17 +555,17 @@ function ResourcesTab() {
                     >
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary-medium text-white flex items-center justify-center text-[8px] font-bold shrink-0">
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary-medium text-white flex items-center justify-center text-[12px] font-bold shrink-0">
                             {member.avatar}
                           </div>
-                          <span className="text-[11px] font-medium text-text">{member.name}</span>
+                          <span className="text-[12px] font-medium text-text">{member.name}</span>
                         </div>
                       </td>
                       {MONTHS.map((_, mIdx) => {
                         const hours = alloc[mIdx] || 0;
                         return (
                           <td key={mIdx} className="px-1 py-1.5">
-                            <div className={`w-full h-8 rounded flex items-center justify-center text-[9px] font-bold ${
+                            <div className={`w-full h-8 rounded flex items-center justify-center text-[12px] font-bold ${
                               hours > 100 ? 'bg-risk-50 text-risk-700' :
                               hours > 60 ? 'bg-mitigated-50 text-mitigated-700' :
                               hours > 0 ? 'bg-compliant-50 text-compliant-700' :
@@ -584,10 +584,10 @@ function ResourcesTab() {
           </div>
           {/* Legend */}
           <div className="px-4 py-2.5 border-t border-border-light flex items-center gap-4">
-            <span className="text-[9px] font-semibold text-text-muted uppercase tracking-wider">Legend:</span>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-compliant-50 border border-compliant" /><span className="text-[9px] text-text-muted">&lt; 40h (Available)</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-mitigated-50 border border-mitigated" /><span className="text-[9px] text-text-muted">40–80h (Loaded)</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-risk-50 border border-red-300" /><span className="text-[9px] text-text-muted">&gt; 100h (Overloaded)</span></div>
+            <span className="text-[12px] font-semibold text-text-muted uppercaser">Legend:</span>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-compliant-50 border border-compliant" /><span className="text-[12px] text-text-muted">&lt; 40h (Available)</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-mitigated-50 border border-mitigated" /><span className="text-[12px] text-text-muted">40–80h (Loaded)</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-risk-50 border border-red-300" /><span className="text-[12px] text-text-muted">&gt; 100h (Overloaded)</span></div>
           </div>
         </div>
       </div>
@@ -628,7 +628,7 @@ function RiskMatrixTab() {
         <div className="flex">
           {/* Y axis label */}
           <div className="flex flex-col items-center justify-center mr-2">
-            <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider [writing-mode:vertical-lr] rotate-180">
+            <span className="text-[12px] font-bold text-text-muted uppercaser [writing-mode:vertical-lr] rotate-180">
               Likelihood
             </span>
           </div>
@@ -645,11 +645,11 @@ function RiskMatrixTab() {
                       className={`aspect-square rounded-xl border flex flex-col items-center justify-center gap-0.5 p-1 ${gridColors[cellKey]} transition-all hover:scale-105`}
                     >
                       {engagements.length > 0 ? engagements.map(e => (
-                        <span key={e.id} className="text-[8px] font-bold bg-white/80 backdrop-blur-sm rounded px-1 py-0.5 text-text truncate max-w-full text-center shadow-sm">
+                        <span key={e.id} className="text-[12px] font-bold bg-white/80 backdrop-blur-sm rounded px-1 py-0.5 text-text truncate max-w-full text-center shadow-sm">
                           {e.name}
                         </span>
                       )) : (
-                        <span className="text-[8px] text-text-muted/30 font-medium">{likelihood * impact}</span>
+                        <span className="text-[12px] text-text-muted/30 font-medium">{likelihood * impact}</span>
                       )}
                     </div>
                   );
@@ -659,21 +659,21 @@ function RiskMatrixTab() {
             {/* X axis label */}
             <div className="flex justify-between mt-2 px-1">
               {[1, 2, 3, 4, 5].map(n => (
-                <span key={n} className="text-[9px] font-semibold text-text-muted flex-1 text-center">{n}</span>
+                <span key={n} className="text-[12px] font-semibold text-text-muted flex-1 text-center">{n}</span>
               ))}
             </div>
             <div className="text-center mt-1">
-              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Impact</span>
+              <span className="text-[12px] font-bold text-text-muted uppercaser">Impact</span>
             </div>
           </div>
         </div>
 
         {/* Legend */}
         <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border-light">
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-compliant-50 border border-compliant" /><span className="text-[9px] text-text-muted">Low (1-4)</span></div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-mitigated-50 border border-mitigated" /><span className="text-[9px] text-text-muted">Medium (5-9)</span></div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-high-50 border border-high" /><span className="text-[9px] text-text-muted">High (10-14)</span></div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-risk-50 border border-risk" /><span className="text-[9px] text-text-muted">Critical (15+)</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-compliant-50 border border-compliant" /><span className="text-[12px] text-text-muted">Low (1-4)</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-mitigated-50 border border-mitigated" /><span className="text-[12px] text-text-muted">Medium (5-9)</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-high-50 border border-high" /><span className="text-[12px] text-text-muted">High (10-14)</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-risk-50 border border-risk" /><span className="text-[12px] text-text-muted">Critical (15+)</span></div>
         </div>
       </div>
 
@@ -692,7 +692,7 @@ function RiskMatrixTab() {
               transition={{ delay: 0.03 * idx }}
               className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-2 transition-colors"
             >
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold text-white ${
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[12px] font-bold text-white ${
                 idx === 0 ? 'bg-risk-500' : idx < 3 ? 'bg-high-500' : idx < 5 ? 'bg-mitigated-500' : 'bg-compliant-500'
               }`}>
                 {idx + 1}
@@ -701,10 +701,10 @@ function RiskMatrixTab() {
                 <span className="text-[12px] font-semibold text-text">{item.name}</span>
               </div>
               <div className="flex items-center gap-4">
-                <div className="text-[10px] text-text-muted">
+                <div className="text-[12px] text-text-muted">
                   L={item.likelihood} / I={item.impact}
                 </div>
-                <div className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                <div className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${
                   item.score >= 15 ? 'bg-risk-50 text-risk-700' :
                   item.score >= 10 ? 'bg-high-50 text-high-700' :
                   item.score >= 5 ? 'bg-mitigated-50 text-mitigated-700' :
@@ -763,7 +763,7 @@ function BudgetTab() {
           <thead>
             <tr className="border-b border-border-light">
               {['Engagement', 'Planned Hrs', 'Actual Hrs', '% Complete', 'Budget', 'Spent', 'Variance'].map(col => (
-                <th key={col} className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-4 py-3 bg-surface-2">{col}</th>
+                <th key={col} className="text-[12px] font-bold text-text-muted uppercaser px-4 py-3 bg-surface-2">{col}</th>
               ))}
             </tr>
           </thead>
@@ -789,7 +789,7 @@ function BudgetTab() {
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <span className="text-[10px] font-bold text-text-muted">{pct}%</span>
+                      <span className="text-[12px] font-bold text-text-muted">{pct}%</span>
                     </div>
                   </td>
                   <td className="text-[12px] text-text-secondary px-4 py-3">${row.budget.toLocaleString()}</td>
@@ -819,15 +819,15 @@ function BudgetTab() {
               transition={{ delay: 0.03 * idx }}
             >
               <div className="flex items-center gap-3 mb-1">
-                <span className="text-[11px] font-medium text-text w-[180px] truncate">{row.name}</span>
+                <span className="text-[12px] font-medium text-text w-[180px] truncate">{row.name}</span>
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center gap-2">
                     <div className="h-3 rounded-r bg-primary/30" style={{ width: `${(row.budget / maxBudget) * 100}%` }} />
-                    <span className="text-[9px] text-text-muted whitespace-nowrap">{fmt(row.budget)}</span>
+                    <span className="text-[12px] text-text-muted whitespace-nowrap">{fmt(row.budget)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="h-3 rounded-r bg-primary" style={{ width: `${(row.spent / maxBudget) * 100}%` }} />
-                    <span className="text-[9px] text-text-secondary font-semibold whitespace-nowrap">{fmt(row.spent)}</span>
+                    <span className="text-[12px] text-text-secondary font-semibold whitespace-nowrap">{fmt(row.spent)}</span>
                   </div>
                 </div>
               </div>
@@ -835,8 +835,8 @@ function BudgetTab() {
           ))}
         </div>
         <div className="flex items-center gap-6 mt-4 pt-3 border-t border-border-light">
-          <div className="flex items-center gap-1.5"><div className="w-4 h-2.5 rounded bg-primary/30" /><span className="text-[9px] text-text-muted">Planned Budget</span></div>
-          <div className="flex items-center gap-1.5"><div className="w-4 h-2.5 rounded bg-primary" /><span className="text-[9px] text-text-muted">Actual Spend</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-4 h-2.5 rounded bg-primary/30" /><span className="text-[12px] text-text-muted">Planned Budget</span></div>
+          <div className="flex items-center gap-1.5"><div className="w-4 h-2.5 rounded bg-primary" /><span className="text-[12px] text-text-muted">Actual Spend</span></div>
         </div>
       </div>
     </motion.div>
@@ -906,7 +906,7 @@ function EngagementDrawer({
           <div className="space-y-0">
             {/* Name */}
             <div className="mb-3">
-              <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider block mb-1.5">Engagement Name</label>
+              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Engagement Name</label>
               <input
                 type="text"
                 value={form.name}
@@ -960,7 +960,7 @@ function EngagementDrawer({
 
             {/* Duration */}
             <div className="mb-3">
-              <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider block mb-1.5">Duration (months)</label>
+              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Duration (months)</label>
               <input
                 type="number"
                 min={1}
@@ -976,7 +976,7 @@ function EngagementDrawer({
 
             {/* Planned Hours */}
             <div className="mb-3">
-              <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider block mb-1.5">Planned Hours</label>
+              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Planned Hours</label>
               <input
                 type="number"
                 min={0}
@@ -1007,7 +1007,7 @@ function EngagementDrawer({
 
             {/* Risk Score */}
             <div className="mb-3">
-              <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider block mb-1.5">Risk Score (1-100)</label>
+              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Risk Score (1-100)</label>
               <input
                 type="number"
                 min={1}
@@ -1023,7 +1023,7 @@ function EngagementDrawer({
 
             {/* Notes */}
             <div className="mb-3">
-              <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider block mb-1.5">Notes</label>
+              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Notes</label>
               <textarea
                 value={form.notes}
                 onChange={(e) => update('notes', e.target.value)}
@@ -1038,7 +1038,7 @@ function EngagementDrawer({
             {/* Assign Resource */}
             {!readOnly && (
               <div className="mb-3">
-                <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider block mb-1.5">Assign Resource</label>
+                <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Assign Resource</label>
                 <div className="relative">
                   <button
                     type="button"
@@ -1079,16 +1079,16 @@ function EngagementDrawer({
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary-medium text-white flex items-center justify-center text-[8px] font-bold">
+                                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary-medium text-white flex items-center justify-center text-[12px] font-bold">
                                     {member.avatar}
                                   </div>
                                   <div>
                                     <div className="text-[12px] font-medium text-text">{member.name}</div>
-                                    <div className="text-[9px] text-text-muted">{member.role}</div>
+                                    <div className="text-[12px] text-text-muted">{member.role}</div>
                                   </div>
                                 </div>
                                 {hasSkillMatch && (
-                                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-compliant-50 text-compliant-700">
+                                  <span className="text-[12px] font-bold px-1.5 py-0.5 rounded-full bg-compliant-50 text-compliant-700">
                                     Skill Match
                                   </span>
                                 )}
@@ -1260,7 +1260,7 @@ export default function AuditPlanningView() {
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.06} rotateOnHover hue={275} opacity={0.05} />
 
-      <div className="px-6 py-8 relative">
+      <div className="px-10 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
@@ -1268,7 +1268,7 @@ export default function AuditPlanningView() {
               <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-primary-medium text-white">
                 <Calendar size={16} />
               </div>
-              <h1 className="text-xl font-bold text-text tracking-tight">Audit Planning</h1>
+              <h1 className="text-xl font-bold text-text">Audit Planning</h1>
             </div>
             <p className="text-sm text-text-secondary mt-1 ml-9">FY26 Annual Audit Plan — April 2025 to March 2026</p>
           </div>
@@ -1284,7 +1284,7 @@ export default function AuditPlanningView() {
               <div className="flex items-center gap-2 px-3 py-1.5 bg-evidence-50 border border-evidence rounded-lg">
                 <Lock size={13} className="text-evidence-700" />
                 <span className="text-[12px] font-semibold text-evidence-700">Plan Frozen</span>
-                <span className="text-[10px] text-evidence-700">by Karan Mehta — Mar 1, 2026</span>
+                <span className="text-[12px] text-evidence-700">by Karan Mehta — Mar 1, 2026</span>
               </div>
             ) : (
               <button
@@ -1336,15 +1336,15 @@ export default function AuditPlanningView() {
                 <tab.icon size={14} className={isDisabled ? 'opacity-40' : ''} />
                 <span className={isDisabled ? 'opacity-40' : ''}>{tab.label}</span>
                 {isDisabled && (
-                  <span className="ml-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-paper-50 text-ink-500 uppercase tracking-wider">v2</span>
+                  <span className="ml-1 text-[12px] font-bold px-1.5 py-0.5 rounded-full bg-paper-50 text-ink-500 uppercaser">v2</span>
                 )}
               </button>
             );
           })}
         </div>
         {/* v2 note */}
-        <div className="text-[11px] text-text-muted mb-4 flex items-center gap-1.5">
-          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-paper-50 text-ink-500 uppercase">Note</span>
+        <div className="text-[12px] text-text-muted mb-4 flex items-center gap-1.5">
+          <span className="text-[12px] font-bold px-1.5 py-0.5 rounded bg-paper-50 text-ink-500 uppercase">Note</span>
           Resources, Risk Matrix, and Budget tabs coming in v2
         </div>
 
@@ -1356,13 +1356,13 @@ export default function AuditPlanningView() {
             className="flex items-center gap-4 mb-4"
           >
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Process:</span>
+              <span className="text-[12px] font-bold text-text-muted uppercaser">Process:</span>
               <div className="flex gap-1">
                 {processFilterOptions.map(opt => (
                   <button
                     key={opt}
                     onClick={() => setProcessFilter(opt)}
-                    className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-full text-[12px] font-semibold transition-all cursor-pointer ${
                       processFilter === opt
                         ? 'bg-primary text-white shadow-sm'
                         : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
@@ -1375,13 +1375,13 @@ export default function AuditPlanningView() {
             </div>
             <div className="w-px h-5 bg-border-light" />
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Status:</span>
+              <span className="text-[12px] font-bold text-text-muted uppercaser">Status:</span>
               <div className="flex gap-1">
                 {statusFilterOptions.map(opt => (
                   <button
                     key={opt}
                     onClick={() => setStatusFilter(opt)}
-                    className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-full text-[12px] font-semibold transition-all cursor-pointer ${
                       statusFilter === opt
                         ? 'bg-primary text-white shadow-sm'
                         : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
@@ -1405,7 +1405,7 @@ export default function AuditPlanningView() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="flex items-center gap-2 mb-3 text-[11px] text-text-muted">
+              <div className="flex items-center gap-2 mb-3 text-[12px] text-text-muted">
                 <Calendar size={12} className="text-primary/60" />
                 <span>Timeline bars are draggable for Manager+ roles. Click an engagement to edit details.</span>
               </div>
@@ -1437,10 +1437,10 @@ export default function AuditPlanningView() {
                             <div className="flex items-center gap-2">
                               <div className="w-2.5 h-2.5 rounded-full" style={{ background: eng.color }} />
                               <span className="text-[12px] font-medium text-text">{eng.name}</span>
-                              <span className="text-[10px] text-text-muted">{eng.owner}</span>
+                              <span className="text-[12px] text-text-muted">{eng.owner}</span>
                             </div>
                             <div className="flex items-center gap-3">
-                              <span className="text-[10px] text-text-muted">{tested}/{eng.controls} controls</span>
+                              <span className="text-[12px] text-text-muted">{tested}/{eng.controls} controls</span>
                               <span className="text-[12px] font-bold font-mono text-text">{progress}%</span>
                             </div>
                           </div>
@@ -1521,11 +1521,11 @@ export default function AuditPlanningView() {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-[11px] text-text-muted uppercase tracking-wider font-medium px-5 py-3">Name</th>
-                  <th className="text-[11px] text-text-muted uppercase tracking-wider font-medium px-5 py-3">Role</th>
-                  <th className="text-[11px] text-text-muted uppercase tracking-wider font-medium px-5 py-3">Action</th>
-                  <th className="text-[11px] text-text-muted uppercase tracking-wider font-medium px-5 py-3">Date</th>
-                  <th className="text-[11px] text-text-muted uppercase tracking-wider font-medium px-5 py-3">Status</th>
+                  <th className="text-[12px] text-text-muted uppercaser font-medium px-5 py-3">Name</th>
+                  <th className="text-[12px] text-text-muted uppercaser font-medium px-5 py-3">Role</th>
+                  <th className="text-[12px] text-text-muted uppercaser font-medium px-5 py-3">Action</th>
+                  <th className="text-[12px] text-text-muted uppercaser font-medium px-5 py-3">Date</th>
+                  <th className="text-[12px] text-text-muted uppercaser font-medium px-5 py-3">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -1542,7 +1542,7 @@ export default function AuditPlanningView() {
                     <td className="text-[12.5px] text-text-secondary px-5 py-3">{entry.action}</td>
                     <td className="text-[12.5px] text-text-secondary px-5 py-3">{entry.date}</td>
                     <td className="px-5 py-3">
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
+                      <span className={`text-[12px] font-bold px-2 py-1 rounded-full ${
                         entry.status === 'completed'
                           ? 'bg-compliant-50 text-compliant-700'
                           : signedOff && entry.action === 'Final Sign-Off'
@@ -1628,7 +1628,7 @@ export default function AuditPlanningView() {
 
               {/* Signer dropdown */}
               <div className="mb-4">
-                <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider block mb-1.5">Signer</label>
+                <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Signer</label>
                 <div className="relative">
                   <button
                     onClick={() => setSignerDropdownOpen(p => !p)}
@@ -1665,7 +1665,7 @@ export default function AuditPlanningView() {
 
               {/* Date */}
               <div className="mb-4">
-                <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider block mb-1.5">Date</label>
+                <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Date</label>
                 <div className="px-3 py-2.5 border border-border rounded-lg text-[13px] text-text-secondary bg-surface-2">
                   March 25, 2026
                 </div>
@@ -1673,7 +1673,7 @@ export default function AuditPlanningView() {
 
               {/* Comments */}
               <div className="mb-5">
-                <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider block mb-1.5">Comments</label>
+                <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Comments</label>
                 <textarea
                   value={signOffComment}
                   onChange={(e) => setSignOffComment(e.target.value)}

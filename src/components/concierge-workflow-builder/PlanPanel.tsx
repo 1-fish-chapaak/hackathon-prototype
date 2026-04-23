@@ -132,7 +132,7 @@ function PlanSection({ workflow }: { workflow: WorkflowDraft | null }) {
   if (!workflow) {
     return (
       <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
-        <p className="text-[11.5px] text-ink-400">
+        <p className="text-[12px] text-ink-400">
           The execution plan appears once you generate a workflow.
         </p>
       </div>
@@ -140,14 +140,14 @@ function PlanSection({ workflow }: { workflow: WorkflowDraft | null }) {
   }
   return (
     <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-ink-400 mb-3">
+      <div className="text-[12px] font-bold uppercaser text-ink-400 mb-3">
         Query Execution Plan
       </div>
       <ol className="space-y-3">
         {workflow.steps.map((s, idx) => (
           <li key={s.id} className="flex items-start gap-3">
             <div className="flex flex-col items-center shrink-0">
-              <div className="w-6 h-6 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-[11px] font-bold">
+              <div className="w-6 h-6 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-[12px] font-bold">
                 {idx + 1}
               </div>
               {idx < workflow.steps.length - 1 && (
@@ -156,7 +156,7 @@ function PlanSection({ workflow }: { workflow: WorkflowDraft | null }) {
             </div>
             <div className="min-w-0 pb-1">
               <div className="text-[12px] font-semibold text-ink-800 truncate">{s.name}</div>
-              <div className="text-[11px] text-ink-400 leading-relaxed">{s.description}</div>
+              <div className="text-[12px] text-ink-400 leading-relaxed">{s.description}</div>
             </div>
           </li>
         ))}
@@ -166,7 +166,7 @@ function PlanSection({ workflow }: { workflow: WorkflowDraft | null }) {
           <Check size={11} />
         </div>
         <div className="min-w-0">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-compliant-700">
+          <div className="text-[12px] font-bold uppercaser text-compliant-700">
             {workflow.output.type === 'flags'
               ? 'Flags Output'
               : workflow.output.type === 'table'
@@ -196,7 +196,7 @@ function RACMSection() {
           <div className="text-[12px] font-semibold text-ink-800 leading-tight">
             Risk &amp; Control Matrix
           </div>
-          <div className="text-[10.5px] text-ink-400">
+          <div className="text-[12px] text-ink-400">
             {MAPPED_RISKS.length} risks · {MAPPED_RISKS.reduce((n, r) => n + r.controlsCount, 0)}{' '}
             controls
           </div>
@@ -205,10 +205,10 @@ function RACMSection() {
 
       <div className="mt-3 mb-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-ink-400">
+          <span className="text-[12px] font-bold uppercaser text-ink-400">
             Control Coverage
           </span>
-          <span className="text-[10.5px] font-semibold text-ink-600">
+          <span className="text-[12px] font-semibold text-ink-600">
             {mapped}/{total}
             {total - mapped > 0 && (
               <span className="ml-1 text-mitigated-700">
@@ -225,7 +225,7 @@ function RACMSection() {
         </div>
       </div>
 
-      <div className="text-[10px] font-bold uppercase tracking-wider text-ink-400 mb-2">
+      <div className="text-[12px] font-bold uppercaser text-ink-400 mb-2">
         Mapped Risks
       </div>
       <ul className="space-y-2">
@@ -236,15 +236,15 @@ function RACMSection() {
           >
             <div className="flex items-center gap-2 mb-1">
               <ChevronRight size={11} className="text-ink-400 shrink-0" />
-              <span className="text-[11px] font-semibold text-ink-800">{r.id}</span>
+              <span className="text-[12px] font-semibold text-ink-800">{r.id}</span>
               <span
-                className={`text-[9.5px] uppercase tracking-wider font-bold rounded-full px-1.5 py-0.5 ${SEVERITY_COLORS[r.severity]}`}
+                className={`text-[9.5px] uppercaser font-bold rounded-full px-1.5 py-0.5 ${SEVERITY_COLORS[r.severity]}`}
               >
                 {r.severity}
               </span>
               <span
                 className={[
-                  'text-[9.5px] uppercase tracking-wider font-bold rounded-full px-1.5 py-0.5',
+                  'text-[9.5px] uppercaser font-bold rounded-full px-1.5 py-0.5',
                   r.status === 'Mapped'
                     ? 'text-evidence bg-evidence-50'
                     : 'text-mitigated bg-mitigated-50',
@@ -253,8 +253,8 @@ function RACMSection() {
                 {r.status}
               </span>
             </div>
-            <div className="text-[11px] text-ink-700 leading-snug mb-1">{r.title}</div>
-            <div className="flex items-center gap-2 text-[10px] text-ink-400">
+            <div className="text-[12px] text-ink-700 leading-snug mb-1">{r.title}</div>
+            <div className="flex items-center gap-2 text-[12px] text-ink-400">
               <span>{r.process}</span>
               <span>·</span>
               <span className="font-mono">{r.evidence}</span>
@@ -366,7 +366,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
           <span className="text-[12px] font-semibold text-ink-700 flex-1">
             Tolerance rules
           </span>
-          <span className="text-[10.5px] font-semibold text-ink-400">
+          <span className="text-[12px] font-semibold text-ink-400">
             {activeRuleCount} active
           </span>
         </div>
@@ -384,9 +384,9 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
                 <div className="flex-1 min-w-0">
                   <div className="text-[12px] font-semibold text-ink-800">{r.label}</div>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10.5px] text-ink-400">{r.description}</span>
+                    <span className="text-[12px] text-ink-400">{r.description}</span>
                     <span
-                      className={`text-[9.5px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 ${SEVERITY_BADGE[r.severity]}`}
+                      className={`text-[9.5px] font-bold uppercaser rounded px-1.5 py-0.5 ${SEVERITY_BADGE[r.severity]}`}
                     >
                       {r.severity}
                     </span>
@@ -399,7 +399,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
         </div>
         <button
           type="button"
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[11.5px] font-semibold text-ink-400 hover:text-brand-700 hover:bg-brand-50/40 border-t border-dashed border-canvas-border transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[12px] font-semibold text-ink-400 hover:text-brand-700 hover:bg-brand-50/40 border-t border-dashed border-canvas-border transition-colors cursor-pointer"
         >
           <Plus size={12} />
           Add tolerance parameter
@@ -411,7 +411,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
         <div className="flex items-center gap-2 px-3 py-2.5 border-b border-canvas-border">
           <BookOpenText size={13} className="text-ink-400" />
           <span className="text-[12px] font-semibold text-ink-700 flex-1">Notes</span>
-          <span className="text-[10.5px] font-semibold text-ink-400">
+          <span className="text-[12px] font-semibold text-ink-400">
             {notes.length} ref{notes.length === 1 ? '' : 's'}
           </span>
         </div>
@@ -447,7 +447,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
                       </span>
                     )}
                   </div>
-                  <p className="text-[10.5px] text-ink-400 mt-0.5 leading-relaxed">
+                  <p className="text-[12px] text-ink-400 mt-0.5 leading-relaxed">
                     {n.description}
                   </p>
                 </div>
@@ -460,7 +460,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
             <div className="rounded-lg border border-brand-200 bg-brand-50/40 p-2.5">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Lightbulb size={11} className="text-brand-600" />
-                <span className="text-[10.5px] font-bold text-brand-700 uppercase tracking-wider">
+                <span className="text-[12px] font-bold text-brand-700 uppercaser">
                   AI Suggestions
                 </span>
               </div>
@@ -473,7 +473,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
                     className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/70 border border-brand-100 hover:bg-white hover:border-brand-300 transition-colors cursor-pointer group"
                   >
                     <Plus size={11} className="text-brand-400 group-hover:text-brand-700" />
-                    <span className="text-[11.5px] text-brand-700 text-left flex-1">{s}</span>
+                    <span className="text-[12px] text-brand-700 text-left flex-1">{s}</span>
                   </button>
                 ))}
               </div>
@@ -503,14 +503,14 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
                     setNewDesc('');
                   }
                 }}
-                className="w-full rounded-md border border-canvas-border bg-canvas-elevated px-2 py-1.5 text-[11.5px] text-ink-600 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/30 transition-all"
+                className="w-full rounded-md border border-canvas-border bg-canvas-elevated px-2 py-1.5 text-[12px] text-ink-600 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/30 transition-all"
               />
               <div className="flex items-center gap-1.5 pt-0.5">
                 <button
                   type="button"
                   onClick={addNote}
                   disabled={!newName.trim()}
-                  className={`inline-flex items-center gap-1 rounded-md text-[11px] font-semibold px-2 py-1 transition-colors ${
+                  className={`inline-flex items-center gap-1 rounded-md text-[12px] font-semibold px-2 py-1 transition-colors ${
                     newName.trim()
                       ? 'bg-brand-600 hover:bg-brand-500 text-white cursor-pointer'
                       : 'bg-brand-100 text-brand-300 cursor-not-allowed'
@@ -526,7 +526,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
                     setNewName('');
                     setNewDesc('');
                   }}
-                  className="inline-flex items-center gap-1 rounded-md text-[11px] font-semibold px-2 py-1 text-ink-500 hover:bg-canvas transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 rounded-md text-[12px] font-semibold px-2 py-1 text-ink-500 hover:bg-canvas transition-colors cursor-pointer"
                 >
                   <X size={10} />
                   Cancel
@@ -537,7 +537,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
             <button
               type="button"
               onClick={() => setAddingNote(true)}
-              className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-canvas-border bg-canvas hover:border-brand-300 hover:text-brand-700 text-ink-400 text-[11.5px] font-semibold px-3 py-2 transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-canvas-border bg-canvas hover:border-brand-300 hover:text-brand-700 text-ink-400 text-[12px] font-semibold px-3 py-2 transition-colors cursor-pointer"
             >
               <Plus size={12} />
               Add Note
@@ -548,7 +548,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
 
       {/* Context: which workflow */}
       {workflow && (
-        <div className="text-center text-[10px] uppercase tracking-wider text-ink-400 font-semibold">
+        <div className="text-center text-[12px] uppercaser text-ink-400 font-semibold">
           For {workflow.name}
         </div>
       )}
@@ -581,17 +581,17 @@ function OutputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
   if (!workflow) return <PlanSection workflow={null} />;
   return (
     <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-ink-400 mb-3">
+      <div className="text-[12px] font-bold uppercaser text-ink-400 mb-3">
         Output Configuration
       </div>
       <div className="rounded-lg border border-compliant/40 bg-compliant-50 p-3">
-        <div className="text-[10px] font-bold uppercase tracking-wider text-compliant-700 mb-1">
+        <div className="text-[12px] font-bold uppercaser text-compliant-700 mb-1">
           {workflow.output.type} output
         </div>
         <div className="text-[12px] font-semibold text-ink-800 leading-tight mb-1">
           {workflow.output.title}
         </div>
-        <p className="text-[11px] text-ink-600 leading-relaxed">{workflow.output.description}</p>
+        <p className="text-[12px] text-ink-600 leading-relaxed">{workflow.output.description}</p>
       </div>
     </div>
   );

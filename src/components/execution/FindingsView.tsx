@@ -129,7 +129,7 @@ function SeverityBadge({ severity }: { severity: Severity }) {
   };
   const s = map[severity];
   return (
-    <span className={`inline-flex items-center gap-1 ${s.bg} ${s.text} border px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap`}>
+    <span className={`inline-flex items-center gap-1 ${s.bg} ${s.text} border px-2 py-0.5 rounded-full text-[12px] font-bold whitespace-nowrap`}>
       <AlertTriangle size={10} />
       {severity}
     </span>
@@ -145,7 +145,7 @@ function StatusBadge({ status }: { status: Status }) {
   };
   const s = map[status];
   return (
-    <span className={`inline-flex items-center gap-1 ${s.bg} ${s.text} border px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${s.pulse ? 'animate-pulse' : ''}`}>
+    <span className={`inline-flex items-center gap-1 ${s.bg} ${s.text} border px-2 py-0.5 rounded-full text-[12px] font-bold whitespace-nowrap ${s.pulse ? 'animate-pulse' : ''}`}>
       {s.icon}
       {status}
     </span>
@@ -178,11 +178,11 @@ export default function FindingsView() {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={350} opacity={0.08} />
-      <div className="px-6 py-8 relative">
+      <div className="px-10 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text tracking-tight">Findings & Issues</h1>
+            <h1 className="text-xl font-bold text-text">Findings & Issues</h1>
             <p className="text-sm text-text-secondary mt-1">Track audit findings, remediation, and closure across all engagements</p>
           </div>
         </div>
@@ -198,7 +198,7 @@ export default function FindingsView() {
           ].map(card => (
             <div key={card.label} className="bg-white rounded-xl border border-border-light p-3 text-center hover:shadow-md transition-all duration-200">
               <div className={`text-xl font-bold ${card.color}`}>{card.value}</div>
-              <div className="text-[10px] text-text-muted uppercase tracking-wider">{card.label}</div>
+              <div className="text-[12px] text-text-muted uppercaser">{card.label}</div>
             </div>
           ))}
         </div>
@@ -216,7 +216,7 @@ export default function FindingsView() {
               }`}
             >
               {f.label}
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+              <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${
                 activeFilter === f.key ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'
               }`}>
                 {f.count}
@@ -244,7 +244,7 @@ export default function FindingsView() {
               <thead>
                 <tr className="border-b border-border-light bg-surface-2/50">
                   {['', 'Finding ID', 'Title', 'Engagement', 'Control', 'Severity', 'Status', 'Owner', 'Due Date', 'Aging'].map(h => (
-                    <th key={h} className="px-3 py-3 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+                    <th key={h} className="px-3 py-3 text-left text-[12px] font-semibold text-text-muted uppercaser">
                       {h}
                     </th>
                   ))}
@@ -274,16 +274,16 @@ export default function FindingsView() {
                           />
                         </td>
                         <td className="px-3 py-3">
-                          <span className="font-mono text-[11px] text-primary font-semibold">{row.id}</span>
+                          <span className="font-mono text-[12px] text-primary font-semibold">{row.id}</span>
                         </td>
                         <td className="px-3 py-3">
                           <span className="text-text font-medium text-[12px] max-w-[220px] truncate block">{row.title}</span>
                         </td>
                         <td className="px-3 py-3">
-                          <span className="text-text-secondary font-mono text-[10px] bg-gray-50 px-1.5 py-0.5 rounded">{row.engagement}</span>
+                          <span className="text-text-secondary font-mono text-[12px] bg-gray-50 px-1.5 py-0.5 rounded">{row.engagement}</span>
                         </td>
                         <td className="px-3 py-3">
-                          <span className="text-text-secondary font-mono text-[10px] bg-gray-50 px-1.5 py-0.5 rounded">{row.control}</span>
+                          <span className="text-text-secondary font-mono text-[12px] bg-gray-50 px-1.5 py-0.5 rounded">{row.control}</span>
                         </td>
                         <td className="px-3 py-3">
                           <SeverityBadge severity={row.severity} />
@@ -292,13 +292,13 @@ export default function FindingsView() {
                           <StatusBadge status={row.status} />
                         </td>
                         <td className="px-3 py-3">
-                          <span className="text-text-secondary text-[11px] font-medium">{row.owner}</span>
+                          <span className="text-text-secondary text-[12px] font-medium">{row.owner}</span>
                         </td>
                         <td className="px-3 py-3">
-                          <span className="text-text-secondary text-[11px]">{row.dueDate}</span>
+                          <span className="text-text-secondary text-[12px]">{row.dueDate}</span>
                         </td>
                         <td className="px-3 py-3">
-                          <span className={`text-[11px] font-semibold ${isOverdue ? 'text-red-600' : isClosed ? 'text-gray-400' : 'text-text-secondary'}`}>
+                          <span className={`text-[12px] font-semibold ${isOverdue ? 'text-red-600' : isClosed ? 'text-gray-400' : 'text-text-secondary'}`}>
                             {row.aging}
                           </span>
                         </td>
@@ -322,42 +322,42 @@ export default function FindingsView() {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden border-b border-border-light bg-surface-2/30"
                   >
-                    <div className="px-6 py-5 grid grid-cols-3 gap-6">
+                    <div className="px-10 py-5 grid grid-cols-3 gap-6">
                       {/* Remediation Plan */}
                       <div>
-                        <h4 className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2">Remediation Plan</h4>
+                        <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-2">Remediation Plan</h4>
                         <p className="text-[12px] text-text-secondary leading-relaxed">{row.remediationPlan}</p>
                       </div>
 
                       {/* Timeline */}
                       <div>
-                        <h4 className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2">Timeline</h4>
+                        <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-2">Timeline</h4>
                         <p className="text-[12px] text-text-secondary leading-relaxed">{row.timeline}</p>
                       </div>
 
                       {/* Evidence & Actions */}
                       <div>
-                        <h4 className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2">Evidence Links</h4>
+                        <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-2">Evidence Links</h4>
                         <div className="space-y-1.5 mb-4">
                           {row.evidenceLinks.map(link => (
-                            <div key={link} className="flex items-center gap-1.5 text-[11px] text-primary hover:underline cursor-pointer">
+                            <div key={link} className="flex items-center gap-1.5 text-[12px] text-primary hover:underline cursor-pointer">
                               <ExternalLink size={10} />
                               {link}
                             </div>
                           ))}
                         </div>
 
-                        <h4 className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2">Actions</h4>
+                        <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-2">Actions</h4>
                         <div className="flex flex-wrap gap-2">
-                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-primary/20 bg-primary/5 text-primary text-[10px] font-semibold hover:bg-primary/10 transition-all cursor-pointer">
+                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-primary/20 bg-primary/5 text-primary text-[12px] font-semibold hover:bg-primary/10 transition-all cursor-pointer">
                             <ArrowUpRight size={10} />
                             View in Engagement
                           </button>
-                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-[10px] font-semibold hover:bg-amber-100 transition-all cursor-pointer">
+                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-[12px] font-semibold hover:bg-amber-100 transition-all cursor-pointer">
                             <Bell size={10} />
                             Send Reminder
                           </button>
-                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 text-red-700 text-[10px] font-semibold hover:bg-red-100 transition-all cursor-pointer">
+                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 text-red-700 text-[12px] font-semibold hover:bg-red-100 transition-all cursor-pointer">
                             <AlertTriangle size={10} />
                             Escalate
                           </button>
@@ -372,11 +372,11 @@ export default function FindingsView() {
 
           {/* Table Footer */}
           <div className="flex items-center justify-between px-4 py-3 border-t border-border-light bg-surface-2/30">
-            <span className="text-[11px] text-text-muted">
+            <span className="text-[12px] text-text-muted">
               Showing {filtered.length} of {FINDINGS.length} findings
             </span>
             <div className="flex items-center gap-1">
-              <span className="text-[11px] text-text-muted">Page 1 of 1</span>
+              <span className="text-[12px] text-text-muted">Page 1 of 1</span>
               <button className="p-1 rounded hover:bg-gray-100 text-text-muted cursor-pointer">
                 <ChevronRight size={14} />
               </button>

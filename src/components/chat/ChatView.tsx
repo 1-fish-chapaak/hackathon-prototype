@@ -264,13 +264,13 @@ function SaveWorkflowButton() {
   const [saved, setSaved] = useState(false);
   if (saved) {
     return (
-      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="flex items-center gap-1.5 px-3 py-2 bg-green-50 text-green-600 rounded-lg text-[11px] font-semibold">
+      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="flex items-center gap-1.5 px-3 py-2 bg-green-50 text-green-600 rounded-lg text-[12px] font-semibold">
         <CheckCircle size={12} /> Saved to Library
       </motion.div>
     );
   }
   return (
-    <button onClick={() => setSaved(true)} className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[11px] font-semibold transition-colors cursor-pointer">
+    <button onClick={() => setSaved(true)} className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
       <Save size={12} /> Save to Library
     </button>
   );
@@ -798,8 +798,8 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                   </div>
                   <div className="min-w-0">
                     <div className="text-[13px] font-medium text-text truncate group-hover:text-primary transition-colors">{chat.title}</div>
-                    <div className="text-[11px] text-text-muted truncate mt-0.5">{chat.preview}</div>
-                    <div className="text-[10px] text-text-muted/60 mt-1">{chat.timestamp}</div>
+                    <div className="text-[12px] text-text-muted truncate mt-0.5">{chat.preview}</div>
+                    <div className="text-[12px] text-text-muted/60 mt-1">{chat.timestamp}</div>
                   </div>
                 </div>
               </button>
@@ -962,7 +962,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
               >
                 <div className="flex items-center justify-center gap-2 mb-3">
                   <Lightbulb size={13} className="text-primary/60" />
-                  <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">AI Recommended</span>
+                  <span className="text-[12px] font-semibold text-text-muted uppercaser">AI Recommended</span>
                 </div>
                 <div className="flex justify-center gap-4">
                   {RECOMMENDED_WORKFLOWS.map((rw, i) => (
@@ -994,8 +994,8 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                             <rw.icon size={15} />
                           </div>
                           <div className="text-[12.5px] font-semibold text-text group-hover:text-primary transition-colors leading-tight mb-1">{rw.label}</div>
-                          <div className="text-[10.5px] text-text-muted leading-snug">{rw.desc}</div>
-                          <div className="mt-3 flex items-center gap-1 text-[10px] text-primary/60 group-hover:text-primary transition-colors font-medium">
+                          <div className="text-[12px] text-text-muted leading-snug">{rw.desc}</div>
+                          <div className="mt-3 flex items-center gap-1 text-[12px] text-primary/60 group-hover:text-primary transition-colors font-medium">
                             <Sparkles size={9} />
                             Click to build
                           </div>
@@ -1028,12 +1028,12 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           <div className="flex items-center gap-3">
             <button
               onClick={() => { setMessages([]); setInput(''); setShowClarificationCard(false); setShowAssumptions(false); setShowProgressiveLoader(false); setWorkflowBuildPhase(0); setCurrentWorkflowType(null); clearTimers(); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-light text-[11px] font-medium text-text-secondary hover:bg-white hover:border-primary/20 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-light text-[12px] font-medium text-text-secondary hover:bg-white hover:border-primary/20 transition-all cursor-pointer"
             >
               <Plus size={12} />
               New Chat
             </button>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-primary/10 to-primary-medium/10 text-primary text-[11px] font-semibold">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-primary/10 to-primary-medium/10 text-primary text-[12px] font-semibold">
               <Sparkles size={11} />
               AI Copilot
             </div>
@@ -1046,19 +1046,19 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           onScroll={handleScroll}
           className="flex-1 overflow-y-auto"
         >
-          <div className="px-6 sm:px-6 py-6 space-y-6">
+          <div className="px-10 sm:px-6 py-6 space-y-6">
             <AnimatePresence initial={false}>
               {messages.map((msg, msgIdx) => (
                 <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className="max-w-[85%]">
                     {msg.role === 'assistant' && !msg.richType && (
-                      <div className="mb-1.5 font-mono text-[11px] text-ink-500 tabular-nums">
+                      <div className="mb-1.5 font-mono text-[12px] text-ink-500 tabular-nums">
                         IRA · responding
                       </div>
                     )}
                     {msg.role === 'assistant' && msg.thinking && (
                       <div className="mb-2 ml-7">
-                        <button onClick={() => setThinkingExpanded(p => !p)} className="flex items-center gap-1.5 text-[11px] text-text-muted hover:text-text-secondary transition-colors cursor-pointer">
+                        <button onClick={() => setThinkingExpanded(p => !p)} className="flex items-center gap-1.5 text-[12px] text-text-muted hover:text-text-secondary transition-colors cursor-pointer">
                           <ChevronDown size={12} className={`transition-transform ${thinkingExpanded ? '' : '-rotate-90'}`} />
                           <Sparkles size={10} className="text-primary/50" />
                           Thought for {msg.thinking.length} steps
@@ -1068,7 +1068,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                               <div className="mt-1.5 pl-3 border-l-2 border-primary/15 space-y-1">
                                 {msg.thinking.map((step, i) => (
-                                  <div key={i} className="text-[11px] text-text-muted/70 flex items-center gap-1.5">
+                                  <div key={i} className="text-[12px] text-text-muted/70 flex items-center gap-1.5">
                                     <div className="w-1 h-1 rounded-full bg-primary/30" />
                                     {step}
                                   </div>
@@ -1093,7 +1093,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                             className="glass-card rounded-xl p-3 text-center"
                           >
                             <div className={`text-lg font-bold ${kpi.color}`}>{kpi.value}</div>
-                            <div className="text-[9px] text-text-muted uppercase tracking-wider mt-0.5">{kpi.label}</div>
+                            <div className="text-[12px] text-text-muted uppercaser mt-0.5">{kpi.label}</div>
                           </motion.div>
                         ))}
                       </div>
@@ -1103,37 +1103,37 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                           <div className="flex items-center gap-2 mb-3">
                             <SlidersHorizontal size={14} className="text-primary" />
                             <span className="text-[12px] font-semibold text-text">Adjust Parameters</span>
-                            <span className="text-[9px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">Interactive</span>
+                            <span className="text-[12px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">Interactive</span>
                           </div>
                           <div className="space-y-3">
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <span className="text-[11px] text-text-secondary">Severity Threshold</span>
-                                <span className="text-[11px] font-bold text-primary">High+</span>
+                                <span className="text-[12px] text-text-secondary">Severity Threshold</span>
+                                <span className="text-[12px] font-bold text-primary">High+</span>
                               </div>
                               <div className="h-2 bg-surface-3 rounded-full overflow-hidden">
                                 <div className="h-full w-3/4 bg-gradient-to-r from-green-400 via-yellow-400 to-red-500 rounded-full" />
                               </div>
-                              <div className="flex justify-between text-[9px] text-text-muted mt-0.5">
+                              <div className="flex justify-between text-[12px] text-text-muted mt-0.5">
                                 <span>Low</span><span>Medium</span><span>High</span><span>Critical</span>
                               </div>
                             </div>
                             <div className="flex gap-3">
                               <div className="flex-1 flex items-center justify-between p-2 rounded-lg bg-surface-2">
-                                <span className="text-[10px] text-text-secondary">Min Controls</span>
-                                <span className="text-[11px] font-bold text-text bg-white px-2 py-0.5 rounded border border-border-light">0</span>
+                                <span className="text-[12px] text-text-secondary">Min Controls</span>
+                                <span className="text-[12px] font-bold text-text bg-white px-2 py-0.5 rounded border border-border-light">0</span>
                               </div>
                               <div className="flex-1 flex items-center justify-between p-2 rounded-lg bg-surface-2">
-                                <span className="text-[10px] text-text-secondary">Time Range</span>
-                                <span className="text-[11px] font-bold text-text bg-white px-2 py-0.5 rounded border border-border-light">90 days</span>
+                                <span className="text-[12px] text-text-secondary">Time Range</span>
+                                <span className="text-[12px] font-bold text-text bg-white px-2 py-0.5 rounded border border-border-light">90 days</span>
                               </div>
                             </div>
                           </div>
                           <div className="mt-3 flex gap-2">
-                            <button className="flex-1 text-[11px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg py-2 transition-colors cursor-pointer">
+                            <button className="flex-1 text-[12px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg py-2 transition-colors cursor-pointer">
                               Re-run with filters
                             </button>
-                            <button className="text-[11px] font-medium text-text-muted hover:text-text-secondary px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                            <button className="text-[12px] font-medium text-text-muted hover:text-text-secondary px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
                               Reset
                             </button>
                           </div>
@@ -1146,10 +1146,10 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                             <Save size={13} className="text-primary" />
                             <span className="text-[12px] font-semibold text-text">Save Workflow</span>
                           </div>
-                          <p className="text-[11px] text-text-muted mb-3">Ready to save this workflow to your library for recurring use?</p>
+                          <p className="text-[12px] text-text-muted mb-3">Ready to save this workflow to your library for recurring use?</p>
                           <div className="flex gap-2">
                             <SaveWorkflowButton />
-                            <button className="px-3 py-2 text-[11px] font-medium text-text-muted hover:text-text-secondary hover:bg-surface-2 rounded-lg transition-colors cursor-pointer">
+                            <button className="px-3 py-2 text-[12px] font-medium text-text-muted hover:text-text-secondary hover:bg-surface-2 rounded-lg transition-colors cursor-pointer">
                               Continue editing
                             </button>
                           </div>
@@ -1191,7 +1191,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                       >
                         <div className="flex items-center gap-1.5 mb-2">
                           <Lightbulb size={11} className="text-primary/50" />
-                          <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Suggested follow-ups</span>
+                          <span className="text-[12px] font-semibold text-text-muted uppercaser">Suggested follow-ups</span>
                         </div>
                         <div className="flex flex-col gap-2">
                           {msg.followUps.map((q, i) => (
@@ -1243,15 +1243,15 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
 
                     <div className="flex-1 min-w-0 pt-1">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-[11px] font-semibold text-primary">Auditify Copilot</span>
-                        <span className="text-[10px] text-text-muted">is thinking...</span>
+                        <span className="text-[12px] font-semibold text-primary">Auditify Copilot</span>
+                        <span className="text-[12px] text-text-muted">is thinking...</span>
                       </div>
 
                       {thinkingSteps.length > 0 && (
                         <div className="mb-2">
                           <div className="pl-3 border-l-2 border-primary/20 space-y-1">
                             {thinkingSteps.map((step, i) => (
-                              <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="text-[11px] text-text-muted flex items-center gap-1.5">
+                              <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="text-[12px] text-text-muted flex items-center gap-1.5">
                                 <div className={`w-1.5 h-1.5 rounded-full ${i === thinkingSteps.length - 1 ? 'bg-primary' : 'bg-primary/30'}`} />
                                 {step}
                               </motion.div>
@@ -1282,7 +1282,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           {/* Assumptions Panel */}
           <AnimatePresence>
             {showAssumptions && (
-              <div className="px-6 pb-4">
+              <div className="px-10 pb-4">
                 <AssumptionsPanel
                   answers={clarificationAnswers}
                   assumptions={currentAssumptions}
@@ -1295,7 +1295,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           {/* Progressive Loader */}
           <AnimatePresence>
             {showProgressiveLoader && (
-              <div className="px-6 pb-4">
+              <div className="px-10 pb-4">
                 <ProgressiveLoader
                   steps={LOADING_STEPS}
                   onComplete={handleProgressiveLoadingComplete}
@@ -1330,7 +1330,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           {files.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {files.map((f, i) => (
-                <div key={i} className="flex items-center gap-1 bg-primary-light text-primary text-[11px] px-2 py-1 rounded-md font-medium">
+                <div key={i} className="flex items-center gap-1 bg-primary-light text-primary text-[12px] px-2 py-1 rounded-md font-medium">
                   <FileText size={11} />
                   <span className="truncate max-w-[100px]">{f.name}</span>
                   <button onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))} className="hover:text-primary-hover ml-0.5 cursor-pointer"><X size={10} /></button>

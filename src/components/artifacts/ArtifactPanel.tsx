@@ -71,7 +71,7 @@ function PlanTab() {
           {steps.map((s, i) => (
             <div key={s.step} className="flex gap-3">
               <div className="flex flex-col items-center">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0 ${
                   s.status === 'done' ? 'bg-compliant-50 text-compliant-700' : 'bg-paper-50 text-ink-500'
                 }`}>
                   {s.step}
@@ -80,7 +80,7 @@ function PlanTab() {
               </div>
               <div className="pb-3">
                 <div className="text-[13px] font-medium text-text">{s.title}</div>
-                <div className="text-[11.5px] text-text-muted mt-0.5">{s.desc}</div>
+                <div className="text-[12px] text-text-muted mt-0.5">{s.desc}</div>
               </div>
             </div>
           ))}
@@ -91,7 +91,7 @@ function PlanTab() {
       <div className="mt-4 p-3 bg-mitigated-50/50 border border-mitigated/50 rounded-xl">
         <div className="flex items-center gap-1.5 mb-2">
           <AlertTriangle size={12} className="text-mitigated-700" />
-          <span className="text-[11px] font-bold text-mitigated-700">Assumptions Made</span>
+          <span className="text-[12px] font-bold text-mitigated-700">Assumptions Made</span>
         </div>
         <div className="space-y-1.5">
           {[
@@ -104,7 +104,7 @@ function PlanTab() {
           ].map((assumption, i) => (
             <div key={i} className="flex items-start gap-2">
               <div className="w-1 h-1 rounded-full bg-amber-400 mt-1.5 shrink-0" />
-              <span className="text-[10.5px] text-mitigated-700">{assumption}</span>
+              <span className="text-[12px] text-mitigated-700">{assumption}</span>
             </div>
           ))}
         </div>
@@ -148,15 +148,15 @@ ORDER BY
         <div className="grid grid-cols-3 gap-3 pt-3">
           <div className="bg-surface-2 rounded-lg p-3 text-center">
             <div className="text-lg font-bold text-text">1.2M</div>
-            <div className="text-[10px] text-text-muted uppercase tracking-wider">Records Scanned</div>
+            <div className="text-[12px] text-text-muted uppercaser">Records Scanned</div>
           </div>
           <div className="bg-surface-2 rounded-lg p-3 text-center">
             <div className="text-lg font-bold text-text">0.3s</div>
-            <div className="text-[10px] text-text-muted uppercase tracking-wider">Query Time</div>
+            <div className="text-[12px] text-text-muted uppercaser">Query Time</div>
           </div>
           <div className="bg-surface-2 rounded-lg p-3 text-center">
             <div className="text-lg font-bold text-text">9</div>
-            <div className="text-[10px] text-text-muted uppercase tracking-wider">Results</div>
+            <div className="text-[12px] text-text-muted uppercaser">Results</div>
           </div>
         </div>
       </CollapsibleSection>
@@ -186,7 +186,7 @@ function SourcesTab() {
             <div className="text-[12px] text-text-muted mt-2">Tables/Files used:</div>
             <div className="flex flex-wrap gap-1.5">
               {src.tables.map(t => (
-                <span key={t} className="text-[11px] bg-primary-xlight text-primary px-2 py-0.5 rounded font-mono">
+                <span key={t} className="text-[12px] bg-primary-xlight text-primary px-2 py-0.5 rounded font-mono">
                   {t}
                 </span>
               ))}
@@ -242,7 +242,7 @@ function ResultTab({ onManageExceptions, onAddToReport, onShareResults }: {
                     <td className="px-3 py-2.5 font-mono text-text-muted">{r.id}</td>
                     <td className="px-3 py-2.5 text-text font-medium">{r.name}</td>
                     <td className="px-3 py-2.5">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${severityColor[r.severity]}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[12px] font-bold uppercase ${severityColor[r.severity]}`}>
                         {r.severity}
                       </span>
                     </td>
@@ -262,10 +262,10 @@ function ResultTab({ onManageExceptions, onAddToReport, onShareResults }: {
         <div className="pt-3 text-[12.5px] text-text leading-relaxed">
           <p>Found <strong>5 high/critical risks</strong> in the P2P process. <strong>2 risks</strong> (RSK-004, RSK-007) have <strong>zero controls</strong> mapped — these represent the highest exposure. RSK-008 (SOD violation) has controls but requires immediate attention due to critical severity.</p>
           <div className="mt-3 flex gap-2">
-            <button className="text-[11px] text-primary font-semibold flex items-center gap-1 hover:underline cursor-pointer" id="artifact-add-report">
+            <button className="text-[12px] text-primary font-semibold flex items-center gap-1 hover:underline cursor-pointer" id="artifact-add-report">
               Add to Report <ArrowRight size={10} />
             </button>
-            <button className="text-[11px] text-primary font-semibold flex items-center gap-1 hover:underline cursor-pointer">
+            <button className="text-[12px] text-primary font-semibold flex items-center gap-1 hover:underline cursor-pointer">
               Add to Dashboard <ArrowRight size={10} />
             </button>
           </div>
@@ -277,7 +277,7 @@ function ResultTab({ onManageExceptions, onAddToReport, onShareResults }: {
         {onAddToReport && (
           <button
             onClick={onAddToReport}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 border border-border-light rounded-xl text-[11px] font-semibold text-text-secondary hover:border-primary/30 hover:text-primary hover:bg-primary-xlight/50 transition-all cursor-pointer"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 border border-border-light rounded-xl text-[12px] font-semibold text-text-secondary hover:border-primary/30 hover:text-primary hover:bg-primary-xlight/50 transition-all cursor-pointer"
           >
             <FileText size={12} />
             Add to Report
@@ -286,7 +286,7 @@ function ResultTab({ onManageExceptions, onAddToReport, onShareResults }: {
         {onManageExceptions && (
           <button
             onClick={onManageExceptions}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-[11px] font-semibold hover:from-orange-600 hover:to-amber-600 transition-all cursor-pointer shadow-sm"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-[12px] font-semibold hover:from-orange-600 hover:to-amber-600 transition-all cursor-pointer shadow-sm"
           >
             <AlertTriangle size={12} />
             Manage Exceptions
@@ -295,7 +295,7 @@ function ResultTab({ onManageExceptions, onAddToReport, onShareResults }: {
         {onShareResults && (
           <button
             onClick={onShareResults}
-            className="flex items-center justify-center gap-1.5 px-3 py-2.5 border border-border-light rounded-xl text-[11px] font-semibold text-text-secondary hover:border-primary/30 hover:text-primary hover:bg-primary-xlight/50 transition-all cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 border border-border-light rounded-xl text-[12px] font-semibold text-text-secondary hover:border-primary/30 hover:text-primary hover:bg-primary-xlight/50 transition-all cursor-pointer"
           >
             <Share2 size={12} />
           </button>

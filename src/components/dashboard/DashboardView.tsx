@@ -378,11 +378,11 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
               <Sparkles size={13} className="text-white" />
             </div>
             <span className="text-[13px] font-semibold text-text">Alerts & Daily Digest</span>
-            {alertCount > 0 && <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">{alertCount} alert{alertCount > 1 ? 's' : ''}</span>}
-            <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">AI Summary</span>
+            {alertCount > 0 && <span className="text-[12px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">{alertCount} alert{alertCount > 1 ? 's' : ''}</span>}
+            <span className="text-[12px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">AI Summary</span>
             <ChevronDown size={14} className={`text-text-muted transition-transform ${expanded ? '' : '-rotate-90'}`} />
           </button>
-          <button onClick={handleShareClick} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors cursor-pointer">
+          <button onClick={handleShareClick} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors cursor-pointer">
             <Send size={11} /> Share with Team
           </button>
         </div>
@@ -395,7 +395,7 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
                 <div className="p-3.5 rounded-xl bg-gradient-to-r from-primary-xlight/60 via-white to-primary-xlight/40 border border-primary/10">
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <Sparkles size={11} className="text-primary" />
-                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider">AI Summary</span>
+                    <span className="text-[12px] font-bold text-primary uppercaser">AI Summary</span>
                   </div>
                   <p className="text-[12px] text-text leading-relaxed">{summary}</p>
                 </div>
@@ -412,10 +412,10 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
                       <div className={`p-1.5 rounded-lg shrink-0 ${color}`}><Icon size={12} /></div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[12px] text-text leading-relaxed">{item.text}</div>
-                        <div className="text-[10px] text-text-muted mt-0.5">{item.time}</div>
+                        <div className="text-[12px] text-text-muted mt-0.5">{item.time}</div>
                       </div>
                       {item.type === 'alert' && (
-                        <span className="text-[9px] font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-full shrink-0">Action needed</span>
+                        <span className="text-[12px] font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-full shrink-0">Action needed</span>
                       )}
                     </motion.div>
                   );
@@ -444,7 +444,7 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
                   <div className="p-2 bg-primary/10 text-primary rounded-xl"><Mail size={16} /></div>
                   <div>
                     <h3 className="text-[15px] font-semibold text-text">Share Alert Summary</h3>
-                    <p className="text-[11px] text-text-muted">AI-generated email ready to send</p>
+                    <p className="text-[12px] text-text-muted">AI-generated email ready to send</p>
                   </div>
                 </div>
                 <button onClick={() => setShowShareModal(false)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
@@ -456,7 +456,7 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
                 {/* Recipient */}
                 <div>
-                  <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider block mb-1.5">Send to</label>
+                  <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Send to</label>
                   <input
                     value={recipient}
                     onChange={e => setRecipient(e.target.value)}
@@ -480,7 +480,7 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
                       <Sparkles size={24} className="text-primary" />
                     </motion.div>
                     <div className="text-[13px] font-medium text-text mb-1">Generating email content...</div>
-                    <div className="text-[11px] text-text-muted">Summarizing alerts, metrics, and recommended actions</div>
+                    <div className="text-[12px] text-text-muted">Summarizing alerts, metrics, and recommended actions</div>
                     {/* Progress bar */}
                     <div className="mt-3 h-1.5 bg-surface-3 rounded-full overflow-hidden max-w-xs mx-auto">
                       <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ duration: 2, ease: 'easeOut' }}
@@ -493,19 +493,19 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
                 {emailGenerated && (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Generated Email</label>
-                      <button onClick={handleCopyEmail} className="flex items-center gap-1 text-[10px] font-medium text-primary hover:underline cursor-pointer">
+                      <label className="text-[12px] font-semibold text-text-muted uppercaser">Generated Email</label>
+                      <button onClick={handleCopyEmail} className="flex items-center gap-1 text-[12px] font-medium text-primary hover:underline cursor-pointer">
                         {emailCopied ? <><CheckCircle2 size={10} /> Copied!</> : <><Copy size={10} /> Copy</>}
                       </button>
                     </div>
                     {/* Subject */}
                     <div className="px-3 py-2 bg-surface-2 rounded-t-xl border border-border-light border-b-0">
-                      <span className="text-[10px] text-text-muted font-medium">Subject: </span>
+                      <span className="text-[12px] text-text-muted font-medium">Subject: </span>
                       <span className="text-[12px] font-semibold text-text">{emailTemplate.subject}</span>
                     </div>
                     {/* Body */}
                     <div className="px-4 py-3 bg-white rounded-b-xl border border-border-light max-h-[250px] overflow-y-auto">
-                      <pre className="text-[11.5px] text-text leading-relaxed whitespace-pre-wrap font-sans">{emailTemplate.body}</pre>
+                      <pre className="text-[12px] text-text leading-relaxed whitespace-pre-wrap font-sans">{emailTemplate.body}</pre>
                     </div>
                   </motion.div>
                 )}
@@ -639,7 +639,7 @@ function BarChart({ title, data, color, onExpand }: { title: string; data: BarDa
           const height = (d.value / max) * 100;
           return (
             <div key={d.label} className="flex-1 flex flex-col items-center gap-1">
-              <span className="text-[10px] text-text-muted font-medium">
+              <span className="text-[12px] text-text-muted font-medium">
                 {typeof d.value === 'number' && d.value >= 1000
                   ? `${(d.value / 1000).toFixed(1)}K`
                   : d.value}
@@ -651,7 +651,7 @@ function BarChart({ title, data, color, onExpand }: { title: string; data: BarDa
                 animate={{ height: `${height}%` }}
                 transition={{ duration: 0.5, delay: i * 0.06, ease: 'easeOut' }}
               />
-              <span className="text-[10px] text-text-muted">{d.label}</span>
+              <span className="text-[12px] text-text-muted">{d.label}</span>
             </div>
           );
         })}
@@ -701,14 +701,14 @@ function MiniTable({ title, headers, rows }: { title: string; headers: string[];
     <div className="glass-card rounded-xl p-5 transition-all duration-150 group">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-text">{title}</h3>
-        <button className="text-[11px] text-primary font-medium hover:underline cursor-pointer">View all</button>
+        <button className="text-[12px] text-primary font-medium hover:underline cursor-pointer">View all</button>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-border">
               {headers.map(h => (
-                <th key={h} className="text-[11px] text-text-muted uppercase tracking-wider font-medium pb-2 pr-4">{h}</th>
+                <th key={h} className="text-[12px] text-text-muted uppercaser font-medium pb-2 pr-4">{h}</th>
               ))}
             </tr>
           </thead>
@@ -745,7 +745,7 @@ function Sidebar({ dashboards, activeId, onSelect }: {
   return (
     <div className="w-[200px] shrink-0 border-r border-border bg-surface-1/50 overflow-y-auto flex flex-col">
       <div className="px-4 pt-5 pb-3">
-        <div className="text-[10px] text-text-muted uppercase tracking-widest font-semibold">Dashboards</div>
+        <div className="text-[12px] text-text-muted uppercasest font-semibold">Dashboards</div>
       </div>
       <nav className="flex-1 px-2 pb-4 space-y-1">
         {dashboards.map(d => {
@@ -813,14 +813,14 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.25 }}
-            className="px-6 py-8"
+            className="px-10 py-8"
           >
             {/* Page header — Editorial: breadcrumb · serif title · context · actions */}
             <div className="mb-6">
-              <div className="font-mono text-[11px] text-ink-500 mb-2 tracking-tight">Dashboards · {dashboard.name}</div>
+              <div className="font-mono text-[12px] text-ink-500 mb-2">Dashboards · {dashboard.name}</div>
               <div className="flex items-end justify-between">
                 <div>
-                  <h1 className="font-display text-[34px] font-[420] tracking-tight text-ink-900 leading-[1.15]">{dashboard.name}</h1>
+                  <h1 className="font-display text-[34px] font-[420] text-ink-900 leading-[1.15]">{dashboard.name}</h1>
                   <p className="text-[13px] text-ink-500 mt-1">{dashboard.subtitle}</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -855,7 +855,7 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
               transition={{ duration: 0.2 }}
               className="bg-canvas-elevated rounded-xl border border-brand-200 p-5 mb-6"
             >
-              <div className="font-mono text-[11px] text-ink-500 mb-2 tabular-nums">IRA · insight · {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+              <div className="font-mono text-[12px] text-ink-500 mb-2 tabular-nums">IRA · insight · {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
               <div className="flex-1">
                 <div className="text-[15px] leading-[1.6] text-ink-800 max-w-[66ch]">
                   {dashboard.id === 'p2p' && '23 potential duplicate invoices detected this month. 3 vendors show spend anomalies exceeding 2-sigma threshold.'}
@@ -889,12 +889,12 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[12px] font-semibold text-brand-600">FY26</span>
-                        <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                        <div className="flex items-center gap-1 text-[12px] font-semibold text-emerald-600">
                           <TrendingUp size={11} />
                           +12.4%
                         </div>
                       </div>
-                      <div className="text-[48px] font-extrabold leading-none tracking-tight text-text">94.2%</div>
+                      <div className="text-[48px] font-extrabold leading-none text-text">94.2%</div>
                       <p className="text-[13px] text-text-muted mt-2 leading-relaxed max-w-[280px]">
                         Compliance score driven by automated controls and continuous monitoring across 4 business processes.
                       </p>
@@ -931,8 +931,8 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                         </div>
                         <span className="text-[12px] font-semibold" style={{ color: '#92400E' }}>Money at Risk</span>
                       </div>
-                      <div className="text-[32px] font-extrabold leading-none tracking-tight" style={{ color: '#1C1917' }}>{'\u20B9'}6.16L</div>
-                      <div className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold text-red-600">
+                      <div className="text-[32px] font-extrabold leading-none" style={{ color: '#1C1917' }}>{'\u20B9'}6.16L</div>
+                      <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold text-red-600">
                         <TrendingDown size={10} />
                         -{'\u20B9'}2.1L <span className="text-text-muted font-normal">vs last quarter</span>
                       </div>
@@ -959,7 +959,7 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                         </div>
                         <span className="text-[12px] font-semibold text-brand-700">SOX Deadline</span>
                       </div>
-                      <div className="text-[40px] font-extrabold leading-none tracking-tight text-brand-700">6</div>
+                      <div className="text-[40px] font-extrabold leading-none text-brand-700">6</div>
                       <div className="text-[13px] font-semibold text-brand-600 mt-1">Days remaining</div>
                     </div>
                     {/* Dot grid */}
@@ -982,12 +982,12 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                           <AlertTriangle size={13} className="text-white" />
                         </div>
                         <span className="text-[12px] font-semibold" style={{ color: '#92400E' }}>Open Exceptions</span>
-                        <span className="ml-auto text-[10px] text-text-muted font-medium">This week</span>
+                        <span className="ml-auto text-[12px] text-text-muted font-medium">This week</span>
                       </div>
-                      <div className="text-[40px] font-extrabold leading-none tracking-tight" style={{ color: '#1C1917' }}>7</div>
+                      <div className="text-[40px] font-extrabold leading-none" style={{ color: '#1C1917' }}>7</div>
                       <div className="text-[12px] text-text-muted mt-1.5">3 unassigned, 4 in progress</div>
                     </div>
-                    <div className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold text-red-600">
+                    <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold text-red-600">
                       <TrendingUp size={10} />
                       +2 <span className="text-text-muted font-normal">this week</span>
                     </div>
@@ -1006,7 +1006,7 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                         </div>
                         <span className="text-[12px] font-semibold text-emerald-700">Savings YTD</span>
                       </div>
-                      <div className="text-[36px] font-extrabold leading-none tracking-tight text-emerald-700">{'\u20B9'}24L</div>
+                      <div className="text-[36px] font-extrabold leading-none text-emerald-700">{'\u20B9'}24L</div>
                       <div className="text-[12px] text-emerald-600/70 mt-1.5">Cost avoided via AI workflows</div>
                     </div>
                     {/* Green bar chart */}

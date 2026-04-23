@@ -29,7 +29,7 @@ export default function AssumptionsPanel({
           <span className="text-[14px] font-semibold text-ink-800">
             Assumptions
           </span>
-          <span className="inline-flex items-center px-2 h-5 rounded-full bg-mitigated-50 text-mitigated-700 text-[11px] font-medium tabular-nums">
+          <span className="inline-flex items-center px-2 h-5 rounded-full bg-mitigated-50 text-mitigated-700 text-[12px] font-medium tabular-nums">
             {assumptions.length}
           </span>
         </div>
@@ -37,7 +37,7 @@ export default function AssumptionsPanel({
         {/* Confirmed answers */}
         {answerEntries.length > 0 && (
           <div className="mb-4">
-            <p className="text-[11px] font-semibold text-ink-500 mb-2">
+            <p className="text-[12px] font-semibold text-ink-500 mb-2">
               Confirmed
             </p>
             <div className="space-y-2">
@@ -63,7 +63,7 @@ export default function AssumptionsPanel({
 
         {/* Assumptions list */}
         <div className="mb-4">
-          <p className="text-[11px] font-semibold text-ink-500 mb-2">
+          <p className="text-[12px] font-semibold text-ink-500 mb-2">
             IRA will assume
           </p>
           <div className="space-y-2">

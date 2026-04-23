@@ -137,8 +137,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: var(--color-canvas);
   color: var(--color-ink-800);
-  line-height: 1.55;
-  letter-spacing: -0.005em;
+  line-height: 16px;
+  letter-spacing: 0;
 }
 
 #root {
@@ -155,8 +155,8 @@ body {
 }
 
 /* ── Display heading family ── */
-.font-display { font-family: var(--font-display); letter-spacing: -0.02em; font-weight: 420; }
-h1, h2, h3 { letter-spacing: -0.02em; line-height: 1.2; }
+.font-display { font-family: var(--font-display); letter-spacing: 0; font-weight: 420; }
+h1, h2, h3 { letter-spacing: 0; line-height: 1.2; }
 
 /* ── Primary button: flat brand-600 ── */
 .btn-primary {
@@ -324,7 +324,7 @@ h1, h2, h3 { letter-spacing: -0.02em; line-height: 1.2; }
 }
 .ai-response .meta {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-ink-500);
   margin-bottom: 8px;
 }

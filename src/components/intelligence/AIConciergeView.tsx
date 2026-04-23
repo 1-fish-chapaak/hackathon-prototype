@@ -94,7 +94,7 @@ export default function AIConciergeView({ setView }: Props) {
                 <Bot size={20} className="text-white" />
               </div>
               <div>
-                <h1 className="text-[28px] font-extrabold tracking-tight">
+                <h1 className="text-[28px] font-extrabold">
                   <span className="ai-gradient-text">AI Concierge</span>
                 </h1>
                 <p className="text-[14px] text-text-secondary leading-relaxed">
@@ -134,7 +134,7 @@ export default function AIConciergeView({ setView }: Props) {
       </div>
 
       {/* Info Note */}
-      <div className="px-6 pb-4 -mt-1">
+      <div className="px-10 pb-4 -mt-1">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -151,7 +151,7 @@ export default function AIConciergeView({ setView }: Props) {
       </div>
 
       {/* Tool Grid */}
-      <div className="px-6 pb-12">
+      <div className="px-10 pb-12">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filtered.map((tool, i) => {
             const Icon = tool.icon;
@@ -183,7 +183,7 @@ export default function AIConciergeView({ setView }: Props) {
                         <Icon size={20} className="text-white" />
                       </div>
                       {tool.beta && (
-                        <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-white text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                        <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-white text-[12px] font-bold uppercaser shadow-sm">
                           Beta
                         </span>
                       )}
@@ -207,7 +207,7 @@ export default function AIConciergeView({ setView }: Props) {
                       {tool.tags.map((tag) => (
                         <span
                           key={tag.label}
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${tag.color}`}
+                          className={`px-2.5 py-0.5 rounded-full text-[12px] font-semibold ${tag.color}`}
                         >
                           {tag.label}
                         </span>

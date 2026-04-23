@@ -67,11 +67,11 @@ export default function ControlLibraryView({}: Props) {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-6 py-8 relative">
+      <div className="px-10 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text tracking-tight">Control Library</h1>
+            <h1 className="text-xl font-bold text-text">Control Library</h1>
             <p className="text-sm text-text-secondary mt-1">Centralized repository of all mitigating controls.</p>
           </div>
           <div className="flex items-center gap-3">
@@ -99,7 +99,7 @@ export default function ControlLibraryView({}: Props) {
           </div>
           <div className="flex-1">
             <div className="text-[12.5px] font-semibold text-text">Control Health Summary</div>
-            <div className="text-[11.5px] text-text-secondary mt-0.5">
+            <div className="text-[12px] text-text-secondary mt-0.5">
               1 key control has failed testing and requires remediation. 1 control is still in draft.
               <span className="text-primary font-semibold cursor-pointer hover:underline ml-1">Review findings</span>
             </div>
@@ -181,7 +181,7 @@ export default function ControlLibraryView({}: Props) {
               label: 'Control ID',
               width: '90px',
               render: (item) => (
-                <span className="font-mono text-text-muted text-[11px]">{String(item.controlId)}</span>
+                <span className="font-mono text-text-muted text-[12px]">{String(item.controlId)}</span>
               ),
             },
             {
@@ -204,7 +204,7 @@ export default function ControlLibraryView({}: Props) {
                 return (
                   <span className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: domainColors[ctrl.domain] || '#888' }} />
-                    <span className="text-text-secondary text-[11px] font-medium">{ctrl.domain}</span>
+                    <span className="text-text-secondary text-[12px] font-medium">{ctrl.domain}</span>
                   </span>
                 );
               },
@@ -217,7 +217,7 @@ export default function ControlLibraryView({}: Props) {
                 const ctrl = item as unknown as ControlRow;
                 const t = TYPE_STYLES[ctrl.type];
                 return (
-                  <span className={`inline-flex items-center ${t.bg} ${t.text} px-2.5 py-0.5 rounded text-[11px] font-bold whitespace-nowrap`}>
+                  <span className={`inline-flex items-center ${t.bg} ${t.text} px-2.5 py-0.5 rounded text-[12px] font-bold whitespace-nowrap`}>
                     {ctrl.type}
                   </span>
                 );
@@ -232,14 +232,14 @@ export default function ControlLibraryView({}: Props) {
                 const ctrl = item as unknown as ControlRow;
                 if (ctrl.keyControl) {
                   return (
-                    <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[11px] font-semibold">
+                    <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[12px] font-semibold">
                       <Star size={10} className="fill-amber-400 text-amber-400" />
                       Key
                     </span>
                   );
                 }
                 return (
-                  <span className="inline-flex items-center bg-gray-50 text-gray-500 px-2 py-0.5 rounded text-[11px] font-medium">
+                  <span className="inline-flex items-center bg-gray-50 text-gray-500 px-2 py-0.5 rounded text-[12px] font-medium">
                     Non-Key
                   </span>
                 );
@@ -263,7 +263,7 @@ export default function ControlLibraryView({}: Props) {
                 const ctrl = item as unknown as ControlRow;
                 const s = STATUS_STYLES[ctrl.status];
                 return (
-                  <span className={`inline-flex items-center gap-1.5 ${s.bg} ${s.text} px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap`}>
+                  <span className={`inline-flex items-center gap-1.5 ${s.bg} ${s.text} px-2.5 py-0.5 rounded-full text-[12px] font-semibold whitespace-nowrap`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
                     {ctrl.status}
                   </span>
@@ -287,11 +287,11 @@ export default function ControlLibraryView({}: Props) {
               </div>
               <div>
                 <h3 className="text-[13px] font-semibold text-text">AI Control Recommendations</h3>
-                <p className="text-[10.5px] text-text-muted mt-0.5">Access Recertification (C-005) has failed -- AI suggests remediation steps</p>
+                <p className="text-[12px] text-text-muted mt-0.5">Access Recertification (C-005) has failed -- AI suggests remediation steps</p>
               </div>
             </div>
             <div className="flex justify-center">
-              <button className="flex items-center gap-1.5 text-[11px] text-primary font-semibold hover:underline cursor-pointer">
+              <button className="flex items-center gap-1.5 text-[12px] text-primary font-semibold hover:underline cursor-pointer">
                 View remediation plan
                 <ArrowRight size={10} />
               </button>

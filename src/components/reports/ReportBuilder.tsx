@@ -144,7 +144,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
       {/* Left Sidebar — Available Blocks */}
       <div className="w-[240px] border-r border-border-light bg-white flex flex-col shrink-0">
         <div className="px-4 py-3 border-b border-border-light">
-          <h3 className="text-[12px] font-semibold text-text uppercase tracking-wider">Add Blocks</h3>
+          <h3 className="text-[12px] font-semibold text-text uppercaser">Add Blocks</h3>
         </div>
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
           {AVAILABLE_BLOCKS.map(block => (
@@ -157,22 +157,22 @@ export default function ReportBuilder({ context, onBack }: Props) {
                 <div className={`p-1 rounded-md ${sectionColor(block.type)}`}>
                   <block.icon size={12} />
                 </div>
-                <span className="text-[11px] font-semibold text-text group-hover:text-primary transition-colors">{block.label}</span>
+                <span className="text-[12px] font-semibold text-text group-hover:text-primary transition-colors">{block.label}</span>
               </div>
-              <p className="text-[10px] text-text-muted pl-7">{block.desc}</p>
+              <p className="text-[12px] text-text-muted pl-7">{block.desc}</p>
             </button>
           ))}
 
           <div className="pt-3 border-t border-border-light mt-3">
-            <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-2 px-1">Workflows</div>
+            <div className="text-[12px] font-semibold text-text-muted uppercaser mb-2 px-1">Workflows</div>
             {WORKFLOWS.slice(0, 5).map(wf => (
               <button
                 key={wf.id}
                 onClick={() => addWorkflowSection(wf)}
-                className="w-full text-left px-3 py-2 rounded-lg text-[11px] hover:bg-primary-xlight transition-colors cursor-pointer"
+                className="w-full text-left px-3 py-2 rounded-lg text-[12px] hover:bg-primary-xlight transition-colors cursor-pointer"
               >
                 <div className="font-medium text-text truncate">{wf.name}</div>
-                <div className="text-[9px] text-text-muted">{wf.type} · {wf.runs} runs</div>
+                <div className="text-[12px] text-text-muted">{wf.type} · {wf.runs} runs</div>
               </button>
             ))}
           </div>
@@ -228,10 +228,10 @@ export default function ReportBuilder({ context, onBack }: Props) {
           <div className="max-w-3xl mx-auto space-y-3">
             {/* Template Configuration Section */}
             <div className="bg-white rounded-xl border border-border-light shadow-sm p-5 mb-4">
-              <h4 className="text-[12px] font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><Layout size={13} className="text-primary" /> Template Configuration</h4>
+              <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-3 flex items-center gap-2"><Layout size={13} className="text-primary" /> Template Configuration</h4>
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="text-[11px] font-semibold text-text block mb-1.5">Template Name</label>
+                  <label className="text-[12px] font-semibold text-text block mb-1.5">Template Name</label>
                   <input
                     value={title}
                     onChange={e => setTitle(e.target.value)}
@@ -239,7 +239,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold text-text block mb-1.5">Theme Color</label>
+                  <label className="text-[12px] font-semibold text-text block mb-1.5">Theme Color</label>
                   <div className="flex gap-2">
                     {['#6a12cd', '#1a2744', '#0d9488', '#334155', '#dc2626'].map(c => (
                       <button
@@ -252,7 +252,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold text-text block mb-1.5">Category</label>
+                  <label className="text-[12px] font-semibold text-text block mb-1.5">Category</label>
                   <div className="relative">
                     <button
                       onClick={() => setShowCategoryDropdown(p => !p)}
@@ -267,11 +267,11 @@ export default function ReportBuilder({ context, onBack }: Props) {
               {/* Header / Footer Preview */}
               <div className="grid grid-cols-2 gap-4 mb-3">
                 <div>
-                  <label className="text-[11px] font-semibold text-text block mb-1.5">Header Text</label>
+                  <label className="text-[12px] font-semibold text-text block mb-1.5">Header Text</label>
                   <input value={templateHeader} onChange={e => setTemplateHeader(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border-light text-[12px] focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10" />
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold text-text block mb-1.5">Footer Text</label>
+                  <label className="text-[12px] font-semibold text-text block mb-1.5">Footer Text</label>
                   <input value={templateFooter} onChange={e => setTemplateFooter(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border-light text-[12px] focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10" />
                 </div>
               </div>
@@ -297,7 +297,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
             {/* Content Note */}
             <div className="flex items-center gap-2.5 p-3 bg-primary/[0.03] border border-primary/10 rounded-xl mb-2">
               <div className="p-1.5 rounded-lg bg-primary/10 text-primary shrink-0"><MessageSquare size={13} /></div>
-              <p className="text-[11px] text-text-secondary leading-relaxed">
+              <p className="text-[12px] text-text-secondary leading-relaxed">
                 Report content is added from <strong>/chat</strong> using the "Add to Report" action. Use this builder to configure layout, section ordering, and approval flow.
               </p>
             </div>
@@ -348,7 +348,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                       onChange={e => setSections(prev => prev.map(s => s.id === section.id ? { ...s, title: e.target.value } : s))}
                       className="flex-1 text-[13px] font-semibold text-text bg-transparent border-none outline-none"
                     />
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-text-muted bg-surface-2 px-2 py-0.5 rounded">
+                    <span className="text-[12px] font-bold uppercaser text-text-muted bg-surface-2 px-2 py-0.5 rounded">
                       {section.type.replace('-', ' ')}
                     </span>
                     <button onClick={() => removeSection(section.id)} className="p-1 hover:bg-risk-50 hover:text-risk-700 rounded text-text-muted transition-colors cursor-pointer">
@@ -361,7 +361,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                       <div className="flex items-center gap-2 p-3 bg-surface-2 rounded-lg">
                         <MessageSquare size={14} className="text-text-muted shrink-0" />
                         <div>
-                          <div className="text-[11px] text-text-muted">Content added from /chat</div>
+                          <div className="text-[12px] text-text-muted">Content added from /chat</div>
                           {section.content && <div className="text-[12px] text-text-secondary mt-0.5">{section.content}</div>}
                         </div>
                       </div>
@@ -370,7 +370,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                         <BarChart3 size={16} className="text-evidence-700" />
                         <div>
                           <div className="text-[12px] font-medium text-text">{section.title}</div>
-                          <div className="text-[10px] text-text-muted">{section.content}</div>
+                          <div className="text-[12px] text-text-muted">{section.content}</div>
                         </div>
                       </div>
                     ) : section.type === 'exception-summary' ? (
@@ -378,22 +378,22 @@ export default function ReportBuilder({ context, onBack }: Props) {
                         <div className="flex gap-3">
                           <div className="flex-1 p-2.5 bg-risk-50 rounded-lg text-center">
                             <div className="text-[16px] font-bold text-risk-700">8</div>
-                            <div className="text-[9px] text-risk-700 uppercase font-semibold">Flagged</div>
+                            <div className="text-[12px] text-risk-700 uppercase font-semibold">Flagged</div>
                           </div>
                           <div className="flex-1 p-2.5 bg-high-50 rounded-lg text-center">
                             <div className="text-[16px] font-bold text-high-700">3</div>
-                            <div className="text-[9px] text-high-700 uppercase font-semibold">Assigned</div>
+                            <div className="text-[12px] text-high-700 uppercase font-semibold">Assigned</div>
                           </div>
                           <div className="flex-1 p-2.5 bg-compliant-50 rounded-lg text-center">
                             <div className="text-[16px] font-bold text-compliant-700">1</div>
-                            <div className="text-[9px] text-compliant-700 uppercase font-semibold">Resolved</div>
+                            <div className="text-[12px] text-compliant-700 uppercase font-semibold">Resolved</div>
                           </div>
                         </div>
-                        <div className="text-[11px] text-text-muted">Total flagged amount: $616,650</div>
+                        <div className="text-[12px] text-text-muted">Total flagged amount: $616,650</div>
                       </div>
                     ) : section.type === 'action-taken' ? (
                       <div className="overflow-x-auto">
-                        <table className="w-full text-[11px]">
+                        <table className="w-full text-[12px]">
                           <thead>
                             <tr className="bg-surface-2">
                               <th className="text-left px-2 py-1.5 font-semibold text-text-secondary">Exception</th>
@@ -432,9 +432,9 @@ export default function ReportBuilder({ context, onBack }: Props) {
             {/* Approval Chain Section */}
             <div className="bg-white rounded-xl border border-border-light shadow-sm p-5 mt-4">
               <div className="flex items-center justify-between mb-3">
-                <h4 className="text-[12px] font-bold text-text-muted uppercase tracking-wider flex items-center gap-2"><UserCheck size={13} className="text-primary" /> Approval Chain</h4>
+                <h4 className="text-[12px] font-bold text-text-muted uppercaser flex items-center gap-2"><UserCheck size={13} className="text-primary" /> Approval Chain</h4>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-text-muted">Approvers:</span>
+                  <span className="text-[12px] text-text-muted">Approvers:</span>
                   <div className="flex gap-1">
                     {[1, 2, 3].map(n => (
                       <button
@@ -448,7 +448,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                           ];
                           setApprovers(APPROVER_DEFAULTS.slice(0, n));
                         }}
-                        className={`w-6 h-6 rounded-md text-[11px] font-bold transition-all cursor-pointer ${showApproverCount === n ? 'bg-primary text-white' : 'bg-surface-2 text-text-muted hover:bg-surface-3'}`}
+                        className={`w-6 h-6 rounded-md text-[12px] font-bold transition-all cursor-pointer ${showApproverCount === n ? 'bg-primary text-white' : 'bg-surface-2 text-text-muted hover:bg-surface-3'}`}
                       >
                         {n}
                       </button>
@@ -459,7 +459,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
               <div className="space-y-2">
                 {approvers.map((approver, i) => (
                   <div key={i} className="flex items-center gap-3 p-3 bg-surface-2 rounded-xl border border-border-light/50">
-                    <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-[12px] font-bold flex items-center justify-center shrink-0">
                       {i + 1}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -473,19 +473,19 @@ export default function ReportBuilder({ context, onBack }: Props) {
                         <input
                           value={approver.role}
                           onChange={e => setApprovers(prev => prev.map((a, idx) => idx === i ? { ...a, role: e.target.value } : a))}
-                          className="text-[11px] text-text-muted bg-transparent border-none outline-none flex-1"
+                          className="text-[12px] text-text-muted bg-transparent border-none outline-none flex-1"
                           placeholder="Role"
                         />
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold text-mitigated-700 bg-mitigated-50 px-2 py-0.5 rounded-full shrink-0">{approver.status}</span>
+                    <span className="text-[12px] font-bold text-mitigated-700 bg-mitigated-50 px-2 py-0.5 rounded-full shrink-0">{approver.status}</span>
                     {i > 0 && i < approvers.length && (
-                      <div className="text-[9px] text-text-muted shrink-0">Step {i + 1}</div>
+                      <div className="text-[12px] text-text-muted shrink-0">Step {i + 1}</div>
                     )}
                   </div>
                 ))}
               </div>
-              <div className="mt-3 text-[10px] text-text-muted flex items-center gap-1.5">
+              <div className="mt-3 text-[12px] text-text-muted flex items-center gap-1.5">
                 <Users size={11} />
                 Report will require approval from {approvers.length} approver{approvers.length > 1 ? 's' : ''} before finalization.
               </div>
@@ -620,7 +620,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                       <Sparkles size={12} className="text-primary" />
                       <span className="text-[12px] font-medium text-text">{wf.name}</span>
                     </div>
-                    <div className="text-[10px] text-text-muted ml-5 mt-0.5">{wf.type} · {wf.runs} runs · Last: {wf.lastRun}</div>
+                    <div className="text-[12px] text-text-muted ml-5 mt-0.5">{wf.type} · {wf.runs} runs · Last: {wf.lastRun}</div>
                   </button>
                 ))}
               </div>

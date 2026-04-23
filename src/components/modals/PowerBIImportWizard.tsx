@@ -75,13 +75,13 @@ export default function PowerBIImportWizard({ onClose }: Props) {
         <div className="px-5 py-3 flex items-center gap-2">
           {steps.map((s, i) => (
             <div key={s} className="flex items-center gap-2 flex-1">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold ${
                 i < currentIndex ? 'bg-compliant-50 text-compliant-700' :
                 i === currentIndex ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'
               }`}>
                 {i < currentIndex ? <CheckCircle size={14} /> : i + 1}
               </div>
-              <span className={`text-[11px] font-medium capitalize ${i === currentIndex ? 'text-primary' : 'text-text-muted'}`}>
+              <span className={`text-[12px] font-medium capitalize ${i === currentIndex ? 'text-primary' : 'text-text-muted'}`}>
                 {s}
               </span>
               {i < steps.length - 1 && <div className="flex-1 h-px bg-border-light ml-1" />}
@@ -135,8 +135,8 @@ export default function PowerBIImportWizard({ onClose }: Props) {
                         <BarChart3 size={20} className="text-mitigated-700" />
                       </div>
                       <div className="text-[12px] font-semibold text-text mb-0.5">{dash.name}</div>
-                      <div className="text-[10px] text-text-muted">{dash.workspace} · {dash.tiles} tiles</div>
-                      <div className="text-[9px] text-text-muted/60 mt-1">Last refresh: {dash.lastRefresh}</div>
+                      <div className="text-[12px] text-text-muted">{dash.workspace} · {dash.tiles} tiles</div>
+                      <div className="text-[12px] text-text-muted/60 mt-1">Last refresh: {dash.lastRefresh}</div>
                     </button>
                   ))}
                 </div>
@@ -170,7 +170,7 @@ export default function PowerBIImportWizard({ onClose }: Props) {
                       </div>
                     ))}
                   </div>
-                  <div className="text-[11px] text-text-muted text-center">
+                  <div className="text-[12px] text-text-muted text-center">
                     {selectedData.tiles} tiles · {selectedData.workspace} · Last refresh: {selectedData.lastRefresh}
                   </div>
                 </div>
@@ -204,7 +204,7 @@ export default function PowerBIImportWizard({ onClose }: Props) {
                 <p className="text-[13px] text-text-muted mb-6">"{selectedData?.name}" has been added to your dashboards.</p>
                 <button
                   onClick={onClose}
-                  className="px-6 py-2.5 bg-primary text-white rounded-xl text-[13px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer"
+                  className="px-10 py-2.5 bg-primary text-white rounded-xl text-[13px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer"
                 >
                   View in Dashboards
                 </button>

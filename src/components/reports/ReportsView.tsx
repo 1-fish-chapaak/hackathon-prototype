@@ -89,12 +89,12 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
         className="relative bg-white rounded-2xl shadow-2xl w-[520px] max-h-[80vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-border-light flex items-center justify-between shrink-0">
+        <div className="px-10 py-4 border-b border-border-light flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-primary/10 text-primary rounded-xl"><Upload size={16} /></div>
             <div>
               <h3 className="text-[15px] font-semibold text-text">Upload Template</h3>
-              <p className="text-[11px] text-text-muted">Convert a document into a report template</p>
+              <p className="text-[12px] text-text-muted">Convert a document into a report template</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
@@ -113,7 +113,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
                 </div>
                 <div className="text-center">
                   <p className="text-[13px] font-medium text-text">Drop your template file here or click to browse</p>
-                  <p className="text-[11px] text-text-muted mt-1">Supports .docx, .pdf, .xlsx</p>
+                  <p className="text-[12px] text-text-muted mt-1">Supports .docx, .pdf, .xlsx</p>
                 </div>
               </button>
             </motion.div>
@@ -126,7 +126,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
                 <div className="p-2 bg-primary/10 rounded-lg"><FileText size={18} className="text-primary" /></div>
                 <div className="flex-1">
                   <p className="text-[13px] font-semibold text-text">SOX_Report_Template.docx</p>
-                  <p className="text-[11px] text-text-muted">2.4 MB</p>
+                  <p className="text-[12px] text-text-muted">2.4 MB</p>
                 </div>
                 <CheckCircle2 size={18} className="text-green-500" />
               </div>
@@ -150,7 +150,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
               </motion.div>
               <div className="text-center">
                 <p className="text-[14px] font-semibold text-text">Analyzing document structure...</p>
-                <p className="text-[11px] text-text-muted mt-1">Detecting sections, headers, and formatting</p>
+                <p className="text-[12px] text-text-muted mt-1">Detecting sections, headers, and formatting</p>
               </div>
               <div className="w-48 h-1.5 bg-surface-2 rounded-full overflow-hidden">
                 <motion.div
@@ -170,7 +170,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
                 <CheckCircle2 size={20} className="text-green-500" />
                 <div>
                   <p className="text-[13px] font-semibold text-primary">Template converted!</p>
-                  <p className="text-[11px] text-primary/70">6 sections detected</p>
+                  <p className="text-[12px] text-primary/70">6 sections detected</p>
                 </div>
               </div>
 
@@ -185,7 +185,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
                       transition={{ delay: i * 0.08 }}
                       className="flex items-center gap-2.5 px-3 py-2 bg-surface-2 rounded-lg"
                     >
-                      <div className="w-5 h-5 rounded-md bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">{i + 1}</div>
+                      <div className="w-5 h-5 rounded-md bg-primary/10 text-primary flex items-center justify-center text-[12px] font-bold">{i + 1}</div>
                       <span className="text-[12px] text-text font-medium">{section}</span>
                     </motion.div>
                   ))}
@@ -205,7 +205,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {step === 'converted' && (
-          <div className="px-6 py-4 border-t border-border-light flex justify-end gap-2 shrink-0">
+          <div className="px-10 py-4 border-t border-border-light flex justify-end gap-2 shrink-0">
             <button onClick={onClose} className="px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">Cancel</button>
             <button
               onClick={() => { addToast({ type: 'success', message: `"${templateName}" saved to template library!` }); onClose(); }}
@@ -237,12 +237,12 @@ function TemplatePreviewModal({ template, onClose, onEdit }: { template: typeof 
         className="relative bg-white rounded-2xl shadow-2xl w-[520px] max-h-[80vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-border-light flex items-center justify-between shrink-0">
+        <div className="px-10 py-4 border-b border-border-light flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className={`p-2 rounded-xl ${color}`}><Icon size={16} /></div>
             <div>
               <h3 className="text-[15px] font-semibold text-text">{template.name}</h3>
-              <p className="text-[11px] text-text-muted">{template.category} template</p>
+              <p className="text-[12px] text-text-muted">{template.category} template</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
@@ -268,7 +268,7 @@ function TemplatePreviewModal({ template, onClose, onEdit }: { template: typeof 
                       <SectionIcon size={14} className="text-primary" />
                     </div>
                     <span className="text-[13px] text-text font-medium">{section.name}</span>
-                    <span className="ml-auto text-[10px] text-text-muted font-medium">Section {i + 1}</span>
+                    <span className="ml-auto text-[12px] text-text-muted font-medium">Section {i + 1}</span>
                   </motion.div>
                 );
               })}
@@ -276,7 +276,7 @@ function TemplatePreviewModal({ template, onClose, onEdit }: { template: typeof 
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-border-light flex justify-between shrink-0">
+        <div className="px-10 py-4 border-t border-border-light flex justify-between shrink-0">
           <button
             onClick={() => { onClose(); onEdit(); }}
             className="flex items-center gap-1.5 px-4 py-2 text-[12px] font-medium text-text-secondary border border-border-light hover:border-primary/30 hover:bg-primary-xlight rounded-lg transition-colors cursor-pointer"
@@ -305,7 +305,7 @@ function ApplyTemplateDropdown({ onSelect, onClose }: { onSelect: (template: typ
       className="absolute right-0 top-full mt-1 w-[280px] bg-white rounded-xl shadow-xl border border-border-light z-50 overflow-hidden"
     >
       <div className="px-3 py-2 border-b border-border-light">
-        <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Select Template</span>
+        <span className="text-[12px] font-semibold text-text-muted uppercaser">Select Template</span>
       </div>
       <div className="max-h-[260px] overflow-y-auto p-1.5">
         {REPORT_TEMPLATES.map(rt => {
@@ -321,7 +321,7 @@ function ApplyTemplateDropdown({ onSelect, onClose }: { onSelect: (template: typ
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[12px] font-medium text-text truncate">{rt.name}</div>
-                <div className="text-[10px] text-text-muted">{rt.category}</div>
+                <div className="text-[12px] text-text-muted">{rt.category}</div>
               </div>
             </button>
           );
@@ -350,12 +350,12 @@ function TemplateEditor({ template, onClose }: { template: typeof REPORT_TEMPLAT
         className="relative bg-white rounded-2xl shadow-2xl w-[600px] max-h-[80vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-border-light flex items-center justify-between shrink-0">
+        <div className="px-10 py-4 border-b border-border-light flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-primary/10 text-primary rounded-xl"><Settings size={16} /></div>
             <div>
               <h3 className="text-[15px] font-semibold text-text">Edit Template</h3>
-              <p className="text-[11px] text-text-muted">{template.name}</p>
+              <p className="text-[12px] text-text-muted">{template.name}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
@@ -382,7 +382,7 @@ function TemplateEditor({ template, onClose }: { template: typeof REPORT_TEMPLAT
                   <div className="flex gap-1 justify-center mb-1.5">
                     {t.colors.map((c, i) => <div key={i} className="w-5 h-5 rounded-full border border-white shadow-sm" style={{ background: c }} />)}
                   </div>
-                  <span className="text-[9px] font-medium text-text">{t.name}</span>
+                  <span className="text-[12px] font-medium text-text">{t.name}</span>
                 </button>
               ))}
             </div>
@@ -426,7 +426,7 @@ function TemplateEditor({ template, onClose }: { template: typeof REPORT_TEMPLAT
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-border-light flex justify-end gap-2 shrink-0">
+        <div className="px-10 py-4 border-t border-border-light flex justify-end gap-2 shrink-0">
           <button onClick={onClose} className="px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">Cancel</button>
           <button onClick={() => { addToast({ type: 'success', message: 'Template saved!' }); onClose(); }} className="px-5 py-2 bg-primary text-white rounded-xl text-[12px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer">Save Template</button>
         </div>
@@ -459,8 +459,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         {/* Section nav */}
         <div className="flex gap-2 flex-wrap">
           {sections.map((s, i) => (
-            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[11px] font-medium text-text-secondary shadow-sm">
-              <span className="text-[9px] font-bold text-primary/50">{i + 1}</span> {s.name}
+            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[12px] font-medium text-text-secondary shadow-sm">
+              <span className="text-[12px] font-bold text-primary/50">{i + 1}</span> {s.name}
             </div>
           ))}
         </div>
@@ -473,14 +473,14 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         <div className="bg-white rounded-xl border border-border-light overflow-hidden">
           <div className="px-5 py-3 border-b border-border-light flex items-center justify-between">
             <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><CheckCircle2 size={14} className="text-primary" /> Control Testing Results</h3>
-            <span className="text-[10px] text-text-muted">{controls.length} controls · {report.generatedAt}</span>
+            <span className="text-[12px] text-text-muted">{controls.length} controls · {report.generatedAt}</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-[11px]">
+            <table className="w-full text-[12px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-border-light">
                   {['Control ID', 'Control Name', 'Process', 'Type', 'Frequency', 'Owner', 'Result', 'Exceptions'].map(h => (
-                    <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercase tracking-wider">{h}</th>
+                    <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercaser">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -490,17 +490,17 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
                     <td className="px-4 py-2.5 font-mono font-semibold text-primary">{c.id}</td>
                     <td className="px-4 py-2.5 font-medium text-text">{c.name}</td>
                     <td className="px-4 py-2.5 text-text-secondary">{c.process}</td>
-                    <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${c.type === 'Preventive' ? 'text-blue-700 bg-blue-50' : 'text-violet-700 bg-violet-50'}`}>{c.type}</span></td>
+                    <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[12px] font-semibold ${c.type === 'Preventive' ? 'text-blue-700 bg-blue-50' : 'text-violet-700 bg-violet-50'}`}>{c.type}</span></td>
                     <td className="px-4 py-2.5 text-text-secondary">{c.freq}</td>
                     <td className="px-4 py-2.5 text-text-secondary">{c.owner}</td>
-                    <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${resultColor(c.result)}`}>{c.result}</span></td>
+                    <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[12px] font-bold ${resultColor(c.result)}`}>{c.result}</span></td>
                     <td className="px-4 py-2.5 text-center font-semibold">{c.exceptions > 0 ? <span className="text-red-600">{c.exceptions}</span> : <span className="text-text-muted">—</span>}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div className="px-5 py-3 border-t border-border-light bg-gray-50/50 flex items-center justify-between text-[10px] text-text-muted">
+          <div className="px-5 py-3 border-t border-border-light bg-gray-50/50 flex items-center justify-between text-[12px] text-text-muted">
             <span>Showing {controls.length} of 54 tested controls</span>
             <span>8 Effective · 2 Deficient · 0 Pending</span>
           </div>
@@ -515,13 +515,13 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
             ].map(d => (
               <div key={d.id} className="rounded-xl border border-border-light p-4 hover:shadow-sm transition-shadow">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-md bg-red-500">{d.id}</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${d.severity === 'Material Weakness' ? 'text-red-700 bg-red-50' : 'text-orange-700 bg-orange-50'}`}>{d.severity}</span>
-                  <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">{d.status}</span>
+                  <span className="text-[12px] font-bold text-white px-2 py-0.5 rounded-md bg-red-500">{d.id}</span>
+                  <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${d.severity === 'Material Weakness' ? 'text-red-700 bg-red-50' : 'text-orange-700 bg-orange-50'}`}>{d.severity}</span>
+                  <span className="text-[12px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">{d.status}</span>
                 </div>
                 <h4 className="text-[12px] font-semibold text-text mb-1">{d.title}</h4>
-                <p className="text-[11px] text-text-secondary leading-relaxed mb-2">{d.desc}</p>
-                <div className="flex items-center gap-3 text-[10px] text-text-muted">
+                <p className="text-[12px] text-text-secondary leading-relaxed mb-2">{d.desc}</p>
+                <div className="flex items-center gap-3 text-[12px] text-text-muted">
                   <span>Control: <span className="font-mono font-semibold text-primary">{d.control}</span></span>
                   <span>Due: <span className="font-semibold">{d.due}</span></span>
                   <span>Owner: {d.owner}</span>
@@ -556,8 +556,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
       <div className="space-y-5">
         <div className="flex gap-2 flex-wrap">
           {sections.map((s, i) => (
-            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[11px] font-medium text-text-secondary shadow-sm">
-              <span className="text-[9px] font-bold text-primary/50">{i + 1}</span> {s.name}
+            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[12px] font-medium text-text-secondary shadow-sm">
+              <span className="text-[12px] font-bold text-primary/50">{i + 1}</span> {s.name}
             </div>
           ))}
         </div>
@@ -566,26 +566,26 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
           <h3 className="text-[13px] font-bold text-text mb-4 flex items-center gap-2"><Shield size={14} className="text-primary" /> Risk Matrix</h3>
           <div className="flex gap-6">
             <div className="flex-1">
-              <div className="text-[9px] font-semibold text-text-muted uppercase tracking-wider mb-2 text-center">Impact →</div>
+              <div className="text-[12px] font-semibold text-text-muted uppercaser mb-2 text-center">Impact →</div>
               <div className="grid grid-cols-5 gap-1">
                 {[5,4,3,2,1].map(likelihood => (
                   [1,2,3,4,5].map(impact => {
                     const risksInCell = risks.filter(r => r.likelihood === likelihood && r.impact === impact);
                     return (
-                      <div key={`${likelihood}-${impact}`} className={`aspect-square rounded-lg flex items-center justify-center text-[9px] font-bold text-white ${riskColor(likelihood, impact)} ${risksInCell.length > 0 ? 'ring-2 ring-white shadow-md' : 'opacity-30'}`}>
+                      <div key={`${likelihood}-${impact}`} className={`aspect-square rounded-lg flex items-center justify-center text-[12px] font-bold text-white ${riskColor(likelihood, impact)} ${risksInCell.length > 0 ? 'ring-2 ring-white shadow-md' : 'opacity-30'}`}>
                         {risksInCell.length > 0 ? risksInCell.map(r => r.id.split('-')[1]).join(',') : ''}
                       </div>
                     );
                   })
                 ))}
               </div>
-              <div className="text-[9px] font-semibold text-text-muted uppercase tracking-wider mt-1 -rotate-0">↑ Likelihood</div>
+              <div className="text-[12px] font-semibold text-text-muted uppercaser mt-1 -rotate-0">↑ Likelihood</div>
             </div>
             <div className="w-48">
-              <div className="text-[10px] font-semibold text-text mb-2">Legend</div>
+              <div className="text-[12px] font-semibold text-text mb-2">Legend</div>
               <div className="space-y-1.5">
                 {[{ c: 'bg-red-500', l: 'Critical (12-25)' }, { c: 'bg-orange-400', l: 'High (8-11)' }, { c: 'bg-amber-300', l: 'Medium (4-7)' }, { c: 'bg-emerald-300', l: 'Low (1-3)' }].map(item => (
-                  <div key={item.l} className="flex items-center gap-2 text-[10px] text-text-secondary"><div className={`w-3 h-3 rounded ${item.c}`} /> {item.l}</div>
+                  <div key={item.l} className="flex items-center gap-2 text-[12px] text-text-secondary"><div className={`w-3 h-3 rounded ${item.c}`} /> {item.l}</div>
                 ))}
               </div>
             </div>
@@ -596,11 +596,11 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
           <div className="px-5 py-3 border-b border-border-light">
             <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-orange-500" /> Risk Register</h3>
           </div>
-          <table className="w-full text-[11px]">
+          <table className="w-full text-[12px]">
             <thead>
               <tr className="bg-gray-50 border-b border-border-light">
                 {['Risk ID', 'Description', 'Process', 'L', 'I', 'Score', 'Controls', 'Status'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercase tracking-wider">{h}</th>
+                  <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercaser">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -612,9 +612,9 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
                   <td className="px-4 py-2.5 text-text-secondary">{r.process}</td>
                   <td className="px-4 py-2.5 text-center">{r.likelihood}</td>
                   <td className="px-4 py-2.5 text-center">{r.impact}</td>
-                  <td className="px-4 py-2.5 text-center"><span className={`inline-flex w-6 h-6 items-center justify-center rounded-md text-[10px] font-bold text-white ${riskColor(r.likelihood, r.impact)}`}>{r.likelihood * r.impact}</span></td>
+                  <td className="px-4 py-2.5 text-center"><span className={`inline-flex w-6 h-6 items-center justify-center rounded-md text-[12px] font-bold text-white ${riskColor(r.likelihood, r.impact)}`}>{r.likelihood * r.impact}</span></td>
                   <td className="px-4 py-2.5 text-center font-semibold">{r.controls}</td>
-                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${r.status === 'Mitigated' ? 'text-emerald-700 bg-emerald-50' : r.status === 'Partial' ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50'}`}>{r.status}</span></td>
+                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[12px] font-bold ${r.status === 'Mitigated' ? 'text-emerald-700 bg-emerald-50' : r.status === 'Partial' ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50'}`}>{r.status}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -636,8 +636,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
       <div className="space-y-5">
         <div className="flex gap-2 flex-wrap">
           {sections.map((s, i) => (
-            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[11px] font-medium text-text-secondary shadow-sm">
-              <span className="text-[9px] font-bold text-primary/50">{i + 1}</span> {s.name}
+            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[12px] font-medium text-text-secondary shadow-sm">
+              <span className="text-[12px] font-bold text-primary/50">{i + 1}</span> {s.name}
             </div>
           ))}
         </div>
@@ -645,14 +645,14 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         <div className="grid grid-cols-4 gap-3">
           {processes.map(p => (
             <div key={p.name} className="bg-white rounded-xl border border-border-light p-4 hover:shadow-md hover:shadow-primary/5 transition-all">
-              <div className="text-[11px] font-semibold text-text-muted mb-2">{p.name}</div>
+              <div className="text-[12px] font-semibold text-text-muted mb-2">{p.name}</div>
               <div className="text-[28px] font-bold text-text leading-none">{p.rate}%</div>
-              <div className="text-[10px] text-text-muted mt-1 mb-3">Effectiveness Rate</div>
+              <div className="text-[12px] text-text-muted mt-1 mb-3">Effectiveness Rate</div>
               {/* Progress bar */}
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
                 <motion.div initial={{ width: 0 }} animate={{ width: `${(p.tested / p.total) * 100}%` }} transition={{ delay: 0.3, duration: 0.6 }} className="h-full rounded-full bg-primary" />
               </div>
-              <div className="flex justify-between text-[9px] text-text-muted">
+              <div className="flex justify-between text-[12px] text-text-muted">
                 <span>{p.tested}/{p.total} tested</span>
                 <span>{p.deficient} deficient</span>
               </div>
@@ -664,11 +664,11 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
           <div className="px-5 py-3 border-b border-border-light">
             <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-orange-500" /> Gap Analysis — Untested Controls</h3>
           </div>
-          <table className="w-full text-[11px]">
+          <table className="w-full text-[12px]">
             <thead>
               <tr className="bg-gray-50 border-b border-border-light">
                 {['Process', 'Untested', 'Deadline', 'Priority', 'Assigned To'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercase tracking-wider">{h}</th>
+                  <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercaser">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -683,7 +683,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
                   <td className="px-4 py-2.5 font-semibold text-text">{g.process}</td>
                   <td className="px-4 py-2.5 font-bold text-red-600">{g.untested}</td>
                   <td className="px-4 py-2.5 text-text-secondary">{g.deadline}</td>
-                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${g.priority === 'High' ? 'text-red-700 bg-red-50' : 'text-amber-700 bg-amber-50'}`}>{g.priority}</span></td>
+                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[12px] font-bold ${g.priority === 'High' ? 'text-red-700 bg-red-50' : 'text-amber-700 bg-amber-50'}`}>{g.priority}</span></td>
                   <td className="px-4 py-2.5 text-text-secondary">{g.assignee}</td>
                 </tr>
               ))}
@@ -696,8 +696,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
           <div className="space-y-2">
             {['Automate 5 manual detective controls in P2P — target: 98% effectiveness', 'Accelerate S2C control testing — hire 1 contractor for April-June sprint', 'Deploy AI anomaly detection on R2R reconciliation — reduce deficiency rate by 50%', 'Implement continuous monitoring for all preventive controls by Q2'].map((item, i) => (
               <div key={i} className="flex items-start gap-2.5 px-3 py-2 bg-primary/[0.02] rounded-lg">
-                <span className="text-[9px] font-bold text-primary bg-primary/10 w-5 h-5 rounded-md flex items-center justify-center shrink-0">{i + 1}</span>
-                <span className="text-[11px] text-text-secondary leading-relaxed">{item}</span>
+                <span className="text-[12px] font-bold text-primary bg-primary/10 w-5 h-5 rounded-md flex items-center justify-center shrink-0">{i + 1}</span>
+                <span className="text-[12px] text-text-secondary leading-relaxed">{item}</span>
               </div>
             ))}
           </div>
@@ -718,8 +718,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
       <div className="space-y-5">
         <div className="flex gap-2 flex-wrap">
           {sections.map((s, i) => (
-            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[11px] font-medium text-text-secondary shadow-sm">
-              <span className="text-[9px] font-bold text-primary/50">{i + 1}</span> {s.name}
+            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[12px] font-medium text-text-secondary shadow-sm">
+              <span className="text-[12px] font-bold text-primary/50">{i + 1}</span> {s.name}
             </div>
           ))}
         </div>
@@ -729,16 +729,16 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
             <div key={w.name} className="bg-white rounded-xl border border-border-light p-4 hover:shadow-md hover:shadow-primary/5 transition-all">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-[12px] font-semibold text-text">{w.name}</h4>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">{w.accuracy}% accuracy</span>
+                <span className="text-[12px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">{w.accuracy}% accuracy</span>
               </div>
               <div className="flex items-end gap-4 mb-3">
                 <div>
                   <div className="text-[20px] font-bold text-text">{w.runs}</div>
-                  <div className="text-[9px] text-text-muted uppercase">Runs</div>
+                  <div className="text-[12px] text-text-muted uppercase">Runs</div>
                 </div>
                 <div>
                   <div className="text-[20px] font-bold text-emerald-600">{w.savings}</div>
-                  <div className="text-[9px] text-text-muted uppercase">Saved</div>
+                  <div className="text-[12px] text-text-muted uppercase">Saved</div>
                 </div>
                 <div className="flex-1">
                   <svg width="100%" height="28" viewBox="0 0 100 28" preserveAspectRatio="none">
@@ -755,11 +755,11 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
           <div className="px-5 py-3 border-b border-border-light">
             <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-orange-500" /> Exception Breakdown</h3>
           </div>
-          <table className="w-full text-[11px]">
+          <table className="w-full text-[12px]">
             <thead>
               <tr className="bg-gray-50 border-b border-border-light">
                 {['Exception', 'Workflow', 'Type', 'Resolution', 'Time', 'Status'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercase tracking-wider">{h}</th>
+                  <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercaser">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -777,7 +777,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
                   <td className="px-4 py-2.5 text-text-secondary">{e.type}</td>
                   <td className="px-4 py-2.5 text-text-secondary">{e.resolution}</td>
                   <td className="px-4 py-2.5 text-text-secondary">{e.time}</td>
-                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${e.status === 'Closed' ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'}`}>{e.status}</span></td>
+                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[12px] font-bold ${e.status === 'Closed' ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'}`}>{e.status}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -793,8 +793,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
       <div className="space-y-5">
         <div className="flex gap-2 flex-wrap">
           {sections.map((s, i) => (
-            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[11px] font-medium text-text-secondary shadow-sm">
-              <span className="text-[9px] font-bold text-primary/50">{i + 1}</span> {s.name}
+            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[12px] font-medium text-text-secondary shadow-sm">
+              <span className="text-[12px] font-bold text-primary/50">{i + 1}</span> {s.name}
             </div>
           ))}
         </div>
@@ -806,10 +806,10 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
             { label: 'Audit Progress', value: '58%', delta: 'On track', sub: '54 of 87 controls tested', color: 'text-blue-600' },
           ].map(m => (
             <div key={m.label} className="bg-white rounded-xl border border-border-light p-5 text-center">
-              <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-2">{m.label}</div>
+              <div className="text-[12px] font-semibold text-text-muted uppercaser mb-2">{m.label}</div>
               <div className={`text-[32px] font-bold leading-none ${m.color}`}>{m.value}</div>
-              <div className="text-[11px] font-semibold text-emerald-600 mt-1">{m.delta}</div>
-              <div className="text-[10px] text-text-muted">{m.sub}</div>
+              <div className="text-[12px] font-semibold text-emerald-600 mt-1">{m.delta}</div>
+              <div className="text-[12px] text-text-muted">{m.sub}</div>
             </div>
           ))}
         </div>
@@ -824,13 +824,13 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
               { name: 'S2C — Source to Contract', progress: 21, controls: '3/14', risk: 'Medium' },
             ].map(p => (
               <div key={p.name} className="flex items-center gap-4">
-                <div className="w-48 text-[11px] font-medium text-text">{p.name}</div>
+                <div className="w-48 text-[12px] font-medium text-text">{p.name}</div>
                 <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
                   <motion.div initial={{ width: 0 }} animate={{ width: `${p.progress}%` }} transition={{ delay: 0.2, duration: 0.6 }} className="h-full rounded-full bg-primary" />
                 </div>
-                <span className="text-[11px] font-bold text-text w-10 text-right">{p.progress}%</span>
-                <span className="text-[10px] text-text-muted w-12">{p.controls}</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.risk === 'High' ? 'text-red-700 bg-red-50' : p.risk === 'Medium' ? 'text-amber-700 bg-amber-50' : 'text-emerald-700 bg-emerald-50'}`}>{p.risk}</span>
+                <span className="text-[12px] font-bold text-text w-10 text-right">{p.progress}%</span>
+                <span className="text-[12px] text-text-muted w-12">{p.controls}</span>
+                <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${p.risk === 'High' ? 'text-red-700 bg-red-50' : p.risk === 'Medium' ? 'text-amber-700 bg-amber-50' : 'text-emerald-700 bg-emerald-50'}`}>{p.risk}</span>
               </div>
             ))}
           </div>
@@ -841,8 +841,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
           <div className="space-y-2">
             {['Approve additional AI workflow investment for S2C process — projected 3x ROI based on P2P results', 'Remediate DEF-002 (journal entry override) before March 31 — material weakness impacting filing', 'Reallocate Tushar Goel from P2P to S2C support in April — P2P is 72% complete, S2C needs acceleration', 'Expand vendor master monitoring to O2C process — similar risk profile to P2P where it saved 2.4L'].map((rec, i) => (
               <div key={i} className="flex items-start gap-2.5 px-3 py-2.5 bg-primary/[0.02] rounded-lg border border-primary/5">
-                <span className="text-[9px] font-bold text-white bg-primary w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
-                <span className="text-[11px] text-text leading-relaxed">{rec}</span>
+                <span className="text-[12px] font-bold text-white bg-primary w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                <span className="text-[12px] text-text leading-relaxed">{rec}</span>
               </div>
             ))}
           </div>
@@ -856,8 +856,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
     <div className="space-y-5">
       <div className="flex gap-2 flex-wrap">
         {sections.map((s, i) => (
-          <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[11px] font-medium text-text-secondary shadow-sm">
-            <span className="text-[9px] font-bold text-primary/50">{i + 1}</span> {s.name}
+          <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[12px] font-medium text-text-secondary shadow-sm">
+            <span className="text-[12px] font-bold text-primary/50">{i + 1}</span> {s.name}
           </div>
         ))}
       </div>
@@ -866,7 +866,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         return (
           <div key={s.name} className="bg-white rounded-xl border border-border-light p-5">
             <h3 className="text-[13px] font-bold text-text mb-2 flex items-center gap-2"><SIcon size={14} className="text-primary" /> {s.name}</h3>
-            <div className="h-16 bg-gray-50 rounded-lg flex items-center justify-center text-[11px] text-text-muted border border-dashed border-border-light">
+            <div className="h-16 bg-gray-50 rounded-lg flex items-center justify-center text-[12px] text-text-muted border border-dashed border-border-light">
               Section content generated from {report.name} data
             </div>
           </div>
@@ -895,15 +895,15 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
       <div className="p-5">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-bold text-white px-2.5 py-1 rounded-md" style={{ background: accentColor }}>{query.id}</span>
-            <span className={`flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${query.status === 'Completed' ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'}`}>
+            <span className="text-[12px] font-bold text-white px-2.5 py-1 rounded-md" style={{ background: accentColor }}>{query.id}</span>
+            <span className={`flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full ${query.status === 'Completed' ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'}`}>
               <div className={`w-1.5 h-1.5 rounded-full ${query.status === 'Completed' ? 'bg-emerald-500' : 'bg-amber-500'}`} /> {query.status}
             </span>
-            <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full flex items-center gap-1"><TrendingUp size={9} /> {query.risk}</span>
-            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${query.severity === 'Critical' ? 'text-red-700 bg-red-50' : 'text-orange-700 bg-orange-50'}`}>{query.severity}</span>
+            <span className="text-[12px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full flex items-center gap-1"><TrendingUp size={9} /> {query.risk}</span>
+            <span className={`text-[12px] font-semibold px-2.5 py-1 rounded-full ${query.severity === 'Critical' ? 'text-red-700 bg-red-50' : 'text-orange-700 bg-orange-50'}`}>{query.severity}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-text-muted shrink-0">
-            <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">{query.addedBy.split(' ').map(n => n[0]).join('')}</div>
+          <div className="flex items-center gap-1.5 text-[12px] text-text-muted shrink-0">
+            <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[12px] font-bold flex items-center justify-center">{query.addedBy.split(' ').map(n => n[0]).join('')}</div>
             {query.addedBy}
           </div>
         </div>
@@ -916,7 +916,7 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
             {query.kpis.map(kpi => (
               <div key={kpi.label} className="glass-card rounded-xl p-3">
                 <div className={`text-xl font-bold ${kpi.color}`}>{kpi.value}</div>
-                <div className="text-[9px] text-text-muted uppercase tracking-wider mt-0.5 leading-tight">{kpi.label}</div>
+                <div className="text-[12px] text-text-muted uppercaser mt-0.5 leading-tight">{kpi.label}</div>
               </div>
             ))}
           </div>
@@ -932,7 +932,7 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
                 fill={`${accentColor}15`} stroke="none"
               />
             </svg>
-            <span className="text-[8px] text-text-muted mt-1">Trend</span>
+            <span className="text-[12px] text-text-muted mt-1">Trend</span>
           </div>
         </div>
 
@@ -940,7 +940,7 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
         <p className="text-[12.5px] text-text-secondary leading-relaxed">{query.summary}</p>
 
         {/* Expand toggle */}
-        <button onClick={() => setExpanded(p => !p)} className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-primary hover:text-primary-hover cursor-pointer transition-colors">
+        <button onClick={() => setExpanded(p => !p)} className="mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-primary hover:text-primary-hover cursor-pointer transition-colors">
           <ChevronDown size={13} className={`transition-transform ${expanded ? '' : '-rotate-90'}`} />
           {expanded ? 'Hide details' : 'Show findings & observations'}
         </button>
@@ -959,7 +959,7 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
                   <ul className="space-y-2">
                     {query.findings.map((f, i) => (
                       <li key={i} className="flex gap-2 text-[12px] text-text leading-relaxed">
-                        <span className="text-text-muted shrink-0 font-mono text-[10px] mt-0.5">{String(i + 1).padStart(2, '0')}</span>
+                        <span className="text-text-muted shrink-0 font-mono text-[12px] mt-0.5">{String(i + 1).padStart(2, '0')}</span>
                         {f}
                       </li>
                     ))}
@@ -1255,7 +1255,7 @@ function ReportView({ report, onBack, onShare }: {
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="h-full overflow-y-auto bg-surface-2">
-      <div className="px-6 py-6">
+      <div className="px-10 py-6">
         {/* Top bar */}
         <div className="flex items-center justify-between mb-6">
           <button onClick={onBack} className="flex items-center gap-1.5 text-[13px] text-text-secondary hover:text-primary transition-colors cursor-pointer">
@@ -1323,23 +1323,23 @@ function ReportView({ report, onBack, onShare }: {
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Shield size={18} className="text-primary" />
                 </div>
-                <span className="text-[11px] font-bold bg-primary/10 text-primary px-3 py-1 rounded-full uppercase tracking-wider">SOX Audit Report</span>
+                <span className="text-[12px] font-bold bg-primary/10 text-primary px-3 py-1 rounded-full uppercaser">SOX Audit Report</span>
                 {appliedTemplate && (
                   <motion.span
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="text-[10px] font-bold bg-primary/15 text-primary px-2.5 py-1 rounded-full flex items-center gap-1"
+                    className="text-[12px] font-bold bg-primary/15 text-primary px-2.5 py-1 rounded-full flex items-center gap-1"
                   >
                     <Layout size={9} /> Template: {appliedTemplate.name}
                   </motion.span>
                 )}
               </div>
-              <h1 className="text-2xl font-bold tracking-tight mb-1 text-text">{report.name}</h1>
+              <h1 className="text-2xl font-bold mb-1 text-text">{report.name}</h1>
               <p className="text-text-muted text-[13px]">{report.generatedBy} · {report.generatedAt} · {activeQueries.length} queries</p>
             </div>
             <div className="text-right">
               <div className="text-3xl font-bold text-primary">{activeQueries.length}</div>
-              <div className="text-[10px] text-text-muted uppercase tracking-wider">Queries</div>
+              <div className="text-[12px] text-text-muted uppercaser">Queries</div>
             </div>
           </div>
         </div>
@@ -1351,7 +1351,7 @@ function ReportView({ report, onBack, onShare }: {
               <div className={`p-2 rounded-lg ${stat.color}`}><stat.icon size={16} /></div>
               <div>
                 <div className="text-xl font-bold text-text">{stat.value}</div>
-                <div className="text-[10px] text-text-muted uppercase tracking-wider">{stat.label}</div>
+                <div className="text-[12px] text-text-muted uppercaser">{stat.label}</div>
               </div>
             </div>
           ))}
@@ -1414,11 +1414,11 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-6 py-8 relative">
+      <div className="px-10 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text tracking-tight">Reports</h1>
+            <h1 className="text-xl font-bold text-text">Reports</h1>
             <p className="text-sm text-text-secondary mt-1">Generate, manage, and export compliance reports</p>
           </div>
           <div className="flex items-center gap-2">
@@ -1443,7 +1443,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             <span className="flex items-center gap-2">
               <BookOpen size={14} />
               My Reports
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'my-reports' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{GENERATED_REPORTS.length}</span>
+              <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'my-reports' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{GENERATED_REPORTS.length}</span>
             </span>
           </button>
           <button
@@ -1453,7 +1453,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             <span className="flex items-center gap-2">
               <Share2 size={14} />
               Shared Reports
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'shared-reports' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{SHARED_REPORTS.length}</span>
+              <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'shared-reports' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{SHARED_REPORTS.length}</span>
             </span>
           </button>
           <button
@@ -1463,7 +1463,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             <span className="flex items-center gap-2">
               <FileText size={14} />
               Templates
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'templates' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{REPORT_TEMPLATES.length}</span>
+              <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'templates' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{REPORT_TEMPLATES.length}</span>
             </span>
           </button>
         </div>
@@ -1493,18 +1493,18 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                     <div className="flex items-center gap-2">
                       <span className="text-text font-medium hover:text-primary transition-colors">{String(item.name)}</span>
                       {reportAppliedTemplates[String(item.id)] && (
-                        <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                        <span className="text-[12px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
                           <Layout size={8} /> {reportAppliedTemplates[String(item.id)].name}
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-text-muted">2 queries · {String(item.pages)} pages</div>
+                    <div className="text-[12px] text-text-muted">2 queries · {String(item.pages)} pages</div>
                   </div>
                 </div>
               )},
               { key: 'generatedBy', label: 'Author', width: '130px', render: (item) => (
                 <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[12px] font-bold flex items-center justify-center">
                     {String(item.generatedBy).split(' ').map(n => n[0]).join('')}
                   </div>
                   <span className="text-text-secondary text-[12px]">{String(item.generatedBy)}</span>
@@ -1516,7 +1516,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
               { key: 'status', label: 'Status', width: '100px', render: (item) => <StatusBadge status={String(item.status)} /> },
               { key: 'approval', label: 'Approval', width: '130px', render: (item) => {
                 const approval = REPORT_APPROVAL[String(item.id)] || 'Draft';
-                return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${approvalColor(approval)}`}>{approval}</span>;
+                return <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${approvalColor(approval)}`}>{approval}</span>;
               }},
               { key: 'actions', label: '', width: '110px', sortable: false, align: 'right', render: (item) => (
                 <div className="flex items-center justify-end gap-1">
@@ -1551,15 +1551,15 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                       <StatusBadge status={r.status} />
                     </div>
                     <div className="font-medium text-[13px] text-text mb-1 group-hover:text-primary transition-colors leading-snug">{r.name}</div>
-                    <div className="text-[11px] text-text-muted mb-3">{r.pages} pages · {r.generatedAt}</div>
+                    <div className="text-[12px] text-text-muted mb-3">{r.pages} pages · {r.generatedAt}</div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
+                        <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[12px] font-bold flex items-center justify-center">
                           {r.generatedBy.split(' ').map(n => n[0]).join('')}
                         </div>
-                        <span className="text-[11px] text-text-secondary">{r.generatedBy}</span>
+                        <span className="text-[12px] text-text-secondary">{r.generatedBy}</span>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${approvalColor(approval)}`}>{approval}</span>
+                      <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${approvalColor(approval)}`}>{approval}</span>
                     </div>
                     <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border-light opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={13} /></button>
@@ -1593,13 +1593,13 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                   <FileText size={14} className="text-primary" />
                   <div>
                     <div className="text-text font-medium">{String(item.name)}</div>
-                    <div className="text-[10px] text-text-muted">{String(item.pages)} pages · shared with {String(item.sharedWith)}</div>
+                    <div className="text-[12px] text-text-muted">{String(item.pages)} pages · shared with {String(item.sharedWith)}</div>
                   </div>
                 </div>
               )},
               { key: 'sharedBy', label: 'Shared By', width: '140px', render: (item) => (
                 <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[12px] font-bold flex items-center justify-center">
                     {String(item.sharedBy).split(' ').map((n: string) => n[0]).join('')}
                   </div>
                   <span className="text-text-secondary text-[12px]">{String(item.sharedBy)}</span>
@@ -1639,12 +1639,12 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                     <StatusBadge status={r.status} />
                   </div>
                   <div className="font-medium text-[13px] text-text mb-1 group-hover:text-primary transition-colors leading-snug">{r.name}</div>
-                  <div className="text-[11px] text-text-muted mb-3">{r.pages} pages · {r.sharedAt} · {r.sharedWith}</div>
+                  <div className="text-[12px] text-text-muted mb-3">{r.pages} pages · {r.sharedAt} · {r.sharedWith}</div>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
+                    <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[12px] font-bold flex items-center justify-center">
                       {r.sharedBy.split(' ').map(n => n[0]).join('')}
                     </div>
-                    <span className="text-[11px] text-text-secondary">{r.sharedBy}</span>
+                    <span className="text-[12px] text-text-secondary">{r.sharedBy}</span>
                   </div>
                   <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border-light opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={13} /></button>
@@ -1676,7 +1676,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                     <div className={`p-2.5 rounded-xl ${color} group-hover:scale-110 transition-transform duration-300`}><Icon size={18} /></div>
                     <button
                       onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }}
-                      className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                      className="flex items-center gap-1 px-2 py-1 text-[12px] font-medium text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
                     >
                       <Edit3 size={10} /> Edit
                     </button>
@@ -1684,13 +1684,13 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                   <h3 className="text-[14px] font-semibold text-text mb-1 group-hover:text-primary transition-colors">{rt.name}</h3>
                   <p className="text-[12px] text-text-secondary leading-relaxed mb-3">{rt.desc}</p>
                   <div className="flex items-center justify-between pt-3 border-t border-border-light">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${color.split(' ')[0]}`}>{rt.category}</span>
+                    <span className={`text-[12px] font-bold uppercaser ${color.split(' ')[0]}`}>{rt.category}</span>
                     <div className="flex gap-1">
-                      <button onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }} className="text-[10px] text-text-muted hover:text-primary font-medium flex items-center gap-0.5 cursor-pointer">
+                      <button onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }} className="text-[12px] text-text-muted hover:text-primary font-medium flex items-center gap-0.5 cursor-pointer">
                         <Settings size={9} /> Customize
                       </button>
                       <span className="text-border-light mx-1">|</span>
-                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: 'Generating PDF download...' }); }} className="text-[10px] text-primary font-semibold flex items-center gap-0.5 cursor-pointer">
+                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: 'Generating PDF download...' }); }} className="text-[12px] text-primary font-semibold flex items-center gap-0.5 cursor-pointer">
                         Generate <ArrowRight size={9} />
                       </button>
                     </div>
@@ -1740,12 +1740,12 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
               className="relative bg-white rounded-2xl shadow-2xl w-[560px] max-h-[80vh] overflow-hidden flex flex-col"
               onClick={e => e.stopPropagation()}
             >
-              <div className="px-6 py-4 border-b border-border-light flex items-center justify-between shrink-0">
+              <div className="px-10 py-4 border-b border-border-light flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="p-2 bg-primary/10 text-primary rounded-xl"><FileText size={16} /></div>
                   <div>
                     <h3 className="text-[15px] font-semibold text-text">New Report</h3>
-                    <p className="text-[11px] text-text-muted">Select a template to get started</p>
+                    <p className="text-[12px] text-text-muted">Select a template to get started</p>
                   </div>
                 </div>
                 <button onClick={() => setShowNewReportTemplateSelector(false)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
@@ -1771,15 +1771,15 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="text-[13px] font-semibold text-text group-hover:text-primary transition-colors">{rt.name}</span>
-                          <span className={`text-[9px] font-bold uppercase tracking-wider ${color.split(' ')[0]}`}>{rt.category}</span>
+                          <span className={`text-[12px] font-bold uppercaser ${color.split(' ')[0]}`}>{rt.category}</span>
                         </div>
-                        <p className="text-[11px] text-text-muted leading-relaxed">{rt.desc}</p>
+                        <p className="text-[12px] text-text-muted leading-relaxed">{rt.desc}</p>
                         {rt.sections && (
                           <div className="flex gap-1 mt-2 flex-wrap">
                             {rt.sections.slice(0, 4).map(s => (
-                              <span key={s.name} className="text-[9px] text-text-muted bg-surface-2 px-1.5 py-0.5 rounded">{s.name}</span>
+                              <span key={s.name} className="text-[12px] text-text-muted bg-surface-2 px-1.5 py-0.5 rounded">{s.name}</span>
                             ))}
-                            {rt.sections.length > 4 && <span className="text-[9px] text-text-muted bg-surface-2 px-1.5 py-0.5 rounded">+{rt.sections.length - 4} more</span>}
+                            {rt.sections.length > 4 && <span className="text-[12px] text-text-muted bg-surface-2 px-1.5 py-0.5 rounded">+{rt.sections.length - 4} more</span>}
                           </div>
                         )}
                       </div>

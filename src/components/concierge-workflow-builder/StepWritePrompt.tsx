@@ -31,7 +31,7 @@ export default function StepWritePrompt({
         className="text-center pt-12 pb-6"
       >
         <h1
-          className="text-[56px] leading-[1.05] font-extrabold tracking-tight"
+          className="text-[56px] leading-[1.05] font-extrabold"
           style={{ fontFamily: 'var(--font-display)' }}
         >
           <span className="text-ink-900">Audit smarter. </span>
@@ -104,12 +104,12 @@ export default function StepWritePrompt({
       >
         <div className="flex items-start justify-between mb-3">
           <div>
-            <h2 className="text-[14px] font-semibold text-ink-800 tracking-tight">
+            <h2 className="text-[14px] font-semibold text-ink-800">
               Recent Workflows
             </h2>
             <p className="text-[12px] text-ink-400 mt-0.5">Pick up where you left off</p>
           </div>
-          <span className="text-[11px] text-ink-400 font-semibold">
+          <span className="text-[12px] text-ink-400 font-semibold">
             {totalWorkflows} workflows
           </span>
         </div>
@@ -130,12 +130,12 @@ export default function StepWritePrompt({
                     <span className="text-[13px] font-semibold text-ink-800 truncate">
                       {w.name}
                     </span>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider rounded-full px-1.5 py-0.5 bg-compliant-50 text-compliant-700">
+                    <span className="text-[12px] font-semibold uppercaser rounded-full px-1.5 py-0.5 bg-compliant-50 text-compliant-700">
                       Template
                     </span>
                   </div>
-                  <p className="text-[11.5px] text-ink-500 truncate">{w.description}</p>
-                  <div className="flex items-center gap-3 text-[10.5px] text-ink-400 mt-1">
+                  <p className="text-[12px] text-ink-500 truncate">{w.description}</p>
+                  <div className="flex items-center gap-3 text-[12px] text-ink-400 mt-1">
                     <span className="inline-flex items-center gap-1">
                       <FileText size={11} />
                       {w.inputs.length} inputs
@@ -174,15 +174,15 @@ export default function StepWritePrompt({
                     <span className="text-[13px] font-semibold text-ink-800 truncate">
                       {w.name}
                     </span>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider rounded-full px-1.5 py-0.5 bg-compliant-50 text-compliant-700">
+                    <span className="text-[12px] font-semibold uppercaser rounded-full px-1.5 py-0.5 bg-compliant-50 text-compliant-700">
                       {w.status === 'active' ? 'Active' : 'Draft'}
                     </span>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider rounded-full px-1.5 py-0.5 bg-brand-50 text-brand-700">
+                    <span className="text-[12px] font-semibold uppercaser rounded-full px-1.5 py-0.5 bg-brand-50 text-brand-700">
                       {w.type}
                     </span>
                   </div>
-                  <p className="text-[11.5px] text-ink-500 truncate">{w.desc}</p>
-                  <div className="flex items-center gap-3 text-[10.5px] text-ink-400 mt-1">
+                  <p className="text-[12px] text-ink-500 truncate">{w.desc}</p>
+                  <div className="flex items-center gap-3 text-[12px] text-ink-400 mt-1">
                     <span className="inline-flex items-center gap-1">
                       <Clock size={11} />
                       Last run {w.lastRun}

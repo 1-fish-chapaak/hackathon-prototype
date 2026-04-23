@@ -95,11 +95,11 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-6 py-8 relative">
+      <div className="px-10 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text tracking-tight">Workflow Intelligence</h1>
+            <h1 className="text-xl font-bold text-text">Workflow Intelligence</h1>
             <p className="text-sm text-text-secondary mt-1">Monitor, analyze, and optimize audit workflows</p>
           </div>
           <div className="flex items-center gap-3">
@@ -145,7 +145,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                         <div className="p-1.5 rounded-lg bg-primary/10 text-primary"><FileText size={13} /></div>
                         <div>
                           <div className="text-[12px] font-semibold text-text">From Template</div>
-                          <div className="text-[10px] text-text-muted">Start from a template</div>
+                          <div className="text-[12px] text-text-muted">Start from a template</div>
                         </div>
                       </button>
                       <div className="border-t border-border-light" />
@@ -156,7 +156,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                         <div className="p-1.5 rounded-lg bg-primary/10 text-primary"><Bot size={13} /></div>
                         <div>
                           <div className="text-[12px] font-semibold text-text">With AI</div>
-                          <div className="text-[10px] text-text-muted">Describe in chat</div>
+                          <div className="text-[12px] text-text-muted">Describe in chat</div>
                         </div>
                       </button>
                     </motion.div>
@@ -174,22 +174,22 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
           </div>
           <div className="flex-1">
             <div className="text-[12.5px] font-semibold text-text">Impact Intelligence</div>
-            <div className="text-[11.5px] text-text-secondary">
+            <div className="text-[12px] text-text-secondary">
               Duplicate Invoice Detector saved <strong>$2.4M</strong> in potential overpayments this quarter. 3 workflows need attention.
             </div>
           </div>
           <div className="flex gap-6 shrink-0">
             <div className="text-center">
               <div className="text-lg font-bold font-mono text-text">{WORKFLOWS.length}</div>
-              <div className="text-[9px] text-text-muted uppercase tracking-wider">Workflows</div>
+              <div className="text-[12px] text-text-muted uppercaser">Workflows</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-bold font-mono text-primary">{totalRuns}</div>
-              <div className="text-[9px] text-text-muted uppercase tracking-wider">Total Runs</div>
+              <div className="text-[12px] text-text-muted uppercaser">Total Runs</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-bold font-mono text-success">{avgScore}</div>
-              <div className="text-[9px] text-text-muted uppercase tracking-wider">Avg Score</div>
+              <div className="text-[12px] text-text-muted uppercaser">Avg Score</div>
             </div>
           </div>
         </div>
@@ -198,7 +198,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-3">
             <Lightbulb size={13} className="text-primary/60" />
-            <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">AI Recommended for Your Audit</span>
+            <span className="text-[12px] font-semibold text-text-muted uppercaser">AI Recommended for Your Audit</span>
           </div>
           <div className="grid grid-cols-3 gap-4">
             {[
@@ -233,14 +233,14 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                         </div>
                         <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/5">
                           <Sparkles size={9} className="text-primary" />
-                          <span className="text-[9px] font-bold text-primary uppercase tracking-wider">{rw.score}% match</span>
+                          <span className="text-[12px] font-bold text-primary uppercaser">{rw.score}% match</span>
                         </div>
                       </div>
                       <h4 className="text-[13px] font-semibold text-text group-hover:text-primary transition-colors mb-1.5">{rw.name}</h4>
-                      <p className="text-[11px] text-text-muted leading-relaxed">{rw.desc}</p>
+                      <p className="text-[12px] text-text-muted leading-relaxed">{rw.desc}</p>
                       <div className="mt-3 flex items-center justify-between">
                         <TypeBadge type={rw.type} />
-                        <span className="text-[10px] text-primary font-semibold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                        <span className="text-[12px] text-primary font-semibold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
                           Build <ArrowRight size={9} />
                         </span>
                       </div>
@@ -261,13 +261,13 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                   <div className="flex items-center gap-2">
                     <Zap size={15} className="text-primary" />
                     <span className="text-[14px] font-semibold text-text">Select Workflows to Run</span>
-                    <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">{selectedWfs.size} selected</span>
+                    <span className="text-[12px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">{selectedWfs.size} selected</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={() => {
                       const all = new Set(filteredForBulk.map(w => w.id));
                       setSelectedWfs(prev => prev.size === all.size ? new Set() : all);
-                    }} className="text-[11px] text-primary font-medium hover:underline cursor-pointer">
+                    }} className="text-[12px] text-primary font-medium hover:underline cursor-pointer">
                       {selectedWfs.size === filteredForBulk.length ? 'Deselect All' : 'Select All'}
                     </button>
                   </div>
@@ -306,9 +306,9 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                         <div className="min-w-0 flex-1">
                           <div className={`text-[12px] font-semibold truncate ${isSelected ? 'text-primary' : 'text-text'}`}>{wf.name}</div>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[9px] text-text-muted">{wf.type}</span>
-                            <span className={`text-[9px] font-bold ${wf.status === 'active' ? 'text-compliant-700' : 'text-ink-500'}`}>●</span>
-                            <span className="text-[9px] text-text-muted">{wf.runs} runs</span>
+                            <span className="text-[12px] text-text-muted">{wf.type}</span>
+                            <span className={`text-[12px] font-bold ${wf.status === 'active' ? 'text-compliant-700' : 'text-ink-500'}`}>●</span>
+                            <span className="text-[12px] text-text-muted">{wf.runs} runs</span>
                           </div>
                         </div>
                       </button>
@@ -415,9 +415,9 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                     { l: 'Success Rate', v: '98.5%', delta: '+0.5%', up: true },
                   ].map(m => (
                     <div key={m.l} className="bg-surface-2 rounded-lg p-3 border border-border-light">
-                      <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">{m.l}</div>
+                      <div className="text-[12px] text-text-muted uppercaser mb-1">{m.l}</div>
                       <div className="text-base font-bold font-mono text-text leading-none mb-1">{m.v}</div>
-                      <div className={`text-[10px] font-mono font-medium ${m.up ? 'text-success' : 'text-danger'}`}>
+                      <div className={`text-[12px] font-mono font-medium ${m.up ? 'text-success' : 'text-danger'}`}>
                         {m.delta}
                       </div>
                     </div>
@@ -429,17 +429,17 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                   <div className="flex items-center gap-2">
                     <TypeBadge type={wf.type} />
                     <StatusBadge status={wf.status} />
-                    <span className="text-[10px] text-text-muted flex items-center gap-1">
+                    <span className="text-[12px] text-text-muted flex items-center gap-1">
                       <Clock size={10} />
                       {wf.lastRun}
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <div className="text-[9px] text-text-muted uppercase tracking-wider">7-day trend</div>
+                      <div className="text-[12px] text-text-muted uppercaser">7-day trend</div>
                     </div>
                     <MiniSparkline data={sparkData} color={isUp ? '#16a34a' : '#dc2626'} />
-                    <div className={`flex items-center gap-0.5 text-[11px] font-semibold font-mono ${isUp ? 'text-success' : 'text-danger'}`}>
+                    <div className={`flex items-center gap-0.5 text-[12px] font-semibold font-mono ${isUp ? 'text-success' : 'text-danger'}`}>
                       {isUp ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
                       {isUp ? '+' : ''}{delta}
                     </div>
@@ -450,25 +450,25 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                 <div className="mt-3 flex items-center gap-2 pt-3 border-t border-border-light">
                   <button
                     onClick={(e) => { e.stopPropagation(); onRunWorkflow?.(wf.id); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-[11px] font-semibold hover:bg-primary/20 transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-[12px] font-semibold hover:bg-primary/20 transition-colors cursor-pointer"
                   >
                     <Play size={11} /> Run
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); onBuildNew(); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg text-[12px] font-medium transition-colors cursor-pointer"
                   >
                     <Edit3 size={11} /> Edit
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); addToast({ message: `"${wf.name}" duplicated`, type: 'success' }); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg text-[12px] font-medium transition-colors cursor-pointer"
                   >
                     <Copy size={11} /> Duplicate
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); addToast({ message: `"${wf.name}" deleted`, type: 'info' }); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ml-auto"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-lg text-[12px] font-medium transition-colors cursor-pointer ml-auto"
                   >
                     <Trash2 size={11} /> Delete
                   </button>
@@ -476,7 +476,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
 
                 {/* Insight - show on first two */}
                 {i < 2 && (
-                  <div className={`mt-3 flex items-start gap-2 rounded-lg p-2.5 text-[11px] leading-relaxed ${
+                  <div className={`mt-3 flex items-start gap-2 rounded-lg p-2.5 text-[12px] leading-relaxed ${
                     i === 0 ? 'bg-compliant-50 border border-compliant text-compliant-700' : 'bg-mitigated-50 border border-mitigated text-mitigated-700'
                   }`}>
                     <Sparkles size={12} className="shrink-0 mt-0.5" />

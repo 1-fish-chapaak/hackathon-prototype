@@ -80,15 +80,15 @@ export default function StepReviewRun({
     >
       {/* Summary */}
       <section className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-brand-600">
+        <span className="text-[12px] font-bold uppercaser text-brand-600">
           {workflow.category}
         </span>
-        <h3 className="text-[15px] font-semibold text-ink-800 tracking-tight mt-0.5">
+        <h3 className="text-[15px] font-semibold text-ink-800 mt-0.5">
           {workflow.name}
         </h3>
         <p className="text-[12px] text-ink-500 leading-relaxed mt-1">{workflow.description}</p>
         <div className="rounded-lg bg-canvas border border-canvas-border p-3 mt-3">
-          <div className="text-[10px] uppercase tracking-wider text-ink-400 font-bold mb-1">
+          <div className="text-[12px] uppercaser text-ink-400 font-bold mb-1">
             Prompt
           </div>
           <p className="text-[12px] text-ink-800 leading-relaxed whitespace-pre-wrap">
@@ -115,11 +115,11 @@ export default function StepReviewRun({
               className="w-full flex items-center justify-between gap-3 px-4 py-3 cursor-pointer"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <span className="w-6 h-6 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-[11px] font-bold shrink-0">
+                <span className="w-6 h-6 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-[12px] font-bold shrink-0">
                   {idx + 1}
                 </span>
                 <span
-                  className={`text-[10px] uppercase tracking-wider font-bold rounded-full px-1.5 py-0.5 ${badge.bg} ${badge.text}`}
+                  className={`text-[12px] uppercaser font-bold rounded-full px-1.5 py-0.5 ${badge.bg} ${badge.text}`}
                 >
                   {badge.label}
                 </span>
@@ -137,7 +137,7 @@ export default function StepReviewRun({
                 <p className="text-[12px] text-ink-600 leading-relaxed mb-3">
                   {step.description}
                 </p>
-                <div className="text-[10px] uppercase tracking-wider font-bold text-ink-400 mb-1.5">
+                <div className="text-[12px] uppercaser font-bold text-ink-400 mb-1.5">
                   Data sources used
                 </div>
                 <ul className="space-y-1.5">
@@ -153,7 +153,7 @@ export default function StepReviewRun({
                         <span className="text-[12px] font-semibold text-ink-800 truncate">
                           {input.name}
                         </span>
-                        <span className="text-[10px] text-ink-400 ml-auto">
+                        <span className="text-[12px] text-ink-400 ml-auto">
                           {count} file{count === 1 ? '' : 's'} · {mapped.length} column
                           {mapped.length === 1 ? '' : 's'}
                         </span>
@@ -169,7 +169,7 @@ export default function StepReviewRun({
 
       {/* Output intent */}
       <section className="rounded-xl border border-compliant/40 bg-compliant-50 p-4">
-        <div className="text-[10px] uppercase tracking-wider font-bold text-compliant-700 mb-1">
+        <div className="text-[12px] uppercaser font-bold text-compliant-700 mb-1">
           {workflow.output.type} output
         </div>
         <div className="text-[14px] font-semibold text-ink-800 leading-tight mb-1">
@@ -186,7 +186,7 @@ export default function StepReviewRun({
           <Loader2 size={18} className="animate-spin text-brand-600 shrink-0" />
           <div>
             <div className="text-[13px] font-semibold text-ink-800">Running workflow…</div>
-            <div className="text-[11.5px] text-ink-500">
+            <div className="text-[12px] text-ink-500">
               Ingesting, validating, and generating your output.
             </div>
           </div>
@@ -204,10 +204,10 @@ export default function StepReviewRun({
             className="rounded-xl border border-canvas-border bg-canvas-elevated p-4"
           >
             <div className="flex items-baseline justify-between gap-4 mb-1">
-              <h4 className="text-[14px] font-semibold text-ink-800 tracking-tight">
+              <h4 className="text-[14px] font-semibold text-ink-800">
                 {result.title}
               </h4>
-              <span className="text-[10px] uppercase tracking-wider text-ink-400 font-bold">
+              <span className="text-[12px] uppercaser text-ink-400 font-bold">
                 {result.outputType}
               </span>
             </div>
@@ -221,7 +221,7 @@ export default function StepReviewRun({
                   key={s.label}
                   className="rounded-lg border border-canvas-border bg-canvas p-3"
                 >
-                  <div className="text-[9.5px] uppercase tracking-wider text-ink-400 font-bold">
+                  <div className="text-[9.5px] uppercaser text-ink-400 font-bold">
                     {s.label}
                   </div>
                   <div className={`mt-0.5 text-[17px] font-bold ${STAT_TONE[s.tone]}`}>

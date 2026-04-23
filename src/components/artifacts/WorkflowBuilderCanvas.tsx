@@ -85,7 +85,7 @@ function AISuggestionRow({ suggestion, colors: _colors, onApply }: { suggestion:
       >
         {applied && <CheckCircle size={12} />}
       </button>
-      <span className={`text-[10.5px] leading-relaxed ${applied ? 'text-primary' : 'text-text-secondary'}`}>{suggestion.text}</span>
+      <span className={`text-[12px] leading-relaxed ${applied ? 'text-primary' : 'text-text-secondary'}`}>{suggestion.text}</span>
     </div>
   );
 }
@@ -222,12 +222,12 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
               {config ? config.name : 'Workflow Canvas'}
             </span>
             {config && (
-              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${colors?.badgeBg} ${colors?.badgeText}`}>
+              <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${colors?.badgeBg} ${colors?.badgeText}`}>
                 {config.id.charAt(0).toUpperCase() + config.id.slice(1)}
               </span>
             )}
             {stage > 0 && stage < 3 && (
-              <span className={`text-[10px] font-bold ${colors?.accent || 'text-primary'} ${colors?.accentBg || 'bg-primary/10'} px-2 py-0.5 rounded-full animate-pulse`}>
+              <span className={`text-[12px] font-bold ${colors?.accent || 'text-primary'} ${colors?.accentBg || 'bg-primary/10'} px-2 py-0.5 rounded-full animate-pulse`}>
                 Configuring...
               </span>
             )}
@@ -245,7 +245,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
               const active = stage === i + 1;
               return (
                 <div key={s.label} className="flex items-center gap-1.5 flex-1">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold transition-all duration-300 ${
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[12px] font-bold transition-all duration-300 ${
                     filled
                       ? `bg-gradient-to-r ${colors?.gradient || 'from-teal-400 to-emerald-500'} text-white`
                       : active
@@ -254,7 +254,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                   }`}>
                     {filled ? <CheckCircle size={12} /> : i + 1}
                   </div>
-                  <span className={`text-[9px] font-medium truncate transition-colors ${
+                  <span className={`text-[12px] font-medium truncate transition-colors ${
                     active ? `${colors?.accent || 'text-evidence-700'} font-bold` : filled ? 'text-text' : 'text-text-muted'
                   }`}>
                     {s.label}
@@ -321,7 +321,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                 <div className="flex items-center gap-2 mb-3">
                   <Database size={14} className={colors.accent} />
                   <h2 className="text-[13px] font-semibold text-text">Input Configuration</h2>
-                  <span className={`text-[9px] font-bold ${colors.badgeText} ${colors.badgeBg} px-2 py-0.5 rounded-full`}>
+                  <span className={`text-[12px] font-bold ${colors.badgeText} ${colors.badgeBg} px-2 py-0.5 rounded-full`}>
                     {sources.length} sources
                   </span>
                 </div>
@@ -345,11 +345,11 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                               {source.frozen ? <Lock size={12} /> : <Database size={12} />}
                             </div>
                             <div>
-                              <div className="text-[11px] font-semibold text-text">{source.name}</div>
-                              <div className="text-[9px] text-text-muted">{source.type}</div>
+                              <div className="text-[12px] font-semibold text-text">{source.name}</div>
+                              <div className="text-[12px] text-text-muted">{source.type}</div>
                             </div>
                           </div>
-                          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${FORMAT_COLORS[source.format] || 'bg-paper-50 text-ink-500 border-gray-200'}`}>
+                          <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded border ${FORMAT_COLORS[source.format] || 'bg-paper-50 text-ink-500 border-gray-200'}`}>
                             {source.format}
                           </span>
                         </div>
@@ -357,7 +357,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                         {/* Fields */}
                         <div className="flex flex-wrap gap-1 mb-2.5">
                           {source.fields.map(field => (
-                            <span key={field} className="text-[8px] font-medium px-1.5 py-0.5 bg-surface-2 text-text-muted rounded">
+                            <span key={field} className="text-[12px] font-medium px-1.5 py-0.5 bg-surface-2 text-text-muted rounded">
                               {field}
                             </span>
                           ))}
@@ -374,16 +374,16 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                             ) : (
                               <ToggleLeft size={18} className="text-gray-300" />
                             )}
-                            <span className={`text-[10px] font-medium ${source.frozen ? colors.accent : 'text-text-muted'}`}>
+                            <span className={`text-[12px] font-medium ${source.frozen ? colors.accent : 'text-text-muted'}`}>
                               {source.frozen ? 'Frozen' : 'Freeze'}
                             </span>
                           </button>
                           {source.frozen ? (
-                            <span className={`text-[8px] font-bold ${colors.badgeText} ${colors.badgeBg} px-1.5 py-0.5 rounded-full flex items-center gap-0.5`}>
+                            <span className={`text-[12px] font-bold ${colors.badgeText} ${colors.badgeBg} px-1.5 py-0.5 rounded-full flex items-center gap-0.5`}>
                               <CheckCircle size={7} /> Frozen
                             </span>
                           ) : (
-                            <span className="text-[8px] font-bold text-high-700 bg-high-50 px-1.5 py-0.5 rounded-full">
+                            <span className="text-[12px] font-bold text-high-700 bg-high-50 px-1.5 py-0.5 rounded-full">
                               Required
                             </span>
                           )}
@@ -391,14 +391,14 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
 
                         {/* Frozen info or Upload zone */}
                         {source.frozen ? (
-                          <div className={`mt-2 text-[9px] ${colors.accent} ${colors.accentBg}/50 rounded-lg px-2 py-1.5`}>
+                          <div className={`mt-2 text-[12px] ${colors.accent} ${colors.accentBg}/50 rounded-lg px-2 py-1.5`}>
                             Using cached version from {source.frozenDate}
-                            {source.records && <span className={`block text-[8px] ${colors.accent} opacity-70 mt-0.5`}>{source.records}</span>}
+                            {source.records && <span className={`block text-[12px] ${colors.accent} opacity-70 mt-0.5`}>{source.records}</span>}
                           </div>
                         ) : (
                           <div className={`mt-2 border border-dashed border-border rounded-lg p-2 flex items-center justify-center gap-1.5 hover:${colors.accentBorder} hover:${colors.accentBg}/30 transition-colors cursor-pointer`}>
                             <Upload size={10} className="text-text-muted" />
-                            <span className="text-[9px] text-text-muted">Drop file or click to upload</span>
+                            <span className="text-[12px] text-text-muted">Drop file or click to upload</span>
                           </div>
                         )}
                       </div>
@@ -410,7 +410,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                 {config.matchSettings.toleranceDefault !== 'N/A' && (
                   <div className="bg-white rounded-xl border border-border-light shadow-sm p-3 mb-3">
                     <div className="flex items-center justify-between mb-2">
-                      <span className={`text-[11px] font-semibold text-text flex items-center gap-1.5`}>
+                      <span className={`text-[12px] font-semibold text-text flex items-center gap-1.5`}>
                         <Hash size={12} className={colors.accent} /> Match Tolerance
                       </span>
                       <div className="flex items-center gap-1">
@@ -420,19 +420,19 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                           onChange={e => setTolerance(e.target.value)}
                           className={`w-12 text-center text-[12px] font-bold ${colors.accent} bg-white border ${colors.accentBorder} rounded-lg py-1 focus:outline-none`}
                         />
-                        <span className="text-[11px] text-text-muted font-medium">%</span>
+                        <span className="text-[12px] text-text-muted font-medium">%</span>
                       </div>
                     </div>
                     <div className="h-1.5 bg-surface-3 rounded-full overflow-hidden">
                       <div className={`h-full bg-gradient-to-r ${colors.gradient} rounded-full transition-all`} style={{ width: `${Math.min(Number(tolerance) * 10, 100)}%` }} />
                     </div>
-                    <div className="flex justify-between text-[8px] text-text-muted mt-1"><span>Exact</span><span>5%</span><span>10%</span></div>
+                    <div className="flex justify-between text-[12px] text-text-muted mt-1"><span>Exact</span><span>5%</span><span>10%</span></div>
                   </div>
                 )}
 
                 {/* Match Logic */}
                 <div className="bg-white rounded-xl border border-border-light shadow-sm p-3 mb-4">
-                  <span className="text-[11px] font-semibold text-text mb-2 block">
+                  <span className="text-[12px] font-semibold text-text mb-2 block">
                     {config.matchSettings.toleranceDefault === 'N/A' ? 'Detection Logic' : 'Match Logic'}
                   </span>
                   <div className="flex gap-2">
@@ -440,7 +440,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                       <button
                         key={option}
                         onClick={() => setMatchLogic(option)}
-                        className={`flex-1 px-3 py-2 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                        className={`flex-1 px-3 py-2 rounded-lg text-[12px] font-medium transition-all cursor-pointer ${
                           matchLogic === option
                             ? `${colors.accentBg} ${colors.badgeText} border-2 ${colors.accentBorder} shadow-sm`
                             : `bg-surface-2 text-text-muted border-2 border-transparent hover:${colors.accentBorder}`
@@ -479,7 +479,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                 <div className="flex items-center gap-2 mb-3">
                   <ArrowRight size={14} className={colors.accent} />
                   <h2 className="text-[13px] font-semibold text-text">Output Configuration</h2>
-                  <span className={`text-[9px] font-bold ${colors.badgeText} ${colors.badgeBg} px-2 py-0.5 rounded-full`}>
+                  <span className={`text-[12px] font-bold ${colors.badgeText} ${colors.badgeBg} px-2 py-0.5 rounded-full`}>
                     {enabledColumns.length} columns
                   </span>
                 </div>
@@ -487,17 +487,17 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                 {/* Output Sheets (Excel tabs) */}
                 <div className="bg-white rounded-xl border border-border-light shadow-sm p-3 mb-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-semibold text-text flex items-center gap-1.5">
+                    <span className="text-[12px] font-semibold text-text flex items-center gap-1.5">
                       <FileText size={12} className={colors.accent} /> Output Sheets
                     </span>
-                    <span className="text-[9px] text-text-muted">Configure multiple sheets in Excel output</span>
+                    <span className="text-[12px] text-text-muted">Configure multiple sheets in Excel output</span>
                   </div>
                   <div className="flex items-end gap-0 bg-surface-2 rounded-t-lg overflow-hidden">
                     {outputSheets.map((sheet) => (
                       <div
                         key={sheet.id}
                         onClick={() => { setActiveSheetId(sheet.id); setEditingSheetId(null); }}
-                        className={`group relative flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium cursor-pointer transition-all border-b-2 ${
+                        className={`group relative flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium cursor-pointer transition-all border-b-2 ${
                           activeSheetId === sheet.id
                             ? `bg-white ${colors.accent} border-current shadow-sm -mb-px rounded-t-lg`
                             : 'text-text-muted border-transparent hover:text-text-secondary hover:bg-white/50'
@@ -510,7 +510,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                             onChange={(e) => setOutputSheets(prev => prev.map(s => s.id === sheet.id ? { ...s, name: e.target.value } : s))}
                             onBlur={() => setEditingSheetId(null)}
                             onKeyDown={(e) => { if (e.key === 'Enter') setEditingSheetId(null); }}
-                            className={`w-20 bg-transparent border-b ${colors.accentBorder} text-[11px] font-medium outline-none ${colors.accent}`}
+                            className={`w-20 bg-transparent border-b ${colors.accentBorder} text-[12px] font-medium outline-none ${colors.accent}`}
                             onClick={(e) => e.stopPropagation()}
                           />
                         ) : (
@@ -540,18 +540,18 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                         setActiveSheetId(newId);
                         setEditingSheetId(newId);
                       }}
-                      className={`flex items-center gap-1 px-2.5 py-2 text-[10px] text-text-muted hover:${colors.accent} transition-colors cursor-pointer`}
+                      className={`flex items-center gap-1 px-2.5 py-2 text-[12px] text-text-muted hover:${colors.accent} transition-colors cursor-pointer`}
                     >
                       <Plus size={10} /> Add Sheet
                     </button>
                   </div>
                   <div className="border border-t-0 border-border-light rounded-b-lg p-2.5 bg-white">
-                    <div className="flex items-center gap-2 text-[10px] text-text-muted">
+                    <div className="flex items-center gap-2 text-[12px] text-text-muted">
                       <FileText size={10} className={colors.accent} />
                       <span>
                         Configuring columns for <strong className={colors.accent}>{outputSheets.find(s => s.id === activeSheetId)?.name}</strong>
                       </span>
-                      <span className="text-[8px] bg-surface-2 px-1.5 py-0.5 rounded">Double-click tab to rename</span>
+                      <span className="text-[12px] bg-surface-2 px-1.5 py-0.5 rounded">Double-click tab to rename</span>
                     </div>
                   </div>
                 </div>
@@ -571,7 +571,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                       <GripVertical size={12} className="text-text-muted/30 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-medium text-text truncate">{col.name}</span>
+                          <span className="text-[12px] font-medium text-text truncate">{col.name}</span>
                           <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded shrink-0 ${TYPE_BADGES[col.type].color}`}>
                             {TYPE_BADGES[col.type].label}
                           </span>
@@ -599,7 +599,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
 
                 {/* KPI Options */}
                 <div className="bg-white rounded-xl border border-border-light shadow-sm p-3 mb-4">
-                  <span className="text-[11px] font-semibold text-text mb-2 block">Dashboard KPIs</span>
+                  <span className="text-[12px] font-semibold text-text mb-2 block">Dashboard KPIs</span>
                   <div className="space-y-1.5">
                     {config.kpiOptions.map(kpi => (
                       <label
@@ -613,9 +613,9 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                           className="w-3.5 h-3.5 rounded accent-current cursor-pointer"
                           style={{ accentColor: config.color }}
                         />
-                        <span className="text-[11px] font-medium text-text flex-1">{kpi.label}</span>
+                        <span className="text-[12px] font-medium text-text flex-1">{kpi.label}</span>
                         {kpi.id === 'run_comparison' && (
-                          <span className="text-[8px] font-bold text-mitigated-700 bg-mitigated-50 px-1.5 py-0.5 rounded">DELTA</span>
+                          <span className="text-[12px] font-bold text-mitigated-700 bg-mitigated-50 px-1.5 py-0.5 rounded">DELTA</span>
                         )}
                       </label>
                     ))}
@@ -626,8 +626,8 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                 <div className="bg-gradient-to-r from-primary/5 via-white to-primary/5 rounded-xl border border-primary/10 p-3 mb-4">
                   <div className="flex items-center gap-2 mb-2.5">
                     <div className="p-1 rounded-md bg-primary/10"><Sparkles size={11} className="text-primary" /></div>
-                    <span className="text-[11px] font-semibold text-text">AI Suggestions</span>
-                    <span className="text-[8px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">SMART</span>
+                    <span className="text-[12px] font-semibold text-text">AI Suggestions</span>
+                    <span className="text-[12px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">SMART</span>
                   </div>
                   <div className="space-y-2">
                     {[
@@ -643,13 +643,13 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
 
                 {/* Layout Picker */}
                 <div className="bg-white rounded-xl border border-border-light shadow-sm p-3 mb-4">
-                  <span className="text-[11px] font-semibold text-text mb-2 block">Output Layout</span>
+                  <span className="text-[12px] font-semibold text-text mb-2 block">Output Layout</span>
                   <div className="flex gap-2">
                     {config.layoutOptions.map(layout => (
                       <button
                         key={layout}
                         onClick={() => setSelectedLayout(layout)}
-                        className={`flex-1 px-3 py-2.5 rounded-xl text-[11px] font-medium transition-all cursor-pointer border-2 ${
+                        className={`flex-1 px-3 py-2.5 rounded-xl text-[12px] font-medium transition-all cursor-pointer border-2 ${
                           selectedLayout === layout
                             ? `${colors.accentBg} ${colors.badgeText} ${colors.accentBorder} shadow-sm`
                             : `border-border-light text-text-muted hover:${colors.accentBorder}`
@@ -666,7 +666,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="flex items-center justify-between">
                   <button
                     onClick={() => advanceStage(1)}
-                    className="flex items-center gap-1 text-[11px] text-text-muted hover:text-text-secondary cursor-pointer"
+                    className="flex items-center gap-1 text-[12px] text-text-muted hover:text-text-secondary cursor-pointer"
                   >
                     <ChevronLeft size={12} /> Back to Inputs
                   </button>
@@ -696,17 +696,17 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                   <div className="flex items-center gap-2">
                     <FileText size={14} className={colors.accent} />
                     <h2 className="text-[13px] font-semibold text-text">{config.name}</h2>
-                    <span className="text-[8px] font-bold bg-compliant-50 text-compliant-700 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[12px] font-bold bg-compliant-50 text-compliant-700 px-2 py-0.5 rounded-full uppercaser flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-compliant-500 animate-pulse" /> Live Preview
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button className={`flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r ${colors.gradient} hover:opacity-90 text-white rounded-lg text-[10px] font-semibold transition-all cursor-pointer shadow-sm`}>
+                    <button className={`flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r ${colors.gradient} hover:opacity-90 text-white rounded-lg text-[12px] font-semibold transition-all cursor-pointer shadow-sm`}>
                       <Play size={10} /> Run Now
                     </button>
                     <button
                       onClick={handleSaveWorkflow}
-                      className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-[10px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer"
                     >
                       <Save size={10} /> Save
                     </button>
@@ -719,8 +719,8 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                     <motion.div key={stat.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
                       className="rounded-2xl p-3 relative overflow-hidden"
                       style={{ background: 'linear-gradient(145deg, #1e1230 0%, #160d24 100%)', border: '1px solid rgba(106,18,205,0.12)' }}>
-                      <div className={`text-[16px] font-extrabold text-white leading-none tracking-tight`}>{stat.value}</div>
-                      <div className="text-[8px] text-white/40 uppercase tracking-wider mt-1">{stat.label}</div>
+                      <div className={`text-[16px] font-extrabold text-white leading-none`}>{stat.value}</div>
+                      <div className="text-[12px] text-white/40 uppercaser mt-1">{stat.label}</div>
                       <div className="absolute -top-4 -right-4 w-12 h-12 rounded-full opacity-20 blur-xl" style={{ background: config.color }} />
                     </motion.div>
                   ))}
@@ -729,8 +729,8 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                 {/* Mini Area Chart */}
                 <div className="bg-white rounded-xl border border-border-light shadow-sm p-3 mb-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Execution Trend — Last 7 Runs</span>
-                    <span className="text-[10px] font-semibold text-compliant-700">{'\u2191'} 12% improvement</span>
+                    <span className="text-[12px] font-bold text-text-muted uppercaser">Execution Trend — Last 7 Runs</span>
+                    <span className="text-[12px] font-semibold text-compliant-700">{'\u2191'} 12% improvement</span>
                   </div>
                   <svg width="100%" height="48" viewBox="0 0 400 48" preserveAspectRatio="none">
                     <defs>
@@ -751,10 +751,10 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                   style={{ background: 'linear-gradient(135deg, rgba(106,18,205,0.04) 0%, rgba(255,255,255,0.8) 40%, rgba(106,18,205,0.02) 100%)', border: '1px solid rgba(106,18,205,0.08)' }}>
                   <div className="flex items-center gap-1.5 mb-2">
                     <Sparkles size={12} className="text-primary" />
-                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider">AI Summary</span>
+                    <span className="text-[12px] font-bold text-primary uppercaser">AI Summary</span>
                   </div>
                   {config.id === 'reconciliation' && (
-                    <p className="text-[11.5px] text-text leading-relaxed">
+                    <p className="text-[12px] text-text leading-relaxed">
                       Processed <strong>1,247 records</strong> across PO, GRN, and Invoice data. <strong>87% matched</strong> successfully with zero variance.
                       <strong className="text-mitigated-700"> 98 records</strong> show amount variances within the 5% tolerance — recommend bulk approval.
                       <strong className="text-risk-700"> 60 unmatched items</strong> require manual investigation:
@@ -763,7 +763,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                     </p>
                   )}
                   {config.id === 'detection' && (
-                    <p className="text-[11.5px] text-text leading-relaxed">
+                    <p className="text-[12px] text-text leading-relaxed">
                       Scanned <strong>12,450 invoices</strong> against 6-month history. Identified <strong className="text-risk-700">8 potential duplicates</strong> totaling <strong>₹6.16L at risk</strong>.
                       Highest confidence match: INV-4521 vs INV-3102 (Acme Corp, 96% match).
                       <strong> 3 invoices</strong> from the same vendor within 48 hours flagged as suspicious.
@@ -772,16 +772,16 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                     </p>
                   )}
                   {config.id === 'monitoring' && (
-                    <p className="text-[11.5px] text-text leading-relaxed">
+                    <p className="text-[12px] text-text leading-relaxed">
                       Detected <strong>24 vendor master changes</strong> in the monitoring window.
                       <strong className="text-risk-700"> 3 unauthorized changes</strong> flagged — 2 bank account modifications by unrecognized users.
                       <strong>16 changes auto-approved</strong> based on authorization matrix.
                       Avg response time for flagged items: <strong>2.4 hours</strong>.
-                      Critical alert: <strong>Acme Corp</strong> bank account changed from HDFC to ICICI by <code className="text-[10px] bg-surface-2 px-1 rounded">admin_user</code> — requires immediate verification.
+                      Critical alert: <strong>Acme Corp</strong> bank account changed from HDFC to ICICI by <code className="text-[12px] bg-surface-2 px-1 rounded">admin_user</code> — requires immediate verification.
                     </p>
                   )}
                   {config.id === 'compliance' && (
-                    <p className="text-[11.5px] text-text leading-relaxed">
+                    <p className="text-[12px] text-text leading-relaxed">
                       Scanned <strong>2,341 users</strong> against 156 SOD rules. Found <strong className="text-risk-700">12 violations</strong> —
                       <strong>4 critical</strong> (Create PO + Approve PO, Edit Master + Pay Vendor).
                       <strong className="text-compliant-700">8 violations have compensating controls</strong> in place.
@@ -801,7 +801,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                         <button
                           key={sheet.id}
                           onClick={() => setActiveSheetId(sheet.id)}
-                          className={`px-4 py-2 text-[10px] font-semibold transition-all cursor-pointer border-b-2 ${
+                          className={`px-4 py-2 text-[12px] font-semibold transition-all cursor-pointer border-b-2 ${
                             activeSheetId === sheet.id
                               ? `bg-white ${colors.accent} border-current -mb-px`
                               : 'text-text-muted border-transparent hover:text-text-secondary hover:bg-white/40'
@@ -817,9 +817,9 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                     className="grid gap-0 bg-surface-2 px-3 py-2 border-b border-border-light"
                     style={{ gridTemplateColumns: `28px repeat(${enabledColumns.length}, minmax(0, 1fr))` }}
                   >
-                    <div className="text-[7px] font-bold uppercase tracking-wider text-text-muted/40">#</div>
+                    <div className="text-[7px] font-bold uppercaser text-text-muted/40">#</div>
                     {enabledColumns.map(col => (
-                      <div key={col.id} className="text-[8px] font-bold uppercase tracking-wider text-text-muted/60 truncate pr-1">
+                      <div key={col.id} className="text-[12px] font-bold uppercaser text-text-muted/60 truncate pr-1">
                         {col.name}
                       </div>
                     ))}
@@ -842,7 +842,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                         className={`grid gap-0 px-3 py-2.5 border-b border-border-light last:border-0 ${rowBg}`}
                         style={{ gridTemplateColumns: `28px repeat(${enabledColumns.length}, minmax(0, 1fr))` }}
                       >
-                        <div className="text-[9px] font-mono text-text-muted/40">{i + 1}</div>
+                        <div className="text-[12px] font-mono text-text-muted/40">{i + 1}</div>
                         {enabledColumns.map((col, ci) => {
                           const cellValue = row.cells[ci] ?? '';
                           const isBadge = col.type === 'badge';
@@ -858,7 +858,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                               row.status === 'variance' || row.status === 'warning' ? '\u26A0' : '\u2717';
                             return (
                               <div key={col.id} className="flex items-center">
-                                <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full ${badgeColor} flex items-center gap-1`}>
+                                <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${badgeColor} flex items-center gap-1`}>
                                   <span className="text-[7px]">{badgeIcon}</span> {cellValue}
                                 </span>
                               </div>
@@ -869,14 +869,14 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                             const pctNum = parseInt(cellValue);
                             const pctColor = pctNum >= 90 ? 'text-compliant-700' : pctNum >= 50 ? 'text-mitigated-700' : 'text-risk-700';
                             return (
-                              <div key={col.id} className={`text-[10px] font-bold ${pctColor}`}>
+                              <div key={col.id} className={`text-[12px] font-bold ${pctColor}`}>
                                 {cellValue}
                               </div>
                             );
                           }
 
                           return (
-                            <div key={col.id} className={`text-[10px] ${col.type === 'number' ? 'font-mono' : ''} text-text truncate pr-1`}>
+                            <div key={col.id} className={`text-[12px] ${col.type === 'number' ? 'font-mono' : ''} text-text truncate pr-1`}>
                               {cellValue}
                             </div>
                           );
@@ -888,14 +888,14 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
 
                 {/* Action Bar */}
                 <div className="flex items-center justify-between pt-3 border-t border-border-light">
-                  <button onClick={() => advanceStage(2)} className="flex items-center gap-1 text-[11px] text-text-muted hover:text-text-secondary cursor-pointer">
+                  <button onClick={() => advanceStage(2)} className="flex items-center gap-1 text-[12px] text-text-muted hover:text-text-secondary cursor-pointer">
                     <ChevronLeft size={12} /> Edit Configuration
                   </button>
                   <div className="flex items-center gap-2">
-                    <button onClick={handleSaveWorkflow} className="flex items-center gap-1.5 px-4 py-2 border border-border rounded-xl text-[11px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer">
+                    <button onClick={handleSaveWorkflow} className="flex items-center gap-1.5 px-4 py-2 border border-border rounded-xl text-[12px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer">
                       <Save size={12} /> Save to Library
                     </button>
-                    <button className={`flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r ${colors.gradient} hover:opacity-90 text-white rounded-xl text-[11px] font-semibold transition-all cursor-pointer shadow-md`}>
+                    <button className={`flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r ${colors.gradient} hover:opacity-90 text-white rounded-xl text-[12px] font-semibold transition-all cursor-pointer shadow-md`}>
                       <Play size={12} /> {RUN_LABELS[config.id]}
                     </button>
                   </div>

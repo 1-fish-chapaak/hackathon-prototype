@@ -123,7 +123,7 @@ function TestingBadge({ status }: { status: string }) {
   };
   const s = map[status] || map['Not Started'];
   return (
-    <span className={`inline-flex items-center gap-1 ${s.bg} ${s.text} px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap`}>
+    <span className={`inline-flex items-center gap-1 ${s.bg} ${s.text} px-2 py-0.5 rounded-full text-[12px] font-bold whitespace-nowrap`}>
       {s.icon}
       {status}
     </span>
@@ -131,7 +131,7 @@ function TestingBadge({ status }: { status: string }) {
 }
 
 function ConclusionBadge({ conclusion }: { conclusion: string }) {
-  if (!conclusion) return <span className="text-gray-300 text-[11px]">-</span>;
+  if (!conclusion) return <span className="text-gray-300 text-[12px]">-</span>;
   const map: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
     'Effective': { bg: 'bg-green-50', text: 'text-green-700', icon: <ShieldCheck size={11} /> },
     'Ineffective': { bg: 'bg-red-50', text: 'text-red-700', icon: <XCircle size={11} /> },
@@ -140,7 +140,7 @@ function ConclusionBadge({ conclusion }: { conclusion: string }) {
   };
   const s = map[conclusion] || map['Pending'];
   return (
-    <span className={`inline-flex items-center gap-1 ${s.bg} ${s.text} px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap`}>
+    <span className={`inline-flex items-center gap-1 ${s.bg} ${s.text} px-2 py-0.5 rounded-full text-[12px] font-bold whitespace-nowrap`}>
       {s.icon}
       {conclusion}
     </span>
@@ -148,13 +148,13 @@ function ConclusionBadge({ conclusion }: { conclusion: string }) {
 }
 
 function EvidenceBadge({ label, status }: { label: string; status: 'complete' | 'partial' | 'none' }) {
-  if (label === '-') return <span className="text-gray-300 text-[11px]">-</span>;
+  if (label === '-') return <span className="text-gray-300 text-[12px]">-</span>;
   const colors = {
     complete: 'text-green-600',
     partial: 'text-amber-600',
     none: 'text-gray-400',
   };
-  return <span className={`text-[11px] font-medium ${colors[status]}`}>{label}</span>;
+  return <span className={`text-[12px] font-medium ${colors[status]}`}>{label}</span>;
 }
 
 function ActionButton({ label, type, onClick }: { label: string; type: string; onClick?: () => void }) {
@@ -168,7 +168,7 @@ function ActionButton({ label, type, onClick }: { label: string; type: string; o
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-semibold transition-all cursor-pointer active:scale-[0.97] ${styles[type] || styles.default}`}
+      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[12px] font-semibold transition-all cursor-pointer active:scale-[0.97] ${styles[type] || styles.default}`}
     >
       {label}
       <ArrowRight size={10} />
@@ -196,11 +196,11 @@ export default function ControlTestingView({ onAskAI }: Props) {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={210} opacity={0.08} />
-      <div className="px-6 py-8 relative">
+      <div className="px-10 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text tracking-tight">Control Testing</h1>
+            <h1 className="text-xl font-bold text-text">Control Testing</h1>
             <p className="text-sm text-text-secondary mt-1">Execute testing, manage evidence, and document conclusions.</p>
           </div>
           <div className="flex items-center gap-2">
@@ -224,7 +224,7 @@ export default function ControlTestingView({ onAskAI }: Props) {
               }`}
             >
               {f.label}
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+              <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${
                 activeFilter === f.key ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'
               }`}>
                 {f.count}
@@ -244,7 +244,7 @@ export default function ControlTestingView({ onAskAI }: Props) {
           ].map(card => (
             <div key={card.label} className="bg-white rounded-xl border border-border-light p-3 text-center hover:shadow-md transition-all duration-200">
               <div className={`text-xl font-bold ${card.color}`}>{card.value}</div>
-              <div className="text-[10px] text-text-muted uppercase tracking-wider">{card.label}</div>
+              <div className="text-[12px] text-text-muted uppercaser">{card.label}</div>
               {card.progress !== undefined && (
                 <div className="mt-1.5 h-1.5 bg-border-light rounded-full overflow-hidden">
                   <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${card.progress}%` }} />
@@ -273,7 +273,7 @@ export default function ControlTestingView({ onAskAI }: Props) {
               <thead>
                 <tr className="border-b border-border-light bg-surface-2/50">
                   {['Control', 'Engagement', 'Population', 'Sample', 'Evidence', 'Testing', 'Reviewer', 'Conclusion', 'Next Action', ''].map(h => (
-                    <th key={h} className="px-3 py-3 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+                    <th key={h} className="px-3 py-3 text-left text-[12px] font-semibold text-text-muted uppercaser">
                       {h}
                     </th>
                   ))}
@@ -292,15 +292,15 @@ export default function ControlTestingView({ onAskAI }: Props) {
                     >
                       <td className="px-3 py-3">
                         <div className="flex flex-col">
-                          <span className="font-mono text-[11px] text-text-muted">{row.id}</span>
+                          <span className="font-mono text-[12px] text-text-muted">{row.id}</span>
                           <span className="text-text font-medium text-[12px]">{row.control}</span>
                         </div>
                       </td>
                       <td className="px-3 py-3">
-                        <span className="text-text-secondary font-mono text-[10px] bg-gray-50 px-1.5 py-0.5 rounded">{row.engagement}</span>
+                        <span className="text-text-secondary font-mono text-[12px] bg-gray-50 px-1.5 py-0.5 rounded">{row.engagement}</span>
                       </td>
                       <td className="px-3 py-3">
-                        <span className={`text-[11px] font-medium ${
+                        <span className={`text-[12px] font-medium ${
                           row.populationStatus === 'validated' ? 'text-green-600' :
                           row.populationStatus === 'received' ? 'text-blue-600' :
                           'text-gray-400'
@@ -309,7 +309,7 @@ export default function ControlTestingView({ onAskAI }: Props) {
                         </span>
                       </td>
                       <td className="px-3 py-3">
-                        <span className={`text-[11px] ${row.sample === '-' ? 'text-gray-300' : 'text-text-secondary'}`}>
+                        <span className={`text-[12px] ${row.sample === '-' ? 'text-gray-300' : 'text-text-secondary'}`}>
                           {row.sample}
                         </span>
                       </td>
@@ -320,7 +320,7 @@ export default function ControlTestingView({ onAskAI }: Props) {
                         <TestingBadge status={row.testing} />
                       </td>
                       <td className="px-3 py-3">
-                        <span className={`text-[11px] ${row.reviewer === '-' ? 'text-gray-300' : 'text-text-secondary font-medium'}`}>
+                        <span className={`text-[12px] ${row.reviewer === '-' ? 'text-gray-300' : 'text-text-secondary font-medium'}`}>
                           {row.reviewer}
                         </span>
                       </td>
@@ -333,7 +333,7 @@ export default function ControlTestingView({ onAskAI }: Props) {
                       <td className="px-3 py-3">
                         <button
                           onClick={() => onAskAI?.(row.id)}
-                          className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1 text-[10px] text-primary font-medium hover:underline transition-all cursor-pointer"
+                          className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1 text-[12px] text-primary font-medium hover:underline transition-all cursor-pointer"
                         >
                           <MessageSquare size={10} />
                           Ask AI
@@ -348,11 +348,11 @@ export default function ControlTestingView({ onAskAI }: Props) {
 
           {/* Table Footer */}
           <div className="flex items-center justify-between px-4 py-3 border-t border-border-light bg-surface-2/30">
-            <span className="text-[11px] text-text-muted">
+            <span className="text-[12px] text-text-muted">
               Showing {filtered.length} of {CONTROLS.length} controls
             </span>
             <div className="flex items-center gap-1">
-              <span className="text-[11px] text-text-muted">Page 1 of 1</span>
+              <span className="text-[12px] text-text-muted">Page 1 of 1</span>
               <button className="p-1 rounded hover:bg-gray-100 text-text-muted cursor-pointer">
                 <ChevronRight size={14} />
               </button>

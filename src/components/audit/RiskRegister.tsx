@@ -42,11 +42,11 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-6 py-8 relative">
+      <div className="px-10 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text tracking-tight">Risk Register</h1>
+            <h1 className="text-xl font-bold text-text">Risk Register</h1>
             <p className="text-sm text-text-secondary mt-1">{RISKS.length} risks across {BUSINESS_PROCESSES.length} business processes</p>
           </div>
           <div className="flex items-center gap-3">
@@ -68,7 +68,7 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
           </div>
           <div className="flex-1">
             <div className="text-[12.5px] font-semibold text-text">AI Risk Analysis</div>
-            <div className="text-[11.5px] text-text-secondary mt-0.5">
+            <div className="text-[12px] text-text-secondary mt-0.5">
               {RISKS.filter(r => r.ctls === 0).length} risks have no controls mapped. {RISKS.filter(r => r.severity === 'critical').length} critical risks require immediate attention.
               <span className="text-primary font-semibold cursor-pointer hover:underline ml-1">Auto-suggest controls</span>
             </div>
@@ -102,7 +102,7 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
                 }`}
               >
                 <div className={`text-2xl font-bold ${textColors[sev]}`}>{count}</div>
-                <div className="text-[11px] text-text-secondary uppercase tracking-wider mt-0.5 capitalize">{sev}</div>
+                <div className="text-[12px] text-text-secondary uppercaser mt-0.5 capitalize">{sev}</div>
               </motion.div>
             );
           })}
@@ -139,7 +139,7 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
                   {risk.bpId === 'p2p' && onRunWorkflow && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onRunWorkflow('wf-001'); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-compliant-50 hover:bg-compliant-50/80 text-compliant-700 text-[11px] font-semibold rounded-lg cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-compliant-50 hover:bg-compliant-50/80 text-compliant-700 text-[12px] font-semibold rounded-lg cursor-pointer"
                     >
                       <ArrowRight size={12} />
                       Run Workflow
@@ -151,14 +151,14 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
           }}
           columns={[
             { key: 'id', label: 'Risk ID', width: '90px', render: (item) => (
-              <span className="font-mono text-text-muted text-[11px]">{String(item.id)}</span>
+              <span className="font-mono text-text-muted text-[12px]">{String(item.id)}</span>
             )},
             { key: 'name', label: 'Description', render: (item) => {
               const risk = item as unknown as typeof RISKS[0];
               return (
                 <div>
                   <div className="text-text font-medium truncate max-w-[280px]">{risk.name}</div>
-                  {risk.lastUpdated && <div className="text-[10px] text-text-muted mt-0.5">Updated {risk.lastUpdated}</div>}
+                  {risk.lastUpdated && <div className="text-[12px] text-text-muted mt-0.5">Updated {risk.lastUpdated}</div>}
                 </div>
               );
             }},
@@ -170,7 +170,7 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
               return (
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ background: bp?.color }} />
-                  <span className="text-text-secondary text-[11px]">{bp?.abbr}</span>
+                  <span className="text-text-secondary text-[12px]">{bp?.abbr}</span>
                 </span>
               );
             }},
@@ -198,11 +198,11 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
               </div>
               <div className="flex-1">
                 <h3 className="text-[13px] font-semibold text-text">AI Risk Analysis &amp; Recommendations</h3>
-                <p className="text-[10.5px] text-text-muted mt-0.5">{AI_RECOMMENDED_CONTROLS.length} risks with zero controls — AI suggests mitigations</p>
+                <p className="text-[12px] text-text-muted mt-0.5">{AI_RECOMMENDED_CONTROLS.length} risks with zero controls — AI suggests mitigations</p>
               </div>
               <div className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/5 border border-primary/10 rounded-full">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-[9px] font-semibold text-text-muted">Auto-refreshes when risks or controls change</span>
+                <span className="text-[12px] font-semibold text-text-muted">Auto-refreshes when risks or controls change</span>
               </div>
             </div>
             <div className="space-y-2.5">
@@ -219,22 +219,22 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-mono font-bold text-primary">{rec.riskId}</span>
-                      <span className="text-[11px] font-medium text-text">Recommend mapping control</span>
+                      <span className="text-[12px] font-mono font-bold text-primary">{rec.riskId}</span>
+                      <span className="text-[12px] font-medium text-text">Recommend mapping control</span>
                     </div>
                     <div className="text-[12.5px] font-medium text-text">{rec.control}</div>
-                    <div className="text-[10.5px] text-text-muted mt-1">Mitigates: {rec.riskName}</div>
+                    <div className="text-[12px] text-text-muted mt-1">Mitigates: {rec.riskName}</div>
                     <div className="flex items-center gap-2 mt-1.5">
                       <div className="flex items-center gap-1">
                         <Sparkles size={9} className="text-primary" />
-                        <span className="text-[10px] font-semibold text-primary">{rec.confidence}% confidence</span>
+                        <span className="text-[12px] font-semibold text-primary">{rec.confidence}% confidence</span>
                       </div>
                       <div className="h-1 flex-1 max-w-[60px] bg-surface-3 rounded-full overflow-hidden">
                         <div className="h-full bg-primary rounded-full" style={{ width: `${rec.confidence}%` }} />
                       </div>
                     </div>
                   </div>
-                  <button className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2.5 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-semibold rounded-lg cursor-pointer shrink-0">
+                  <button className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2.5 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-[12px] font-semibold rounded-lg cursor-pointer shrink-0">
                     <Plus size={10} />
                     Add
                   </button>
@@ -242,7 +242,7 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
               ))}
             </div>
             <div className="mt-3 flex justify-center">
-              <button className="flex items-center gap-1.5 text-[11px] text-primary font-semibold hover:underline cursor-pointer">
+              <button className="flex items-center gap-1.5 text-[12px] text-primary font-semibold hover:underline cursor-pointer">
                 View all recommendations
                 <ArrowRight size={10} />
               </button>

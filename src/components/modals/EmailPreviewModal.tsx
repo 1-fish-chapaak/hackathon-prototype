@@ -37,7 +37,7 @@ export default function EmailPreviewModal({ recipientName, onClose }: Props) {
             </div>
             <div>
               <h3 className="text-[14px] font-semibold text-text">Email Preview</h3>
-              <p className="text-[11px] text-text-muted">Notification sent to risk owner</p>
+              <p className="text-[12px] text-text-muted">Notification sent to risk owner</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer">

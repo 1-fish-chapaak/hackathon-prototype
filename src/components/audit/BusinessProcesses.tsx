@@ -53,13 +53,13 @@ function LinkControlsModal({ risk, onClose }: { risk: typeof RISKS[0]; onClose: 
           </div>
           <p className="text-[12px] text-text-muted">Select controls to mitigate this risk</p>
           <div className="mt-3 p-3 rounded-xl bg-primary-xlight border border-primary/10">
-            <div className="text-[11px] text-primary font-bold uppercase tracking-wider mb-1">Risk</div>
+            <div className="text-[12px] text-primary font-bold uppercaser mb-1">Risk</div>
             <div className="text-[13px] font-medium text-text">{risk.name}</div>
-            <div className="text-[11px] text-text-muted mt-1">{risk.id} · <SeverityBadge severity={risk.severity} /></div>
+            <div className="text-[12px] text-text-muted mt-1">{risk.id} · <SeverityBadge severity={risk.severity} /></div>
           </div>
         </div>
 
-        <div className="px-6 py-4 space-y-2">
+        <div className="px-10 py-4 space-y-2">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles size={13} className="text-primary" />
             <span className="text-[12px] font-semibold text-primary">AI Suggested Controls</span>
@@ -88,12 +88,12 @@ function LinkControlsModal({ risk, onClose }: { risk: typeof RISKS[0]; onClose: 
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[13px] font-semibold text-text">{ctl.name}</span>
                       {ctl.isKey && (
-                        <span className="text-[9px] font-bold bg-mitigated-50 text-mitigated-700 px-1.5 py-0.5 rounded uppercase">Key</span>
+                        <span className="text-[12px] font-bold bg-mitigated-50 text-mitigated-700 px-1.5 py-0.5 rounded uppercase">Key</span>
                       )}
                     </div>
-                    <p className="text-[11.5px] text-text-muted leading-relaxed">{ctl.desc}</p>
+                    <p className="text-[12px] text-text-muted leading-relaxed">{ctl.desc}</p>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-[10px] font-mono text-text-muted/60">{ctl.id}</span>
+                      <span className="text-[12px] font-mono text-text-muted/60">{ctl.id}</span>
                       <StatusBadge status={ctl.status} />
                     </div>
                   </div>
@@ -131,7 +131,7 @@ function UploadSOPModal({ onClose }: { onClose: () => void }) {
         exit={{ scale: 0.95, opacity: 0 }}
         className="relative bg-white rounded-2xl shadow-2xl w-[520px] overflow-hidden"
       >
-        <div className="px-6 py-5 border-b border-border-light">
+        <div className="px-10 py-5 border-b border-border-light">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-text">Upload SOP</h2>
             <button onClick={onClose} className="p-1.5 hover:bg-paper-50 rounded-lg"><X size={16} className="text-text-muted" /></button>
@@ -148,12 +148,12 @@ function UploadSOPModal({ onClose }: { onClose: () => void }) {
             <div className="text-[12px] text-text-muted">PDF, DOCX up to 50MB</div>
             <div className="mt-4 flex items-center justify-center gap-2">
               <Sparkles size={13} className="text-primary" />
-              <span className="text-[11px] text-primary font-semibold">AI will extract risks and controls automatically</span>
+              <span className="text-[12px] text-primary font-semibold">AI will extract risks and controls automatically</span>
             </div>
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-border-light flex justify-end gap-2">
+        <div className="px-10 py-4 border-t border-border-light flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-paper-50">Cancel</button>
           <button onClick={onClose} className="px-4 py-2 bg-primary text-white rounded-lg text-[13px] font-semibold hover:bg-primary-hover flex items-center gap-1.5">
             <Upload size={14} />
@@ -194,7 +194,7 @@ function SOPFlowChart({ steps }: { steps: typeof SOP_FLOWS[string] }) {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: i * 0.08 }}
-            className={`border-2 ${nodeStyles[step.type]} ${nodeShapes[step.type]} text-[11px] font-semibold text-center min-w-[120px] shadow-sm relative`}
+            className={`border-2 ${nodeStyles[step.type]} ${nodeShapes[step.type]} text-[12px] font-semibold text-center min-w-[120px] shadow-sm relative`}
           >
             {step.type === 'decision' && (
               <div className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ${nodeIcons[step.type]} ring-2 ring-white`} />
@@ -209,9 +209,9 @@ function SOPFlowChart({ steps }: { steps: typeof SOP_FLOWS[string] }) {
           )}
           {step.type === 'decision' && step.next && step.next.length > 1 && (
             <div className="flex items-center gap-1 -mt-1 mb-1">
-              <span className="text-[9px] text-compliant-700 font-bold">Yes</span>
-              <span className="text-[9px] text-ink-500 mx-2">|</span>
-              <span className="text-[9px] text-risk-700 font-bold">No</span>
+              <span className="text-[12px] text-compliant-700 font-bold">Yes</span>
+              <span className="text-[12px] text-ink-500 mx-2">|</span>
+              <span className="text-[12px] text-risk-700 font-bold">No</span>
             </div>
           )}
         </div>
@@ -232,40 +232,40 @@ function SOPRelationshipMap({ sopId, bpId }: { sopId: string; bpId: string }) {
       {/* SOP */}
       <div className="flex flex-col items-center shrink-0 min-w-[120px]">
         <div className="px-3 py-2.5 bg-primary/10 border border-primary/20 rounded-xl text-center w-full">
-          <div className="text-[9px] font-bold text-primary uppercase tracking-wider mb-0.5">SOP</div>
-          <div className="text-[10px] font-semibold text-text leading-tight">{sop?.name || sopId}</div>
+          <div className="text-[12px] font-bold text-primary uppercaser mb-0.5">SOP</div>
+          <div className="text-[12px] font-semibold text-text leading-tight">{sop?.name || sopId}</div>
         </div>
       </div>
       <div className="flex items-center self-center shrink-0"><ArrowRight size={16} className="text-text-muted" /></div>
       {/* RACMs */}
       <div className="flex flex-col gap-1.5 shrink-0 min-w-[130px]">
-        <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">RACMs</div>
+        <div className="text-[12px] font-bold text-text-muted uppercaser">RACMs</div>
         {relatedRacms.length > 0 ? relatedRacms.map(r => (
           <div key={r.id} className="px-2.5 py-1.5 bg-evidence-50 border border-evidence rounded-lg">
-            <div className="text-[10px] font-semibold text-evidence-700">{r.id}</div>
-            <div className="text-[9px] text-evidence-700 truncate">{r.name}</div>
+            <div className="text-[12px] font-semibold text-evidence-700">{r.id}</div>
+            <div className="text-[12px] text-evidence-700 truncate">{r.name}</div>
           </div>
-        )) : <div className="text-[10px] text-text-muted italic">None linked</div>}
+        )) : <div className="text-[12px] text-text-muted italic">None linked</div>}
       </div>
       <div className="flex items-center self-center shrink-0"><ArrowRight size={16} className="text-text-muted" /></div>
       {/* Risks */}
       <div className="flex flex-col gap-1.5 shrink-0 min-w-[140px]">
-        <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Risks</div>
+        <div className="text-[12px] font-bold text-text-muted uppercaser">Risks</div>
         {relatedRisks.map(r => (
           <div key={r.id} className="px-2.5 py-1.5 bg-high-50 border border-high rounded-lg">
-            <div className="text-[10px] font-semibold text-high-700">{r.id}</div>
-            <div className="text-[9px] text-high-700 leading-tight truncate max-w-[130px]">{r.name.split(' ').slice(0, 4).join(' ')}...</div>
+            <div className="text-[12px] font-semibold text-high-700">{r.id}</div>
+            <div className="text-[12px] text-high-700 leading-tight truncate max-w-[130px]">{r.name.split(' ').slice(0, 4).join(' ')}...</div>
           </div>
         ))}
       </div>
       <div className="flex items-center self-center shrink-0"><ArrowRight size={16} className="text-text-muted" /></div>
       {/* Controls */}
       <div className="flex flex-col gap-1.5 shrink-0 min-w-[140px]">
-        <div className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Controls</div>
+        <div className="text-[12px] font-bold text-text-muted uppercaser">Controls</div>
         {relatedControls.map(c => (
           <div key={c.id} className="px-2.5 py-1.5 bg-compliant-50 border border-compliant rounded-lg">
-            <div className="text-[10px] font-semibold text-compliant-700">{c.id}</div>
-            <div className="text-[9px] text-compliant-700 leading-tight truncate max-w-[130px]">{c.name}</div>
+            <div className="text-[12px] font-semibold text-compliant-700">{c.id}</div>
+            <div className="text-[12px] text-compliant-700 leading-tight truncate max-w-[130px]">{c.name}</div>
           </div>
         ))}
       </div>
@@ -301,7 +301,7 @@ function SOPAIRecommendations({ sopId }: { sopId: string }) {
       >
         <Sparkles size={13} className="text-primary" />
         AI Recommendations
-        <span className="text-[10px] font-bold bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">{recommendations.length}</span>
+        <span className="text-[12px] font-bold bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">{recommendations.length}</span>
         <ChevronDown size={12} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
       <AnimatePresence>
@@ -329,8 +329,8 @@ function SOPAIRecommendations({ sopId }: { sopId: string }) {
                       <TypeIcon size={12} />
                     </div>
                     <div className="flex-1">
-                      <div className="text-[11.5px] text-ink-500 leading-relaxed">{rec.text}</div>
-                      <div className={`text-[9px] font-bold uppercase tracking-wider mt-1 ${impactColors[rec.impact]}`}>
+                      <div className="text-[12px] text-ink-500 leading-relaxed">{rec.text}</div>
+                      <div className={`text-[12px] font-bold uppercaser mt-1 ${impactColors[rec.impact]}`}>
                         {rec.impact} impact
                       </div>
                     </div>
@@ -418,7 +418,7 @@ function RACMWorkflowPanel({ bpId }: { bpId: string }) {
 
   return (
     <div className="mt-3">
-      <button onClick={() => setExpanded(p => !p)} className="flex items-center gap-2 text-[11px] font-semibold text-primary cursor-pointer hover:underline">
+      <button onClick={() => setExpanded(p => !p)} className="flex items-center gap-2 text-[12px] font-semibold text-primary cursor-pointer hover:underline">
         <Workflow size={12} />
         {allWorkflows.length} Linked Workflows
         <ChevronDown size={11} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
@@ -434,31 +434,31 @@ function RACMWorkflowPanel({ bpId }: { bpId: string }) {
                 value={search}
                 onChange={e => { setSearch(e.target.value); setShowCount(5); }}
                 placeholder="Search workflows..."
-                className="w-full pl-7 pr-3 py-1.5 rounded-lg border border-border-light text-[11px] focus:outline-none focus:border-primary/40 transition-all bg-white"
+                className="w-full pl-7 pr-3 py-1.5 rounded-lg border border-border-light text-[12px] focus:outline-none focus:border-primary/40 transition-all bg-white"
               />
               {search && <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2"><X size={10} className="text-text-muted" /></button>}
             </div>
 
             {/* Results count */}
-            <div className="text-[10px] text-text-muted mb-1.5">{filtered.length} workflow{filtered.length !== 1 ? 's' : ''} found</div>
+            <div className="text-[12px] text-text-muted mb-1.5">{filtered.length} workflow{filtered.length !== 1 ? 's' : ''} found</div>
 
             {/* Workflow list */}
             <div className="space-y-1 max-h-[200px] overflow-y-auto">
               {visible.map(wf => (
                 <div key={wf.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-primary-xlight/50 transition-colors cursor-pointer group">
                   <Workflow size={10} className="text-primary/60 shrink-0" />
-                  <span className="text-[11px] text-text group-hover:text-primary transition-colors flex-1 truncate">{wf.name}</span>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                  <span className="text-[12px] text-text group-hover:text-primary transition-colors flex-1 truncate">{wf.name}</span>
+                  <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${
                     wf.status === 'active' ? 'bg-compliant-50 text-compliant-700' : wf.status === 'paused' ? 'bg-mitigated-50 text-mitigated-700' : 'bg-paper-50 text-ink-500'
                   }`}>{wf.status}</span>
-                  <span className="text-[9px] text-text-muted">{wf.runs} runs</span>
+                  <span className="text-[12px] text-text-muted">{wf.runs} runs</span>
                 </div>
               ))}
             </div>
 
             {/* Load more */}
             {hasMore && (
-              <button onClick={() => setShowCount(p => p + 10)} className="w-full text-center text-[10px] text-primary font-medium py-1.5 hover:underline cursor-pointer mt-1">
+              <button onClick={() => setShowCount(p => p + 10)} className="w-full text-center text-[12px] text-primary font-medium py-1.5 hover:underline cursor-pointer mt-1">
                 Show more ({filtered.length - showCount} remaining)
               </button>
             )}
@@ -526,7 +526,7 @@ function BPDetailView({ bp, onBack }: {
         {uploadModal && <UploadSOPModal onClose={() => setUploadModal(false)} />}
       </AnimatePresence>
 
-      <div className="px-6 py-6">
+      <div className="px-10 py-6">
         <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-primary mb-4 transition-colors">
           <ArrowLeft size={14} />
           Business Processes
@@ -557,18 +557,18 @@ function BPDetailView({ bp, onBack }: {
           {/* Process Metadata — always visible */}
           <div className="flex items-center gap-6 mb-4 pb-4 border-b border-border-light">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Owner:</span>
+              <span className="text-[12px] font-bold text-text-muted uppercaser">Owner:</span>
               <span className="text-[12px] font-medium text-text">Tushar Goel</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Status:</span>
-              <span className="inline-flex items-center gap-1.5 bg-success-bg text-compliant-700 px-2.5 py-0.5 rounded-full text-[11px] font-semibold">
+              <span className="text-[12px] font-bold text-text-muted uppercaser">Status:</span>
+              <span className="inline-flex items-center gap-1.5 bg-success-bg text-compliant-700 px-2.5 py-0.5 rounded-full text-[12px] font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-success" />
                 Active
               </span>
             </div>
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider shrink-0">Description:</span>
+              <span className="text-[12px] font-bold text-text-muted uppercaser shrink-0">Description:</span>
               <span className="text-[12px] text-text-secondary truncate">End-to-end {bp.name.toLowerCase()} process covering all related risks, controls, and compliance workflows.</span>
             </div>
           </div>
@@ -590,7 +590,7 @@ function BPDetailView({ bp, onBack }: {
                 className="text-center p-4 rounded-xl bg-surface-2/80 border border-border-light/50 cursor-pointer hover:border-primary/20 hover:shadow-sm transition-all"
               >
                 <div className="text-xl font-bold text-text leading-none mb-1">{s.v}</div>
-                <div className="text-[10px] text-text-muted uppercase tracking-wider font-medium">{s.l}</div>
+                <div className="text-[12px] text-text-muted uppercaser font-medium">{s.l}</div>
               </motion.div>
             ))}
           </div>
@@ -625,7 +625,7 @@ function BPDetailView({ bp, onBack }: {
               <span className="flex items-center gap-2">
                 {t.label}
                 {t.count != null && (
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                  <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${
                     tab === t.id ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'
                   }`}>{t.count}</span>
                 )}
@@ -668,10 +668,10 @@ function BPDetailView({ bp, onBack }: {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[13px] font-semibold text-text">{sop.name}</span>
-                          <span className="text-[10px] font-bold bg-paper-50 text-text-muted px-1.5 py-0.5 rounded">{sop.version}</span>
+                          <span className="text-[12px] font-bold bg-paper-50 text-text-muted px-1.5 py-0.5 rounded">{sop.version}</span>
                           <StatusBadge status={sop.status} />
                         </div>
-                        <div className="text-[11px] text-text-muted">
+                        <div className="text-[12px] text-text-muted">
                           Uploaded by {sop.by} · {sop.at} · {sop.risks} risks · {sop.controls} controls extracted
                         </div>
                       </div>
@@ -693,7 +693,7 @@ function BPDetailView({ bp, onBack }: {
                       {flowSteps && (
                         <button
                           onClick={() => toggleSopVisual(sop.id, 'flow')}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
                             activeVisual === 'flow'
                               ? 'bg-primary/10 text-primary border border-primary/20'
                               : 'bg-paper-50 text-ink-500 border border-gray-200 hover:bg-paper-50'
@@ -705,7 +705,7 @@ function BPDetailView({ bp, onBack }: {
                       )}
                       <button
                         onClick={() => toggleSopVisual(sop.id, 'map')}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
                           activeVisual === 'map'
                             ? 'bg-primary/10 text-primary border border-primary/20'
                             : 'bg-paper-50 text-ink-500 border border-gray-200 hover:bg-paper-50'
@@ -727,7 +727,7 @@ function BPDetailView({ bp, onBack }: {
                           className="overflow-hidden"
                         >
                           <div className="mt-3 pt-3 border-t border-border-light">
-                            <div className="text-[10px] font-bold text-ink-500 uppercase tracking-wider mb-2">Process Flow</div>
+                            <div className="text-[12px] font-bold text-ink-500 uppercaser mb-2">Process Flow</div>
                             <div className="bg-paper-50 rounded-xl p-4 border border-gray-200">
                               <SOPFlowChart steps={flowSteps} />
                             </div>
@@ -743,7 +743,7 @@ function BPDetailView({ bp, onBack }: {
                           className="overflow-hidden"
                         >
                           <div className="mt-3 pt-3 border-t border-border-light">
-                            <div className="text-[10px] font-bold text-ink-500 uppercase tracking-wider mb-2">Relationship Map</div>
+                            <div className="text-[12px] font-bold text-ink-500 uppercaser mb-2">Relationship Map</div>
                             <div className="bg-paper-50 rounded-xl p-4 border border-gray-200">
                               <SOPRelationshipMap sopId={sop.id} bpId={sop.bpId} />
                             </div>
@@ -800,15 +800,15 @@ function BPDetailView({ bp, onBack }: {
                           <div className="flex items-center gap-3">
                             <div className="flex-1 min-w-0">
                               <div className="text-[13px] font-medium text-text group-hover:text-primary transition-colors">{r.name}</div>
-                              <div className="text-[11px] text-text-muted">{r.id}{r.sopId && <span className="text-primary"> · SOP linked</span>}</div>
+                              <div className="text-[12px] text-text-muted">{r.id}{r.sopId && <span className="text-primary"> · SOP linked</span>}</div>
                             </div>
                             <div className="shrink-0"><FrameworkBadge fw={r.fw} /></div>
                             <div className="shrink-0"><StatusBadge status={r.status} /></div>
                             <div className="flex items-center gap-1.5 shrink-0">
                               <Avatar name={r.owner} size={20} />
-                              <span className="text-text-secondary text-[11px]">{r.owner.split(' ')[0]}</span>
+                              <span className="text-text-secondary text-[12px]">{r.owner.split(' ')[0]}</span>
                             </div>
-                            <div className="text-text-muted text-[11px] flex items-center gap-1 shrink-0">
+                            <div className="text-text-muted text-[12px] flex items-center gap-1 shrink-0">
                               <Clock size={11} />
                               {r.lastRun}
                             </div>
@@ -821,7 +821,7 @@ function BPDetailView({ bp, onBack }: {
                             <div className="mt-3 p-3 bg-gradient-to-r from-primary-xlight/50 to-white rounded-xl border border-primary/10">
                               <div className="flex items-center gap-1.5 mb-2">
                                 <Sparkles size={12} className="text-primary" />
-                                <span className="text-[10px] font-bold text-primary uppercase tracking-wider">AI Recommended Controls</span>
+                                <span className="text-[12px] font-bold text-primary uppercaser">AI Recommended Controls</span>
                               </div>
                               <div className="space-y-2">
                                 {RACM_RECOMMENDED_CONTROLS[r.id].map((rec, idx) => (
@@ -834,10 +834,10 @@ function BPDetailView({ bp, onBack }: {
                                       {rec.type === 'automated' ? <Zap size={10} /> : rec.type === 'detective' ? <Eye size={10} /> : <Shield size={10} />}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                      <div className="text-[11px] font-medium text-text">{rec.control}</div>
+                                      <div className="text-[12px] font-medium text-text">{rec.control}</div>
                                       <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[9px] text-text-muted">Mitigates: {rec.risk}</span>
-                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                                        <span className="text-[12px] text-text-muted">Mitigates: {rec.risk}</span>
+                                        <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${
                                           rec.type === 'automated' ? 'bg-evidence-50 text-evidence-700' :
                                           rec.type === 'detective' ? 'bg-mitigated-50 text-mitigated-700' :
                                           'bg-compliant-50 text-compliant-700'
@@ -845,7 +845,7 @@ function BPDetailView({ bp, onBack }: {
                                       </div>
                                     </div>
                                     <div className="shrink-0 text-right">
-                                      <div className="text-[11px] font-bold text-primary">{rec.confidence}%</div>
+                                      <div className="text-[12px] font-bold text-primary">{rec.confidence}%</div>
                                       <div className="w-12 h-1 bg-surface-3 rounded-full overflow-hidden mt-0.5">
                                         <div className="h-full bg-primary rounded-full" style={{ width: `${rec.confidence}%` }} />
                                       </div>
@@ -871,10 +871,10 @@ function BPDetailView({ bp, onBack }: {
           <div>
             {/* RACM tag filter chips */}
             <div className="flex items-center gap-2 mb-4">
-              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider shrink-0">RACM Filter:</span>
+              <span className="text-[12px] font-bold text-text-muted uppercaser shrink-0">RACM Filter:</span>
               <button
                 onClick={() => setRacmFilterTag('all')}
-                className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-full text-[12px] font-semibold transition-all cursor-pointer ${
                   racmFilterTag === 'all' ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
                 }`}
               >
@@ -884,7 +884,7 @@ function BPDetailView({ bp, onBack }: {
                 <button
                   key={r.id}
                   onClick={() => setRacmFilterTag(racmFilterTag === r.id ? 'all' : r.id)}
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-full text-[12px] font-semibold transition-all cursor-pointer ${
                     racmFilterTag === r.id ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
                   }`}
                 >
@@ -945,17 +945,17 @@ function BPDetailView({ bp, onBack }: {
                       </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-[11px] text-text-muted mb-3">
+                  <div className="grid grid-cols-2 gap-2 text-[12px] text-text-muted mb-3">
                     <div className="flex items-center gap-1"><Clock size={10} />{wf.lastRun}</div>
                     <div className="flex items-center gap-1">{wf.runs} runs</div>
                   </div>
                   {!bulkMode && (
                     <div className="flex gap-2">
-                      <button onClick={() => addToast({ message: 'Initializing workflow run...', type: 'success' })} className="flex items-center gap-1 px-3 py-1.5 bg-primary-light text-primary rounded-lg text-[11px] font-semibold hover:bg-primary/15">
+                      <button onClick={() => addToast({ message: 'Initializing workflow run...', type: 'success' })} className="flex items-center gap-1 px-3 py-1.5 bg-primary-light text-primary rounded-lg text-[12px] font-semibold hover:bg-primary/15">
                         <Play size={10} />
                         Run Now
                       </button>
-                      <button className="flex items-center gap-1 px-3 py-1.5 border border-border rounded-lg text-[11px] font-medium text-text-secondary hover:bg-paper-50">
+                      <button className="flex items-center gap-1 px-3 py-1.5 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-paper-50">
                         <ArrowUpRight size={10} />
                         Promote to Control
                       </button>
@@ -970,7 +970,7 @@ function BPDetailView({ bp, onBack }: {
                   <Plus size={16} className="text-primary" />
                 </div>
                 <div className="text-[13px] font-semibold text-text">New Workflow</div>
-                <div className="text-[11px] text-text-muted">Or import from library</div>
+                <div className="text-[12px] text-text-muted">Or import from library</div>
               </div>
             </div>
 
@@ -1020,7 +1020,7 @@ function BPDetailView({ bp, onBack }: {
                       transition={{ delay: i * 0.04 }}
                       className="border-b border-border-light last:border-0 hover:bg-primary-xlight/50 transition-colors cursor-pointer"
                     >
-                      <td className="px-4 py-3 font-mono text-text-muted text-[11px]">{risk.id}</td>
+                      <td className="px-4 py-3 font-mono text-text-muted text-[12px]">{risk.id}</td>
                       <td className="px-3 py-3">
                         <div className="text-[13px] font-medium text-text truncate max-w-[280px]">{risk.name}</div>
                       </td>
@@ -1044,7 +1044,7 @@ function BPDetailView({ bp, onBack }: {
                   <Sparkles size={13} className="text-primary" />
                   <span className="text-[12px] font-bold text-text">AI Insight</span>
                 </div>
-                <p className="text-[11.5px] text-text-secondary">
+                <p className="text-[12px] text-text-secondary">
                   {bpRisks.filter(r => r.ctls === 0).length} risks have no controls mapped. Consider auto-suggesting controls for these risks.
                 </p>
               </div>
@@ -1066,10 +1066,10 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP }: Props) {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-6 py-8 relative">
+      <div className="px-10 py-8 relative">
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text tracking-tight">Business Processes</h1>
+            <h1 className="text-xl font-bold text-text">Business Processes</h1>
             <p className="text-sm text-text-secondary mt-1">Manage processes, SOPs, RACMs, and control mappings</p>
           </div>
           <button className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors">
@@ -1092,11 +1092,11 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP }: Props) {
           <div className="flex gap-4 shrink-0">
             <div className="text-center">
               <div className="text-lg font-bold font-mono text-text">{BUSINESS_PROCESSES.length}</div>
-              <div className="text-[10px] text-text-muted uppercase tracking-wider">Processes</div>
+              <div className="text-[12px] text-text-muted uppercaser">Processes</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-bold font-mono text-primary">{Math.round(BUSINESS_PROCESSES.reduce((s, b) => s + b.coverage, 0) / BUSINESS_PROCESSES.length)}%</div>
-              <div className="text-[10px] text-text-muted uppercase tracking-wider">Avg Coverage</div>
+              <div className="text-[12px] text-text-muted uppercaser">Avg Coverage</div>
             </div>
           </div>
         </div>
@@ -1132,7 +1132,7 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP }: Props) {
                         </div>
                         <div className="flex-1">
                           <div className="text-[15px] font-semibold text-text group-hover:text-primary transition-colors">{bp.name}</div>
-                          <div className="text-[11px] text-text-muted">FY 2025–26</div>
+                          <div className="text-[12px] text-text-muted">FY 2025–26</div>
                         </div>
                         <ChevronRight size={15} className="text-text-muted opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                       </div>
@@ -1148,7 +1148,7 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP }: Props) {
                         ].map(s => (
                           <div key={s.l} className="text-center p-2 rounded-lg bg-surface-2/80 border border-border-light/50">
                             <div className="text-lg font-bold text-text leading-none mb-0.5">{s.v}</div>
-                            <div className="text-[9px] text-text-muted uppercase tracking-wider font-medium">{s.l}</div>
+                            <div className="text-[12px] text-text-muted uppercaser font-medium">{s.l}</div>
                           </div>
                         ))}
                       </div>

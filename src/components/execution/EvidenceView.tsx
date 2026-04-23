@@ -114,7 +114,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   const s = map[status] || map['Pending Mapping'];
   return (
-    <span className={`inline-flex items-center gap-1 ${s.bg} ${s.text} px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap`}>
+    <span className={`inline-flex items-center gap-1 ${s.bg} ${s.text} px-2 py-0.5 rounded-full text-[12px] font-bold whitespace-nowrap`}>
       {s.icon}
       {status}
     </span>
@@ -137,7 +137,7 @@ function ActionBtn({ label }: { label: string }) {
     'Re-upload': <Upload size={10} />,
   };
   return (
-    <button className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer ${styles[label] || 'text-text-secondary hover:text-primary'}`}>
+    <button className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[12px] font-semibold transition-all cursor-pointer ${styles[label] || 'text-text-secondary hover:text-primary'}`}>
       {icons[label]}
       {label}
     </button>
@@ -157,11 +157,11 @@ export default function EvidenceView() {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={160} opacity={0.08} />
-      <div className="px-6 py-8 relative">
+      <div className="px-10 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text tracking-tight">Evidence & Workpapers</h1>
+            <h1 className="text-xl font-bold text-text">Evidence & Workpapers</h1>
             <p className="text-sm text-text-secondary mt-1">Manage uploaded populations, evidence, and master data.</p>
           </div>
           <div className="flex items-center gap-2">
@@ -206,7 +206,7 @@ export default function EvidenceView() {
               Drop files here or{' '}
               <span className="text-primary cursor-pointer hover:underline">browse</span>
             </p>
-            <p className="text-[11px] text-text-muted mt-1">
+            <p className="text-[12px] text-text-muted mt-1">
               Supports XLSX, CSV, PDF, XML up to 500 MB
             </p>
           </div>
@@ -229,7 +229,7 @@ export default function EvidenceView() {
           ].map(card => (
             <div key={card.label} className="bg-white rounded-xl border border-border-light p-3 text-center hover:shadow-md transition-all duration-200">
               <div className={`text-xl font-bold ${card.color}`}>{card.value}</div>
-              <div className="text-[10px] text-text-muted uppercase tracking-wider">{card.label}</div>
+              <div className="text-[12px] text-text-muted uppercaser">{card.label}</div>
             </div>
           ))}
         </div>
@@ -258,7 +258,7 @@ export default function EvidenceView() {
               <thead>
                 <tr className="border-b border-border-light bg-surface-2/50">
                   {['File Name', 'Source', 'Type', 'Linked Control', 'Engagement', 'Rows', 'Size', 'Status', 'Actions'].map(h => (
-                    <th key={h} className="px-3 py-3 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+                    <th key={h} className="px-3 py-3 text-left text-[12px] font-semibold text-text-muted uppercaser">
                       {h}
                     </th>
                   ))}
@@ -282,38 +282,38 @@ export default function EvidenceView() {
                         </div>
                       </td>
                       <td className="px-3 py-3">
-                        <span className={`text-[11px] font-medium ${
+                        <span className={`text-[12px] font-medium ${
                           row.source === 'Manual Upload' ? 'text-text-muted' : 'text-indigo-600'
                         }`}>
                           {row.source}
                         </span>
                       </td>
                       <td className="px-3 py-3">
-                        <span className="text-[11px] text-text-secondary bg-gray-50 px-1.5 py-0.5 rounded font-medium">
+                        <span className="text-[12px] text-text-secondary bg-gray-50 px-1.5 py-0.5 rounded font-medium">
                           {row.type}
                         </span>
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex gap-1">
                           {row.linkedControls.map(c => (
-                            <span key={c} className="text-[10px] font-mono text-primary bg-primary/5 px-1.5 py-0.5 rounded-md border border-primary/10">
+                            <span key={c} className="text-[12px] font-mono text-primary bg-primary/5 px-1.5 py-0.5 rounded-md border border-primary/10">
                               {c}
                             </span>
                           ))}
                         </div>
                       </td>
                       <td className="px-3 py-3">
-                        <span className="text-text-secondary font-mono text-[10px] bg-gray-50 px-1.5 py-0.5 rounded">
+                        <span className="text-text-secondary font-mono text-[12px] bg-gray-50 px-1.5 py-0.5 rounded">
                           {row.engagement}
                         </span>
                       </td>
                       <td className="px-3 py-3">
-                        <span className={`text-[11px] tabular-nums ${row.rows === '-' ? 'text-gray-300' : 'text-text-secondary'}`}>
+                        <span className={`text-[12px] tabular-nums ${row.rows === '-' ? 'text-gray-300' : 'text-text-secondary'}`}>
                           {row.rows}
                         </span>
                       </td>
                       <td className="px-3 py-3">
-                        <span className="text-[11px] text-text-muted tabular-nums">{row.size}</span>
+                        <span className="text-[12px] text-text-muted tabular-nums">{row.size}</span>
                       </td>
                       <td className="px-3 py-3">
                         <StatusBadge status={row.status} />
@@ -334,11 +334,11 @@ export default function EvidenceView() {
 
           {/* Table Footer */}
           <div className="flex items-center justify-between px-4 py-3 border-t border-border-light bg-surface-2/30">
-            <span className="text-[11px] text-text-muted">
+            <span className="text-[12px] text-text-muted">
               Showing {filtered.length} of {FILES.length} files
             </span>
             <div className="flex items-center gap-1">
-              <span className="text-[11px] text-text-muted">Page 1 of 1</span>
+              <span className="text-[12px] text-text-muted">Page 1 of 1</span>
               <button className="p-1 rounded hover:bg-gray-100 text-text-muted cursor-pointer">
                 <ChevronRight size={14} />
               </button>

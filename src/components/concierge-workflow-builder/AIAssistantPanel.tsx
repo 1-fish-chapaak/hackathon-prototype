@@ -66,7 +66,7 @@ export default function AIAssistantPanel({
           </div>
           <div>
             <div className="text-[13px] font-semibold text-ink-800 leading-tight">AI Assistant</div>
-            <div className="text-[11px] text-ink-400 leading-tight">Guided workflow setup</div>
+            <div className="text-[12px] text-ink-400 leading-tight">Guided workflow setup</div>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
@@ -91,7 +91,7 @@ export default function AIAssistantPanel({
               </div>
             );
           })}
-          <span className="text-[11px] font-semibold text-brand-700 ml-2 whitespace-nowrap">
+          <span className="text-[12px] font-semibold text-brand-700 ml-2 whitespace-nowrap">
             {STEPS.find((s) => s.id === step)?.label}
           </span>
         </div>
@@ -167,7 +167,7 @@ export default function AIAssistantPanel({
               <button
                 type="button"
                 onClick={onOpenGuideMe}
-                className="inline-flex items-center gap-1 rounded-full bg-brand-50 hover:bg-brand-100 text-brand-700 text-[11.5px] font-semibold px-2.5 py-1 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 rounded-full bg-brand-50 hover:bg-brand-100 text-brand-700 text-[12px] font-semibold px-2.5 py-1 transition-colors cursor-pointer"
               >
                 <Sparkles size={12} />
                 Guide me

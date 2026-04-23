@@ -72,7 +72,7 @@ function QuickActionPanel({ setView, onDismiss }: { setView: Props['setView']; o
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <div className="text-[11px] font-mono text-ink-500 tabular-nums">{pct}%</div>
+          <div className="text-[12px] font-mono text-ink-500 tabular-nums">{pct}%</div>
           <div className="w-32 h-1.5 rounded-full bg-canvas-border overflow-hidden">
             <div
               className="h-full bg-brand-600 transition-[width] duration-300 ease-out"
@@ -199,7 +199,7 @@ function WorkQueueSection({ setView }: { setView: Props['setView'] }) {
     <div>
       <div className="flex items-end justify-between mb-3">
         <div>
-          <div className="font-mono text-[11px] text-ink-500 tracking-tight tabular-nums">Work queue</div>
+          <div className="font-mono text-[12px] text-ink-500 tabular-nums">Work queue</div>
           <h2 className="font-display text-[24px] font-[420] text-ink-900 leading-tight">{items.length} items waiting on you</h2>
         </div>
         <button
@@ -238,7 +238,7 @@ function WorkQueueSection({ setView }: { setView: Props['setView'] }) {
                   </td>
                   <td className="px-2">
                     <div className="text-ink-900">{it.item}</div>
-                    <div className="text-[11px] text-ink-500 mt-0.5">{it.context}</div>
+                    <div className="text-[12px] text-ink-500 mt-0.5">{it.context}</div>
                   </td>
                   <td className="px-2">
                     <SeverityBadge severity={it.risk} />
@@ -327,12 +327,12 @@ function HealthDashboardSection() {
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-[12px] font-semibold text-brand-600">FY26</span>
-              <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+              <div className="flex items-center gap-1 text-[12px] font-semibold text-emerald-600">
                 <TrendingUp size={11} />
                 +{completionPct > 0 ? Math.round(completionPct * 0.13) : 0}%
               </div>
             </div>
-            <div className="text-[48px] font-extrabold leading-none tracking-tight text-ink-900">{completionPct}%</div>
+            <div className="text-[48px] font-extrabold leading-none text-ink-900">{completionPct}%</div>
             <p className="text-[13px] text-ink-500 mt-2 leading-relaxed max-w-[280px]">
               {executed} of {planned} controls executed across {active.length} active engagements.
             </p>
@@ -368,8 +368,8 @@ function HealthDashboardSection() {
               </div>
               <span className="text-[12px] font-semibold" style={{ color: '#92400E' }}>Risk Overview</span>
             </div>
-            <div className="text-[32px] font-extrabold leading-none tracking-tight" style={{ color: '#1C1917' }}>{riskTotal} risks</div>
-            <div className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold text-red-600">
+            <div className="text-[32px] font-extrabold leading-none" style={{ color: '#1C1917' }}>{riskTotal} risks</div>
+            <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold text-red-600">
               <Shield size={10} />
               {riskFailed} critical/high <span className="text-ink-500 font-normal">· {riskHealthy} mitigated</span>
             </div>
@@ -395,11 +395,11 @@ function HealthDashboardSection() {
               </div>
               <span className="text-[12px] font-semibold text-brand-700">Controls</span>
             </div>
-            <div className="text-[40px] font-extrabold leading-none tracking-tight text-brand-700">{ctlTotal}</div>
+            <div className="text-[40px] font-extrabold leading-none text-brand-700">{ctlTotal}</div>
             <div className="text-[13px] font-semibold text-brand-600 mt-1">in library</div>
           </div>
           <div className="mt-3 space-y-1.5">
-            <div className="flex items-center justify-between text-[11px]">
+            <div className="flex items-center justify-between text-[12px]">
               <span className="text-ink-500">{ctlPending} pending</span>
               <span className="font-semibold text-amber-600">{ctlOverdue} overdue</span>
             </div>
@@ -422,12 +422,12 @@ function HealthDashboardSection() {
                 <ShieldAlert size={13} className="text-white" />
               </div>
               <span className="text-[12px] font-semibold" style={{ color: '#92400E' }}>Open Deficiencies</span>
-              <span className="ml-auto text-[10px] text-ink-500 font-medium">Active</span>
+              <span className="ml-auto text-[12px] text-ink-500 font-medium">Active</span>
             </div>
-            <div className="text-[40px] font-extrabold leading-none tracking-tight" style={{ color: '#1C1917' }}>{defTotal}</div>
+            <div className="text-[40px] font-extrabold leading-none" style={{ color: '#1C1917' }}>{defTotal}</div>
             <div className="text-[12px] text-ink-500 mt-1.5">{defOpen} open, {defInProgress} in progress</div>
           </div>
-          <div className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold text-red-600">
+          <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold text-red-600">
             <AlertTriangle size={10} />
             {DEFICIENCIES.filter(d => d.severity === 'MW').length} material weakness
           </div>
@@ -446,7 +446,7 @@ function HealthDashboardSection() {
               </div>
               <span className="text-[12px] font-semibold text-emerald-700">Workflow Runs</span>
             </div>
-            <div className="text-[36px] font-extrabold leading-none tracking-tight text-emerald-700">{totalWorkflowRuns}</div>
+            <div className="text-[36px] font-extrabold leading-none text-emerald-700">{totalWorkflowRuns}</div>
             <div className="text-[12px] text-emerald-600/70 mt-1.5">{WORKFLOWS.length} active workflows</div>
           </div>
           <div className="flex items-end gap-1.5 h-8 mt-2">
@@ -567,7 +567,7 @@ export default function HomeView({ setView }: Props) {
       <div className="border-b border-canvas-border bg-canvas-elevated relative overflow-hidden">
         {/* Subtle gradient accent bar */}
         <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(90deg, #8838DE, #A366F0, #16A34A, #F59E0B)' }} />
-        <div className="px-6 pt-8 pb-6">
+        <div className="px-10 pt-8 pb-6">
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -575,7 +575,7 @@ export default function HomeView({ setView }: Props) {
             className="flex items-end justify-between"
           >
             <div>
-              <h1 className="text-[40px] tracking-tight leading-[1.1] mb-2">
+              <h1 className="text-[40px] leading-[1.1] mb-2">
                 <span className="font-extrabold" style={{ background: 'linear-gradient(135deg, #8838DE, #6A12CD)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Good morning,</span>
                 {' '}
                 <span className="font-[420] text-ink-900">Auditor</span>
@@ -620,7 +620,7 @@ export default function HomeView({ setView }: Props) {
       </div>
 
       {/* Body */}
-      <div className="px-6 py-8 space-y-8">
+      <div className="px-10 py-8 space-y-8">
         {!dismissed && <QuickActionPanel setView={setView} onDismiss={dismiss} />}
         {dismissed && (
           <button

@@ -26,11 +26,11 @@ export default function DataSourcesView() {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-6 py-8 relative">
+      <div className="px-10 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text tracking-tight">Data Sources</h1>
+            <h1 className="text-xl font-bold text-text">Data Sources</h1>
             <p className="text-sm text-text-secondary mt-1">Manage connected databases, files, and integrations</p>
           </div>
           <div className="flex items-center gap-3">
@@ -63,7 +63,7 @@ export default function DataSourcesView() {
                 <stat.icon size={16} />
               </div>
               <div className="text-2xl font-bold text-text">{stat.value}</div>
-              <div className="text-[11px] text-text-muted uppercase tracking-wider mt-0.5">{stat.label}</div>
+              <div className="text-[12px] text-text-muted uppercaser mt-0.5">{stat.label}</div>
             </motion.div>
           ))}
         </div>
@@ -96,7 +96,7 @@ export default function DataSourcesView() {
                         <StatusBadge status={ds.status} />
                       </div>
                       <div className="flex items-center gap-4 mt-1 text-[12px] text-text-muted">
-                        <span className="uppercase font-bold text-[10px]">{ds.type}</span>
+                        <span className="uppercase font-bold text-[12px]">{ds.type}</span>
                         <span>{ds.records} records</span>
                         <span>Last sync: {ds.lastSync}</span>
                       </div>

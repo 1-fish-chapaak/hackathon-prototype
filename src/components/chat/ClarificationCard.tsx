@@ -124,7 +124,7 @@ export default function ClarificationCard({
               }`}
             >
               <span
-                className={`flex items-center justify-center w-6 h-6 rounded-lg text-[11px] font-bold shrink-0 ${
+                className={`flex items-center justify-center w-6 h-6 rounded-lg text-[12px] font-bold shrink-0 ${
                   isSelected
                     ? 'bg-primary text-white'
                     : 'bg-white text-text-muted border border-border-light'

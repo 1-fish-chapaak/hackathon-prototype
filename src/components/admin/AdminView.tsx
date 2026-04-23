@@ -137,12 +137,12 @@ function UsersTab() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border-light/60">
-              <th className="text-left px-6 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">User</th>
-              <th className="text-left px-6 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">Email</th>
-              <th className="text-left px-6 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">Role</th>
-              <th className="text-left px-6 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">Team</th>
-              <th className="text-left px-6 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">Status</th>
-              <th className="text-left px-6 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider">Last Login</th>
+              <th className="text-left px-6 py-3.5 text-[12px] font-semibold text-text-muted uppercaser">User</th>
+              <th className="text-left px-6 py-3.5 text-[12px] font-semibold text-text-muted uppercaser">Email</th>
+              <th className="text-left px-6 py-3.5 text-[12px] font-semibold text-text-muted uppercaser">Role</th>
+              <th className="text-left px-6 py-3.5 text-[12px] font-semibold text-text-muted uppercaser">Team</th>
+              <th className="text-left px-6 py-3.5 text-[12px] font-semibold text-text-muted uppercaser">Status</th>
+              <th className="text-left px-6 py-3.5 text-[12px] font-semibold text-text-muted uppercaser">Last Login</th>
             </tr>
           </thead>
           <tbody>
@@ -155,34 +155,34 @@ function UsersTab() {
                 className="border-b border-border-light/40 last:border-0 hover:bg-violet-50/30 transition-colors"
               >
                 {/* User */}
-                <td className="px-6 py-3.5">
+                <td className="px-10 py-3.5">
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarGradients[i]} flex items-center justify-center shadow-sm`}>
-                      <span className="text-[11px] font-bold text-white">{user.initials}</span>
+                      <span className="text-[12px] font-bold text-white">{user.initials}</span>
                     </div>
                     <span className="text-[13px] font-semibold text-text">{user.name}</span>
                   </div>
                 </td>
 
                 {/* Email */}
-                <td className="px-6 py-3.5">
+                <td className="px-10 py-3.5">
                   <span className="text-[12.5px] text-text-secondary">{user.email}</span>
                 </td>
 
                 {/* Role */}
-                <td className="px-6 py-3.5">
-                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold border ${user.roleColor}`}>
+                <td className="px-10 py-3.5">
+                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[12px] font-semibold border ${user.roleColor}`}>
                     {user.role}
                   </span>
                 </td>
 
                 {/* Team */}
-                <td className="px-6 py-3.5">
+                <td className="px-10 py-3.5">
                   <span className="text-[12.5px] text-text-secondary">{user.team}</span>
                 </td>
 
                 {/* Status */}
-                <td className="px-6 py-3.5">
+                <td className="px-10 py-3.5">
                   {user.status === 'Active' ? (
                     <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-emerald-600">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -197,7 +197,7 @@ function UsersTab() {
                 </td>
 
                 {/* Last Login */}
-                <td className="px-6 py-3.5">
+                <td className="px-10 py-3.5">
                   <span className="text-[12.5px] text-text-muted">{user.lastLogin}</span>
                 </td>
               </motion.tr>
@@ -268,7 +268,7 @@ export default function AdminView({ activeTab }: Props) {
                 <Settings size={20} className="text-white" />
               </div>
               <div>
-                <h1 className="text-[28px] font-extrabold tracking-tight">
+                <h1 className="text-[28px] font-extrabold">
                   <span className="ai-gradient-text">Administration</span>
                 </h1>
                 <p className="text-[14px] text-text-secondary leading-relaxed">
@@ -318,7 +318,7 @@ export default function AdminView({ activeTab }: Props) {
       </div>
 
       {/* Tab Content */}
-      <div className="px-6 pb-12 pt-2">
+      <div className="px-10 pb-12 pt-2">
         <AnimatePresence mode="wait">
           {currentTab === 'users' ? (
             <UsersTab key="users" />

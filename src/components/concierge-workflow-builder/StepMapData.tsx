@@ -86,7 +86,7 @@ export default function StepMapData({ workflow, files, alignments, setAlignments
             >
               <div className="min-w-0">
                 <div className="text-[14px] font-bold text-ink-900">{input.name}</div>
-                <p className="text-[11.5px] text-ink-400 mt-0.5 line-clamp-1">
+                <p className="text-[12px] text-ink-400 mt-0.5 line-clamp-1">
                   {input.description}
                 </p>
               </div>
@@ -95,7 +95,7 @@ export default function StepMapData({ workflow, files, alignments, setAlignments
                   <span className="text-[18px] font-bold text-ink-800 tabular-nums leading-tight">
                     {mappedCount}/{list.length || input.columns?.length || 0}
                   </span>
-                  <span className="text-[10px] text-ink-400 font-semibold leading-tight">
+                  <span className="text-[12px] text-ink-400 font-semibold leading-tight">
                     columns
                     <br />
                     mapped
@@ -108,97 +108,63 @@ export default function StepMapData({ workflow, files, alignments, setAlignments
               </div>
             </button>
 
-            {/* Mapped sources */}
-            <div className="px-5 pb-4">
-              <div className="border-t border-canvas-border mb-3" />
+            {/* Mapped sources row */}
+            <div className="px-5 pb-3 flex flex-wrap items-center gap-2">
+              <span className="text-[12px] font-semibold text-ink-500">Mapped Sources</span>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[12px] font-semibold text-brand-700 hover:bg-brand-50 transition-colors cursor-pointer"
+              >
+                <Eye size={11} />
+                Preview
+              </button>
 
-              {/* Row 1: label + preview · match */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400">
-                    Mapped Sources
-                  </span>
-                  {uploaded.length > 0 && (
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-canvas-border bg-canvas-elevated hover:border-ink-300 hover:text-ink-800 px-2.5 py-0.5 text-[11px] font-semibold text-ink-600 transition-colors cursor-pointer"
-                    >
-                      <Eye size={11} />
-                      Preview
-                    </button>
-                  )}
-                </div>
-                {list.length > 0 && (
-                  <div
-                    className={[
-                      'inline-flex items-center gap-1 tabular-nums',
-                      matchPct >= 85
-                        ? 'text-compliant-700'
-                        : matchPct >= 65
-                          ? 'text-mitigated-700'
-                          : 'text-risk-700',
-                    ].join(' ')}
-                    title="Aggregate match score across all column alignments"
-                  >
-                    <span className="text-[11px] font-bold uppercase tracking-wider">
-                      {matchPct}% Match
-                    </span>
-                    <Info
-                      size={12}
-                      className={
-                        matchPct >= 85
-                          ? 'text-compliant/70'
-                          : matchPct >= 65
-                            ? 'text-mitigated/80'
-                            : 'text-risk/80'
-                      }
-                    />
-                  </div>
+              <div className="flex items-center flex-wrap gap-1.5 ml-1 flex-1">
+                {uploaded.length === 0 ? (
+                  <span className="text-[12px] text-ink-400">No files linked yet.</span>
+                ) : (
+                  <>
+                    {uploaded.slice(0, 2).map((f, i) => (
+                      <span
+                        key={`${f.name}-${i}`}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-canvas-border bg-white px-2 py-0.5 text-[12px] text-ink-700"
+                      >
+                        <FileIcon size={10} className="text-brand-600" />
+                        <span className="max-w-[160px] truncate">{f.name}</span>
+                        <X size={10} className="text-ink-400" />
+                      </span>
+                    ))}
+                    {uploaded.length > 2 && (
+                      <span className="text-[12px] text-ink-500 font-semibold">
+                        + {uploaded.length - 2} more
+                      </span>
+                    )}
+                  </>
                 )}
-              </div>
-
-              {/* Row 2: file pills · select button */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center flex-wrap gap-1.5 min-w-0">
-                  {uploaded.length === 0 ? (
-                    <span className="text-[11.5px] text-ink-400 italic">
-                      No files mapped. Upload or choose a file to get started.
-                    </span>
-                  ) : (
-                    <>
-                      {uploaded.slice(0, 2).map((f, i) => (
-                        <span
-                          key={`${f.name}-${i}`}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50/60 pl-2.5 pr-1.5 py-1 text-[11.5px] text-ink-700"
-                        >
-                          <FileIcon size={11} className="text-brand-600/70 shrink-0" />
-                          <span className="max-w-[160px] truncate">{f.name}</span>
-                          <button
-                            type="button"
-                            className="p-0.5 rounded text-ink-400 hover:text-risk-600 hover:bg-risk-50 transition-colors"
-                            aria-label="Remove file"
-                          >
-                            <X size={11} />
-                          </button>
-                        </span>
-                      ))}
-                      {uploaded.length > 2 && (
-                        <span className="inline-flex items-center rounded-lg border border-brand-200/60 bg-brand-50/40 px-2.5 py-1 text-[11.5px] font-semibold text-brand-700">
-                          + {uploaded.length - 2} more
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 bg-canvas-elevated hover:bg-brand-50 px-3 py-1.5 text-[11.5px] font-semibold text-brand-700 transition-colors cursor-pointer shrink-0"
+                  className="inline-flex items-center gap-1 rounded-md border border-canvas-border bg-canvas hover:bg-brand-50 hover:border-brand-300 px-2 py-0.5 text-[12px] font-semibold text-ink-600 transition-colors cursor-pointer"
                 >
-                  <ArrowLeftRight size={12} />
+                  <ArrowLeftRight size={10} />
                   Select File(s)
                 </button>
               </div>
+
+              {list.length > 0 && (
+                <span
+                  className={[
+                    'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-bold uppercaser',
+                    matchPct >= 85
+                      ? 'bg-compliant-50 text-compliant-700'
+                      : matchPct >= 65
+                        ? 'bg-mitigated-50 text-mitigated-700'
+                        : 'bg-risk-50 text-risk-700',
+                  ].join(' ')}
+                  title="Aggregate match score across all column alignments"
+                >
+                  {matchPct}% Match
+                </span>
+              )}
             </div>
 
             {/* Column Alignment */}
@@ -273,7 +239,7 @@ function ColumnAlignmentTable({
 
   if (rows.length === 0) {
     return (
-      <div className="px-5 pb-5 text-[11.5px] text-ink-400">
+      <div className="px-5 pb-5 text-[12px] text-ink-400">
         No columns detected for {input.name}.
       </div>
     );
@@ -307,7 +273,7 @@ function ColumnAlignmentTable({
                 </span>
               </span>
             </div>
-            <span className="inline-flex items-center gap-0.5 text-[11.5px] text-brand-600 font-semibold">
+            <span className="inline-flex items-center gap-0.5 text-[12px] text-brand-600 font-semibold">
               {autoExpanded ? 'Collapse' : 'Expand'}
               {autoExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </span>
@@ -406,7 +372,7 @@ function FieldRow({
           {row.source.name}
         </span>
         <span
-          className={`text-[9.5px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 shrink-0 ${DTYPE_STYLE[row.source.dtype] ?? DTYPE_STYLE.STRING}`}
+          className={`text-[9.5px] font-bold uppercaser rounded px-1.5 py-0.5 shrink-0 ${DTYPE_STYLE[row.source.dtype] ?? DTYPE_STYLE.STRING}`}
         >
           {row.source.dtype}
         </span>
@@ -427,7 +393,7 @@ function FieldRow({
               {row.target.name}
             </span>
             <span
-              className={`text-[9.5px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 shrink-0 ${DTYPE_STYLE[row.target.dtype] ?? DTYPE_STYLE.STRING}`}
+              className={`text-[9.5px] font-bold uppercaser rounded px-1.5 py-0.5 shrink-0 ${DTYPE_STYLE[row.target.dtype] ?? DTYPE_STYLE.STRING}`}
             >
               {row.target.dtype}
             </span>
@@ -435,7 +401,7 @@ function FieldRow({
         ) : (
           <button
             type="button"
-            className="text-[11.5px] font-semibold text-brand-700 hover:underline cursor-pointer"
+            className="text-[12px] font-semibold text-brand-700 hover:underline cursor-pointer"
           >
             + Map target…
           </button>
@@ -516,10 +482,10 @@ function AIJustificationPopover({
           <div key={m.label}>
             <div className="flex items-baseline justify-between mb-1">
               <div className="flex items-baseline gap-1.5">
-                <span className="text-[11.5px] font-bold text-ink-800">{m.label}</span>
+                <span className="text-[12px] font-bold text-ink-800">{m.label}</span>
                 <span className="text-[9.5px] font-medium text-ink-400">×{m.weight}%</span>
               </div>
-              <span className={`text-[11.5px] font-bold tabular-nums ${confidenceColor(m.score)}`}>
+              <span className={`text-[12px] font-bold tabular-nums ${confidenceColor(m.score)}`}>
                 {m.score}%
               </span>
             </div>
@@ -535,12 +501,12 @@ function AIJustificationPopover({
       </div>
       <div className="mx-3.5 border-t border-canvas-border" />
       <div className="px-3.5 py-2.5">
-        <p className="text-[10.5px] text-ink-600 leading-relaxed">{row.explanation}</p>
+        <p className="text-[12px] text-ink-600 leading-relaxed">{row.explanation}</p>
         <div className="flex items-center justify-between gap-2 mt-2">
           <div className="flex items-center gap-2 min-w-0">
             <span
               className={[
-                'inline-flex items-center rounded-full border px-2 py-0.5 text-[9.5px] font-bold tracking-wide',
+                'inline-flex items-center rounded-full border px-2 py-0.5 text-[9.5px] font-bold',
                 row.confidence >= 85
                   ? 'bg-compliant-50 text-compliant-700 border-compliant/40'
                   : row.confidence >= 70
@@ -558,7 +524,7 @@ function AIJustificationPopover({
             <button
               type="button"
               onClick={onAccept}
-              className="inline-flex items-center gap-1 rounded-md bg-brand-600 hover:bg-brand-500 text-white text-[10.5px] font-semibold px-2 py-1 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 rounded-md bg-brand-600 hover:bg-brand-500 text-white text-[12px] font-semibold px-2 py-1 transition-colors cursor-pointer"
             >
               Accept
             </button>

@@ -91,7 +91,7 @@ function ConfidenceChip({ value }: { value: number }) {
         ? 'bg-warning-bg text-warning'
         : 'bg-surface-2 text-text-muted';
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold font-mono ${color}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[12px] font-bold font-mono ${color}`}>
       {value}%
     </span>
   );
@@ -105,7 +105,7 @@ function StatusBadge({ status }: { status: PastRun['status'] }) {
   };
   const s = map[status];
   return (
-    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${s.bg}`}>
+    <span className={`text-[12px] font-bold uppercaser px-2 py-0.5 rounded ${s.bg}`}>
       {s.label}
     </span>
   );
@@ -171,7 +171,7 @@ function FileDropZone({
             </div>
             <div className="text-left">
               <div className="text-[13px] font-medium text-text">{slot.file.name}</div>
-              <div className="text-[11px] text-text-muted">
+              <div className="text-[12px] text-text-muted">
                 {(slot.file.size / 1024).toFixed(1)} KB
               </div>
             </div>
@@ -189,12 +189,12 @@ function FileDropZone({
             <Upload size={18} className="text-text-muted group-hover:text-primary transition-colors" />
           </div>
           <div className="text-[13px] font-medium text-text mb-1">{slot.label}</div>
-          <div className="text-[11px] text-text-muted mb-2">{slot.description}</div>
-          <div className="text-[10px] text-text-muted/60">
+          <div className="text-[12px] text-text-muted mb-2">{slot.description}</div>
+          <div className="text-[12px] text-text-muted/60">
             Drop file here or <span className="text-primary font-medium">browse</span>
           </div>
           {slot.required && (
-            <span className="absolute top-3 right-3 text-[9px] font-bold text-danger uppercase tracking-wider">Required</span>
+            <span className="absolute top-3 right-3 text-[12px] font-bold text-danger uppercaser">Required</span>
           )}
         </>
       )}
@@ -296,7 +296,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
 
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
-      <div className="px-6 py-8 relative">
+      <div className="px-10 py-8 relative">
         {/* ─── Back Button ─── */}
         <button
           onClick={onBack}
@@ -317,19 +317,19 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
 
           <div className="flex items-start justify-between">
             <div>
-              <div className="flex items-center gap-2 text-[11px] text-text-muted mb-2">
-                <div className="flex items-center gap-1 text-success font-semibold uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-[12px] text-text-muted mb-2">
+                <div className="flex items-center gap-1 text-success font-semibold uppercaser">
                   <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                   {WORKFLOW_META.status === 'active' ? 'Active' : 'Inactive'}
                 </div>
                 <span className="font-mono">{workflowId.toUpperCase()}</span>
               </div>
-              <h1 className="text-xl font-bold text-text tracking-tight mb-1">{WORKFLOW_META.name}</h1>
+              <h1 className="text-xl font-bold text-text mb-1">{WORKFLOW_META.name}</h1>
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                <span className="text-[12px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
                   {WORKFLOW_META.category}
                 </span>
-                <span className="text-[10px] font-semibold text-text-muted bg-surface-3 px-2 py-0.5 rounded-full font-mono">
+                <span className="text-[12px] font-semibold text-text-muted bg-surface-3 px-2 py-0.5 rounded-full font-mono">
                   {WORKFLOW_META.version}
                 </span>
               </div>
@@ -373,14 +373,14 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
           className="rounded-2xl border border-border-light p-6 mb-8"
           style={glassStyle}
         >
-          <h2 className="text-[13px] font-bold text-text uppercase tracking-wider mb-5 flex items-center gap-2">
+          <h2 className="text-[13px] font-bold text-text uppercaser mb-5 flex items-center gap-2">
             <FileText size={14} className="text-primary" />
             Input Configuration
           </h2>
 
           {/* File Uploads */}
           <div className="mb-6">
-            <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-3">
+            <div className="text-[12px] font-semibold text-text-muted uppercaser mb-3">
               Data Sources
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -397,13 +397,13 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
 
           {/* Parameters */}
           <div className="mb-6">
-            <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-3">
+            <div className="text-[12px] font-semibold text-text-muted uppercaser mb-3">
               Parameters
             </div>
             <div className="grid grid-cols-3 gap-4">
               {/* Threshold */}
               <div>
-                <label className="text-[11px] font-semibold text-text block mb-1.5 flex items-center gap-1.5">
+                <label className="text-[12px] font-semibold text-text block mb-1.5 flex items-center gap-1.5">
                   <Percent size={11} className="text-primary" />
                   Match Threshold
                 </label>
@@ -416,13 +416,13 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
                     onChange={(e) => setThreshold(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl border border-border-light text-[13px] font-mono text-text bg-white focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-text-muted">%</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-text-muted">%</span>
                 </div>
               </div>
 
               {/* Date Range */}
               <div>
-                <label className="text-[11px] font-semibold text-text block mb-1.5 flex items-center gap-1.5">
+                <label className="text-[12px] font-semibold text-text block mb-1.5 flex items-center gap-1.5">
                   <Calendar size={11} className="text-primary" />
                   Date Range
                 </label>
@@ -444,7 +444,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
 
               {/* Company Code */}
               <div>
-                <label className="text-[11px] font-semibold text-text block mb-1.5 flex items-center gap-1.5">
+                <label className="text-[12px] font-semibold text-text block mb-1.5 flex items-center gap-1.5">
                   <Building2 size={11} className="text-primary" />
                   Company Code
                 </label>
@@ -615,9 +615,9 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
                     <div className={`w-7 h-7 rounded-lg ${card.color} flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform duration-300`}>
                       <card.icon size={14} />
                     </div>
-                    <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">{card.label}</div>
+                    <div className="text-[12px] text-text-muted uppercaser mb-1">{card.label}</div>
                     <div className="text-2xl font-bold font-mono text-text leading-none mb-1">{card.value}</div>
-                    <div className="text-[11px] text-text-secondary">{card.note}</div>
+                    <div className="text-[12px] text-text-secondary">{card.note}</div>
                   </motion.div>
                 ))}
               </div>
@@ -629,14 +629,14 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
                     <TrendingUp size={14} className="text-primary" />
                     Duplicate Invoice Matches
                   </h3>
-                  <span className="text-[11px] text-text-muted font-mono">{RESULTS_DATA.length} records</span>
+                  <span className="text-[12px] text-text-muted font-mono">{RESULTS_DATA.length} records</span>
                 </div>
 
                 <div className="overflow-x-auto">
                   {/* Table header */}
                   <div className="grid grid-cols-[140px_1fr_120px_110px_90px] gap-3 px-5 py-3 bg-surface-2 border-b border-border-light min-w-[600px]">
                     {['Invoice #', 'Vendor', 'Amount', 'Dup. Group', 'Confidence'].map((h) => (
-                      <span key={h} className="text-[10px] font-bold text-text-muted uppercase tracking-wider">{h}</span>
+                      <span key={h} className="text-[12px] font-bold text-text-muted uppercaser">{h}</span>
                     ))}
                   </div>
 
@@ -652,7 +652,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
                       <span className="text-[12px] font-mono text-primary font-medium">{row.invoiceNo}</span>
                       <span className="text-[12px] text-text truncate">{row.vendor}</span>
                       <span className="text-[12px] font-mono text-text font-medium">{row.amount}</span>
-                      <span className="text-[11px] font-mono text-text-muted bg-surface-2 px-2 py-0.5 rounded w-fit">{row.duplicateGroup}</span>
+                      <span className="text-[12px] font-mono text-text-muted bg-surface-2 px-2 py-0.5 rounded w-fit">{row.duplicateGroup}</span>
                       <ConfidenceChip value={row.confidence} />
                     </motion.div>
                   ))}
@@ -691,13 +691,13 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
               <Clock size={14} className="text-primary" />
               Past Runs
             </h3>
-            <span className="text-[11px] text-text-muted font-mono">{PAST_RUNS.length} runs</span>
+            <span className="text-[12px] text-text-muted font-mono">{PAST_RUNS.length} runs</span>
           </div>
 
           {/* Table header */}
           <div className="grid grid-cols-[90px_1fr_90px_80px_80px_70px] gap-3 px-5 py-3 bg-surface-2 border-b border-border-light">
             {['Run', 'Date', 'Findings', 'Status', 'Duration', ''].map((h) => (
-              <span key={h || 'action'} className="text-[10px] font-bold text-text-muted uppercase tracking-wider">{h}</span>
+              <span key={h || 'action'} className="text-[12px] font-bold text-text-muted uppercaser">{h}</span>
             ))}
           </div>
 
@@ -718,7 +718,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
               </div>
               <StatusBadge status={run.status} />
               <span className="text-[12px] font-mono text-text-muted">{run.duration}</span>
-              <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border-light text-[11px] font-medium text-text-secondary hover:bg-surface-2 hover:border-primary/30 transition-colors cursor-pointer">
+              <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border-light text-[12px] font-medium text-text-secondary hover:bg-surface-2 hover:border-primary/30 transition-colors cursor-pointer">
                 <Eye size={11} />
                 View
               </button>

@@ -146,9 +146,9 @@ function RiskHierarchy() {
               </div>
               <div className="flex-1 text-left">
                 <div className="text-[13px] font-semibold text-text">{risk.name}</div>
-                <div className="text-[10px] text-text-muted mt-0.5">{risk.id} · {risk.controls.length} controls linked</div>
+                <div className="text-[12px] text-text-muted mt-0.5">{risk.id} · {risk.controls.length} controls linked</div>
               </div>
-              <span className={`inline-flex items-center ${sev.bg} ${sev.text} px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase`}>
+              <span className={`inline-flex items-center ${sev.bg} ${sev.text} px-2.5 py-0.5 rounded-full text-[12px] font-bold uppercase`}>
                 {risk.severity}
               </span>
             </button>
@@ -169,14 +169,14 @@ function RiskHierarchy() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-[12px] font-medium text-text">{control.name}</div>
-                          <div className="text-[10px] text-text-muted">{control.id} · {control.workflows.length} workflows</div>
+                          <div className="text-[12px] text-text-muted">{control.id} · {control.workflows.length} workflows</div>
                         </div>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             addToast({ message: control.linked ? `Unlinked ${control.id}` : `Linked ${control.id}`, type: 'info' });
                           }}
-                          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
+                          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer ${
                             control.linked
                               ? 'bg-red-50 text-red-600 hover:bg-red-100'
                               : 'bg-green-50 text-green-600 hover:bg-green-100'
@@ -195,12 +195,12 @@ function RiskHierarchy() {
                                 <Workflow size={11} />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="text-[11px] font-medium text-text">{wf.name}</div>
-                                <div className="text-[9px] text-text-muted">{wf.id}</div>
+                                <div className="text-[12px] font-medium text-text">{wf.name}</div>
+                                <div className="text-[12px] text-text-muted">{wf.id}</div>
                               </div>
                               <button
                                 onClick={() => addToast({ message: wf.linked ? `Unlinked ${wf.id}` : `Linked ${wf.id}`, type: 'info' })}
-                                className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-semibold transition-colors cursor-pointer ${
+                                className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer ${
                                   wf.linked
                                     ? 'bg-red-50 text-red-600 hover:bg-red-100'
                                     : 'bg-green-50 text-green-600 hover:bg-green-100'
@@ -242,11 +242,11 @@ export default function RACMView({}: Props) {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-6 py-8 relative">
+      <div className="px-10 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text tracking-tight">Risk & Control Matrices</h1>
+            <h1 className="text-xl font-bold text-text">Risk & Control Matrices</h1>
             <p className="text-sm text-text-secondary mt-1">Manage RACMs across all business processes.</p>
           </div>
           <div className="flex items-center gap-3">
@@ -274,7 +274,7 @@ export default function RACMView({}: Props) {
           </div>
           <div className="flex-1">
             <div className="text-[12.5px] font-semibold text-text">RACM Coverage Analysis</div>
-            <div className="text-[11.5px] text-text-secondary mt-0.5">
+            <div className="text-[12px] text-text-secondary mt-0.5">
               2 RACMs have incomplete control mappings. IT General Controls has 5 unmapped risks requiring attention.
               <span className="text-primary font-semibold cursor-pointer hover:underline ml-1">Auto-map controls</span>
             </div>
@@ -344,7 +344,7 @@ export default function RACMView({}: Props) {
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={(e) => { e.stopPropagation(); addToast({ message: `Exporting ${racm.name}...`, type: 'info' }); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-text-secondary text-[11px] font-semibold rounded-lg cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-text-secondary text-[12px] font-semibold rounded-lg cursor-pointer"
                     >
                       <Download size={12} />
                       Export
@@ -353,7 +353,7 @@ export default function RACMView({}: Props) {
                 </div>
                 {/* Risk → Control → Workflow hierarchy */}
                 <div>
-                  <div className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">Risk Hierarchy</div>
+                  <div className="text-[12px] font-bold text-text-muted uppercaser mb-2">Risk Hierarchy</div>
                   <RiskHierarchy />
                 </div>
               </div>
@@ -368,7 +368,7 @@ export default function RACMView({}: Props) {
                 return (
                   <div>
                     <div className="text-text font-medium">{racm.name}</div>
-                    <div className="text-[10px] text-text-muted mt-0.5">Updated {racm.lastUpdated}</div>
+                    <div className="text-[12px] text-text-muted mt-0.5">Updated {racm.lastUpdated}</div>
                   </div>
                 );
               },
@@ -383,7 +383,7 @@ export default function RACMView({}: Props) {
                 return (
                   <span className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: processColors[racm.processAbbr] || '#888' }} />
-                    <span className="text-text-secondary text-[11px] font-medium">{racm.processAbbr}</span>
+                    <span className="text-text-secondary text-[12px] font-medium">{racm.processAbbr}</span>
                   </span>
                 );
               },
@@ -393,7 +393,7 @@ export default function RACMView({}: Props) {
               label: 'Version',
               width: '70px',
               render: (item) => (
-                <span className="text-[11px] font-mono text-text-muted">{String(item.version)}</span>
+                <span className="text-[12px] font-mono text-text-muted">{String(item.version)}</span>
               ),
             },
             {
@@ -404,7 +404,7 @@ export default function RACMView({}: Props) {
                 const racm = item as unknown as RACMRow;
                 const s = STATUS_STYLES[racm.status];
                 return (
-                  <span className={`inline-flex items-center gap-1.5 ${s.bg} ${s.text} px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap`}>
+                  <span className={`inline-flex items-center gap-1.5 ${s.bg} ${s.text} px-2.5 py-0.5 rounded-full text-[12px] font-semibold whitespace-nowrap`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
                     {racm.status}
                   </span>
@@ -442,7 +442,7 @@ export default function RACMView({}: Props) {
                     <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
                       <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-[11px] font-semibold text-text-secondary w-8 text-right">{pct}%</span>
+                    <span className="text-[12px] font-semibold text-text-secondary w-8 text-right">{pct}%</span>
                   </div>
                 );
               },
@@ -457,7 +457,7 @@ export default function RACMView({}: Props) {
                 const racm = item as unknown as RACMRow;
                 if (racm.completeness >= 100) return null;
                 return (
-                  <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[12px] font-semibold whitespace-nowrap">
                     <AlertTriangle size={10} />
                     Missing
                   </span>
@@ -481,11 +481,11 @@ export default function RACMView({}: Props) {
               </div>
               <div>
                 <h3 className="text-[13px] font-semibold text-text">AI Mapping Suggestions</h3>
-                <p className="text-[10.5px] text-text-muted mt-0.5">2 RACMs have unmapped risks that AI can resolve automatically</p>
+                <p className="text-[12px] text-text-muted mt-0.5">2 RACMs have unmapped risks that AI can resolve automatically</p>
               </div>
             </div>
             <div className="flex justify-center">
-              <button className="flex items-center gap-1.5 text-[11px] text-primary font-semibold hover:underline cursor-pointer">
+              <button className="flex items-center gap-1.5 text-[12px] text-primary font-semibold hover:underline cursor-pointer">
                 View suggestions
                 <ArrowRight size={10} />
               </button>

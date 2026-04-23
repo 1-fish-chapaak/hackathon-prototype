@@ -255,7 +255,7 @@ export default function PersonaDemo() {
                       : 'bg-text-muted/40'
             }`}
           />
-          <span className="text-[11px] font-medium uppercase tracking-widest text-text-muted">
+          <span className="text-[12px] font-medium uppercasest text-text-muted">
             {state}
           </span>
         </div>
@@ -263,7 +263,7 @@ export default function PersonaDemo() {
 
       {/* Variant Selector */}
       <div className="flex w-full flex-col gap-2">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+        <span className="text-[12px] font-medium uppercaser text-text-muted">
           Variant
         </span>
         <div className="grid grid-cols-3 gap-1.5">
@@ -285,7 +285,7 @@ export default function PersonaDemo() {
 
       {/* State Controls */}
       <div className="flex w-full flex-col gap-2">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+        <span className="text-[12px] font-medium uppercaser text-text-muted">
           State
         </span>
         <div className="flex flex-wrap gap-1.5">
@@ -300,7 +300,7 @@ export default function PersonaDemo() {
                   isActive ? cfg.activeColor : cfg.color
                 }`}
               >
-                <span className="text-[10px]">{cfg.icon}</span>
+                <span className="text-[12px]">{cfg.icon}</span>
                 {cfg.label}
               </button>
             );

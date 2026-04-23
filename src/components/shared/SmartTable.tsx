@@ -140,7 +140,7 @@ export default function SmartTable<T extends Record<string, unknown>>({
           )}
           {headerExtra && <div className="flex items-center gap-2">{headerExtra}</div>}
           {paginated && (
-            <div className="text-[11px] text-text-muted shrink-0">
+            <div className="text-[12px] text-text-muted shrink-0">
               {sorted.length} result{sorted.length !== 1 ? 's' : ''}
             </div>
           )}
@@ -182,7 +182,7 @@ export default function SmartTable<T extends Record<string, unknown>>({
                     </div>
                     <div className="text-[13px] font-medium text-text-secondary">{emptyMessage}</div>
                     {search && (
-                      <button onClick={() => setSearch('')} className="text-[11px] text-primary font-medium hover:underline cursor-pointer mt-1">
+                      <button onClick={() => setSearch('')} className="text-[12px] text-primary font-medium hover:underline cursor-pointer mt-1">
                         Clear search
                       </button>
                     )}
@@ -231,7 +231,7 @@ export default function SmartTable<T extends Record<string, unknown>>({
                   {expandable && isExpanded && (
                     <tr>
                       <td colSpan={totalCols} className="p-0">
-                        <div className="px-6 py-4 bg-surface-2/50 border-b border-border-light">
+                        <div className="px-10 py-4 bg-surface-2/50 border-b border-border-light">
                           {expandable(item)}
                         </div>
                       </td>
@@ -247,7 +247,7 @@ export default function SmartTable<T extends Record<string, unknown>>({
       {/* Pagination */}
       {paginated && totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-border-light bg-surface-2/30">
-          <div className="text-[11px] text-text-muted">
+          <div className="text-[12px] text-text-muted">
             Showing {safePage * pageSize + 1}–{Math.min((safePage + 1) * pageSize, sorted.length)} of {sorted.length}
           </div>
           <div className="flex items-center gap-1">
@@ -262,7 +262,7 @@ export default function SmartTable<T extends Record<string, unknown>>({
               <button
                 key={i}
                 onClick={() => setPage(i)}
-                className={`w-7 h-7 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+                className={`w-7 h-7 rounded-md text-[12px] font-semibold transition-colors cursor-pointer ${
                   i === safePage
                     ? 'bg-primary text-white'
                     : 'text-text-secondary hover:bg-gray-100'

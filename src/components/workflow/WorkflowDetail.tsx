@@ -32,7 +32,7 @@ const RUN_HISTORY = [
 
 function ScoreChip({ score }: { score: number }) {
   const bg = score >= 85 ? 'bg-primary/10 text-primary' : score >= 70 ? 'bg-mitigated-50 text-mitigated-700' : 'bg-risk-50 text-risk-700';
-  return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold font-mono ${bg}`}>{score}</span>;
+  return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[12px] font-bold font-mono ${bg}`}>{score}</span>;
 }
 
 type TabId = 'overview' | 'runs' | 'config';
@@ -54,7 +54,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-6 py-8 relative">
+      <div className="px-10 py-8 relative">
         <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-primary mb-4 transition-colors cursor-pointer">
           <ArrowLeft size={14} />
           Workflows
@@ -66,21 +66,21 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
 
           <div className="flex items-start justify-between mb-5">
             <div>
-              <div className="flex items-center gap-2 text-[11px] text-text-muted mb-2">
-                <div className="flex items-center gap-1 text-success font-semibold uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-[12px] text-text-muted mb-2">
+                <div className="flex items-center gap-1 text-success font-semibold uppercaser">
                   <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                   Active
                 </div>
                 <span className="font-mono">{wf.id.toUpperCase()}</span>
               </div>
               <div className="flex items-center gap-3 mb-1.5">
-                <h1 className="text-xl font-bold text-text tracking-tight">{wf.name}</h1>
+                <h1 className="text-xl font-bold text-text">{wf.name}</h1>
                 <div className="flex items-center gap-1 bg-surface-2 rounded-lg p-0.5">
                   {['v1', 'v2', 'v3'].map(v => (
                     <button
                       key={v}
                       onClick={() => setVersion(v)}
-                      className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-md text-[12px] font-semibold transition-all cursor-pointer ${
                         version === v ? 'bg-white text-primary shadow-sm' : 'text-text-muted hover:text-text-secondary'
                       }`}
                     >
@@ -129,9 +129,9 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                 <div className={`w-7 h-7 rounded-lg ${k.color} flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform duration-300`}>
                   <k.icon size={14} />
                 </div>
-                <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">{k.l}</div>
+                <div className="text-[12px] text-text-muted uppercaser mb-1">{k.l}</div>
                 <div className="text-2xl font-bold font-mono text-text leading-none mb-1">{k.v}</div>
-                <div className="text-[11px] text-text-secondary">{k.note}</div>
+                <div className="text-[12px] text-text-secondary">{k.note}</div>
               </div>
             ))}
           </div>
@@ -154,7 +154,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
               <span className="flex items-center gap-2">
                 {t.label}
                 {t.count != null && (
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${tab === t.id ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{t.count}</span>
+                  <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${tab === t.id ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{t.count}</span>
                 )}
               </span>
             </button>
@@ -166,18 +166,18 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
           <div className="space-y-5">
             {/* Schedule Info */}
             <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
-              <h4 className="text-[12px] font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><Calendar size={13} className="text-primary" /> Schedule</h4>
+              <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-3 flex items-center gap-2"><Calendar size={13} className="text-primary" /> Schedule</h4>
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-surface-2 border border-border-light rounded-xl p-3">
-                  <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Type</div>
+                  <div className="text-[12px] text-text-muted uppercaser mb-1">Type</div>
                   <div className="text-[14px] font-bold text-text">Daily</div>
                 </div>
                 <div className="bg-surface-2 border border-border-light rounded-xl p-3">
-                  <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Run Time</div>
+                  <div className="text-[12px] text-text-muted uppercaser mb-1">Run Time</div>
                   <div className="text-[14px] font-bold text-text">06:00 AM</div>
                 </div>
                 <div className="bg-surface-2 border border-border-light rounded-xl p-3">
-                  <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Next Run</div>
+                  <div className="text-[12px] text-text-muted uppercaser mb-1">Next Run</div>
                   <div className="text-[14px] font-bold text-primary flex items-center gap-1.5">
                     <Clock size={13} />
                     Tomorrow, 06:00 AM
@@ -199,11 +199,11 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
             {/* Steps as professional table-like list */}
             <div className="bg-white rounded-xl border border-border-light overflow-hidden">
               <div className="grid grid-cols-[40px_1fr_120px_100px_80px] gap-3 px-5 py-3 bg-surface-2 border-b border-border-light">
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">#</span>
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Step</span>
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Type</span>
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Avg Time</span>
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Status</span>
+                <span className="text-[12px] font-bold text-text-muted uppercaser">#</span>
+                <span className="text-[12px] font-bold text-text-muted uppercaser">Step</span>
+                <span className="text-[12px] font-bold text-text-muted uppercaser">Type</span>
+                <span className="text-[12px] font-bold text-text-muted uppercaser">Avg Time</span>
+                <span className="text-[12px] font-bold text-text-muted uppercaser">Status</span>
               </div>
               {wf.steps.map((step, i) => {
                 const types = ['Ingestion', 'Transform', 'Analysis', 'Scoring', 'Action'];
@@ -220,11 +220,11 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                     <div>
                       <span className="text-[13px] font-medium text-text">{step}</span>
                     </div>
-                    <span className="text-[11px] font-mono text-text-muted">{types[i] || 'Process'}</span>
-                    <span className="text-[11px] font-mono text-text-muted">{times[i] || '0.2s'}</span>
+                    <span className="text-[12px] font-mono text-text-muted">{types[i] || 'Process'}</span>
+                    <span className="text-[12px] font-mono text-text-muted">{times[i] || '0.2s'}</span>
                     <div className="flex items-center gap-1.5">
                       <CheckCircle2 size={13} className="text-success" />
-                      <span className="text-[11px] text-success font-medium">OK</span>
+                      <span className="text-[12px] text-success font-medium">OK</span>
                     </div>
                   </motion.div>
                 );
@@ -238,7 +238,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
           <div className="bg-white rounded-xl border border-border-light overflow-hidden">
             <div className="grid grid-cols-[80px_1fr_80px_100px_80px_80px_70px] gap-3 px-5 py-3 bg-surface-2 border-b border-border-light">
               {['Run', 'Date', 'Trigger', 'Duration', 'Flags', 'Score', 'Status'].map(h => (
-                <span key={h} className="text-[10px] font-bold text-text-muted uppercase tracking-wider">{h}</span>
+                <span key={h} className="text-[12px] font-bold text-text-muted uppercaser">{h}</span>
               ))}
             </div>
             {RUN_HISTORY.map((run, i) => (
@@ -251,11 +251,11 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
               >
                 <span className="text-[12px] font-mono text-primary font-medium">{run.id}</span>
                 <span className="text-[12px] font-mono text-text-secondary">{run.date}</span>
-                <span className="text-[11px] text-text-muted">{run.trigger}</span>
+                <span className="text-[12px] text-text-muted">{run.trigger}</span>
                 <span className="text-[12px] font-mono text-text font-medium">{run.duration}</span>
                 <span className="text-[12px] font-mono text-text font-medium">{run.flags}</span>
                 <ScoreChip score={run.score} />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-success bg-compliant-50 px-2 py-0.5 rounded text-center">
+                <span className="text-[12px] font-bold uppercaser text-success bg-compliant-50 px-2 py-0.5 rounded text-center">
                   {run.status === 'ok' ? 'PASS' : 'WARN'}
                 </span>
               </motion.div>
@@ -268,33 +268,33 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
           <div className="space-y-5">
             {/* Schedule */}
             <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
-              <h4 className="text-[12px] font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><Calendar size={13} className="text-primary" /> Schedule & Triggers</h4>
+              <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-3 flex items-center gap-2"><Calendar size={13} className="text-primary" /> Schedule & Triggers</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[11px] font-semibold text-text block mb-1">Frequency</label>
+                  <label className="text-[12px] font-semibold text-text block mb-1">Frequency</label>
                   <div className="flex gap-1.5">
                     {['Hourly', 'Daily', 'Weekly', 'Monthly'].map(f => (
-                      <button key={f} className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${f === 'Daily' ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-surface-3'}`}>{f}</button>
+                      <button key={f} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all cursor-pointer ${f === 'Daily' ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-surface-3'}`}>{f}</button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold text-text block mb-1">Run Time</label>
+                  <label className="text-[12px] font-semibold text-text block mb-1">Run Time</label>
                   <input value="06:00 AM" readOnly className="w-full px-3 py-2 rounded-lg border border-border-light text-[12px] bg-white text-text" />
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold text-text block mb-1">Trigger On</label>
+                  <label className="text-[12px] font-semibold text-text block mb-1">Trigger On</label>
                   <div className="flex gap-1.5">
                     {['Schedule', 'Data Change', 'Manual'].map(t => (
-                      <button key={t} className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${t === 'Schedule' ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-surface-3'}`}>{t}</button>
+                      <button key={t} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all cursor-pointer ${t === 'Schedule' ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-surface-3'}`}>{t}</button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold text-text block mb-1">Retry on Failure</label>
+                  <label className="text-[12px] font-semibold text-text block mb-1">Retry on Failure</label>
                   <div className="flex gap-1.5">
                     {['Off', '1x', '3x', '5x'].map(r => (
-                      <button key={r} className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${r === '3x' ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-surface-3'}`}>{r}</button>
+                      <button key={r} className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all cursor-pointer ${r === '3x' ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-surface-3'}`}>{r}</button>
                     ))}
                   </div>
                 </div>
@@ -303,7 +303,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
 
             {/* Thresholds & Rules */}
             <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
-              <h4 className="text-[12px] font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><SlidersHorizontal size={13} className="text-primary" /> Thresholds & Rules</h4>
+              <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-3 flex items-center gap-2"><SlidersHorizontal size={13} className="text-primary" /> Thresholds & Rules</h4>
               <div className="space-y-3">
                 {[
                   { label: 'Match Tolerance', value: '5%', desc: 'Fuzzy match threshold for duplicate detection' },
@@ -314,7 +314,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                   <div key={rule.label} className="flex items-center justify-between p-3 rounded-xl bg-surface-2/50 border border-border-light/50">
                     <div>
                       <div className="text-[12px] font-medium text-text">{rule.label}</div>
-                      <div className="text-[10px] text-text-muted">{rule.desc}</div>
+                      <div className="text-[12px] text-text-muted">{rule.desc}</div>
                     </div>
                     <input value={rule.value} readOnly className="w-24 text-right px-2 py-1.5 rounded-lg border border-border-light text-[12px] font-mono text-primary bg-white" />
                   </div>
@@ -324,7 +324,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
 
             {/* Data Sources */}
             <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
-              <h4 className="text-[12px] font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><Database size={13} className="text-primary" /> Connected Sources</h4>
+              <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-3 flex items-center gap-2"><Database size={13} className="text-primary" /> Connected Sources</h4>
               <div className="space-y-2">
                 {[
                   { name: 'SAP ERP — AP Module', type: 'SQL', status: 'connected', records: '1.2M' },
@@ -336,10 +336,10 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                       <div className="w-2 h-2 rounded-full bg-compliant-500" />
                       <div>
                         <div className="text-[12px] font-medium text-text">{ds.name}</div>
-                        <div className="text-[10px] text-text-muted">{ds.type} · {ds.records} records</div>
+                        <div className="text-[12px] text-text-muted">{ds.type} · {ds.records} records</div>
                       </div>
                     </div>
-                    <span className="text-[9px] font-bold text-compliant-700 bg-compliant-50 px-1.5 py-0.5 rounded-full">{ds.status}</span>
+                    <span className="text-[12px] font-bold text-compliant-700 bg-compliant-50 px-1.5 py-0.5 rounded-full">{ds.status}</span>
                   </div>
                 ))}
               </div>
@@ -347,7 +347,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
 
             {/* Notification settings */}
             <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
-              <h4 className="text-[12px] font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><Bell size={13} className="text-primary" /> Notifications</h4>
+              <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-3 flex items-center gap-2"><Bell size={13} className="text-primary" /> Notifications</h4>
               <div className="space-y-2.5">
                 {[
                   { label: 'Email on completion', enabled: true },

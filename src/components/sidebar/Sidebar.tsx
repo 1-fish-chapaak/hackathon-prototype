@@ -5,7 +5,7 @@ import {
   FileBarChart, ChevronDown, PanelLeft,
   AlertTriangle, Sparkles, Building2, Home, Calendar,
   Shield, Search as SearchIcon, Settings, Clock, Check,
-  Wand2
+  Wand2, MoreHorizontal, LogOut, HelpCircle
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
 
@@ -59,7 +59,7 @@ function NavItem({ icon: Icon, label, active, expanded, onClick, badge }: {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.12 }}
-            className="ml-auto text-[10.5px] font-semibold bg-sidebar-accent text-brand-600 px-[7px] py-[2px] rounded-full tabular-nums"
+            className="ml-auto text-[12px] font-semibold bg-sidebar-accent text-brand-600 px-[7px] py-[2px] rounded-full tabular-nums"
           >
             {badge}
           </motion.span>
@@ -74,7 +74,7 @@ function Divider({ label, expanded }: { label?: string; expanded: boolean }) {
   if (!expanded || !label) return <div className="h-px bg-sidebar-border my-2 mx-3" />;
   return (
     <div className="px-3.5 pt-2 pb-1">
-      <span className="text-[10px] font-medium uppercase tracking-normal text-sidebar-text-dim">{label}</span>
+      <span className="text-[12px] font-medium uppercase text-sidebar-text-dim">{label}</span>
     </div>
   );
 }
@@ -92,6 +92,9 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
   const [activeTeam, setActiveTeam] = useState('irame-5');
   const [teamSearch, setTeamSearch] = useState('');
   const teamRef = useRef<HTMLDivElement>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [signOutConfirm, setSignOutConfirm] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!teamOpen) return;
@@ -101,6 +104,15 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [teamOpen]);
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const close = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setUserMenuOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [userMenuOpen]);
 
   const filteredTeams = TEAMS.filter(t => t.name.toLowerCase().includes(teamSearch.toLowerCase()));
 
@@ -145,7 +157,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                 transition={{ duration: 0.15 }}
                 className="overflow-hidden"
               >
-                <div className="text-[14px] font-bold text-sidebar-accent leading-tight tracking-normal whitespace-nowrap">IRAME.AI</div>
+                <div className="text-[14px] font-bold text-sidebar-accent leading-tight whitespace-nowrap">IRAME.AI</div>
                 <button
                   onClick={() => { setTeamOpen(p => !p); setTeamSearch(''); }}
                   className="text-[12px] text-sidebar-text-dim font-medium whitespace-nowrap flex items-center gap-1 hover:text-sidebar-text transition-colors cursor-pointer"
@@ -166,12 +178,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -4, scale: 0.98 }}
               transition={{ duration: 0.15, ease: [0.22, 0.68, 0, 1] }}
-              className="absolute left-3 right-3 top-full mt-1.5 rounded-xl z-50 overflow-hidden"
-              style={{
-                background: '#140728',
-                border: '1px solid rgba(163, 102, 240, 0.22)',
-                boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 12px 40px rgba(10,3,25,0.6)',
-              }}
+              className="absolute left-3 right-3 top-full mt-1.5 rounded-xl z-50 overflow-hidden border border-white/[0.12] bg-sidebar-bg shadow-2xl"
             >
               {/* Search */}
               <div className="p-3">
@@ -230,7 +237,6 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
 
           {/* Top actions */}
           <NavItem icon={MessageSquare} label="Ask IRA" active={view === 'chat' || view === 'chat-trash'} expanded={isExpanded} onClick={() => setView('chat')} />
-          <NavItem icon={SearchIcon} label="Search" active={false} expanded={isExpanded} onClick={() => setView('chat')} />
 
           {/* Primary */}
           <NavItem icon={Home} label="Home" active={view === 'home'} expanded={isExpanded} onClick={() => setView('home')} />
@@ -244,16 +250,16 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
           <NavItem icon={AlertTriangle} label="Risk Register" active={view === 'audit-risk-register'} expanded={isExpanded} onClick={() => setView('audit-risk-register')} badge="14" />
           <NavItem icon={Shield} label="Control Library" active={view === 'governance-controls' || view === 'governance-control-detail'} expanded={isExpanded} onClick={() => setView('governance-controls')} />
 
-          {/* ── Main nav (no label, just divider) ── */}
-          <Divider expanded={isExpanded} />
+          {/* ── GLOBAL ── */}
+          <Divider label="Global" expanded={isExpanded} />
 
           <NavItem icon={LayoutDashboard} label="Dashboard" active={view === 'dashboards'} expanded={isExpanded} onClick={() => setView('dashboards')} />
           <NavItem icon={FileBarChart} label="Report" active={view === 'reports' || view === 'report-history' || view === 'report-builder'} expanded={isExpanded} onClick={() => setView('reports')} />
           <NavItem icon={Workflow} label="Workflow Library" active={workflowViews.includes(view)} expanded={isExpanded} onClick={() => setView('workflow-templates')} />
           <NavItem icon={Wand2} label="AI Concierge" active={aiConciergeViews.includes(view)} expanded={isExpanded} onClick={() => setView('ai-concierge')} />
 
-          {/* ── Bottom nav ── */}
-          <Divider expanded={isExpanded} />
+          {/* ── SYSTEM ── */}
+          <Divider label="System" expanded={isExpanded} />
 
           <NavItem icon={Database} label="Configuration" active={view === 'data-sources' || view === 'configuration'} expanded={isExpanded} onClick={() => setView('data-sources')} />
           <NavItem icon={Settings} label="Admin" active={adminViews.includes(view)} expanded={isExpanded} onClick={() => setView('admin-users')} />
@@ -262,7 +268,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
       </nav>
 
       {/* ── User profile ── */}
-      <div className={`border-t border-sidebar-border shrink-0 ${isExpanded ? 'px-3 py-3' : 'px-2 py-2'}`}>
+      <div className={`border-t border-sidebar-border shrink-0 relative ${isExpanded ? 'px-3 py-3' : 'px-2 py-2'}`} ref={userMenuRef}>
         <AnimatePresence>
           {isExpanded && (
             <motion.div
@@ -271,14 +277,71 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
               exit={{ opacity: 0, height: 0 }}
               className="flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg bg-sidebar-surface border border-sidebar-border cursor-pointer hover:bg-sidebar-surface-hover transition-colors"
             >
-              <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center text-[11px] font-bold text-brand-600 shrink-0">
+              <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center text-[12px] font-bold text-brand-600 shrink-0">
                 JD
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-semibold text-sidebar-accent truncate">John Doe</div>
-                <div className="text-[11px] text-sidebar-text-dim truncate">Lead Auditor</div>
+                <div className="text-[12px] text-sidebar-text-dim truncate">Lead Auditor</div>
               </div>
-              <span className="text-sidebar-text-muted text-[14px]">⋯</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); setUserMenuOpen(p => !p); setSignOutConfirm(false); }}
+                className="p-1 rounded-md hover:bg-white/[0.08] transition-colors text-sidebar-text-muted hover:text-sidebar-text cursor-pointer"
+              >
+                <MoreHorizontal size={16} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* User menu dropdown */}
+        <AnimatePresence>
+          {userMenuOpen && isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, y: 4, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 4, scale: 0.98 }}
+              transition={{ duration: 0.12 }}
+              className="absolute left-3 right-3 bottom-full mb-1.5 rounded-xl z-50 overflow-hidden border border-white/[0.12] bg-sidebar-bg shadow-2xl"
+            >
+              {signOutConfirm ? (
+                <div className="p-4">
+                  <div className="text-[13px] font-semibold text-white mb-1">Sign out?</div>
+                  <div className="text-[12px] text-white/50 mb-4">You'll need to sign in again to access your workspace.</div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSignOutConfirm(false)}
+                      className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium text-white/80 border border-white/[0.12] hover:bg-white/[0.06] transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => { setSignOutConfirm(false); setUserMenuOpen(false); }}
+                      className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium text-white bg-red-500 hover:bg-red-600 transition-colors cursor-pointer"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-1.5">
+                  <button
+                    onClick={() => { setUserMenuOpen(false); window.open('https://irame.ai', '_blank'); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white/80 hover:bg-white/[0.06] hover:text-white transition-colors cursor-pointer"
+                  >
+                    <HelpCircle size={14} className="text-white/50" />
+                    Help & Support
+                  </button>
+                  <div className="h-px mx-3 my-1 bg-white/[0.08]" />
+                  <button
+                    onClick={() => setSignOutConfirm(true)}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-red-400 hover:bg-white/[0.06] hover:text-red-300 transition-colors cursor-pointer"
+                  >
+                    <LogOut size={14} />
+                    Sign Out
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
