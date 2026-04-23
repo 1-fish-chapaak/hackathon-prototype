@@ -2,8 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Database, FileText, Globe, Cloud, MessageSquare, Layers,
-  Search, Upload, MoreHorizontal, ArrowUpDown, ChevronDown,
-  Zap, Plus,
+  Search, Upload, MoreHorizontal, ArrowUpDown, ChevronDown, Plus,
 } from 'lucide-react';
 import { useToast } from '../shared/Toast';
 
@@ -71,16 +70,15 @@ const SEED: DataSource[] = [
 
 // ─── Tab definitions ─────────────────────────────────────────────────────────
 
-type TabId = 'all' | SourceType;
+type TabId = 'all' | 'file' | 'integrated';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: 'all',      label: 'All Sources',   icon: Layers },
-  { id: 'file',     label: 'Files',         icon: FileText },
-  { id: 'database', label: 'Databases',     icon: Database },
-  { id: 'api',      label: 'APIs',          icon: Globe },
-  { id: 'cloud',    label: 'Cloud',         icon: Cloud },
-  { id: 'session',  label: 'Session Files', icon: MessageSquare },
+  { id: 'all',        label: 'Data Sources',   icon: Layers },
+  { id: 'file',       label: 'Files',          icon: FileText },
+  { id: 'integrated', label: 'Integrated DBs', icon: Database },
 ];
+
+const INTEGRATED_TYPES: SourceType[] = ['database', 'api', 'cloud', 'session'];
 
 const TYPE_META: Record<SourceType, { icon: React.ElementType; tone: string }> = {
   file:     { icon: FileText,       tone: 'text-brand-700 bg-brand-50' },
@@ -158,17 +156,18 @@ export default function DataSourcesView() {
   const [sortOpen, setSortOpen] = useState(false);
 
   const tabCounts = useMemo<Record<TabId, number>>(() => ({
-    all:      SEED.length,
-    file:     SEED.filter(d => d.type === 'file').length,
-    database: SEED.filter(d => d.type === 'database').length,
-    api:      SEED.filter(d => d.type === 'api').length,
-    cloud:    SEED.filter(d => d.type === 'cloud').length,
-    session:  SEED.filter(d => d.type === 'session').length,
+    all:        SEED.length,
+    file:       SEED.filter(d => d.type === 'file').length,
+    integrated: SEED.filter(d => INTEGRATED_TYPES.includes(d.type)).length,
   }), []);
 
   const visible = useMemo(() => {
     const filtered = SEED
-      .filter(d => tab === 'all' || d.type === tab)
+      .filter(d => {
+        if (tab === 'all') return true;
+        if (tab === 'file') return d.type === 'file';
+        return INTEGRATED_TYPES.includes(d.type);
+      })
       .filter(d => !search || d.name.toLowerCase().includes(search.toLowerCase()) || d.subtype.toLowerCase().includes(search.toLowerCase()));
     const dir = sort === 'newest' ? -1 : 1;
     return filtered.sort((a, b) => dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
@@ -178,24 +177,7 @@ export default function DataSourcesView() {
 
   return (
     <div className="space-y-6">
-      {/* ── Page-level header strip (matches the inspiration screenshot) ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="font-display text-[28px] font-[420] text-ink-900 leading-tight">Configuration</h2>
-          <p className="text-[13px] text-ink-500 mt-1">Manage data sources, sync schedules, and connections.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => addToast({ message: 'New connection wizard opening.', type: 'info' })}
-            className="flex items-center gap-2 px-3 h-10 rounded-md border border-canvas-border bg-canvas-elevated text-[13px] font-medium text-ink-800 hover:border-brand-200 transition-colors cursor-pointer"
-          >
-            <Zap size={14} className="text-mitigated-700" />
-            New connection
-          </button>
-        </div>
-      </div>
-
-      {/* ── Type tabs (6 categories with icons) ── */}
+      {/* ── Type tabs (3: Data Sources / Files / Integrated DBs) ── */}
       <div className="flex items-center gap-0 border-b border-canvas-border">
         {TABS.map(t => {
           const Icon = t.icon;

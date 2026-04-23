@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Database, Brain, Plus, Pencil, Trash2, X, Check,
-  Sparkles, ArrowRight,
+  Sparkles, ArrowRight, ThumbsUp, ThumbsDown, TrendingUp,
 } from 'lucide-react';
 import DataSourcesView from '../data-sources/DataSourcesView';
 
@@ -132,9 +132,138 @@ function SmartLearnTab() {
   const removeBehav = (id: string) => setBehaviours(prev => prev.filter(b => b.id !== id));
   const removeMem   = (id: string) => setMemory(prev => prev.filter(m => m.id !== id));
 
+  // ── Aggregations for the modern dashboard view ────────────────────────────
+  const avgConfidence = behaviours.length
+    ? Math.round(behaviours.reduce((s, b) => s + b.confidence, 0) / behaviours.length)
+    : 0;
+
+  const scopeAgg = BEHAV_SCOPES.map(scope => {
+    const items = behaviours.filter(b => b.scope === scope);
+    return {
+      scope,
+      count: items.length,
+      avg: items.length ? Math.round(items.reduce((s, b) => s + b.confidence, 0) / items.length) : 0,
+    };
+  }).filter(s => s.count > 0);
+
+  const likes: string[] = [
+    'Tabular layouts for risk and control lists',
+    'Spelled-out severity (Critical / High / Medium / Low)',
+    'Executive summary first, details second',
+    'Inline source IDs (CTR-004, RSK-007, ENG-XXX)',
+    'Numbers with thousand separators + tabular alignment',
+    'IRA in first person ("I found…")',
+  ];
+  const avoids: string[] = [
+    'Severity codes (P0–P3, MW/SD/CD)',
+    'Numeric date formats (04/28/26)',
+    'Avatar circles next to AI responses',
+    'Decorative gradients and drop shadows',
+    'Filler intros ("Here is what I found…")',
+    'Centered body paragraphs outside hero moments',
+  ];
+
   return (
     <div className="space-y-8">
-      {/* ── Behavioral preferences ────────────────────────────────────── */}
+      {/* ── Hero stats ──────────────────────────────────────────────────── */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-5">
+          <div className="font-mono text-[11px] text-ink-500 tabular-nums mb-2">Behavioural preferences</div>
+          <div className="flex items-baseline gap-3">
+            <div className="font-display text-[36px] font-[420] text-ink-900 tabular-nums leading-none">{behaviours.length}</div>
+            <div className="text-[12px] text-ink-500">learned across {scopeAgg.length} scopes</div>
+          </div>
+        </div>
+        <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-5">
+          <div className="font-mono text-[11px] text-ink-500 tabular-nums mb-2">Enterprise terms</div>
+          <div className="flex items-baseline gap-3">
+            <div className="font-display text-[36px] font-[420] text-ink-900 tabular-nums leading-none">{memory.length}</div>
+            <div className="text-[12px] text-ink-500">field aliases mapped</div>
+          </div>
+        </div>
+        <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-5">
+          <div className="font-mono text-[11px] text-ink-500 tabular-nums mb-2">Average confidence</div>
+          <div className="flex items-baseline gap-3">
+            <div className="font-display text-[36px] font-[420] text-brand-700 tabular-nums leading-none">{avgConfidence}%</div>
+            <div className="text-[12px] text-ink-500 inline-flex items-center gap-1"><TrendingUp size={11} className="text-compliant-700" /> trending up</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Reasoning flow ─────────────────────────────────────────────── */}
+      <section className="rounded-xl border border-canvas-border bg-canvas-elevated p-5">
+        <div className="font-mono text-[11px] text-ink-500 tabular-nums mb-1">How IRA answers a question</div>
+        <h3 className="font-display text-[20px] font-[420] text-ink-900 leading-tight mb-4">Reasoning flow</h3>
+        <div className="flex flex-wrap items-center gap-2 text-[12px]">
+          {[
+            { label: 'Receive query',           tone: 'bg-paper-50 text-ink-700' },
+            { label: 'Match enterprise memory', tone: 'bg-evidence-50 text-evidence-700' },
+            { label: 'Apply behavioural prefs', tone: 'bg-brand-50 text-brand-700' },
+            { label: 'Generate answer',         tone: 'bg-mitigated-50 text-mitigated-700' },
+            { label: 'Cite sources',            tone: 'bg-compliant-50 text-compliant-700' },
+          ].map((step, i, arr) => (
+            <span key={step.label} className="flex items-center gap-2">
+              <span className={`inline-flex items-center px-3 h-8 rounded-md font-medium ${step.tone}`}>{step.label}</span>
+              {i < arr.length - 1 && <ArrowRight size={14} className="text-ink-400 shrink-0" />}
+            </span>
+          ))}
+        </div>
+        <p className="text-[12px] text-ink-500 mt-3 leading-relaxed">
+          Every IRA response runs through these five steps. Memory and behaviour are pulled from the lists below — edit them and the next answer reflects the change.
+        </p>
+      </section>
+
+      {/* ── Behaviour confidence chart ─────────────────────────────────── */}
+      <section className="rounded-xl border border-canvas-border bg-canvas-elevated p-5">
+        <div className="font-mono text-[11px] text-ink-500 tabular-nums mb-1">Confidence by behavioural scope</div>
+        <h3 className="font-display text-[20px] font-[420] text-ink-900 leading-tight mb-4">Where IRA is most confident</h3>
+        <div className="space-y-3">
+          {scopeAgg.map(s => (
+            <div key={s.scope} className="flex items-center gap-3">
+              <span className={`inline-flex items-center px-2 h-5 rounded-full text-[11px] font-medium w-[88px] justify-center ${SCOPE_TONE[s.scope]}`}>{s.scope}</span>
+              <div className="flex-1 h-2.5 rounded-full bg-paper-50 overflow-hidden">
+                <div className="h-full bg-brand-600 rounded-full transition-[width] duration-300 ease-out" style={{ width: `${s.avg}%` }} />
+              </div>
+              <span className="text-[12px] tabular-nums text-ink-700 w-10 text-right">{s.avg}%</span>
+              <span className="text-[11px] tabular-nums text-ink-400 w-8 text-right">×{s.count}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Likes vs avoids ────────────────────────────────────────────── */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="rounded-xl border border-compliant/30 bg-compliant-50/40 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <ThumbsUp size={14} className="text-compliant-700" />
+            <span className="font-mono text-[11px] text-compliant-700 tabular-nums">What IRA leans into</span>
+          </div>
+          <ul className="space-y-2">
+            {likes.map(l => (
+              <li key={l} className="flex items-start gap-2 text-[13px] text-ink-800">
+                <Check size={12} className="text-compliant-700 mt-1 shrink-0" />
+                {l}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="rounded-xl border border-risk/30 bg-risk-50/40 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <ThumbsDown size={14} className="text-risk-700" />
+            <span className="font-mono text-[11px] text-risk-700 tabular-nums">What IRA avoids</span>
+          </div>
+          <ul className="space-y-2">
+            {avoids.map(a => (
+              <li key={a} className="flex items-start gap-2 text-[13px] text-ink-800">
+                <X size={12} className="text-risk-700 mt-1 shrink-0" />
+                {a}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* ── Behavioral preferences (editable list) ────────────────────── */}
       <section>
         <div className="flex items-end justify-between mb-3">
           <div>
