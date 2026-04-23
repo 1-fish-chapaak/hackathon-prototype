@@ -5,13 +5,13 @@ import {
   TrendingUp, Download, Share2, ArrowRight, ArrowLeft, ChevronDown,
   Sparkles, Eye, Settings, Palette, Type,
   Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2, Trash2,
-  List, LayoutGrid
+  List, LayoutGrid, ExternalLink
 } from 'lucide-react';
 import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/mockData';
 import { StatusBadge } from '../shared/StatusBadge';
 import SmartTable from '../shared/SmartTable';
-import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
+import FloatingLines from '../shared/FloatingLines';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   shield: Shield,
@@ -26,22 +26,14 @@ const ICON_MAP: Record<string, React.ElementType> = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  Compliance: 'text-blue-600 bg-blue-50',
-  Risk: 'text-orange-600 bg-orange-50',
-  Controls: 'text-purple-600 bg-purple-50',
-  Analytics: 'text-violet-600 bg-violet-50',
-  Audit: 'text-red-600 bg-red-50',
+  Compliance: 'text-evidence-700 bg-evidence-50',
+  Risk: 'text-high-700 bg-high-50',
+  Controls: 'text-brand-700 bg-brand-50',
+  Analytics: 'text-brand-700 bg-brand-50',
+  Audit: 'text-risk-700 bg-risk-50',
   Executive: 'text-indigo-600 bg-indigo-50',
 };
 
-const CATEGORY_GRADIENTS: Record<string, string> = {
-  Compliance: 'from-[#e8daf5] to-[#d4c4eb]',
-  Risk: 'from-[#fce7d6] to-[#e8daf5]',
-  Controls: 'from-[#e8daf5] to-[#ddd0f0]',
-  Analytics: 'from-[#ede4f7] to-[#e0d0f0]',
-  Audit: 'from-[#fce4e4] to-[#e8daf5]',
-  Executive: 'from-[#ddd0f0] to-[#e0d8f5]',
-};
 
 const SECTION_ICONS: Record<string, React.ElementType> = {
   'file-text': FileText,
@@ -89,15 +81,15 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
         className="relative bg-white rounded-2xl shadow-2xl w-[520px] max-h-[80vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="px-10 py-4 border-b border-border-light flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 border-b border-border-light flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-primary/10 text-primary rounded-xl"><Upload size={16} /></div>
             <div>
               <h3 className="text-[15px] font-semibold text-text">Upload Template</h3>
-              <p className="text-[12px] text-text-muted">Convert a document into a report template</p>
+              <p className="text-[11px] text-text-muted">Convert a document into a report template</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
+          <button onClick={onClose} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
@@ -113,7 +105,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
                 </div>
                 <div className="text-center">
                   <p className="text-[13px] font-medium text-text">Drop your template file here or click to browse</p>
-                  <p className="text-[12px] text-text-muted mt-1">Supports .docx, .pdf, .xlsx</p>
+                  <p className="text-[11px] text-text-muted mt-1">Supports .docx, .pdf, .xlsx</p>
                 </div>
               </button>
             </motion.div>
@@ -126,9 +118,9 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
                 <div className="p-2 bg-primary/10 rounded-lg"><FileText size={18} className="text-primary" /></div>
                 <div className="flex-1">
                   <p className="text-[13px] font-semibold text-text">SOX_Report_Template.docx</p>
-                  <p className="text-[12px] text-text-muted">2.4 MB</p>
+                  <p className="text-[11px] text-text-muted">2.4 MB</p>
                 </div>
-                <CheckCircle2 size={18} className="text-green-500" />
+                <CheckCircle2 size={18} className="text-compliant-700" />
               </div>
               <button
                 onClick={() => setStep('converting')}
@@ -150,7 +142,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
               </motion.div>
               <div className="text-center">
                 <p className="text-[14px] font-semibold text-text">Analyzing document structure...</p>
-                <p className="text-[12px] text-text-muted mt-1">Detecting sections, headers, and formatting</p>
+                <p className="text-[11px] text-text-muted mt-1">Detecting sections, headers, and formatting</p>
               </div>
               <div className="w-48 h-1.5 bg-surface-2 rounded-full overflow-hidden">
                 <motion.div
@@ -166,11 +158,11 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
           {/* Conversion Complete */}
           {step === 'converted' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
-              <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-100 rounded-xl">
-                <CheckCircle2 size={20} className="text-green-500" />
+              <div className="flex items-center gap-3 p-4 bg-compliant-50 border border-compliant rounded-xl">
+                <CheckCircle2 size={20} className="text-compliant-700" />
                 <div>
                   <p className="text-[13px] font-semibold text-primary">Template converted!</p>
-                  <p className="text-[12px] text-primary/70">6 sections detected</p>
+                  <p className="text-[11px] text-primary/70">6 sections detected</p>
                 </div>
               </div>
 
@@ -185,7 +177,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
                       transition={{ delay: i * 0.08 }}
                       className="flex items-center gap-2.5 px-3 py-2 bg-surface-2 rounded-lg"
                     >
-                      <div className="w-5 h-5 rounded-md bg-primary/10 text-primary flex items-center justify-center text-[12px] font-bold">{i + 1}</div>
+                      <div className="w-5 h-5 rounded-md bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">{i + 1}</div>
                       <span className="text-[12px] text-text font-medium">{section}</span>
                     </motion.div>
                   ))}
@@ -205,8 +197,8 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {step === 'converted' && (
-          <div className="px-10 py-4 border-t border-border-light flex justify-end gap-2 shrink-0">
-            <button onClick={onClose} className="px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">Cancel</button>
+          <div className="px-6 py-4 border-t border-border-light flex justify-end gap-2 shrink-0">
+            <button onClick={onClose} className="px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-paper-50 rounded-lg transition-colors cursor-pointer">Cancel</button>
             <button
               onClick={() => { addToast({ type: 'success', message: `"${templateName}" saved to template library!` }); onClose(); }}
               className="px-5 py-2 bg-primary text-white rounded-xl text-[12px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer"
@@ -224,7 +216,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
 function TemplatePreviewModal({ template, onClose, onEdit }: { template: typeof REPORT_TEMPLATES[0]; onClose: () => void; onEdit: () => void }) {
   const { addToast } = useToast();
   const Icon = ICON_MAP[template.icon] || FileText;
-  const color = CATEGORY_COLORS[template.category] || 'text-gray-600 bg-gray-50';
+  const color = CATEGORY_COLORS[template.category] || 'text-ink-500 bg-paper-50';
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
@@ -237,15 +229,15 @@ function TemplatePreviewModal({ template, onClose, onEdit }: { template: typeof 
         className="relative bg-white rounded-2xl shadow-2xl w-[520px] max-h-[80vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="px-10 py-4 border-b border-border-light flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 border-b border-border-light flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className={`p-2 rounded-xl ${color}`}><Icon size={16} /></div>
             <div>
               <h3 className="text-[15px] font-semibold text-text">{template.name}</h3>
-              <p className="text-[12px] text-text-muted">{template.category} template</p>
+              <p className="text-[11px] text-text-muted">{template.category} template</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
+          <button onClick={onClose} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
@@ -268,7 +260,7 @@ function TemplatePreviewModal({ template, onClose, onEdit }: { template: typeof 
                       <SectionIcon size={14} className="text-primary" />
                     </div>
                     <span className="text-[13px] text-text font-medium">{section.name}</span>
-                    <span className="ml-auto text-[12px] text-text-muted font-medium">Section {i + 1}</span>
+                    <span className="ml-auto text-[10px] text-text-muted font-medium">Section {i + 1}</span>
                   </motion.div>
                 );
               })}
@@ -276,7 +268,7 @@ function TemplatePreviewModal({ template, onClose, onEdit }: { template: typeof 
           </div>
         </div>
 
-        <div className="px-10 py-4 border-t border-border-light flex justify-between shrink-0">
+        <div className="px-6 py-4 border-t border-border-light flex justify-between shrink-0">
           <button
             onClick={() => { onClose(); onEdit(); }}
             className="flex items-center gap-1.5 px-4 py-2 text-[12px] font-medium text-text-secondary border border-border-light hover:border-primary/30 hover:bg-primary-xlight rounded-lg transition-colors cursor-pointer"
@@ -305,7 +297,7 @@ function ApplyTemplateDropdown({ onSelect, onClose }: { onSelect: (template: typ
       className="absolute right-0 top-full mt-1 w-[280px] bg-white rounded-xl shadow-xl border border-border-light z-50 overflow-hidden"
     >
       <div className="px-3 py-2 border-b border-border-light">
-        <span className="text-[12px] font-semibold text-text-muted uppercaser">Select Template</span>
+        <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Select Template</span>
       </div>
       <div className="max-h-[260px] overflow-y-auto p-1.5">
         {REPORT_TEMPLATES.map(rt => {
@@ -316,12 +308,12 @@ function ApplyTemplateDropdown({ onSelect, onClose }: { onSelect: (template: typ
               onClick={() => { onSelect(rt); onClose(); }}
               className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-primary-xlight transition-colors cursor-pointer flex items-center gap-2.5"
             >
-              <div className={`p-1.5 rounded-md ${CATEGORY_COLORS[rt.category] || 'text-gray-600 bg-gray-50'}`}>
+              <div className={`p-1.5 rounded-md ${CATEGORY_COLORS[rt.category] || 'text-ink-500 bg-paper-50'}`}>
                 <Icon size={12} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[12px] font-medium text-text truncate">{rt.name}</div>
-                <div className="text-[12px] text-text-muted">{rt.category}</div>
+                <div className="text-[10px] text-text-muted">{rt.category}</div>
               </div>
             </button>
           );
@@ -350,15 +342,15 @@ function TemplateEditor({ template, onClose }: { template: typeof REPORT_TEMPLAT
         className="relative bg-white rounded-2xl shadow-2xl w-[600px] max-h-[80vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="px-10 py-4 border-b border-border-light flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 border-b border-border-light flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-primary/10 text-primary rounded-xl"><Settings size={16} /></div>
             <div>
               <h3 className="text-[15px] font-semibold text-text">Edit Template</h3>
-              <p className="text-[12px] text-text-muted">{template.name}</p>
+              <p className="text-[11px] text-text-muted">{template.name}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
+          <button onClick={onClose} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
@@ -382,7 +374,7 @@ function TemplateEditor({ template, onClose }: { template: typeof REPORT_TEMPLAT
                   <div className="flex gap-1 justify-center mb-1.5">
                     {t.colors.map((c, i) => <div key={i} className="w-5 h-5 rounded-full border border-white shadow-sm" style={{ background: c }} />)}
                   </div>
-                  <span className="text-[12px] font-medium text-text">{t.name}</span>
+                  <span className="text-[9px] font-medium text-text">{t.name}</span>
                 </button>
               ))}
             </div>
@@ -426,8 +418,8 @@ function TemplateEditor({ template, onClose }: { template: typeof REPORT_TEMPLAT
           </div>
         </div>
 
-        <div className="px-10 py-4 border-t border-border-light flex justify-end gap-2 shrink-0">
-          <button onClick={onClose} className="px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">Cancel</button>
+        <div className="px-6 py-4 border-t border-border-light flex justify-end gap-2 shrink-0">
+          <button onClick={onClose} className="px-4 py-2 text-[12px] font-medium text-text-secondary hover:bg-paper-50 rounded-lg transition-colors cursor-pointer">Cancel</button>
           <button onClick={() => { addToast({ type: 'success', message: 'Template saved!' }); onClose(); }} className="px-5 py-2 bg-primary text-white rounded-xl text-[12px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer">Save Template</button>
         </div>
       </motion.div>
@@ -453,14 +445,14 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
       { id: 'CTR-009', name: 'SOD Rule Enforcement', process: 'ALL', type: 'Preventive', freq: 'Continuous', owner: 'GRC Module', result: 'Effective', exceptions: 4 },
       { id: 'CTR-010', name: 'Intercompany Elimination', process: 'R2R', type: 'Detective', freq: 'Quarterly', owner: 'Karan Mehta', result: 'Effective', exceptions: 0 },
     ];
-    const resultColor = (r: string) => r === 'Effective' ? 'text-emerald-700 bg-emerald-50' : r === 'Deficient' ? 'text-red-700 bg-red-50' : 'text-amber-700 bg-amber-50';
+    const resultColor = (r: string) => r === 'Effective' ? 'text-compliant-700 bg-compliant-50' : r === 'Deficient' ? 'text-risk-700 bg-risk-50' : 'text-mitigated-700 bg-mitigated-50';
     return (
       <div className="space-y-5">
         {/* Section nav */}
         <div className="flex gap-2 flex-wrap">
           {sections.map((s, i) => (
-            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[12px] font-medium text-text-secondary shadow-sm">
-              <span className="text-[12px] font-bold text-primary/50">{i + 1}</span> {s.name}
+            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[11px] font-medium text-text-secondary shadow-sm">
+              <span className="text-[9px] font-bold text-primary/50">{i + 1}</span> {s.name}
             </div>
           ))}
         </div>
@@ -473,41 +465,41 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         <div className="bg-white rounded-xl border border-border-light overflow-hidden">
           <div className="px-5 py-3 border-b border-border-light flex items-center justify-between">
             <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><CheckCircle2 size={14} className="text-primary" /> Control Testing Results</h3>
-            <span className="text-[12px] text-text-muted">{controls.length} controls · {report.generatedAt}</span>
+            <span className="text-[10px] text-text-muted">{controls.length} controls · {report.generatedAt}</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-[12px]">
+            <table className="w-full text-[11px]">
               <thead>
-                <tr className="bg-gray-50 border-b border-border-light">
+                <tr className="bg-paper-50 border-b border-border-light">
                   {['Control ID', 'Control Name', 'Process', 'Type', 'Frequency', 'Owner', 'Result', 'Exceptions'].map(h => (
-                    <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercaser">{h}</th>
+                    <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {controls.map((c, i) => (
-                  <tr key={c.id} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
+                  <tr key={c.id} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-paper-50/40'}`}>
                     <td className="px-4 py-2.5 font-mono font-semibold text-primary">{c.id}</td>
                     <td className="px-4 py-2.5 font-medium text-text">{c.name}</td>
                     <td className="px-4 py-2.5 text-text-secondary">{c.process}</td>
-                    <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[12px] font-semibold ${c.type === 'Preventive' ? 'text-blue-700 bg-blue-50' : 'text-violet-700 bg-violet-50'}`}>{c.type}</span></td>
+                    <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${c.type === 'Preventive' ? 'text-evidence-700 bg-evidence-50' : 'text-brand-700 bg-brand-50'}`}>{c.type}</span></td>
                     <td className="px-4 py-2.5 text-text-secondary">{c.freq}</td>
                     <td className="px-4 py-2.5 text-text-secondary">{c.owner}</td>
-                    <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[12px] font-bold ${resultColor(c.result)}`}>{c.result}</span></td>
-                    <td className="px-4 py-2.5 text-center font-semibold">{c.exceptions > 0 ? <span className="text-red-600">{c.exceptions}</span> : <span className="text-text-muted">—</span>}</td>
+                    <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${resultColor(c.result)}`}>{c.result}</span></td>
+                    <td className="px-4 py-2.5 text-center font-semibold">{c.exceptions > 0 ? <span className="text-risk-700">{c.exceptions}</span> : <span className="text-text-muted">—</span>}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div className="px-5 py-3 border-t border-border-light bg-gray-50/50 flex items-center justify-between text-[12px] text-text-muted">
+          <div className="px-5 py-3 border-t border-border-light bg-paper-50/50 flex items-center justify-between text-[10px] text-text-muted">
             <span>Showing {controls.length} of 54 tested controls</span>
             <span>8 Effective · 2 Deficient · 0 Pending</span>
           </div>
         </div>
         {/* Deficiency Detail */}
         <div className="bg-white rounded-xl border border-border-light p-5">
-          <h3 className="text-[13px] font-bold text-text mb-3 flex items-center gap-2"><AlertTriangle size={14} className="text-red-500" /> Deficiency Analysis</h3>
+          <h3 className="text-[13px] font-bold text-text mb-3 flex items-center gap-2"><AlertTriangle size={14} className="text-risk-700" /> Deficiency Analysis</h3>
           <div className="grid grid-cols-2 gap-4">
             {[
               { id: 'DEF-001', control: 'CTR-003', title: 'Vendor Master Change — Missing Dual Approval', severity: 'Significant', status: 'In Remediation', due: 'Mar 31, 2026', owner: 'Deepak Bansal', desc: '7 vendor master changes processed without dual-approval. Includes 3 bank account modifications.' },
@@ -515,13 +507,13 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
             ].map(d => (
               <div key={d.id} className="rounded-xl border border-border-light p-4 hover:shadow-sm transition-shadow">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[12px] font-bold text-white px-2 py-0.5 rounded-md bg-red-500">{d.id}</span>
-                  <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${d.severity === 'Material Weakness' ? 'text-red-700 bg-red-50' : 'text-orange-700 bg-orange-50'}`}>{d.severity}</span>
-                  <span className="text-[12px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">{d.status}</span>
+                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-md bg-risk-500">{d.id}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${d.severity === 'Material Weakness' ? 'text-risk-700 bg-risk-50' : 'text-high-700 bg-high-50'}`}>{d.severity}</span>
+                  <span className="text-[10px] font-semibold text-evidence-700 bg-evidence-50 px-2 py-0.5 rounded-full">{d.status}</span>
                 </div>
                 <h4 className="text-[12px] font-semibold text-text mb-1">{d.title}</h4>
-                <p className="text-[12px] text-text-secondary leading-relaxed mb-2">{d.desc}</p>
-                <div className="flex items-center gap-3 text-[12px] text-text-muted">
+                <p className="text-[11px] text-text-secondary leading-relaxed mb-2">{d.desc}</p>
+                <div className="flex items-center gap-3 text-[10px] text-text-muted">
                   <span>Control: <span className="font-mono font-semibold text-primary">{d.control}</span></span>
                   <span>Due: <span className="font-semibold">{d.due}</span></span>
                   <span>Owner: {d.owner}</span>
@@ -547,7 +539,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
     ];
     const riskColor = (l: number, i: number) => {
       const score = l * i;
-      if (score >= 12) return 'bg-red-500';
+      if (score >= 12) return 'bg-risk-500';
       if (score >= 8) return 'bg-orange-400';
       if (score >= 4) return 'bg-amber-300';
       return 'bg-emerald-300';
@@ -556,8 +548,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
       <div className="space-y-5">
         <div className="flex gap-2 flex-wrap">
           {sections.map((s, i) => (
-            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[12px] font-medium text-text-secondary shadow-sm">
-              <span className="text-[12px] font-bold text-primary/50">{i + 1}</span> {s.name}
+            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[11px] font-medium text-text-secondary shadow-sm">
+              <span className="text-[9px] font-bold text-primary/50">{i + 1}</span> {s.name}
             </div>
           ))}
         </div>
@@ -566,26 +558,26 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
           <h3 className="text-[13px] font-bold text-text mb-4 flex items-center gap-2"><Shield size={14} className="text-primary" /> Risk Matrix</h3>
           <div className="flex gap-6">
             <div className="flex-1">
-              <div className="text-[12px] font-semibold text-text-muted uppercaser mb-2 text-center">Impact →</div>
+              <div className="text-[9px] font-semibold text-text-muted uppercase tracking-wider mb-2 text-center">Impact →</div>
               <div className="grid grid-cols-5 gap-1">
                 {[5,4,3,2,1].map(likelihood => (
                   [1,2,3,4,5].map(impact => {
                     const risksInCell = risks.filter(r => r.likelihood === likelihood && r.impact === impact);
                     return (
-                      <div key={`${likelihood}-${impact}`} className={`aspect-square rounded-lg flex items-center justify-center text-[12px] font-bold text-white ${riskColor(likelihood, impact)} ${risksInCell.length > 0 ? 'ring-2 ring-white shadow-md' : 'opacity-30'}`}>
+                      <div key={`${likelihood}-${impact}`} className={`aspect-square rounded-lg flex items-center justify-center text-[9px] font-bold text-white ${riskColor(likelihood, impact)} ${risksInCell.length > 0 ? 'ring-2 ring-white shadow-md' : 'opacity-30'}`}>
                         {risksInCell.length > 0 ? risksInCell.map(r => r.id.split('-')[1]).join(',') : ''}
                       </div>
                     );
                   })
                 ))}
               </div>
-              <div className="text-[12px] font-semibold text-text-muted uppercaser mt-1 -rotate-0">↑ Likelihood</div>
+              <div className="text-[9px] font-semibold text-text-muted uppercase tracking-wider mt-1 -rotate-0">↑ Likelihood</div>
             </div>
             <div className="w-48">
-              <div className="text-[12px] font-semibold text-text mb-2">Legend</div>
+              <div className="text-[10px] font-semibold text-text mb-2">Legend</div>
               <div className="space-y-1.5">
-                {[{ c: 'bg-red-500', l: 'Critical (12-25)' }, { c: 'bg-orange-400', l: 'High (8-11)' }, { c: 'bg-amber-300', l: 'Medium (4-7)' }, { c: 'bg-emerald-300', l: 'Low (1-3)' }].map(item => (
-                  <div key={item.l} className="flex items-center gap-2 text-[12px] text-text-secondary"><div className={`w-3 h-3 rounded ${item.c}`} /> {item.l}</div>
+                {[{ c: 'bg-risk-500', l: 'Critical (12-25)' }, { c: 'bg-orange-400', l: 'High (8-11)' }, { c: 'bg-amber-300', l: 'Medium (4-7)' }, { c: 'bg-emerald-300', l: 'Low (1-3)' }].map(item => (
+                  <div key={item.l} className="flex items-center gap-2 text-[10px] text-text-secondary"><div className={`w-3 h-3 rounded ${item.c}`} /> {item.l}</div>
                 ))}
               </div>
             </div>
@@ -594,27 +586,27 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         {/* Risk Register */}
         <div className="bg-white rounded-xl border border-border-light overflow-hidden">
           <div className="px-5 py-3 border-b border-border-light">
-            <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-orange-500" /> Risk Register</h3>
+            <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-high-700" /> Risk Register</h3>
           </div>
-          <table className="w-full text-[12px]">
+          <table className="w-full text-[11px]">
             <thead>
-              <tr className="bg-gray-50 border-b border-border-light">
+              <tr className="bg-paper-50 border-b border-border-light">
                 {['Risk ID', 'Description', 'Process', 'L', 'I', 'Score', 'Controls', 'Status'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercaser">{h}</th>
+                  <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {risks.map((r, i) => (
-                <tr key={r.id} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
+                <tr key={r.id} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-paper-50/40'}`}>
                   <td className="px-4 py-2.5 font-mono font-semibold text-primary">{r.id}</td>
                   <td className="px-4 py-2.5 font-medium text-text">{r.name}</td>
                   <td className="px-4 py-2.5 text-text-secondary">{r.process}</td>
                   <td className="px-4 py-2.5 text-center">{r.likelihood}</td>
                   <td className="px-4 py-2.5 text-center">{r.impact}</td>
-                  <td className="px-4 py-2.5 text-center"><span className={`inline-flex w-6 h-6 items-center justify-center rounded-md text-[12px] font-bold text-white ${riskColor(r.likelihood, r.impact)}`}>{r.likelihood * r.impact}</span></td>
+                  <td className="px-4 py-2.5 text-center"><span className={`inline-flex w-6 h-6 items-center justify-center rounded-md text-[10px] font-bold text-white ${riskColor(r.likelihood, r.impact)}`}>{r.likelihood * r.impact}</span></td>
                   <td className="px-4 py-2.5 text-center font-semibold">{r.controls}</td>
-                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[12px] font-bold ${r.status === 'Mitigated' ? 'text-emerald-700 bg-emerald-50' : r.status === 'Partial' ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50'}`}>{r.status}</span></td>
+                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${r.status === 'Mitigated' ? 'text-compliant-700 bg-compliant-50' : r.status === 'Partial' ? 'text-mitigated-700 bg-mitigated-50' : 'text-risk-700 bg-risk-50'}`}>{r.status}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -636,8 +628,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
       <div className="space-y-5">
         <div className="flex gap-2 flex-wrap">
           {sections.map((s, i) => (
-            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[12px] font-medium text-text-secondary shadow-sm">
-              <span className="text-[12px] font-bold text-primary/50">{i + 1}</span> {s.name}
+            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[11px] font-medium text-text-secondary shadow-sm">
+              <span className="text-[9px] font-bold text-primary/50">{i + 1}</span> {s.name}
             </div>
           ))}
         </div>
@@ -645,14 +637,14 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         <div className="grid grid-cols-4 gap-3">
           {processes.map(p => (
             <div key={p.name} className="bg-white rounded-xl border border-border-light p-4 hover:shadow-md hover:shadow-primary/5 transition-all">
-              <div className="text-[12px] font-semibold text-text-muted mb-2">{p.name}</div>
+              <div className="text-[11px] font-semibold text-text-muted mb-2">{p.name}</div>
               <div className="text-[28px] font-bold text-text leading-none">{p.rate}%</div>
-              <div className="text-[12px] text-text-muted mt-1 mb-3">Effectiveness Rate</div>
+              <div className="text-[10px] text-text-muted mt-1 mb-3">Effectiveness Rate</div>
               {/* Progress bar */}
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
+              <div className="h-2 bg-paper-50 rounded-full overflow-hidden mb-2">
                 <motion.div initial={{ width: 0 }} animate={{ width: `${(p.tested / p.total) * 100}%` }} transition={{ delay: 0.3, duration: 0.6 }} className="h-full rounded-full bg-primary" />
               </div>
-              <div className="flex justify-between text-[12px] text-text-muted">
+              <div className="flex justify-between text-[9px] text-text-muted">
                 <span>{p.tested}/{p.total} tested</span>
                 <span>{p.deficient} deficient</span>
               </div>
@@ -662,13 +654,13 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         {/* Gap Analysis Table */}
         <div className="bg-white rounded-xl border border-border-light overflow-hidden">
           <div className="px-5 py-3 border-b border-border-light">
-            <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-orange-500" /> Gap Analysis — Untested Controls</h3>
+            <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-high-700" /> Gap Analysis — Untested Controls</h3>
           </div>
-          <table className="w-full text-[12px]">
+          <table className="w-full text-[11px]">
             <thead>
-              <tr className="bg-gray-50 border-b border-border-light">
+              <tr className="bg-paper-50 border-b border-border-light">
                 {['Process', 'Untested', 'Deadline', 'Priority', 'Assigned To'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercaser">{h}</th>
+                  <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -679,11 +671,11 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
                 { process: 'R2R', untested: 5, deadline: 'Mar 31', priority: 'Medium', assignee: 'Karan Mehta' },
                 { process: 'S2C', untested: 11, deadline: 'Jun 30', priority: 'Medium', assignee: 'Rohan Patel' },
               ].map((g, i) => (
-                <tr key={g.process} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
+                <tr key={g.process} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-paper-50/40'}`}>
                   <td className="px-4 py-2.5 font-semibold text-text">{g.process}</td>
-                  <td className="px-4 py-2.5 font-bold text-red-600">{g.untested}</td>
+                  <td className="px-4 py-2.5 font-bold text-risk-700">{g.untested}</td>
                   <td className="px-4 py-2.5 text-text-secondary">{g.deadline}</td>
-                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[12px] font-bold ${g.priority === 'High' ? 'text-red-700 bg-red-50' : 'text-amber-700 bg-amber-50'}`}>{g.priority}</span></td>
+                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${g.priority === 'High' ? 'text-risk-700 bg-risk-50' : 'text-mitigated-700 bg-mitigated-50'}`}>{g.priority}</span></td>
                   <td className="px-4 py-2.5 text-text-secondary">{g.assignee}</td>
                 </tr>
               ))}
@@ -696,8 +688,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
           <div className="space-y-2">
             {['Automate 5 manual detective controls in P2P — target: 98% effectiveness', 'Accelerate S2C control testing — hire 1 contractor for April-June sprint', 'Deploy AI anomaly detection on R2R reconciliation — reduce deficiency rate by 50%', 'Implement continuous monitoring for all preventive controls by Q2'].map((item, i) => (
               <div key={i} className="flex items-start gap-2.5 px-3 py-2 bg-primary/[0.02] rounded-lg">
-                <span className="text-[12px] font-bold text-primary bg-primary/10 w-5 h-5 rounded-md flex items-center justify-center shrink-0">{i + 1}</span>
-                <span className="text-[12px] text-text-secondary leading-relaxed">{item}</span>
+                <span className="text-[9px] font-bold text-primary bg-primary/10 w-5 h-5 rounded-md flex items-center justify-center shrink-0">{i + 1}</span>
+                <span className="text-[11px] text-text-secondary leading-relaxed">{item}</span>
               </div>
             ))}
           </div>
@@ -718,8 +710,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
       <div className="space-y-5">
         <div className="flex gap-2 flex-wrap">
           {sections.map((s, i) => (
-            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[12px] font-medium text-text-secondary shadow-sm">
-              <span className="text-[12px] font-bold text-primary/50">{i + 1}</span> {s.name}
+            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[11px] font-medium text-text-secondary shadow-sm">
+              <span className="text-[9px] font-bold text-primary/50">{i + 1}</span> {s.name}
             </div>
           ))}
         </div>
@@ -729,16 +721,16 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
             <div key={w.name} className="bg-white rounded-xl border border-border-light p-4 hover:shadow-md hover:shadow-primary/5 transition-all">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-[12px] font-semibold text-text">{w.name}</h4>
-                <span className="text-[12px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">{w.accuracy}% accuracy</span>
+                <span className="text-[10px] font-bold text-compliant-700 bg-compliant-50 px-2 py-0.5 rounded-full">{w.accuracy}% accuracy</span>
               </div>
               <div className="flex items-end gap-4 mb-3">
                 <div>
                   <div className="text-[20px] font-bold text-text">{w.runs}</div>
-                  <div className="text-[12px] text-text-muted uppercase">Runs</div>
+                  <div className="text-[9px] text-text-muted uppercase">Runs</div>
                 </div>
                 <div>
-                  <div className="text-[20px] font-bold text-emerald-600">{w.savings}</div>
-                  <div className="text-[12px] text-text-muted uppercase">Saved</div>
+                  <div className="text-[20px] font-bold text-compliant-700">{w.savings}</div>
+                  <div className="text-[9px] text-text-muted uppercase">Saved</div>
                 </div>
                 <div className="flex-1">
                   <svg width="100%" height="28" viewBox="0 0 100 28" preserveAspectRatio="none">
@@ -753,13 +745,13 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         {/* Exception Breakdown */}
         <div className="bg-white rounded-xl border border-border-light overflow-hidden">
           <div className="px-5 py-3 border-b border-border-light">
-            <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-orange-500" /> Exception Breakdown</h3>
+            <h3 className="text-[13px] font-bold text-text flex items-center gap-2"><AlertTriangle size={14} className="text-high-700" /> Exception Breakdown</h3>
           </div>
-          <table className="w-full text-[12px]">
+          <table className="w-full text-[11px]">
             <thead>
-              <tr className="bg-gray-50 border-b border-border-light">
+              <tr className="bg-paper-50 border-b border-border-light">
                 {['Exception', 'Workflow', 'Type', 'Resolution', 'Time', 'Status'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercaser">{h}</th>
+                  <th key={h} className="px-4 py-2.5 text-left font-semibold text-text-muted uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -771,13 +763,13 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
                 { id: 'EXC-004', workflow: 'SOD Detector', type: 'Critical SOD', resolution: 'Under review', time: '—', status: 'Open' },
                 { id: 'EXC-005', workflow: 'Duplicate Detector', type: 'Cross-vendor match', resolution: 'Auto-resolved', time: '0.3h', status: 'Closed' },
               ].map((e, i) => (
-                <tr key={e.id} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
+                <tr key={e.id} className={`border-b border-border-light/60 hover:bg-primary/[0.015] transition-colors ${i % 2 === 0 ? '' : 'bg-paper-50/40'}`}>
                   <td className="px-4 py-2.5 font-mono font-semibold text-primary">{e.id}</td>
                   <td className="px-4 py-2.5 text-text">{e.workflow}</td>
                   <td className="px-4 py-2.5 text-text-secondary">{e.type}</td>
                   <td className="px-4 py-2.5 text-text-secondary">{e.resolution}</td>
                   <td className="px-4 py-2.5 text-text-secondary">{e.time}</td>
-                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[12px] font-bold ${e.status === 'Closed' ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'}`}>{e.status}</span></td>
+                  <td className="px-4 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${e.status === 'Closed' ? 'text-compliant-700 bg-compliant-50' : 'text-mitigated-700 bg-mitigated-50'}`}>{e.status}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -793,8 +785,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
       <div className="space-y-5">
         <div className="flex gap-2 flex-wrap">
           {sections.map((s, i) => (
-            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[12px] font-medium text-text-secondary shadow-sm">
-              <span className="text-[12px] font-bold text-primary/50">{i + 1}</span> {s.name}
+            <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[11px] font-medium text-text-secondary shadow-sm">
+              <span className="text-[9px] font-bold text-primary/50">{i + 1}</span> {s.name}
             </div>
           ))}
         </div>
@@ -802,14 +794,14 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Compliance Score', value: '94.2%', delta: '+2.4%', sub: 'vs prior quarter', color: 'text-primary' },
-            { label: 'Controls Effective', value: '48/54', delta: '89%', sub: 'effectiveness rate', color: 'text-emerald-600' },
-            { label: 'Audit Progress', value: '58%', delta: 'On track', sub: '54 of 87 controls tested', color: 'text-blue-600' },
+            { label: 'Controls Effective', value: '48/54', delta: '89%', sub: 'effectiveness rate', color: 'text-compliant-700' },
+            { label: 'Audit Progress', value: '58%', delta: 'On track', sub: '54 of 87 controls tested', color: 'text-evidence-700' },
           ].map(m => (
             <div key={m.label} className="bg-white rounded-xl border border-border-light p-5 text-center">
-              <div className="text-[12px] font-semibold text-text-muted uppercaser mb-2">{m.label}</div>
+              <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-2">{m.label}</div>
               <div className={`text-[32px] font-bold leading-none ${m.color}`}>{m.value}</div>
-              <div className="text-[12px] font-semibold text-emerald-600 mt-1">{m.delta}</div>
-              <div className="text-[12px] text-text-muted">{m.sub}</div>
+              <div className="text-[11px] font-semibold text-compliant-700 mt-1">{m.delta}</div>
+              <div className="text-[10px] text-text-muted">{m.sub}</div>
             </div>
           ))}
         </div>
@@ -824,13 +816,13 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
               { name: 'S2C — Source to Contract', progress: 21, controls: '3/14', risk: 'Medium' },
             ].map(p => (
               <div key={p.name} className="flex items-center gap-4">
-                <div className="w-48 text-[12px] font-medium text-text">{p.name}</div>
-                <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                <div className="w-48 text-[11px] font-medium text-text">{p.name}</div>
+                <div className="flex-1 h-3 bg-paper-50 rounded-full overflow-hidden">
                   <motion.div initial={{ width: 0 }} animate={{ width: `${p.progress}%` }} transition={{ delay: 0.2, duration: 0.6 }} className="h-full rounded-full bg-primary" />
                 </div>
-                <span className="text-[12px] font-bold text-text w-10 text-right">{p.progress}%</span>
-                <span className="text-[12px] text-text-muted w-12">{p.controls}</span>
-                <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${p.risk === 'High' ? 'text-red-700 bg-red-50' : p.risk === 'Medium' ? 'text-amber-700 bg-amber-50' : 'text-emerald-700 bg-emerald-50'}`}>{p.risk}</span>
+                <span className="text-[11px] font-bold text-text w-10 text-right">{p.progress}%</span>
+                <span className="text-[10px] text-text-muted w-12">{p.controls}</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.risk === 'High' ? 'text-risk-700 bg-risk-50' : p.risk === 'Medium' ? 'text-mitigated-700 bg-mitigated-50' : 'text-compliant-700 bg-compliant-50'}`}>{p.risk}</span>
               </div>
             ))}
           </div>
@@ -841,8 +833,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
           <div className="space-y-2">
             {['Approve additional AI workflow investment for S2C process — projected 3x ROI based on P2P results', 'Remediate DEF-002 (journal entry override) before March 31 — material weakness impacting filing', 'Reallocate Tushar Goel from P2P to S2C support in April — P2P is 72% complete, S2C needs acceleration', 'Expand vendor master monitoring to O2C process — similar risk profile to P2P where it saved 2.4L'].map((rec, i) => (
               <div key={i} className="flex items-start gap-2.5 px-3 py-2.5 bg-primary/[0.02] rounded-lg border border-primary/5">
-                <span className="text-[12px] font-bold text-white bg-primary w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
-                <span className="text-[12px] text-text leading-relaxed">{rec}</span>
+                <span className="text-[9px] font-bold text-white bg-primary w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                <span className="text-[11px] text-text leading-relaxed">{rec}</span>
               </div>
             ))}
           </div>
@@ -856,8 +848,8 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
     <div className="space-y-5">
       <div className="flex gap-2 flex-wrap">
         {sections.map((s, i) => (
-          <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[12px] font-medium text-text-secondary shadow-sm">
-            <span className="text-[12px] font-bold text-primary/50">{i + 1}</span> {s.name}
+          <div key={s.name} className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-border-light text-[11px] font-medium text-text-secondary shadow-sm">
+            <span className="text-[9px] font-bold text-primary/50">{i + 1}</span> {s.name}
           </div>
         ))}
       </div>
@@ -866,7 +858,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         return (
           <div key={s.name} className="bg-white rounded-xl border border-border-light p-5">
             <h3 className="text-[13px] font-bold text-text mb-2 flex items-center gap-2"><SIcon size={14} className="text-primary" /> {s.name}</h3>
-            <div className="h-16 bg-gray-50 rounded-lg flex items-center justify-center text-[12px] text-text-muted border border-dashed border-border-light">
+            <div className="h-16 bg-paper-50 rounded-lg flex items-center justify-center text-[11px] text-text-muted border border-dashed border-border-light">
               Section content generated from {report.name} data
             </div>
           </div>
@@ -889,90 +881,100 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
       className="rounded-2xl border border-border-light shadow-sm overflow-hidden mb-4 bg-white"
     >
       {/* Accent top bar */}
-      <div className="h-1" style={{ background: `linear-gradient(90deg, ${accentColor}, ${accentColor}40)` }} />
+      <div className="h-1" style={{ background: 'linear-gradient(90deg, #2F0D5F, #A05CFF)' }} />
 
       {/* Header — always visible */}
-      <div className="p-5">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[12px] font-bold text-white px-2.5 py-1 rounded-md" style={{ background: accentColor }}>{query.id}</span>
-            <span className={`flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full ${query.status === 'Completed' ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'}`}>
-              <div className={`w-1.5 h-1.5 rounded-full ${query.status === 'Completed' ? 'bg-emerald-500' : 'bg-amber-500'}`} /> {query.status}
+      <div className="px-6 py-5">
+        {/* Top row: flat meta bar + author + action */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center divide-x divide-border-light">
+            <span className="pr-2 text-[11px] font-bold text-primary uppercase tracking-wide">
+              Query · {query.id}
             </span>
-            <span className="text-[12px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full flex items-center gap-1"><TrendingUp size={9} /> {query.risk}</span>
-            <span className={`text-[12px] font-semibold px-2.5 py-1 rounded-full ${query.severity === 'Critical' ? 'text-red-700 bg-red-50' : 'text-orange-700 bg-orange-50'}`}>{query.severity}</span>
+            <span className={`px-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide ${query.status === 'Completed' ? 'text-compliant-700' : 'text-mitigated-700'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${query.status === 'Completed' ? 'bg-compliant-500' : 'bg-mitigated-500'}`} />
+              {query.status}
+            </span>
+            <span className="px-2 text-[11px] font-semibold text-primary uppercase tracking-wide">
+              {query.risk}
+            </span>
+            <span className="pl-2 text-[11px] font-semibold uppercase tracking-wide">
+              <span className="text-text-secondary">Severity · </span>
+              <span className={query.severity === 'Critical' ? 'text-risk-700' : 'text-high-700'}>{query.severity}</span>
+            </span>
           </div>
-          <div className="flex items-center gap-1.5 text-[12px] text-text-muted shrink-0">
-            <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[12px] font-bold flex items-center justify-center">{query.addedBy.split(' ').map(n => n[0]).join('')}</div>
-            {query.addedBy}
+          <div className="flex items-center gap-2 text-[12px] shrink-0">
+            <span className="font-bold text-primary text-[11px] uppercase tracking-wide">{query.addedBy.split(' ').map(n => n[0]).join('')}</span>
+            <span className="text-text-muted">{query.addedBy}</span>
           </div>
         </div>
 
-        <h3 className="text-[14px] font-semibold text-text leading-snug mb-4">{query.title}</h3>
+        {/* Title */}
+        <h3 className="text-[15px] font-bold text-text leading-snug mb-5">{query.title}</h3>
 
-        {/* KPIs + Mini Chart Row */}
-        <div className="flex gap-3 mb-4">
-          <div className="flex-1 grid grid-cols-4 gap-2">
-            {query.kpis.map(kpi => (
-              <div key={kpi.label} className="glass-card rounded-xl p-3">
-                <div className={`text-xl font-bold ${kpi.color}`}>{kpi.value}</div>
-                <div className="text-[12px] text-text-muted uppercaser mt-0.5 leading-tight">{kpi.label}</div>
-              </div>
-            ))}
-          </div>
-          {/* Mini sparkline chart */}
-          <div className="w-28 glass-card rounded-xl p-3 flex flex-col items-center justify-center">
-            <svg width="80" height="32" viewBox="0 0 80 32">
+        {/* KPIs + Trend row */}
+        <div className="flex gap-3 mb-5">
+          {query.kpis.map(kpi => (
+            <div key={kpi.label} className="flex-1 border border-border-light bg-white p-4" style={{ borderRadius: '8px' }}>
+              <div className={`text-2xl font-bold mb-1 ${kpi.color}`}>{kpi.value}</div>
+              <div className="text-[11px] text-text-muted">{kpi.label}</div>
+            </div>
+          ))}
+          {/* Trend sparkline */}
+          <div className="flex-1 border border-border-light bg-white p-4 flex flex-col items-center justify-center" style={{ borderRadius: '8px' }}>
+            <svg width="80" height="36" viewBox="0 0 80 36">
               <polyline
-                points={query.chartData.map((v, i) => `${i * (80 / (query.chartData.length - 1))},${32 - v * 0.3}`).join(' ')}
+                points={query.chartData.map((v, i) => `${i * (80 / (query.chartData.length - 1))},${36 - v * 0.34}`).join(' ')}
                 fill="none" stroke={accentColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
               />
               <polyline
-                points={`0,32 ${query.chartData.map((v, i) => `${i * (80 / (query.chartData.length - 1))},${32 - v * 0.3}`).join(' ')} 80,32`}
+                points={`0,36 ${query.chartData.map((v, i) => `${i * (80 / (query.chartData.length - 1))},${36 - v * 0.34}`).join(' ')} 80,36`}
                 fill={`${accentColor}15`} stroke="none"
               />
             </svg>
-            <span className="text-[12px] text-text-muted mt-1">Trend</span>
+            <span className="text-[11px] text-text-muted mt-1.5">Trend</span>
           </div>
         </div>
 
         {/* Summary */}
-        <p className="text-[12.5px] text-text-secondary leading-relaxed">{query.summary}</p>
+        <p className="text-[13px] text-text-secondary leading-relaxed mb-4">{query.summary}</p>
 
-        {/* Expand toggle */}
-        <button onClick={() => setExpanded(p => !p)} className="mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-primary hover:text-primary-hover cursor-pointer transition-colors">
-          <ChevronDown size={13} className={`transition-transform ${expanded ? '' : '-rotate-90'}`} />
-          {expanded ? 'Hide details' : 'Show findings & observations'}
-        </button>
+        {/* Bottom row: expand toggle + manage exceptions */}
+        <div className="flex items-center justify-between">
+          <button onClick={() => setExpanded(p => !p)} className="flex items-center gap-1.5 text-[13px] font-bold text-primary hover:text-primary-hover cursor-pointer transition-colors">
+            <ChevronDown size={14} className={`transition-transform ${expanded ? '' : '-rotate-90'}`} />
+            {expanded ? 'Hide findings & observations' : 'Show findings & observations'}
+          </button>
+          <button className="flex items-center gap-1.5 px-3 py-1.5 border border-border-light bg-white text-[12px] font-medium text-ink-600 hover:border-primary/30 hover:text-primary transition-colors cursor-pointer" style={{ borderRadius: '8px' }}>
+            Manage Exceptions
+            <ExternalLink size={13} />
+          </button>
+        </div>
       </div>
 
       {/* Expandable details */}
       <AnimatePresence>
         {expanded && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-            <div className="px-5 pb-5 border-t border-border-light pt-4">
-              <div className="grid grid-cols-2 gap-5">
+            <div className="px-6 pb-6 border-t border-border-light pt-5">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <h4 className="text-[13px] font-bold text-text mb-2.5 flex items-center gap-1.5">
-                    <AlertTriangle size={12} style={{ color: accentColor }} /> Findings
-                  </h4>
-                  <ul className="space-y-2">
+                  <h4 className="text-[12px] font-bold text-text-secondary uppercase tracking-wider mb-3">Findings</h4>
+                  <ul className="space-y-2.5">
                     {query.findings.map((f, i) => (
-                      <li key={i} className="flex gap-2 text-[12px] text-text leading-relaxed">
-                        <span className="text-text-muted shrink-0 font-mono text-[12px] mt-0.5">{String(i + 1).padStart(2, '0')}</span>
+                      <li key={i} className="flex gap-2.5 text-[13px] text-text leading-relaxed">
+                        <span className="text-text-muted shrink-0 font-mono text-[11px] mt-0.5">{String(i + 1).padStart(2, '0')}</span>
                         {f}
                       </li>
                     ))}
                   </ul>
                 </div>
                 <div>
-                  <h4 className="text-[13px] font-bold text-text mb-2.5 flex items-center gap-1.5">
-                    <Eye size={12} className="text-blue-500" /> Observations
-                  </h4>
-                  <ul className="space-y-2">
+                  <h4 className="text-[12px] font-bold text-text-secondary uppercase tracking-wider mb-3">Observations</h4>
+                  <ul className="space-y-2.5">
                     {query.observations.map((o, i) => (
-                      <li key={i} className="flex gap-2 text-[12px] text-text leading-relaxed">
-                        <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: accentColor + '60' }} />
+                      <li key={i} className="flex gap-2.5 text-[13px] text-text leading-relaxed">
+                        <div className="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-primary/40" />
                         {o}
                       </li>
                     ))}
@@ -1007,9 +1009,7 @@ function ReportView({ report, onBack, onShare }: {
     }, 800);
   };
 
-  const coverGradient = appliedTemplate
-    ? CATEGORY_GRADIENTS[appliedTemplate.category] || 'from-[#ede4f7] to-[#e0d0f0]'
-    : 'from-[#ede4f7] to-[#e0d0f0]';
+  const reportTemplate = REPORT_TEMPLATES.find(t => t.id === report.templateId) ?? null;
 
   const DEFAULT_QUERIES = [
     {
@@ -1018,9 +1018,9 @@ function ReportView({ report, onBack, onShare }: {
       addedBy: report.generatedBy,
       kpis: [
         { label: 'Flagged By AI', value: '140', color: 'text-primary' },
-        { label: 'Manually Flagged', value: '1', color: 'text-orange-600' },
-        { label: 'Resolved', value: '3', color: 'text-emerald-600' },
-        { label: 'Pending', value: '136', color: 'text-red-600' },
+        { label: 'Manually Flagged', value: '1', color: 'text-high-700' },
+        { label: 'Resolved', value: '3', color: 'text-compliant-700' },
+        { label: 'Pending', value: '136', color: 'text-risk-700' },
       ],
       summary: 'The workflow identified 140 duplicate invoice entries across vendors, each grouped into case IDs. Duplicates represent ~95.6M in invoice value, with some cases exceeding 24.2M for a single vendor-date-amount combination.',
       findings: [
@@ -1043,9 +1043,9 @@ function ReportView({ report, onBack, onShare }: {
       addedBy: 'AI Copilot',
       kpis: [
         { label: 'Changes Found', value: '47', color: 'text-primary' },
-        { label: 'Unauthorized', value: '12', color: 'text-red-600' },
-        { label: 'Verified', value: '35', color: 'text-emerald-600' },
-        { label: 'Pending', value: '8', color: 'text-orange-600' },
+        { label: 'Unauthorized', value: '12', color: 'text-risk-700' },
+        { label: 'Verified', value: '35', color: 'text-compliant-700' },
+        { label: 'Pending', value: '8', color: 'text-high-700' },
       ],
       summary: 'Vendor master data analysis revealed 47 changes in 90 days. 12 lacked dual-approval — 8 involved bank account modifications (highest fraud risk category).',
       findings: [
@@ -1070,9 +1070,9 @@ function ReportView({ report, onBack, onShare }: {
         addedBy: report.generatedBy,
         kpis: [
           { label: 'Total Risks', value: '12', color: 'text-primary' },
-          { label: 'Critical', value: '2', color: 'text-red-600' },
-          { label: 'High', value: '5', color: 'text-orange-600' },
-          { label: 'Mitigated', value: '5', color: 'text-emerald-600' },
+          { label: 'Critical', value: '2', color: 'text-risk-700' },
+          { label: 'High', value: '5', color: 'text-high-700' },
+          { label: 'Mitigated', value: '5', color: 'text-compliant-700' },
         ],
         summary: 'Enterprise risk assessment identified 12 risks across 4 business processes. 2 critical risks (RSK-004 Fictitious vendors, RSK-007 Malware via portals) remain uncontrolled with zero mapped controls. Estimated uncontrolled exposure: 18L.',
         findings: [
@@ -1094,9 +1094,9 @@ function ReportView({ report, onBack, onShare }: {
         addedBy: 'AI Copilot',
         kpis: [
           { label: 'Strategies Reviewed', value: '18', color: 'text-primary' },
-          { label: 'Effective', value: '10', color: 'text-emerald-600' },
-          { label: 'Partial', value: '5', color: 'text-amber-600' },
-          { label: 'Ineffective', value: '3', color: 'text-red-600' },
+          { label: 'Effective', value: '10', color: 'text-compliant-700' },
+          { label: 'Partial', value: '5', color: 'text-mitigated-700' },
+          { label: 'Ineffective', value: '3', color: 'text-risk-700' },
         ],
         summary: '18 mitigation strategies reviewed. 3 classified as ineffective — all relate to manual detective controls in P2P that fail under high-volume processing (>500 transactions/day).',
         findings: [
@@ -1118,9 +1118,9 @@ function ReportView({ report, onBack, onShare }: {
         addedBy: report.generatedBy,
         kpis: [
           { label: 'Controls Tested', value: '54', color: 'text-primary' },
-          { label: 'Effective', value: '48', color: 'text-emerald-600' },
-          { label: 'Deficient', value: '4', color: 'text-red-600' },
-          { label: 'Pending Test', value: '33', color: 'text-amber-600' },
+          { label: 'Effective', value: '48', color: 'text-compliant-700' },
+          { label: 'Deficient', value: '4', color: 'text-risk-700' },
+          { label: 'Pending Test', value: '33', color: 'text-mitigated-700' },
         ],
         summary: 'Control effectiveness assessment across all business processes. 89% of tested controls rated effective. 2 material weaknesses identified in P2P journal entry approval and R2R reconciliation process.',
         findings: [
@@ -1144,9 +1144,9 @@ function ReportView({ report, onBack, onShare }: {
         addedBy: 'AI Copilot',
         kpis: [
           { label: 'Total Runs', value: '115', color: 'text-primary' },
-          { label: 'Accuracy', value: '94.2%', color: 'text-emerald-600' },
-          { label: 'Exceptions', value: '23', color: 'text-orange-600' },
-          { label: 'Avg Runtime', value: '1.8d', color: 'text-blue-600' },
+          { label: 'Accuracy', value: '94.2%', color: 'text-compliant-700' },
+          { label: 'Exceptions', value: '23', color: 'text-high-700' },
+          { label: 'Avg Runtime', value: '1.8d', color: 'text-evidence-700' },
         ],
         summary: '8 active AI workflows processed 115 runs this quarter. Duplicate Invoice Detector leads with 45 runs and 96% precision. Processing time improved 14% after model retrain. Vendor Master Monitor caught 2 critical unauthorized changes.',
         findings: [
@@ -1168,9 +1168,9 @@ function ReportView({ report, onBack, onShare }: {
         addedBy: report.generatedBy,
         kpis: [
           { label: 'Exceptions', value: '23', color: 'text-primary' },
-          { label: 'Auto-Resolved', value: '8', color: 'text-emerald-600' },
-          { label: 'Manual Review', value: '12', color: 'text-amber-600' },
-          { label: 'Escalated', value: '3', color: 'text-red-600' },
+          { label: 'Auto-Resolved', value: '8', color: 'text-compliant-700' },
+          { label: 'Manual Review', value: '12', color: 'text-mitigated-700' },
+          { label: 'Escalated', value: '3', color: 'text-risk-700' },
         ],
         summary: '23 exceptions flagged this quarter. AI auto-resolved 35% without human intervention. 3 escalated to senior audit — all related to vendor bank account modifications exceeding risk threshold.',
         findings: [
@@ -1192,9 +1192,9 @@ function ReportView({ report, onBack, onShare }: {
         addedBy: report.generatedBy,
         kpis: [
           { label: 'Compliance', value: '94.2%', color: 'text-primary' },
-          { label: 'Material Weakness', value: '2', color: 'text-red-600' },
-          { label: 'Cost Saved', value: '24L', color: 'text-emerald-600' },
-          { label: 'Exposure', value: '18L', color: 'text-orange-600' },
+          { label: 'Material Weakness', value: '2', color: 'text-risk-700' },
+          { label: 'Cost Saved', value: '24L', color: 'text-compliant-700' },
+          { label: 'Exposure', value: '18L', color: 'text-high-700' },
         ],
         summary: 'Enterprise GRC posture is strong at 94.2% compliance with improving trajectory. Two material weaknesses require board attention. AI-powered workflows saved 24L YTD through automated detection and prevention.',
         findings: [
@@ -1215,28 +1215,28 @@ function ReportView({ report, onBack, onShare }: {
 
   const TEMPLATE_STATS: Record<string, { label: string; value: string; icon: React.ElementType; color: string }[]> = {
     'rt-002': [
-      { label: 'Total Risks', value: '12', icon: AlertTriangle, color: 'text-orange-600 bg-orange-50' },
-      { label: 'Uncontrolled', value: '2', icon: Shield, color: 'text-red-600 bg-red-50' },
-      { label: 'Mitigated', value: '5', icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
-      { label: 'Exposure', value: '18L', icon: TrendingUp, color: 'text-blue-600 bg-blue-50' },
+      { label: 'Total Risks', value: '12', icon: AlertTriangle, color: 'text-high-700 bg-high-50' },
+      { label: 'Uncontrolled', value: '2', icon: Shield, color: 'text-risk-700 bg-risk-50' },
+      { label: 'Mitigated', value: '5', icon: CheckCircle2, color: 'text-compliant-700 bg-compliant-50' },
+      { label: 'Exposure', value: '18L', icon: TrendingUp, color: 'text-evidence-700 bg-evidence-50' },
     ],
     'rt-003': [
-      { label: 'Controls Tested', value: '54', icon: Shield, color: 'text-blue-600 bg-blue-50' },
-      { label: 'Effective', value: '48', icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
-      { label: 'Deficient', value: '4', icon: AlertTriangle, color: 'text-red-600 bg-red-50' },
-      { label: 'Effectiveness Rate', value: '89%', icon: TrendingUp, color: 'text-purple-600 bg-purple-50' },
+      { label: 'Controls Tested', value: '54', icon: Shield, color: 'text-evidence-700 bg-evidence-50' },
+      { label: 'Effective', value: '48', icon: CheckCircle2, color: 'text-compliant-700 bg-compliant-50' },
+      { label: 'Deficient', value: '4', icon: AlertTriangle, color: 'text-risk-700 bg-risk-50' },
+      { label: 'Effectiveness Rate', value: '89%', icon: TrendingUp, color: 'text-brand-700 bg-brand-50' },
     ],
     'rt-004': [
-      { label: 'Workflow Runs', value: '115', icon: TrendingUp, color: 'text-blue-600 bg-blue-50' },
-      { label: 'Accuracy', value: '94.2%', icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
-      { label: 'Exceptions', value: '23', icon: AlertTriangle, color: 'text-orange-600 bg-orange-50' },
-      { label: 'Cost Saved', value: '24L', icon: Shield, color: 'text-purple-600 bg-purple-50' },
+      { label: 'Workflow Runs', value: '115', icon: TrendingUp, color: 'text-evidence-700 bg-evidence-50' },
+      { label: 'Accuracy', value: '94.2%', icon: CheckCircle2, color: 'text-compliant-700 bg-compliant-50' },
+      { label: 'Exceptions', value: '23', icon: AlertTriangle, color: 'text-high-700 bg-high-50' },
+      { label: 'Cost Saved', value: '24L', icon: Shield, color: 'text-brand-700 bg-brand-50' },
     ],
     'rt-006': [
-      { label: 'Compliance Score', value: '94.2%', icon: Shield, color: 'text-purple-600 bg-purple-50' },
-      { label: 'Material Weakness', value: '2', icon: AlertTriangle, color: 'text-red-600 bg-red-50' },
-      { label: 'Cost Saved', value: '24L', icon: TrendingUp, color: 'text-emerald-600 bg-emerald-50' },
-      { label: 'Risk Exposure', value: '18L', icon: FileText, color: 'text-orange-600 bg-orange-50' },
+      { label: 'Compliance Score', value: '94.2%', icon: Shield, color: 'text-brand-700 bg-brand-50' },
+      { label: 'Material Weakness', value: '2', icon: AlertTriangle, color: 'text-risk-700 bg-risk-50' },
+      { label: 'Cost Saved', value: '24L', icon: TrendingUp, color: 'text-compliant-700 bg-compliant-50' },
+      { label: 'Risk Exposure', value: '18L', icon: FileText, color: 'text-high-700 bg-high-50' },
     ],
   };
 
@@ -1247,15 +1247,15 @@ function ReportView({ report, onBack, onShare }: {
   const activeStats = appliedTemplate && TEMPLATE_STATS[appliedTemplate.id]
     ? TEMPLATE_STATS[appliedTemplate.id]
     : [
-        { label: 'Total Exceptions', value: '187', icon: AlertTriangle, color: 'text-orange-600 bg-orange-50' },
-        { label: 'Resolved', value: '38', icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
-        { label: 'Critical Items', value: '12', icon: Shield, color: 'text-red-600 bg-red-50' },
-        { label: 'Compliance Score', value: '78%', icon: TrendingUp, color: 'text-blue-600 bg-blue-50' },
+        { label: 'Total Exceptions', value: '187', icon: AlertTriangle, color: 'text-high-700 bg-high-50' },
+        { label: 'Resolved', value: '38', icon: CheckCircle2, color: 'text-compliant-700 bg-compliant-50' },
+        { label: 'Critical Items', value: '12', icon: Shield, color: 'text-risk-700 bg-risk-50' },
+        { label: 'Compliance Score', value: '78%', icon: TrendingUp, color: 'text-evidence-700 bg-evidence-50' },
       ];
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="h-full overflow-y-auto bg-surface-2">
-      <div className="px-10 py-6">
+      <div className="max-w-4xl mx-auto px-8 py-6">
         {/* Top bar */}
         <div className="flex items-center justify-between mb-6">
           <button onClick={onBack} className="flex items-center gap-1.5 text-[13px] text-text-secondary hover:text-primary transition-colors cursor-pointer">
@@ -1313,33 +1313,32 @@ function ReportView({ report, onBack, onShare }: {
           )}
         </AnimatePresence>
 
-        {/* Report Cover — compact */}
-        <div className={`relative rounded-2xl overflow-hidden mb-5 bg-gradient-to-br ${coverGradient} shadow-md`} style={{ border: '1px solid rgba(106,18,205,0.12)' }}>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/10 to-transparent" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-primary/8 to-transparent" />
-          <div className="relative px-8 py-8 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Shield size={18} className="text-primary" />
-                </div>
-                <span className="text-[12px] font-bold bg-primary/10 text-primary px-3 py-1 rounded-full uppercaser">SOX Audit Report</span>
-                {appliedTemplate && (
-                  <motion.span
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="text-[12px] font-bold bg-primary/15 text-primary px-2.5 py-1 rounded-full flex items-center gap-1"
-                  >
-                    <Layout size={9} /> Template: {appliedTemplate.name}
-                  </motion.span>
-                )}
-              </div>
-              <h1 className="text-2xl font-bold mb-1 text-text">{report.name}</h1>
-              <p className="text-text-muted text-[13px]">{report.generatedBy} · {report.generatedAt} · {activeQueries.length} queries</p>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-primary">{activeQueries.length}</div>
-              <div className="text-[12px] text-text-muted uppercaser">Queries</div>
+        {/* Report Cover */}
+        <div className="relative rounded-2xl overflow-hidden mb-5 bg-gradient-to-br from-[#3b0b72] to-[#6a12cd]" style={{ boxShadow: '0 4px 24px rgba(106,18,205,0.35)' }}>
+          <div className="absolute inset-0 z-0" style={{ maskImage: 'linear-gradient(to right, transparent 35%, white 70%)', WebkitMaskImage: 'linear-gradient(to right, transparent 35%, white 70%)' }}>
+            <FloatingLines
+              enabledWaves={['top', 'middle']}
+              lineCount={6}
+              lineDistance={6}
+              bendRadius={4}
+              bendStrength={-0.3}
+              interactive={true}
+              parallax={false}
+              color="#e879f9"
+              opacity={0.3}
+            />
+          </div>
+          <div className="relative z-10 px-8 py-7">
+            <h1 className="text-2xl font-bold text-white tracking-tight mb-1">{report.name}</h1>
+            {reportTemplate && (
+              <p className="text-white/60 text-[13px] mb-3">{reportTemplate.desc}</p>
+            )}
+            <div className="flex items-center gap-2 text-[13px]">
+              <span className="font-semibold text-white">{report.generatedBy}</span>
+              <span className="text-white/30 mx-0.5">|</span>
+              <span className="text-white/70">{report.generatedAt}</span>
+              <span className="text-white/30 mx-0.5">|</span>
+              <span className="text-white/70">{activeQueries.length} {activeQueries.length === 1 ? 'query' : 'queries'}</span>
             </div>
           </div>
         </div>
@@ -1351,7 +1350,7 @@ function ReportView({ report, onBack, onShare }: {
               <div className={`p-2 rounded-lg ${stat.color}`}><stat.icon size={16} /></div>
               <div>
                 <div className="text-xl font-bold text-text">{stat.value}</div>
-                <div className="text-[12px] text-text-muted uppercaser">{stat.label}</div>
+                <div className="text-[10px] text-text-muted tracking-wide">{stat.label}</div>
               </div>
             </div>
           ))}
@@ -1396,9 +1395,9 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
   };
 
   const approvalColor = (status: string) => {
-    if (status === 'Approved') return 'text-emerald-700 bg-emerald-50';
-    if (status === 'Pending Approval') return 'text-amber-700 bg-amber-50';
-    return 'text-gray-600 bg-gray-100';
+    if (status === 'Approved') return 'text-compliant-700 bg-compliant-50';
+    if (status === 'Pending Approval') return 'text-mitigated-700 bg-mitigated-50';
+    return 'text-ink-500 bg-paper-50';
   };
 
   if (viewingReport) {
@@ -1413,12 +1412,11 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
 
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
-      <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-10 py-8 relative">
+      <div className="max-w-5xl mx-auto px-8 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text">Reports</h1>
+            <h1 className="text-xl font-bold text-text tracking-tight">Reports</h1>
             <p className="text-sm text-text-secondary mt-1">Generate, manage, and export compliance reports</p>
           </div>
           <div className="flex items-center gap-2">
@@ -1443,7 +1441,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             <span className="flex items-center gap-2">
               <BookOpen size={14} />
               My Reports
-              <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'my-reports' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{GENERATED_REPORTS.length}</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'my-reports' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{GENERATED_REPORTS.length}</span>
             </span>
           </button>
           <button
@@ -1453,7 +1451,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             <span className="flex items-center gap-2">
               <Share2 size={14} />
               Shared Reports
-              <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'shared-reports' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{SHARED_REPORTS.length}</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'shared-reports' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{SHARED_REPORTS.length}</span>
             </span>
           </button>
           <button
@@ -1463,7 +1461,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             <span className="flex items-center gap-2">
               <FileText size={14} />
               Templates
-              <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'templates' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>{REPORT_TEMPLATES.length}</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'templates' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{REPORT_TEMPLATES.length}</span>
             </span>
           </button>
         </div>
@@ -1477,7 +1475,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             searchKeys={['name', 'generatedBy']}
             paginated={false}
             headerExtra={
-              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+              <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-lg">
                 <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="List view"><List size={15} /></button>
                 <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
               </div>
@@ -1488,26 +1486,20 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                   const report = GENERATED_REPORTS.find(r => r.id === item.id);
                   if (report) setViewingReport(report);
                 }}>
-                  <FileText size={14} className="text-primary" />
+                  <div className="flex items-center justify-center w-8 h-8 shrink-0" style={{ background: 'rgba(106,18,205,0.04)', borderRadius: '8px' }}>
+                    <FileText size={16} style={{ color: '#6a12cd' }} />
+                  </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-text font-medium hover:text-primary transition-colors">{String(item.name)}</span>
                       {reportAppliedTemplates[String(item.id)] && (
-                        <span className="text-[12px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                        <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
                           <Layout size={8} /> {reportAppliedTemplates[String(item.id)].name}
                         </span>
                       )}
                     </div>
-                    <div className="text-[12px] text-text-muted">2 queries · {String(item.pages)} pages</div>
+                    <div className="text-[10px] text-text-muted">2 queries · {String(item.pages)} pages</div>
                   </div>
-                </div>
-              )},
-              { key: 'generatedBy', label: 'Author', width: '130px', render: (item) => (
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[12px] font-bold flex items-center justify-center">
-                    {String(item.generatedBy).split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <span className="text-text-secondary text-[12px]">{String(item.generatedBy)}</span>
                 </div>
               )},
               { key: 'generatedAt', label: 'Date', width: '120px', render: (item) => (
@@ -1516,13 +1508,13 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
               { key: 'status', label: 'Status', width: '100px', render: (item) => <StatusBadge status={String(item.status)} /> },
               { key: 'approval', label: 'Approval', width: '130px', render: (item) => {
                 const approval = REPORT_APPROVAL[String(item.id)] || 'Draft';
-                return <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${approvalColor(approval)}`}>{approval}</span>;
+                return <span className={`inline-flex items-center px-2.5 h-6 rounded-full text-[12px] leading-[16px] font-medium whitespace-nowrap ${approvalColor(approval)}`}>{approval}</span>;
               }},
               { key: 'actions', label: '', width: '110px', sortable: false, align: 'right', render: (item) => (
                 <div className="flex items-center justify-end gap-1">
                   <button onClick={() => addToast({ type: 'success', message: `Downloading ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={14} /></button>
                   <button onClick={() => onShare ? onShare(String(item.id)) : addToast({ type: 'info', message: `Sharing ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={14} /></button>
-                  <button onClick={() => addToast({ type: 'success', message: `${item.name} deleted.` })} className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
+                  <button onClick={() => addToast({ type: 'success', message: `${item.name} deleted.` })} className="p-1.5 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
                 </div>
               )},
             ]}
@@ -1533,38 +1525,33 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
           <div className="bg-white rounded-xl border border-border-light overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border-light bg-surface-2/50">
               <p className="text-[12px] text-text-muted">{GENERATED_REPORTS.length} reports</p>
-              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+              <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-lg">
                 <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="List view"><List size={15} /></button>
                 <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
               </div>
             </div>
-            <div className="p-4 grid grid-cols-3 gap-4">
+            <div className="p-4 grid grid-cols-3 gap-4 items-start">
               {GENERATED_REPORTS.map((r, i) => {
-                const approval = REPORT_APPROVAL[r.id] || 'Draft';
                 return (
                   <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                     className="glass-card rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all group cursor-pointer"
                     onClick={() => setViewingReport(r)}
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="p-2 bg-primary/10 text-primary rounded-lg"><FileText size={16} /></div>
-                      <StatusBadge status={r.status} />
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-center w-8 h-8 shrink-0" style={{ background: 'rgba(106,18,205,0.04)', borderRadius: '8px' }}><FileText size={16} style={{ color: '#6a12cd' }} /></div>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Download"><Download size={15} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); onShare ? onShare(r.id) : addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Share"><Share2 size={15} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="hover:text-red-500 transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Delete"><Trash2 size={15} /></button>
+                      </div>
                     </div>
                     <div className="font-medium text-[13px] text-text mb-1 group-hover:text-primary transition-colors leading-snug">{r.name}</div>
-                    <div className="text-[12px] text-text-muted mb-3">{r.pages} pages · {r.generatedAt}</div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[12px] font-bold flex items-center justify-center">
-                          {r.generatedBy.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <span className="text-[12px] text-text-secondary">{r.generatedBy}</span>
+                    <div className="text-[11px] text-text-muted mb-3">{r.pages} pages · {r.generatedAt}</div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
+                        {r.generatedBy.split(' ').map(n => n[0]).join('')}
                       </div>
-                      <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${approvalColor(approval)}`}>{approval}</span>
-                    </div>
-                    <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border-light opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={13} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); onShare ? onShare(r.id) : addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={13} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="p-1 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={13} /></button>
+                      <span className="text-[11px] text-text-secondary">{r.generatedBy}</span>
                     </div>
                   </motion.div>
                 );
@@ -1582,7 +1569,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             searchKeys={['name', 'sharedBy', 'sharedWith']}
             paginated={false}
             headerExtra={
-              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+              <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-lg">
                 <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="List view"><List size={15} /></button>
                 <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
               </div>
@@ -1590,16 +1577,18 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             columns={[
               { key: 'name', label: 'Report', render: (item) => (
                 <div className="flex items-center gap-2">
-                  <FileText size={14} className="text-primary" />
+                  <div className="flex items-center justify-center w-8 h-8 shrink-0" style={{ background: 'rgba(106,18,205,0.04)', borderRadius: '8px' }}>
+                    <FileText size={16} style={{ color: '#6a12cd' }} />
+                  </div>
                   <div>
                     <div className="text-text font-medium">{String(item.name)}</div>
-                    <div className="text-[12px] text-text-muted">{String(item.pages)} pages · shared with {String(item.sharedWith)}</div>
+                    <div className="text-[10px] text-text-muted">{String(item.pages)} pages · shared with {String(item.sharedWith)}</div>
                   </div>
                 </div>
               )},
-              { key: 'sharedBy', label: 'Shared By', width: '140px', render: (item) => (
+              { key: 'sharedBy', label: 'Shared By', render: (item) => (
                 <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[12px] font-bold flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
                     {String(item.sharedBy).split(' ').map((n: string) => n[0]).join('')}
                   </div>
                   <span className="text-text-secondary text-[12px]">{String(item.sharedBy)}</span>
@@ -1613,7 +1602,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                 <div className="flex items-center justify-end gap-1">
                   <button onClick={() => addToast({ type: 'success', message: `Downloading ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={14} /></button>
                   <button onClick={() => addToast({ type: 'info', message: `Sharing ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={14} /></button>
-                  <button onClick={() => addToast({ type: 'success', message: `${item.name} deleted.` })} className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
+                  <button onClick={() => addToast({ type: 'success', message: `${item.name} deleted.` })} className="p-1.5 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
                 </div>
               )},
             ]}
@@ -1624,7 +1613,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
           <div className="bg-white rounded-xl border border-border-light overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border-light bg-surface-2/50">
               <p className="text-[12px] text-text-muted">{SHARED_REPORTS.length} reports</p>
-              <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-lg">
+              <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-lg">
                 <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="List view"><List size={15} /></button>
                 <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
               </div>
@@ -1639,17 +1628,17 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                     <StatusBadge status={r.status} />
                   </div>
                   <div className="font-medium text-[13px] text-text mb-1 group-hover:text-primary transition-colors leading-snug">{r.name}</div>
-                  <div className="text-[12px] text-text-muted mb-3">{r.pages} pages · {r.sharedAt} · {r.sharedWith}</div>
+                  <div className="text-[11px] text-text-muted mb-3">{r.pages} pages · {r.sharedAt} · {r.sharedWith}</div>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[12px] font-bold flex items-center justify-center">
+                    <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
                       {r.sharedBy.split(' ').map(n => n[0]).join('')}
                     </div>
-                    <span className="text-[12px] text-text-secondary">{r.sharedBy}</span>
+                    <span className="text-[11px] text-text-secondary">{r.sharedBy}</span>
                   </div>
                   <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border-light opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={13} /></button>
                     <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="p-1 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={13} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="p-1 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={13} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="p-1 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={13} /></button>
                   </div>
                 </motion.div>
               ))}
@@ -1662,7 +1651,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
           <div className="grid grid-cols-3 gap-4">
             {REPORT_TEMPLATES.map((rt, i) => {
               const Icon = ICON_MAP[rt.icon] || FileText;
-              const color = CATEGORY_COLORS[rt.category] || 'text-gray-600 bg-gray-50';
+              const color = CATEGORY_COLORS[rt.category] || 'text-ink-500 bg-paper-50';
               return (
                 <motion.div
                   key={rt.id}
@@ -1673,10 +1662,10 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                   onClick={() => setPreviewingTemplate(rt)}
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <div className={`p-2.5 rounded-xl ${color} group-hover:scale-110 transition-transform duration-300`}><Icon size={18} /></div>
+                    <div className={`p-2.5 ${color} group-hover:scale-110 transition-transform duration-300`} style={{ borderRadius: '8px' }}><Icon size={18} /></div>
                     <button
                       onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }}
-                      className="flex items-center gap-1 px-2 py-1 text-[12px] font-medium text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                      className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
                     >
                       <Edit3 size={10} /> Edit
                     </button>
@@ -1684,13 +1673,13 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                   <h3 className="text-[14px] font-semibold text-text mb-1 group-hover:text-primary transition-colors">{rt.name}</h3>
                   <p className="text-[12px] text-text-secondary leading-relaxed mb-3">{rt.desc}</p>
                   <div className="flex items-center justify-between pt-3 border-t border-border-light">
-                    <span className={`text-[12px] font-bold uppercaser ${color.split(' ')[0]}`}>{rt.category}</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${color.split(' ')[0]}`}>{rt.category}</span>
                     <div className="flex gap-1">
-                      <button onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }} className="text-[12px] text-text-muted hover:text-primary font-medium flex items-center gap-0.5 cursor-pointer">
+                      <button onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }} className="text-[10px] text-text-muted hover:text-primary font-medium flex items-center gap-0.5 cursor-pointer">
                         <Settings size={9} /> Customize
                       </button>
                       <span className="text-border-light mx-1">|</span>
-                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: 'Generating PDF download...' }); }} className="text-[12px] text-primary font-semibold flex items-center gap-0.5 cursor-pointer">
+                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: 'Generating PDF download...' }); }} className="text-[10px] text-primary font-semibold flex items-center gap-0.5 cursor-pointer">
                         Generate <ArrowRight size={9} />
                       </button>
                     </div>
@@ -1740,20 +1729,20 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
               className="relative bg-white rounded-2xl shadow-2xl w-[560px] max-h-[80vh] overflow-hidden flex flex-col"
               onClick={e => e.stopPropagation()}
             >
-              <div className="px-10 py-4 border-b border-border-light flex items-center justify-between shrink-0">
+              <div className="px-6 py-4 border-b border-border-light flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="p-2 bg-primary/10 text-primary rounded-xl"><FileText size={16} /></div>
                   <div>
                     <h3 className="text-[15px] font-semibold text-text">New Report</h3>
-                    <p className="text-[12px] text-text-muted">Select a template to get started</p>
+                    <p className="text-[11px] text-text-muted">Select a template to get started</p>
                   </div>
                 </div>
-                <button onClick={() => setShowNewReportTemplateSelector(false)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
+                <button onClick={() => setShowNewReportTemplateSelector(false)} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {REPORT_TEMPLATES.map((rt, i) => {
                   const Icon = ICON_MAP[rt.icon] || FileText;
-                  const color = CATEGORY_COLORS[rt.category] || 'text-gray-600 bg-gray-50';
+                  const color = CATEGORY_COLORS[rt.category] || 'text-ink-500 bg-paper-50';
                   return (
                     <motion.button
                       key={rt.id}
@@ -1767,19 +1756,19 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                       }}
                       className="w-full text-left p-4 rounded-xl border border-border-light hover:border-primary/30 hover:bg-primary-xlight/50 hover:shadow-sm transition-all duration-300 cursor-pointer group flex items-start gap-3"
                     >
-                      <div className={`p-2 rounded-xl ${color} shrink-0 group-hover:scale-110 transition-transform duration-300`}><Icon size={16} /></div>
+                      <div className={`p-2 ${color} shrink-0 group-hover:scale-110 transition-transform duration-300`} style={{ borderRadius: '8px' }}><Icon size={16} /></div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="text-[13px] font-semibold text-text group-hover:text-primary transition-colors">{rt.name}</span>
-                          <span className={`text-[12px] font-bold uppercaser ${color.split(' ')[0]}`}>{rt.category}</span>
+                          <span className={`text-[9px] font-bold uppercase tracking-wider ${color.split(' ')[0]}`}>{rt.category}</span>
                         </div>
-                        <p className="text-[12px] text-text-muted leading-relaxed">{rt.desc}</p>
+                        <p className="text-[11px] text-text-muted leading-relaxed">{rt.desc}</p>
                         {rt.sections && (
                           <div className="flex gap-1 mt-2 flex-wrap">
                             {rt.sections.slice(0, 4).map(s => (
-                              <span key={s.name} className="text-[12px] text-text-muted bg-surface-2 px-1.5 py-0.5 rounded">{s.name}</span>
+                              <span key={s.name} className="text-[9px] text-text-muted bg-surface-2 px-1.5 py-0.5 rounded">{s.name}</span>
                             ))}
-                            {rt.sections.length > 4 && <span className="text-[12px] text-text-muted bg-surface-2 px-1.5 py-0.5 rounded">+{rt.sections.length - 4} more</span>}
+                            {rt.sections.length > 4 && <span className="text-[9px] text-text-muted bg-surface-2 px-1.5 py-0.5 rounded">+{rt.sections.length - 4} more</span>}
                           </div>
                         )}
                       </div>
