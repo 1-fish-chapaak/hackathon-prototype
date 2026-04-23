@@ -3,6 +3,7 @@ import type { WorkflowTypeId } from '../data/mockData';
 
 export type View =
   | 'home'
+  | 'recents'
   | 'chat'
   | 'workflow-templates'
   | 'workflow-detail'

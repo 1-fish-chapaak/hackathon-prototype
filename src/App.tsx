@@ -16,6 +16,7 @@ import DashboardView from './components/dashboard/DashboardView';
 import ReportsView from './components/reports/ReportsView';
 import DataSourcesView from './components/data-sources/DataSourcesView';
 import HomeView from './components/home/HomeView';
+import RecentsView from './components/recents/RecentsView';
 import ExceptionManagementModal from './components/modals/ExceptionManagementModal';
 import EmailPreviewModal from './components/modals/EmailPreviewModal';
 import ShareModal from './components/modals/ShareModal';
@@ -118,6 +119,9 @@ export default function App() {
     switch (state.view) {
       case 'home':
         return <HomeView setView={setView} />;
+
+      case 'recents':
+        return <RecentsView setView={setView} />;
 
       case 'chat':
         return (

@@ -234,7 +234,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
 
           {/* Primary */}
           <NavItem icon={Home} label="Home" active={view === 'home'} expanded={isExpanded} onClick={() => setView('home')} />
-          <NavItem icon={Clock} label="Recents" active={false} expanded={isExpanded} onClick={() => setView('home')} />
+          <NavItem icon={Clock} label="Recents" active={view === 'recents'} expanded={isExpanded} onClick={() => setView('recents')} />
 
           {/* ── PROGRAMS ── */}
           <Divider label="Programs" expanded={isExpanded} />
