@@ -10,7 +10,6 @@ import {
 import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/mockData';
 import { StatusBadge } from '../shared/StatusBadge';
 import SmartTable from '../shared/SmartTable';
-import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -1533,7 +1532,6 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             </div>
             <div className="p-4 grid grid-cols-3 gap-4 items-start">
               {GENERATED_REPORTS.map((r, i) => {
-                const approval = REPORT_APPROVAL[r.id] || 'Draft';
                 return (
                   <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                     className="glass-card rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all group cursor-pointer"
