@@ -487,7 +487,6 @@ function FieldRow({
 // ─── Select File(s) dropdown ─────────────────────────────────────────
 
 function SelectFileDropdown({
-  inputId,
   isOpen,
   onToggle,
   onClose,

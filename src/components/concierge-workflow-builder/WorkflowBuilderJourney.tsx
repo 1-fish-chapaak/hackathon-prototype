@@ -352,7 +352,7 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
       <GuideMeModal
         open={guideMeOpen}
         onClose={() => setGuideMeOpen(false)}
-        onInsert={handleGuideInsert}
+        onPick={(generatedPrompt) => handleGuideInsert(generatedPrompt)}
       />
     </div>
   );
