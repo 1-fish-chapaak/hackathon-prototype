@@ -192,13 +192,6 @@ export default function DataSourcesView() {
             <Zap size={14} className="text-mitigated-700" />
             New connection
           </button>
-          <button
-            onClick={() => addToast({ message: 'Power BI import dialog opening.', type: 'info' })}
-            className="flex items-center gap-2 px-4 h-10 rounded-md bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white text-[13px] font-semibold transition-colors cursor-pointer"
-          >
-            <Upload size={14} />
-            Import from Power BI
-          </button>
         </div>
       </div>
 
