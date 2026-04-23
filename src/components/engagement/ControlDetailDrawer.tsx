@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  X, ChevronRight, ChevronDown, CheckCircle2, Clock, AlertTriangle,
-  Database, FileText, Upload, Shield, Workflow, Target, Play,
-  Eye, ArrowRight, XCircle, Check, ArrowLeft, Users,
-  Paperclip, BarChart3, Send, Lock, Zap, CloudUpload, Filter
+  X, ChevronRight, ChevronDown, CheckCircle2, AlertTriangle,
+  Database, FileText, Workflow, Target,
+  Eye, ArrowRight, XCircle, ArrowLeft, Users,
+  Paperclip, Send, Lock, Zap, CloudUpload
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -387,7 +387,7 @@ function TestingStep_({ ctrl }: { ctrl: ControlDetail }) {
         <div className="w-48 shrink-0">
           <div className="text-[10px] font-bold text-text-muted uppercase mb-2">Samples</div>
           <div className="space-y-1 max-h-[400px] overflow-y-auto">
-            {ctrl.samples.map((s, i) => (
+            {ctrl.samples.map((s, _i) => (
               <button
                 key={s.id}
                 onClick={() => setSelectedSample(s.id)}
@@ -600,7 +600,7 @@ interface Props {
   onClose: () => void;
 }
 
-export default function ControlDetailDrawer({ controlId, onClose }: Props) {
+export default function ControlDetailDrawer({ controlId: _controlId, onClose }: Props) {
   const ctrl = MOCK_CONTROL; // In production, look up by controlId
   const [activeStep, setActiveStep] = useState<TestingStep>('overview');
 
