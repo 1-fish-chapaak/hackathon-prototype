@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   FileText, Shield, AlertTriangle, CheckCircle2, BarChart3,
   TrendingUp, Download, Share2, ArrowRight, ArrowLeft, ChevronDown,
-  Sparkles, Eye, Settings, Palette, Type,
+  Sparkles, Settings, Palette, Type,
   Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2, Trash2,
   List, LayoutGrid, ExternalLink
 } from 'lucide-react';
