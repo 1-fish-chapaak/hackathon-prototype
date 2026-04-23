@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import {
   Search, ChevronDown, ChevronRight, AlertTriangle, Clock,
-  CheckCircle2, AlertOctagon, Bell,
-  Workflow, FileText, Shield, Target, Database, Filter
+  CheckCircle2, AlertOctagon, ExternalLink, Bell, ArrowUpRight,
+  Workflow, FileText, Shield, Target, Database, Filter, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Orb from '../shared/Orb';

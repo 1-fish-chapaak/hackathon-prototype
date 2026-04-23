@@ -34,12 +34,12 @@ import WorkflowBuilderJourney from './components/concierge-workflow-builder/Work
 import AdminView from './components/admin/AdminView';
 import FindingsView from './components/execution/FindingsView';
 import WorkflowExecutor from './components/workflow/WorkflowExecutor';
-import WorkingPaperPanel from './components/execution/WorkingPaperPanel';
-import WorkflowExecutionPanel from './components/execution/WorkflowExecutionPanel';
-import TraceabilityPanel from './components/execution/TraceabilityPanel';
 import EngagementDetailView from './components/engagement/EngagementDetailView';
 import ControlDetailDrawer from './components/engagement/ControlDetailDrawer';
 import ManageExceptionsView from './components/exceptions/ManageExceptionsView';
+import WorkingPaperPanel from './components/execution/WorkingPaperPanel';
+import WorkflowExecutionPanel from './components/execution/WorkflowExecutionPanel';
+import TraceabilityPanel from './components/execution/TraceabilityPanel';
 
 export default function App() {
   const {
