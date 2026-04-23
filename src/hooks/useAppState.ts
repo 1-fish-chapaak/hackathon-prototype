@@ -165,9 +165,6 @@ export function useAppState() {
     setState(prev => ({ ...prev, selectedBPId: id, view: id ? 'bp-detail' : 'business-processes' }));
   }, []);
 
-  const setSelectedEngagement = useCallback((id: string | null) => {
-    setState(prev => ({ ...prev, selectedEngagementId: id }));
-  }, []);
 
   const openAuditExecution = useCallback((engagementId: string) => {
     setState(prev => ({ ...prev, view: 'audit-execution' as View, selectedEngagementId: engagementId }));

@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Lock, CheckCircle2, Flag, Target, Calendar,
   Users, ShieldCheck, ClipboardList, LayoutGrid,
-  X, ChevronDown, Plus, Edit3, AlertTriangle,
-  DollarSign, BarChart3, Clock, Zap, ArrowRight,
-  Play, FileCheck, Eye, Copy
+  X, ChevronDown, Plus, AlertTriangle,
+  DollarSign, Zap, ArrowRight,
+  Play, Copy
 } from 'lucide-react';
 import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
@@ -506,8 +506,6 @@ function LifecycleStepper({ status }: { status: EngagementLifecycle }) {
         {[...planningSteps, ...executionSteps].map((step, i) => {
           const isActive = step === status;
           const isPast = LIFECYCLE_ORDER.indexOf(step) < currentIdx;
-          const isFuture = LIFECYCLE_ORDER.indexOf(step) > currentIdx;
-          const isExec = executionSteps.includes(step);
 
           return (
             <div key={step} className="flex items-center gap-1">
