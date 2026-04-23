@@ -161,7 +161,7 @@ function Dropdown<T extends string>({
 
   return (
     <div ref={ref} className="mb-3">
-      <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">{label}</label>
+      <label className="text-[12px] font-semibold text-text-muted block mb-1.5">{label}</label>
       <div className="relative">
         <button
           type="button"
@@ -212,15 +212,15 @@ function KpiCard({ label, value, icon: Icon, color, index }: {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 + index * 0.06 }}
-      className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300 group cursor-default"
+      className="glass-card rounded-2xl p-5 hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300 group cursor-default"
     >
       <div className="flex items-start justify-between mb-3">
-        <div className={`p-2 rounded-lg ${color} group-hover:scale-110 transition-transform duration-300`}>
+        <div className={`p-2 rounded-lg ${color} transition-transform duration-300`}>
           <Icon size={16} />
         </div>
       </div>
       <div className="text-2xl font-bold text-text">{value}</div>
-      <div className="text-[12px] text-text-muted uppercaser mt-1">{label}</div>
+      <div className="text-[12px] text-text-muted mt-1">{label}</div>
     </motion.div>
   );
 }
@@ -313,7 +313,7 @@ function GanttChart({
   return (
     <div className="glass-card rounded-2xl overflow-hidden relative">
       {frozen && (
-        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2 py-1 bg-evidence-50/80 backdrop-blur-sm border border-evidence rounded-md">
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2 py-1 bg-evidence-50 border border-evidence-50 rounded-md">
           <Lock size={10} className="text-evidence-700" />
           <span className="text-[12px] font-semibold text-evidence-700">Locked</span>
         </div>
@@ -322,13 +322,13 @@ function GanttChart({
       {/* Header row */}
       <div className="flex border-b border-border-light">
         <div className="w-[280px] shrink-0 px-4 py-3 bg-surface-2 border-r border-border-light">
-          <span className="text-[12px] font-bold text-text-muted uppercaser">Engagement</span>
+          <span className="text-[12px] font-bold text-text-muted">Engagement</span>
         </div>
         <div className="flex-1 flex">
           {MONTHS.map((m, i) => (
             <div
               key={m}
-              className={`flex-1 px-2 py-3 text-center text-[12px] font-bold uppercaser border-r border-border-light last:border-0 ${
+              className={`flex-1 px-2 py-3 text-center text-[12px] font-bold border-r border-border-light last:border-0 ${
                 i === currentMonth ? 'bg-primary/5 text-primary' : 'bg-surface-2 text-text-muted'
               }`}
             >
@@ -340,7 +340,7 @@ function GanttChart({
 
       {/* Rows */}
       {filtered.length === 0 ? (
-        <div className="px-10 py-8 text-center text-[13px] text-text-muted">No engagements match the current filters.</div>
+        <div className="p-8 text-center text-[13px] text-text-muted">No engagements match the current filters.</div>
       ) : filtered.map((item, idx) => (
         <motion.div
           key={item.id}
@@ -381,7 +381,7 @@ function GanttChart({
               initial={{ width: 0 }}
               animate={{ width: `${(item.duration / totalMonths) * 100}%` }}
               transition={{ duration: 0.6, delay: 0.2 + idx * 0.05 }}
-              className="absolute h-7 rounded-lg shadow-sm flex items-center px-2 cursor-pointer hover:shadow-md hover:brightness-110 transition-all"
+              className="absolute h-7 rounded-lg shadow-sm flex items-center px-2 cursor-pointer hover:brightness-110 transition-all"
               style={{
                 left: `${(item.start / totalMonths) * 100}%`,
                 background: `linear-gradient(135deg, ${item.color}dd, ${item.color}99)`,
@@ -398,12 +398,12 @@ function GanttChart({
 
       {/* Today marker */}
       <div
-        className="absolute top-0 bottom-0 w-px bg-red-400 z-10 pointer-events-none"
+        className="absolute top-0 bottom-0 w-px bg-risk z-10 pointer-events-none"
         style={{
           left: `calc(280px + ((100% - 280px) * ${getCurrentMonthProgress() / 12}))`,
         }}
       >
-        <div className="absolute -top-0 -translate-x-1/2 bg-red-400 text-white text-[12px] font-bold px-1.5 py-0.5 rounded-b-md">
+        <div className="absolute -top-0 -translate-x-1/2 bg-risk text-white text-[12px] font-bold px-1.5 py-0.5 rounded-b-md">
           Today
         </div>
       </div>
@@ -428,7 +428,7 @@ function MilestonesStrip() {
       transition={{ delay: 0.6 }}
       className="glass-card rounded-2xl p-4 mt-4"
     >
-      <div className="text-[12px] font-bold text-text-muted uppercaser mb-3">Key Milestones</div>
+      <div className="text-[12px] font-bold text-text-muted mb-3">Key Milestones</div>
       <div className="relative flex items-center">
         <div className="absolute left-0 right-0 h-px bg-border-light top-1/2" />
         <div className="flex-1 flex justify-between relative">
@@ -444,7 +444,7 @@ function MilestonesStrip() {
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
                   isPast
-                    ? 'bg-compliant-50 border-green-300 text-compliant-700'
+                    ? 'bg-compliant-50 border-compliant text-compliant-700'
                     : 'bg-white border-border-light text-text-muted'
                 } transition-colors`}>
                   <ms.icon size={13} />
@@ -484,7 +484,7 @@ function ResourcesTab() {
             const totalHours = Object.values(alloc).reduce((s, h) => s + h, 0);
             const totalCapacity = member.capacity * 12;
             const utilization = Math.round((totalHours / totalCapacity) * 100);
-            const barColor = utilization > 100 ? 'bg-risk-500' : utilization > 80 ? 'bg-mitigated-500' : 'bg-compliant-500';
+            const barColor = utilization > 100 ? 'bg-risk' : utilization > 80 ? 'bg-mitigated' : 'bg-compliant';
 
             return (
               <motion.div
@@ -492,7 +492,7 @@ function ResourcesTab() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05 * idx }}
-                className="glass-card rounded-2xl p-4 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300"
+                className="glass-card rounded-2xl p-4 hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300"
               >
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary-medium text-white flex items-center justify-center text-[12px] font-bold">
@@ -536,9 +536,9 @@ function ResourcesTab() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border-light">
-                  <th className="text-[12px] font-bold text-text-muted uppercaser px-4 py-3 text-left bg-surface-2 min-w-[160px]">Team Member</th>
+                  <th className="text-[12px] font-bold text-text-muted px-4 py-3 text-left bg-surface-2 min-w-[160px]">Team Member</th>
                   {MONTHS.map(m => (
-                    <th key={m} className="text-[12px] font-bold text-text-muted uppercaser px-1 py-3 text-center bg-surface-2 min-w-[56px]">{m}</th>
+                    <th key={m} className="text-[12px] font-bold text-text-muted px-1 py-3 text-center bg-surface-2 min-w-[56px]">{m}</th>
                   ))}
                 </tr>
               </thead>
@@ -584,10 +584,10 @@ function ResourcesTab() {
           </div>
           {/* Legend */}
           <div className="px-4 py-2.5 border-t border-border-light flex items-center gap-4">
-            <span className="text-[12px] font-semibold text-text-muted uppercaser">Legend:</span>
+            <span className="text-[12px] font-semibold text-text-muted">Legend:</span>
             <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-compliant-50 border border-compliant" /><span className="text-[12px] text-text-muted">&lt; 40h (Available)</span></div>
             <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-mitigated-50 border border-mitigated" /><span className="text-[12px] text-text-muted">40–80h (Loaded)</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-risk-50 border border-red-300" /><span className="text-[12px] text-text-muted">&gt; 100h (Overloaded)</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-risk-50 border border-risk" /><span className="text-[12px] text-text-muted">&gt; 100h (Overloaded)</span></div>
           </div>
         </div>
       </div>
@@ -628,7 +628,7 @@ function RiskMatrixTab() {
         <div className="flex">
           {/* Y axis label */}
           <div className="flex flex-col items-center justify-center mr-2">
-            <span className="text-[12px] font-bold text-text-muted uppercaser [writing-mode:vertical-lr] rotate-180">
+            <span className="text-[12px] font-bold text-text-muted [writing-mode:vertical-lr] rotate-180">
               Likelihood
             </span>
           </div>
@@ -642,10 +642,10 @@ function RiskMatrixTab() {
                   return (
                     <div
                       key={cellKey}
-                      className={`aspect-square rounded-xl border flex flex-col items-center justify-center gap-0.5 p-1 ${gridColors[cellKey]} transition-all hover:scale-105`}
+                      className={`aspect-square rounded-xl border flex flex-col items-center justify-center gap-0.5 p-1 ${gridColors[cellKey]} transition-all`}
                     >
                       {engagements.length > 0 ? engagements.map(e => (
-                        <span key={e.id} className="text-[12px] font-bold bg-white/80 backdrop-blur-sm rounded px-1 py-0.5 text-text truncate max-w-full text-center shadow-sm">
+                        <span key={e.id} className="text-[12px] font-bold bg-canvas-elevated border border-canvas-border rounded px-1 py-0.5 text-ink-700 truncate max-w-full text-center">
                           {e.name}
                         </span>
                       )) : (
@@ -663,7 +663,7 @@ function RiskMatrixTab() {
               ))}
             </div>
             <div className="text-center mt-1">
-              <span className="text-[12px] font-bold text-text-muted uppercaser">Impact</span>
+              <span className="text-[12px] font-bold text-text-muted">Impact</span>
             </div>
           </div>
         </div>
@@ -693,7 +693,7 @@ function RiskMatrixTab() {
               className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-2 transition-colors"
             >
               <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[12px] font-bold text-white ${
-                idx === 0 ? 'bg-risk-500' : idx < 3 ? 'bg-high-500' : idx < 5 ? 'bg-mitigated-500' : 'bg-compliant-500'
+                idx === 0 ? 'bg-risk' : idx < 3 ? 'bg-high' : idx < 5 ? 'bg-mitigated' : 'bg-compliant'
               }`}>
                 {idx + 1}
               </div>
@@ -763,7 +763,7 @@ function BudgetTab() {
           <thead>
             <tr className="border-b border-border-light">
               {['Engagement', 'Planned Hrs', 'Actual Hrs', '% Complete', 'Budget', 'Spent', 'Variance'].map(col => (
-                <th key={col} className="text-[12px] font-bold text-text-muted uppercaser px-4 py-3 bg-surface-2">{col}</th>
+                <th key={col} className="text-[12px] font-bold text-text-muted px-4 py-3 bg-surface-2">{col}</th>
               ))}
             </tr>
           </thead>
@@ -906,7 +906,7 @@ function EngagementDrawer({
           <div className="space-y-0">
             {/* Name */}
             <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Engagement Name</label>
+              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Engagement Name</label>
               <input
                 type="text"
                 value={form.name}
@@ -960,7 +960,7 @@ function EngagementDrawer({
 
             {/* Duration */}
             <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Duration (months)</label>
+              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Duration (months)</label>
               <input
                 type="number"
                 min={1}
@@ -976,7 +976,7 @@ function EngagementDrawer({
 
             {/* Planned Hours */}
             <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Planned Hours</label>
+              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Planned Hours</label>
               <input
                 type="number"
                 min={0}
@@ -1007,7 +1007,7 @@ function EngagementDrawer({
 
             {/* Risk Score */}
             <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Risk Score (1-100)</label>
+              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Risk Score (1-100)</label>
               <input
                 type="number"
                 min={1}
@@ -1023,7 +1023,7 @@ function EngagementDrawer({
 
             {/* Notes */}
             <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Notes</label>
+              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Notes</label>
               <textarea
                 value={form.notes}
                 onChange={(e) => update('notes', e.target.value)}
@@ -1038,7 +1038,7 @@ function EngagementDrawer({
             {/* Assign Resource */}
             {!readOnly && (
               <div className="mb-3">
-                <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Assign Resource</label>
+                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Assign Resource</label>
                 <div className="relative">
                   <button
                     type="button"
@@ -1260,7 +1260,7 @@ export default function AuditPlanningView() {
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.06} rotateOnHover hue={275} opacity={0.05} />
 
-      <div className="px-10 py-8 relative">
+      <div className="p-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
@@ -1299,7 +1299,7 @@ export default function AuditPlanningView() {
               onClick={handleSignOff}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer ${
                 signedOff
-                  ? 'bg-green-600 text-white'
+                  ? 'bg-compliant text-white'
                   : 'bg-primary hover:bg-primary-hover text-white'
               }`}
             >
@@ -1336,7 +1336,7 @@ export default function AuditPlanningView() {
                 <tab.icon size={14} className={isDisabled ? 'opacity-40' : ''} />
                 <span className={isDisabled ? 'opacity-40' : ''}>{tab.label}</span>
                 {isDisabled && (
-                  <span className="ml-1 text-[12px] font-bold px-1.5 py-0.5 rounded-full bg-paper-50 text-ink-500 uppercaser">v2</span>
+                  <span className="ml-1 text-[12px] font-bold px-1.5 py-0.5 rounded-full bg-paper-50 text-ink-500">v2</span>
                 )}
               </button>
             );
@@ -1344,8 +1344,8 @@ export default function AuditPlanningView() {
         </div>
         {/* v2 note */}
         <div className="text-[12px] text-text-muted mb-4 flex items-center gap-1.5">
-          <span className="text-[12px] font-bold px-1.5 py-0.5 rounded bg-paper-50 text-ink-500 uppercase">Note</span>
-          Resources, Risk Matrix, and Budget tabs coming in v2
+          <span className="text-[12px] font-medium px-2 h-5 inline-flex items-center rounded-full bg-paper-100 text-ink-500">Note</span>
+          Resources, risk matrix, and budget tabs coming in v2.
         </div>
 
         {/* Filters (show for timeline, resources, budget) */}
@@ -1356,7 +1356,7 @@ export default function AuditPlanningView() {
             className="flex items-center gap-4 mb-4"
           >
             <div className="flex items-center gap-2">
-              <span className="text-[12px] font-bold text-text-muted uppercaser">Process:</span>
+              <span className="text-[12px] font-bold text-text-muted">Process:</span>
               <div className="flex gap-1">
                 {processFilterOptions.map(opt => (
                   <button
@@ -1375,7 +1375,7 @@ export default function AuditPlanningView() {
             </div>
             <div className="w-px h-5 bg-border-light" />
             <div className="flex items-center gap-2">
-              <span className="text-[12px] font-bold text-text-muted uppercaser">Status:</span>
+              <span className="text-[12px] font-bold text-text-muted">Status:</span>
               <div className="flex gap-1">
                 {statusFilterOptions.map(opt => (
                   <button
@@ -1521,11 +1521,11 @@ export default function AuditPlanningView() {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-[12px] text-text-muted uppercaser font-medium px-5 py-3">Name</th>
-                  <th className="text-[12px] text-text-muted uppercaser font-medium px-5 py-3">Role</th>
-                  <th className="text-[12px] text-text-muted uppercaser font-medium px-5 py-3">Action</th>
-                  <th className="text-[12px] text-text-muted uppercaser font-medium px-5 py-3">Date</th>
-                  <th className="text-[12px] text-text-muted uppercaser font-medium px-5 py-3">Status</th>
+                  <th className="text-[12px] text-text-muted font-medium px-5 py-3">Name</th>
+                  <th className="text-[12px] text-text-muted font-medium px-5 py-3">Role</th>
+                  <th className="text-[12px] text-text-muted font-medium px-5 py-3">Action</th>
+                  <th className="text-[12px] text-text-muted font-medium px-5 py-3">Date</th>
+                  <th className="text-[12px] text-text-muted font-medium px-5 py-3">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -1604,7 +1604,7 @@ export default function AuditPlanningView() {
                 </button>
                 <button
                   onClick={confirmFreeze}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
                 >
                   Freeze Plan
                 </button>
@@ -1628,7 +1628,7 @@ export default function AuditPlanningView() {
 
               {/* Signer dropdown */}
               <div className="mb-4">
-                <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Signer</label>
+                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Signer</label>
                 <div className="relative">
                   <button
                     onClick={() => setSignerDropdownOpen(p => !p)}
@@ -1665,7 +1665,7 @@ export default function AuditPlanningView() {
 
               {/* Date */}
               <div className="mb-4">
-                <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Date</label>
+                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Date</label>
                 <div className="px-3 py-2.5 border border-border rounded-lg text-[13px] text-text-secondary bg-surface-2">
                   March 25, 2026
                 </div>
@@ -1673,7 +1673,7 @@ export default function AuditPlanningView() {
 
               {/* Comments */}
               <div className="mb-5">
-                <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Comments</label>
+                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Comments</label>
                 <textarea
                   value={signOffComment}
                   onChange={(e) => setSignOffComment(e.target.value)}

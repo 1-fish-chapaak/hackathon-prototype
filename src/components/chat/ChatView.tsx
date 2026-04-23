@@ -104,10 +104,10 @@ const DETAILED_QUERY_CONFIG: Record<Exclude<DetailedQueryType, 'duplicate-invoic
     responseText: "Here's your current SOX audit status. The assessment is 58% complete with 14 of 24 controls tested so far. 2 deficiencies have been identified that require remediation before the reporting deadline.",
     insightsText: "**Key Insights:** 2 material weaknesses identified in IT General Controls (ITGC-003, ITGC-007). Revenue recognition controls (SOX-RC-01) passed with no exceptions. Segregation of duties testing is pending for 4 remaining controls. Recommend escalating ITGC remediation to meet Q2 deadline.",
     kpis: [
-      { label: 'Controls Tested', value: '14/24', color: 'text-blue-600' },
+      { label: 'Controls Tested', value: '14/24', color: 'text-evidence-700' },
       { label: 'Completion', value: '58%', color: 'text-primary' },
-      { label: 'Deficiencies', value: '2', color: 'text-red-600' },
-      { label: 'On Track', value: 'At Risk', color: 'text-orange-600' },
+      { label: 'Deficiencies', value: '2', color: 'text-risk-700' },
+      { label: 'On Track', value: 'At Risk', color: 'text-high-700' },
     ],
     followUps: [
       'Show details on the 2 deficiencies found',
@@ -129,9 +129,9 @@ const DETAILED_QUERY_CONFIG: Record<Exclude<DetailedQueryType, 'duplicate-invoic
     insightsText: "**Key Insights:** Acme Corp ($4.2M, 23% of spend) is the largest vendor with no secondary source. 3 vendors have contracts expiring within 60 days. Vendor VND-0042 (TechServ Ltd) shows a 340% spend increase YoY — flagged for review. Recommend diversifying supply chain for critical categories.",
     kpis: [
       { label: 'Total Spend', value: '$18.4M', color: 'text-text' },
-      { label: 'Top 5 Share', value: '67%', color: 'text-orange-600' },
-      { label: 'Active Vendors', value: '892', color: 'text-blue-600' },
-      { label: 'High Risk', value: '3', color: 'text-red-600' },
+      { label: 'Top 5 Share', value: '67%', color: 'text-high-700' },
+      { label: 'Active Vendors', value: '892', color: 'text-evidence-700' },
+      { label: 'High Risk', value: '3', color: 'text-risk-700' },
     ],
     followUps: [
       'Show the full vendor concentration breakdown',
@@ -152,10 +152,10 @@ const DETAILED_QUERY_CONFIG: Record<Exclude<DetailedQueryType, 'duplicate-invoic
     responseText: "I've identified 3 risks with zero controls mapped: RSK-004 (Unauthorized vendor payments), RSK-007 (Data exfiltration via API), and RSK-009 (Segregation of duties bypass). These represent your highest exposure areas.",
     insightsText: "**Key Insights:** RSK-004 has been uncontrolled for 120+ days and is rated Critical severity. RSK-007 was added last quarter after a penetration test finding. RSK-009 was previously controlled by CTR-011 which was retired in Jan 2026. Recommend immediate control mapping for all three — combined inherent risk exposure is $2.1M.",
     kpis: [
-      { label: 'Uncontrolled', value: '3', color: 'text-red-600' },
-      { label: 'Critical', value: '1', color: 'text-red-600' },
-      { label: 'Exposure', value: '$2.1M', color: 'text-orange-600' },
-      { label: 'Avg Days Open', value: '87', color: 'text-orange-600' },
+      { label: 'Uncontrolled', value: '3', color: 'text-risk-700' },
+      { label: 'Critical', value: '1', color: 'text-risk-700' },
+      { label: 'Exposure', value: '$2.1M', color: 'text-high-700' },
+      { label: 'Avg Days Open', value: '87', color: 'text-high-700' },
     ],
     followUps: [
       'Suggest controls for RSK-004',
@@ -176,10 +176,10 @@ const DETAILED_QUERY_CONFIG: Record<Exclude<DetailedQueryType, 'duplicate-invoic
     responseText: "Control effectiveness analysis complete. Your overall effectiveness rate is 79% across 42 active controls. CTR-004 (Three-way match verification) is rated Ineffective with a 34% pass rate in the last testing cycle.",
     insightsText: "**Key Insights:** CTR-004 failed 19 of 29 test samples — root cause is manual override by AP clerks. CTR-012 (Access review) dropped from 95% to 71% effectiveness this quarter. 6 controls are rated Needs Improvement. Top performing: CTR-001 (automated bank reconciliation) at 99% effectiveness. Recommend automating CTR-004 to eliminate manual bypass.",
     kpis: [
-      { label: 'Overall Rate', value: '79%', color: 'text-blue-600' },
-      { label: 'Ineffective', value: '1', color: 'text-red-600' },
-      { label: 'Needs Improvement', value: '6', color: 'text-orange-600' },
-      { label: 'Effective', value: '35', color: 'text-green-600' },
+      { label: 'Overall Rate', value: '79%', color: 'text-evidence-700' },
+      { label: 'Ineffective', value: '1', color: 'text-risk-700' },
+      { label: 'Needs Improvement', value: '6', color: 'text-high-700' },
+      { label: 'Effective', value: '35', color: 'text-compliant' },
     ],
     followUps: [
       'Show details on CTR-004 failures',
@@ -201,9 +201,9 @@ const DETAILED_QUERY_CONFIG: Record<Exclude<DetailedQueryType, 'duplicate-invoic
     insightsText: "**Key Insights:** 2 risks (RSK-004, RSK-007) have zero controls mapped — highest exposure. RSK-008 (SOD violation) has controls but requires immediate attention due to critical severity. Recommend prioritizing control mapping for uncontrolled risks and scheduling a focused review of AP segregation of duties.",
     kpis: [
       { label: 'Records Scanned', value: '1.2M', color: 'text-text' },
-      { label: 'Risks Found', value: '5', color: 'text-orange-600' },
-      { label: 'Critical', value: '2', color: 'text-red-600' },
-      { label: 'Uncontrolled', value: '2', color: 'text-red-600' },
+      { label: 'Risks Found', value: '5', color: 'text-high-700' },
+      { label: 'Critical', value: '2', color: 'text-risk-700' },
+      { label: 'Uncontrolled', value: '2', color: 'text-risk-700' },
     ],
     followUps: [
       'Show me the trend over the last 6 months',
@@ -233,8 +233,8 @@ const QUERY_FOLLOWUPS = [
 
 const RECOMMENDED_WORKFLOWS = [
   { label: 'Three-Way PO Reconciliation', desc: 'Match PO, GRN & Invoice data with freeze options', icon: ArrowRightLeft, color: 'text-teal-600 bg-teal-50' },
-  { label: 'Payment Anomaly Detector', desc: 'ML-based unusual payment pattern detection', icon: Zap, color: 'text-orange-600 bg-orange-50' },
-  { label: 'Audit Evidence Collector', desc: 'Auto-gather evidence for control testing', icon: BarChart3, color: 'text-green-600 bg-green-50' },
+  { label: 'Payment Anomaly Detector', desc: 'ML-based unusual payment pattern detection', icon: Zap, color: 'text-high-700 bg-high-50' },
+  { label: 'Audit Evidence Collector', desc: 'Auto-gather evidence for control testing', icon: BarChart3, color: 'text-compliant bg-compliant-50' },
 ];
 
 const LOADING_STEPS = [
@@ -264,7 +264,7 @@ function SaveWorkflowButton() {
   const [saved, setSaved] = useState(false);
   if (saved) {
     return (
-      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="flex items-center gap-1.5 px-3 py-2 bg-green-50 text-green-600 rounded-lg text-[12px] font-semibold">
+      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="flex items-center gap-1.5 px-3 py-2 bg-compliant-50 text-compliant rounded-lg text-[12px] font-semibold">
         <CheckCircle size={12} /> Saved to Library
       </motion.div>
     );
@@ -895,7 +895,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                 Your AI copilot already knows what to look for. Just ask.
               </motion.p>
 
-              <div className="ai-border ai-glow" style={{ marginBottom: 24 }}>
+              <div className="ai-border" style={{ marginBottom: 24 }}>
                 <div style={{ position: 'relative', background: 'white', borderRadius: 18 }}>
                   <textarea
                     ref={textareaRef}
@@ -962,7 +962,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
               >
                 <div className="flex items-center justify-center gap-2 mb-3">
                   <Lightbulb size={13} className="text-primary/60" />
-                  <span className="text-[12px] font-semibold text-text-muted uppercaser">AI Recommended</span>
+                  <span className="text-[12px] font-semibold text-text-muted">AI Recommended</span>
                 </div>
                 <div className="flex justify-center gap-4">
                   {RECOMMENDED_WORKFLOWS.map((rw, i) => (
@@ -1018,7 +1018,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
       {chatHistoryPanel}
       <div className="flex flex-col h-full bg-white" style={{ flex: '1 1 0%', minWidth: 0 }}>
         {/* Top bar */}
-        <div className="h-12 border-b border-border-light bg-white/80 backdrop-blur-sm flex items-center justify-between px-4 shrink-0 z-10">
+        <div className="h-12 border-b border-canvas-border bg-canvas-elevated flex items-center justify-between px-4 shrink-0 z-10">
           <div className="flex items-center gap-2">
             <button onClick={toggleChatHistory} className={`p-1.5 rounded-md transition-colors cursor-pointer ${showChatHistory ? 'bg-primary/10 text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-gray-50'}`}>
               <History size={16} />
@@ -1085,15 +1085,15 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                       <div className="ml-7 grid grid-cols-4 gap-2">
                         {((msg.richData?.kpis as { label: string; value: string; color: string }[] | undefined) || [
                           { label: 'Records Scanned', value: '1.2M', color: 'text-text' },
-                          { label: 'Risks Found', value: '5', color: 'text-orange-600' },
-                          { label: 'Critical', value: '2', color: 'text-red-600' },
-                          { label: 'Uncontrolled', value: '2', color: 'text-red-600' },
+                          { label: 'Risks Found', value: '5', color: 'text-high-700' },
+                          { label: 'Critical', value: '2', color: 'text-risk-700' },
+                          { label: 'Uncontrolled', value: '2', color: 'text-risk-700' },
                         ]).map((kpi, ki) => (
                           <motion.div key={kpi.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: ki * 0.1 }}
                             className="glass-card rounded-xl p-3 text-center"
                           >
                             <div className={`text-lg font-bold ${kpi.color}`}>{kpi.value}</div>
-                            <div className="text-[12px] text-text-muted uppercaser mt-0.5">{kpi.label}</div>
+                            <div className="text-[12px] text-text-muted mt-0.5">{kpi.label}</div>
                           </motion.div>
                         ))}
                       </div>
@@ -1111,8 +1111,8 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                                 <span className="text-[12px] text-text-secondary">Severity Threshold</span>
                                 <span className="text-[12px] font-bold text-primary">High+</span>
                               </div>
-                              <div className="h-2 bg-surface-3 rounded-full overflow-hidden">
-                                <div className="h-full w-3/4 bg-gradient-to-r from-green-400 via-yellow-400 to-red-500 rounded-full" />
+                              <div className="h-2 bg-paper-100 rounded-full overflow-hidden">
+                                <div className="h-full w-3/4 bg-mitigated rounded-full" />
                               </div>
                               <div className="flex justify-between text-[12px] text-text-muted mt-0.5">
                                 <span>Low</span><span>Medium</span><span>High</span><span>Critical</span>
@@ -1191,7 +1191,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                       >
                         <div className="flex items-center gap-1.5 mb-2">
                           <Lightbulb size={11} className="text-primary/50" />
-                          <span className="text-[12px] font-semibold text-text-muted uppercaser">Suggested follow-ups</span>
+                          <span className="text-[12px] font-semibold text-text-muted">Suggested follow-ups</span>
                         </div>
                         <div className="flex flex-col gap-2">
                           {msg.followUps.map((q, i) => (
@@ -1236,7 +1236,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                 <div className="max-w-[85%]">
                   <div className="flex items-start gap-3">
                     <div className="shrink-0 mt-0.5">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shadow-sm ai-pulse-ring-infinite">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shadow-sm-infinite">
                         <Sparkles size={14} className="text-white" />
                       </div>
                     </div>
@@ -1338,14 +1338,14 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
               ))}
             </div>
           )}
-          <div className="ai-border ai-glow">
+          <div className="ai-border">
             <div className="relative bg-white rounded-[18px]">
               <textarea
                 value={input}
                 onChange={e => { setInput(e.target.value); handleTextareaInput(); }}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask anything or describe a workflow to build..."
-                className="w-full bg-transparent border-none outline-none resize-none py-3.5 pl-4 pr-28 text-[13.5px] text-text placeholder:text-text-muted min-h-[48px] max-h-[160px] rounded-[18px]"
+                className="w-full bg-transparent border-none outline-none resize-none py-4 pl-4 pr-28 text-[13.5px] text-text placeholder:text-text-muted min-h-[48px] max-h-[160px] rounded-[18px]"
                 rows={1}
               />
               <div className="absolute right-2 bottom-2 flex items-center gap-1">

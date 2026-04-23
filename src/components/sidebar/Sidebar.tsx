@@ -317,7 +317,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                     </button>
                     <button
                       onClick={() => { setSignOutConfirm(false); setUserMenuOpen(false); }}
-                      className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium text-white bg-red-500 hover:bg-red-600 transition-colors cursor-pointer"
+                      className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium text-white bg-risk hover:bg-risk-700 transition-colors cursor-pointer"
                     >
                       Sign Out
                     </button>
@@ -335,7 +335,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                   <div className="h-px mx-3 my-1 bg-white/[0.08]" />
                   <button
                     onClick={() => setSignOutConfirm(true)}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-red-400 hover:bg-white/[0.06] hover:text-red-300 transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-risk-700 hover:bg-white/[0.06] hover:text-risk transition-colors cursor-pointer"
                   >
                     <LogOut size={14} />
                     Sign Out

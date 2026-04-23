@@ -54,7 +54,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-10 py-8 relative">
+      <div className="p-8 relative">
         <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-primary mb-4 transition-colors cursor-pointer">
           <ArrowLeft size={14} />
           Workflows
@@ -67,7 +67,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
           <div className="flex items-start justify-between mb-5">
             <div>
               <div className="flex items-center gap-2 text-[12px] text-text-muted mb-2">
-                <div className="flex items-center gap-1 text-success font-semibold uppercaser">
+                <div className="flex items-center gap-1 text-success font-semibold">
                   <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                   Active
                 </div>
@@ -125,11 +125,11 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
               { l: 'Flags Raised', v: vData.flags, icon: AlertTriangle, color: 'bg-mitigated-50 text-mitigated-700', note: '8 critical' },
               { l: 'Impact Score', v: vData.score, icon: TrendingUp, color: 'bg-compliant-50 text-compliant-700', note: vData.scoreNote },
             ].map(k => (
-              <div key={k.l} className="bg-surface-2 border border-border-light rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all duration-300 group cursor-default">
-                <div className={`w-7 h-7 rounded-lg ${k.color} flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform duration-300`}>
+              <div key={k.l} className="bg-surface-2 border border-border-light rounded-xl p-4 hover:border-primary/20 transition-all duration-300 group cursor-default">
+                <div className={`w-7 h-7 rounded-lg ${k.color} flex items-center justify-center mb-2.5 transition-transform duration-300`}>
                   <k.icon size={14} />
                 </div>
-                <div className="text-[12px] text-text-muted uppercaser mb-1">{k.l}</div>
+                <div className="text-[12px] text-text-muted mb-1">{k.l}</div>
                 <div className="text-2xl font-bold font-mono text-text leading-none mb-1">{k.v}</div>
                 <div className="text-[12px] text-text-secondary">{k.note}</div>
               </div>
@@ -166,18 +166,18 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
           <div className="space-y-5">
             {/* Schedule Info */}
             <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
-              <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-3 flex items-center gap-2"><Calendar size={13} className="text-primary" /> Schedule</h4>
+              <h4 className="text-[12px] font-bold text-text-muted mb-3 flex items-center gap-2"><Calendar size={13} className="text-primary" /> Schedule</h4>
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-surface-2 border border-border-light rounded-xl p-3">
-                  <div className="text-[12px] text-text-muted uppercaser mb-1">Type</div>
+                  <div className="text-[12px] text-text-muted mb-1">Type</div>
                   <div className="text-[14px] font-bold text-text">Daily</div>
                 </div>
                 <div className="bg-surface-2 border border-border-light rounded-xl p-3">
-                  <div className="text-[12px] text-text-muted uppercaser mb-1">Run Time</div>
+                  <div className="text-[12px] text-text-muted mb-1">Run Time</div>
                   <div className="text-[14px] font-bold text-text">06:00 AM</div>
                 </div>
                 <div className="bg-surface-2 border border-border-light rounded-xl p-3">
-                  <div className="text-[12px] text-text-muted uppercaser mb-1">Next Run</div>
+                  <div className="text-[12px] text-text-muted mb-1">Next Run</div>
                   <div className="text-[14px] font-bold text-primary flex items-center gap-1.5">
                     <Clock size={13} />
                     Tomorrow, 06:00 AM
@@ -199,11 +199,11 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
             {/* Steps as professional table-like list */}
             <div className="bg-white rounded-xl border border-border-light overflow-hidden">
               <div className="grid grid-cols-[40px_1fr_120px_100px_80px] gap-3 px-5 py-3 bg-surface-2 border-b border-border-light">
-                <span className="text-[12px] font-bold text-text-muted uppercaser">#</span>
-                <span className="text-[12px] font-bold text-text-muted uppercaser">Step</span>
-                <span className="text-[12px] font-bold text-text-muted uppercaser">Type</span>
-                <span className="text-[12px] font-bold text-text-muted uppercaser">Avg Time</span>
-                <span className="text-[12px] font-bold text-text-muted uppercaser">Status</span>
+                <span className="text-[12px] font-bold text-text-muted">#</span>
+                <span className="text-[12px] font-bold text-text-muted">Step</span>
+                <span className="text-[12px] font-bold text-text-muted">Type</span>
+                <span className="text-[12px] font-bold text-text-muted">Avg Time</span>
+                <span className="text-[12px] font-bold text-text-muted">Status</span>
               </div>
               {wf.steps.map((step, i) => {
                 const types = ['Ingestion', 'Transform', 'Analysis', 'Scoring', 'Action'];
@@ -214,7 +214,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.05 }}
-                    className="grid grid-cols-[40px_1fr_120px_100px_80px] gap-3 px-5 py-3.5 border-b border-border-light last:border-0 hover:bg-primary-xlight/30 transition-colors items-center"
+                    className="grid grid-cols-[40px_1fr_120px_100px_80px] gap-3 px-5 py-4 border-b border-border-light last:border-0 hover:bg-primary-xlight/30 transition-colors items-center"
                   >
                     <span className="text-[12px] font-mono font-bold text-text-muted">{i + 1}</span>
                     <div>
@@ -238,7 +238,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
           <div className="bg-white rounded-xl border border-border-light overflow-hidden">
             <div className="grid grid-cols-[80px_1fr_80px_100px_80px_80px_70px] gap-3 px-5 py-3 bg-surface-2 border-b border-border-light">
               {['Run', 'Date', 'Trigger', 'Duration', 'Flags', 'Score', 'Status'].map(h => (
-                <span key={h} className="text-[12px] font-bold text-text-muted uppercaser">{h}</span>
+                <span key={h} className="text-[12px] font-bold text-text-muted">{h}</span>
               ))}
             </div>
             {RUN_HISTORY.map((run, i) => (
@@ -247,7 +247,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: i * 0.04 }}
-                className="grid grid-cols-[80px_1fr_80px_100px_80px_80px_70px] gap-3 px-5 py-3.5 border-b border-border-light last:border-0 hover:bg-primary-xlight/30 active:bg-primary-xlight/50 transition-colors items-center cursor-pointer"
+                className="grid grid-cols-[80px_1fr_80px_100px_80px_80px_70px] gap-3 px-5 py-4 border-b border-border-light last:border-0 hover:bg-primary-xlight/30 active:bg-primary-xlight/50 transition-colors items-center cursor-pointer"
               >
                 <span className="text-[12px] font-mono text-primary font-medium">{run.id}</span>
                 <span className="text-[12px] font-mono text-text-secondary">{run.date}</span>
@@ -255,7 +255,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                 <span className="text-[12px] font-mono text-text font-medium">{run.duration}</span>
                 <span className="text-[12px] font-mono text-text font-medium">{run.flags}</span>
                 <ScoreChip score={run.score} />
-                <span className="text-[12px] font-bold uppercaser text-success bg-compliant-50 px-2 py-0.5 rounded text-center">
+                <span className="text-[12px] font-bold text-success bg-compliant-50 px-2 py-0.5 rounded text-center">
                   {run.status === 'ok' ? 'PASS' : 'WARN'}
                 </span>
               </motion.div>
@@ -268,7 +268,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
           <div className="space-y-5">
             {/* Schedule */}
             <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
-              <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-3 flex items-center gap-2"><Calendar size={13} className="text-primary" /> Schedule & Triggers</h4>
+              <h4 className="text-[12px] font-bold text-text-muted mb-3 flex items-center gap-2"><Calendar size={13} className="text-primary" /> Schedule & Triggers</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[12px] font-semibold text-text block mb-1">Frequency</label>
@@ -303,7 +303,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
 
             {/* Thresholds & Rules */}
             <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
-              <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-3 flex items-center gap-2"><SlidersHorizontal size={13} className="text-primary" /> Thresholds & Rules</h4>
+              <h4 className="text-[12px] font-bold text-text-muted mb-3 flex items-center gap-2"><SlidersHorizontal size={13} className="text-primary" /> Thresholds & Rules</h4>
               <div className="space-y-3">
                 {[
                   { label: 'Match Tolerance', value: '5%', desc: 'Fuzzy match threshold for duplicate detection' },
@@ -324,7 +324,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
 
             {/* Data Sources */}
             <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
-              <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-3 flex items-center gap-2"><Database size={13} className="text-primary" /> Connected Sources</h4>
+              <h4 className="text-[12px] font-bold text-text-muted mb-3 flex items-center gap-2"><Database size={13} className="text-primary" /> Connected Sources</h4>
               <div className="space-y-2">
                 {[
                   { name: 'SAP ERP — AP Module', type: 'SQL', status: 'connected', records: '1.2M' },
@@ -333,7 +333,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
                 ].map(ds => (
                   <div key={ds.name} className="flex items-center justify-between p-3 rounded-xl bg-surface-2/50 border border-border-light/50">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-2 h-2 rounded-full bg-compliant-500" />
+                      <div className="w-2 h-2 rounded-full bg-compliant" />
                       <div>
                         <div className="text-[12px] font-medium text-text">{ds.name}</div>
                         <div className="text-[12px] text-text-muted">{ds.type} · {ds.records} records</div>
@@ -347,7 +347,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
 
             {/* Notification settings */}
             <div className="rounded-2xl border border-border-light p-5" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 2px 12px rgba(106,18,205,0.02), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
-              <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-3 flex items-center gap-2"><Bell size={13} className="text-primary" /> Notifications</h4>
+              <h4 className="text-[12px] font-bold text-text-muted mb-3 flex items-center gap-2"><Bell size={13} className="text-primary" /> Notifications</h4>
               <div className="space-y-2.5">
                 {[
                   { label: 'Email on completion', enabled: true },

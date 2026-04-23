@@ -42,7 +42,7 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-10 py-8 relative">
+      <div className="p-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
@@ -62,8 +62,8 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
         </div>
 
         {/* AI Insight */}
-        <div className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-2xl border border-primary/10 p-4 mb-6 flex items-center gap-4 ai-shimmer">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shrink-0 ai-pulse-ring">
+        <div className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-2xl border border-primary/10 p-4 mb-6 flex items-center gap-4">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shrink-0">
             <Sparkles size={16} className="text-white" />
           </div>
           <div className="flex-1">
@@ -102,7 +102,7 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
                 }`}
               >
                 <div className={`text-2xl font-bold ${textColors[sev]}`}>{count}</div>
-                <div className="text-[12px] text-text-secondary uppercaser mt-0.5 capitalize">{sev}</div>
+                <div className="text-[12px] text-text-secondary mt-0.5 capitalize">{sev}</div>
               </motion.div>
             );
           })}
@@ -201,7 +201,7 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
                 <p className="text-[12px] text-text-muted mt-0.5">{AI_RECOMMENDED_CONTROLS.length} risks with zero controls — AI suggests mitigations</p>
               </div>
               <div className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/5 border border-primary/10 rounded-full">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                <div className="w-1.5 h-1.5 rounded-full bg-compliant animate-pulse" />
                 <span className="text-[12px] font-semibold text-text-muted">Auto-refreshes when risks or controls change</span>
               </div>
             </div>
@@ -212,7 +212,7 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 + i * 0.08 }}
-                  className="flex items-start gap-3 p-3.5 rounded-xl bg-white border border-border-light hover:border-primary/20 hover:shadow-sm transition-all group"
+                  className="flex items-start gap-3 p-4 rounded-xl bg-white border border-border-light hover:border-primary/20 hover:shadow-sm transition-all group"
                 >
                   <div className="p-1.5 bg-primary/5 rounded-lg text-primary shrink-0 mt-0.5">
                     <Shield size={14} />

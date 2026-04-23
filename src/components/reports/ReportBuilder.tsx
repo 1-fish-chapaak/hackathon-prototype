@@ -257,7 +257,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                     <button
                       key={c}
                       onClick={() => setTemplateThemeColor(c)}
-                      className={`w-8 h-8 border-2 transition-all cursor-pointer ${templateThemeColor === c ? 'border-text scale-110 shadow-md' : 'border-transparent hover:scale-105'}`}
+                      className={`w-8 h-8 border-2 transition-all cursor-pointer ${templateThemeColor === c ? 'border-text scale-110 shadow-md' : 'border-transparent'}`}
                       style={{ background: c, borderRadius: '8px' }}
                     />
                   ))}
@@ -284,7 +284,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
 
             {/* Add Report Sections */}
             <div>
-              <h4 className="text-[12px] font-bold text-text-muted uppercaser mb-3 flex items-center gap-2">
+              <h4 className="text-[12px] font-bold text-text-muted mb-3 flex items-center gap-2">
                 <Plus size={13} className="text-primary" /> Add Report Sections
               </h4>
               <div className="flex flex-col gap-2">
@@ -314,7 +314,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
             </div>
 
             {sections.length > 0 && (
-              <h4 className="text-[12px] font-bold text-text-muted uppercaser px-1 pt-2">Detected Sections</h4>
+              <h4 className="text-[12px] font-bold text-text-muted px-1 pt-2">Detected Sections</h4>
             )}
 
             <AnimatePresence>
@@ -326,7 +326,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                   exit={{ opacity: 0, scale: 0.95 }}
                 >
                 <div
-                  className={`bg-white rounded-xl border shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 ${
+                  className={`bg-white rounded-xl border shadow-sm hover:border-primary/20 transition-all duration-300 ${
                     dragOverIndex === index ? 'border-primary border-2' : 'border-border-light'
                   }`}
                   draggable

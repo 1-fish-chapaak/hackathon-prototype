@@ -71,23 +71,23 @@ const DASHBOARDS: DashboardDef[] = [
     accentHue: 210,
     subtitle: 'Procure-to-Pay analytics',
     kpis: [
-      { title: 'Invoices Processed', value: '12,450', change: '+8.2%', trend: 'up', icon: Receipt, color: 'text-blue-600 bg-blue-50' },
-      { title: 'Duplicate Flags', value: 23, change: '-12%', trend: 'down', icon: AlertTriangle, color: 'text-orange-600 bg-orange-50' },
+      { title: 'Invoices Processed', value: '12,450', change: '+8.2%', trend: 'up', icon: Receipt, color: 'text-evidence-700 bg-evidence-50' },
+      { title: 'Duplicate Flags', value: 23, change: '-12%', trend: 'down', icon: AlertTriangle, color: 'text-high-700 bg-high-50' },
       { title: 'Avg Processing Time', value: '1.8 days', change: '-0.3d', trend: 'down', icon: Clock, color: 'text-cyan-600 bg-cyan-50' },
-      { title: 'Compliance Rate', value: '94.2%', change: '+1.4%', trend: 'up', icon: Shield, color: 'text-green-600 bg-green-50' },
+      { title: 'Compliance Rate', value: '94.2%', change: '+1.4%', trend: 'up', icon: Shield, color: 'text-compliant bg-compliant-50' },
     ],
     donut: {
       title: 'Invoice Status',
       centerLabel: '12.4K',
       segments: [
-        { label: 'Processed', value: 85, color: '#3b82f6' },
-        { label: 'Pending', value: 10, color: '#f59e0b' },
-        { label: 'Flagged', value: 5, color: '#ef4444' },
+        { label: 'Processed', value: 85, color: 'var(--color-evidence)' },
+        { label: 'Pending', value: 10, color: 'var(--color-mitigated)' },
+        { label: 'Flagged', value: 5, color: 'var(--color-risk)' },
       ],
     },
     bars: {
       title: 'Monthly Invoice Volume',
-      color: '#3b82f6',
+      color: 'var(--color-evidence)',
       data: [
         { label: 'Oct', value: 1820 },
         { label: 'Nov', value: 2150 },
@@ -117,24 +117,24 @@ const DASHBOARDS: DashboardDef[] = [
     accentHue: 160,
     subtitle: 'Revenue & collections overview',
     kpis: [
-      { title: 'Orders Fulfilled', value: '8,920', change: '+5.1%', trend: 'up', icon: Package, color: 'text-emerald-600 bg-emerald-50' },
-      { title: 'Revenue Recognized', value: '$42.5M', change: '+12%', trend: 'up', icon: DollarSign, color: 'text-green-600 bg-green-50' },
-      { title: 'Disputed', value: 34, change: '+3', trend: 'up', icon: AlertTriangle, color: 'text-orange-600 bg-orange-50' },
+      { title: 'Orders Fulfilled', value: '8,920', change: '+5.1%', trend: 'up', icon: Package, color: 'text-compliant bg-compliant-50' },
+      { title: 'Revenue Recognized', value: '$42.5M', change: '+12%', trend: 'up', icon: DollarSign, color: 'text-compliant bg-compliant-50' },
+      { title: 'Disputed', value: 34, change: '+3', trend: 'up', icon: AlertTriangle, color: 'text-high-700 bg-high-50' },
       { title: 'DSO', value: '38 days', change: '-2d', trend: 'down', icon: Clock, color: 'text-teal-600 bg-teal-50' },
     ],
     donut: {
       title: 'Revenue by Region',
       centerLabel: '$42.5M',
       segments: [
-        { label: 'North America', value: 45, color: '#10b981' },
-        { label: 'Europe', value: 28, color: '#06b6d4' },
-        { label: 'APAC', value: 18, color: '#8b5cf6' },
-        { label: 'LATAM', value: 9, color: '#f59e0b' },
+        { label: 'North America', value: 45, color: 'var(--color-compliant)' },
+        { label: 'Europe', value: 28, color: 'var(--color-evidence)' },
+        { label: 'APAC', value: 18, color: 'var(--color-brand-500)' },
+        { label: 'LATAM', value: 9, color: 'var(--color-mitigated)' },
       ],
     },
     bars: {
       title: 'Monthly Collections ($M)',
-      color: '#10b981',
+      color: 'var(--color-compliant)',
       data: [
         { label: 'Oct', value: 6.2 },
         { label: 'Nov', value: 7.1 },
@@ -165,13 +165,13 @@ const DASHBOARDS: DashboardDef[] = [
     subtitle: 'Sourcing & contract management',
     kpis: [
       { title: 'Active Contracts', value: 234, change: '+18', trend: 'up', icon: FileText, color: 'text-violet-600 bg-violet-50' },
-      { title: 'Expiring Soon', value: 12, change: '+4', trend: 'up', icon: Clock, color: 'text-orange-600 bg-orange-50' },
+      { title: 'Expiring Soon', value: 12, change: '+4', trend: 'up', icon: Clock, color: 'text-high-700 bg-high-50' },
       { title: 'Vendor Score', value: '87%', change: '+2.3%', trend: 'up', icon: BarChart3, color: 'text-purple-600 bg-purple-50' },
-      { title: 'Savings Realized', value: '$2.1M', change: '+$340K', trend: 'up', icon: DollarSign, color: 'text-green-600 bg-green-50' },
+      { title: 'Savings Realized', value: '$2.1M', change: '+$340K', trend: 'up', icon: DollarSign, color: 'text-compliant bg-compliant-50' },
     ],
     bars: {
       title: 'Contract Value by Category',
-      color: '#8b5cf6',
+      color: 'var(--color-brand-500)',
       data: [
         { label: 'IT', value: 8.2 },
         { label: 'MRO', value: 5.4 },
@@ -184,11 +184,11 @@ const DASHBOARDS: DashboardDef[] = [
     progress: {
       title: 'Vendor Compliance Scores',
       data: [
-        { label: 'Acme Corp', value: 94, color: '#16a34a' },
-        { label: 'Global Supplies', value: 87, color: '#8b5cf6' },
-        { label: 'TechParts Ltd', value: 72, color: '#f59e0b' },
-        { label: 'Office Essentials', value: 91, color: '#16a34a' },
-        { label: 'FastShip', value: 65, color: '#ef4444' },
+        { label: 'Acme Corp', value: 94, color: 'var(--color-compliant)' },
+        { label: 'Global Supplies', value: 87, color: 'var(--color-brand-500)' },
+        { label: 'TechParts Ltd', value: 72, color: 'var(--color-mitigated)' },
+        { label: 'Office Essentials', value: 91, color: 'var(--color-compliant)' },
+        { label: 'FastShip', value: 65, color: 'var(--color-risk)' },
       ],
     },
     table: {
@@ -211,24 +211,24 @@ const DASHBOARDS: DashboardDef[] = [
     accentHue: 340,
     subtitle: 'Governance, risk & compliance',
     kpis: [
-      { title: 'Total Risks', value: 12, change: '+2', trend: 'up', icon: AlertTriangle, color: 'text-rose-600 bg-rose-50' },
-      { title: 'Controls Tested', value: '14/24', change: '+3', trend: 'up', icon: Shield, color: 'text-blue-600 bg-blue-50' },
-      { title: 'Deficiencies', value: 2, change: '-1', trend: 'down', icon: XCircle, color: 'text-red-600 bg-red-50' },
+      { title: 'Total Risks', value: 12, change: '+2', trend: 'up', icon: AlertTriangle, color: 'text-risk-700 bg-risk-50' },
+      { title: 'Controls Tested', value: '14/24', change: '+3', trend: 'up', icon: Shield, color: 'text-evidence-700 bg-evidence-50' },
+      { title: 'Deficiencies', value: 2, change: '-1', trend: 'down', icon: XCircle, color: 'text-risk-700 bg-risk-50' },
       { title: 'Workflow Runs', value: 156, change: '+23', trend: 'up', icon: Activity, color: 'text-pink-600 bg-pink-50' },
     ],
     donut: {
       title: 'Risk Severity Distribution',
       centerLabel: '12',
       segments: [
-        { label: 'Critical', value: 2, color: '#dc2626' },
-        { label: 'High', value: 5, color: '#ea580c' },
-        { label: 'Medium', value: 3, color: '#d97706' },
-        { label: 'Low', value: 2, color: '#16a34a' },
+        { label: 'Critical', value: 2, color: 'var(--color-risk)' },
+        { label: 'High', value: 5, color: 'var(--color-high)' },
+        { label: 'Medium', value: 3, color: 'var(--color-mitigated)' },
+        { label: 'Low', value: 2, color: 'var(--color-compliant)' },
       ],
     },
     bars: {
       title: 'Control Effectiveness',
-      color: '#e11d48',
+      color: 'var(--color-risk)',
       data: [
         { label: 'Access', value: 92 },
         { label: 'Change', value: 85 },
@@ -241,9 +241,9 @@ const DASHBOARDS: DashboardDef[] = [
     progress: {
       title: 'Audit Completion',
       data: [
-        { label: 'SOX FY26', value: 58, color: '#e11d48' },
-        { label: 'Internal Audit Q1', value: 82, color: '#16a34a' },
-        { label: 'Vendor Audit', value: 35, color: '#f59e0b' },
+        { label: 'SOX FY26', value: 58, color: 'var(--color-risk)' },
+        { label: 'Internal Audit Q1', value: 82, color: 'var(--color-compliant)' },
+        { label: 'Vendor Audit', value: 35, color: 'var(--color-mitigated)' },
       ],
     },
     table: {
@@ -301,19 +301,19 @@ const DASHBOARD_SUMMARIES: Record<DashboardId, string> = {
 const SHARE_EMAIL_TEMPLATES: Record<DashboardId, { subject: string; body: string }> = {
   p2p: {
     subject: 'P2P Audit Alert Summary — Action Required',
-    body: `Hi Team,\n\nHere's today's P2P audit summary from Auditify Copilot:\n\n🔴 ALERTS\n• 3 new duplicate invoice flags detected overnight — Acme Corp (2), Global Supplies (1)\n• New vendor "Atlas Manufacturing" onboarded — KYC verification pending\n\n✅ IMPROVEMENTS\n• Compliance rate improved from 93.1% → 94.2%\n• Avg processing time dropped to 1.8 days (was 2.1 days)\n\n📊 KEY METRICS\n• Invoices processed: 12,450 (+8.2%)\n• Duplicate flags: 23 (-12%)\n• Compliance rate: 94.2% (+1.4%)\n\n⚡ RECOMMENDED ACTIONS\n1. Review & assign the 3 new duplicate flags before payment batch\n2. Expedite KYC verification for Atlas Manufacturing\n3. Continue vendor master data cleanup — showing strong results\n\nGenerated by Auditify Copilot — AI-Powered Internal Audit Platform`,
+    body: `Hi Team,\n\nHere's today's P2P audit summary from Auditify Copilot:\n\nALERTS\n• 3 new duplicate invoice flags detected overnight — Acme Corp (2), Global Supplies (1)\n• New vendor "Atlas Manufacturing" onboarded — KYC verification pending\n\nIMPROVEMENTS\n• Compliance rate improved from 93.1% → 94.2%\n• Avg processing time dropped to 1.8 days (was 2.1 days)\n\nKEY METRICS\n• Invoices processed: 12,450 (+8.2%)\n• Duplicate flags: 23 (-12%)\n• Compliance rate: 94.2% (+1.4%)\n\nRECOMMENDED ACTIONS\n1. Review & assign the 3 new duplicate flags before payment batch\n2. Expedite KYC verification for Atlas Manufacturing\n3. Continue vendor master data cleanup — showing strong results\n\nGenerated by Auditify Copilot — AI-Powered Internal Audit Platform`,
   },
   o2c: {
     subject: 'O2C Audit Alert Summary — 2 SLA Breaches',
-    body: `Hi Team,\n\nHere's today's O2C audit summary from Auditify Copilot:\n\n🔴 ALERTS\n• 2 high-value invoices ($180K+) pending approval beyond SLA\n• Revenue recognition timing discrepancy flagged in Q4 entries\n\n✅ IMPROVEMENTS\n• DSO improved from 42 → 38 days\n• Disputed orders down 15% vs last month\n\n⚡ RECOMMENDED ACTIONS\n1. Escalate the 2 SLA-breached invoices immediately\n2. Review the Q4 revenue timing discrepancy before period close\n3. Continue collection drive momentum\n\nGenerated by Auditify Copilot`,
+    body: `Hi Team,\n\nHere's today's O2C audit summary from Auditify Copilot:\n\nALERTS\n• 2 high-value invoices ($180K+) pending approval beyond SLA\n• Revenue recognition timing discrepancy flagged in Q4 entries\n\nIMPROVEMENTS\n• DSO improved from 42 → 38 days\n• Disputed orders down 15% vs last month\n\nRECOMMENDED ACTIONS\n1. Escalate the 2 SLA-breached invoices immediately\n2. Review the Q4 revenue timing discrepancy before period close\n3. Continue collection drive momentum\n\nGenerated by Auditify Copilot`,
   },
   s2c: {
     subject: 'S2C Alert — 4 Contracts Expiring Within 30 Days',
-    body: `Hi Team,\n\nHere's today's S2C audit summary from Auditify Copilot:\n\n🔴 ALERTS\n• 4 contracts expiring within 30 days — 2 high-value (>$500K)\n• 3 vendors downgraded to Medium risk\n\n✅ IMPROVEMENTS\n• Cost savings: $2.8M realized vs $2.4M target (117%)\n• New compliance clause added to contract templates\n\n⚡ RECOMMENDED ACTIONS\n1. Start renegotiation on the 2 high-value expiring contracts this week\n2. Review the 3 downgraded vendors' risk mitigation plans\n\nGenerated by Auditify Copilot`,
+    body: `Hi Team,\n\nHere's today's S2C audit summary from Auditify Copilot:\n\nALERTS\n• 4 contracts expiring within 30 days — 2 high-value (>$500K)\n• 3 vendors downgraded to Medium risk\n\nIMPROVEMENTS\n• Cost savings: $2.8M realized vs $2.4M target (117%)\n• New compliance clause added to contract templates\n\nRECOMMENDED ACTIONS\n1. Start renegotiation on the 2 high-value expiring contracts this week\n2. Review the 3 downgraded vendors' risk mitigation plans\n\nGenerated by Auditify Copilot`,
   },
   grc: {
     subject: 'GRC Alert — DEF-002 Remediation Due in 6 Days',
-    body: `Hi Team,\n\nHere's today's GRC audit summary from Auditify Copilot:\n\n🔴 CRITICAL\n• Material weakness DEF-002 remediation due in 6 days\n• New risk RSK-012 identified — GL balance discrepancy\n\n📊 PROGRESS\n• SOX audit progress: 58% (14/24 controls tested)\n• 3 controls tested since yesterday\n• Workflow automation saved 45 person-hours this month\n\n⚡ RECOMMENDED ACTIONS\n1. Escalate DEF-002 to ensure Mar 31 deadline is met\n2. Assign controls for RSK-012 in R2R process\n3. Prioritize remaining 10 untested controls\n\nGenerated by Auditify Copilot`,
+    body: `Hi Team,\n\nHere's today's GRC audit summary from Auditify Copilot:\n\nCRITICAL\n• Material weakness DEF-002 remediation due in 6 days\n• New risk RSK-012 identified — GL balance discrepancy\n\nPROGRESS\n• SOX audit progress: 58% (14/24 controls tested)\n• 3 controls tested since yesterday\n• Workflow automation saved 45 person-hours this month\n\nRECOMMENDED ACTIONS\n1. Escalate DEF-002 to ensure Mar 31 deadline is met\n2. Assign controls for RSK-012 in R2R process\n3. Prioritize remaining 10 untested controls\n\nGenerated by Auditify Copilot`,
   },
 };
 
@@ -333,9 +333,9 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
 
   const typeIcons = { change: RefreshCw, alert: AlertTriangle, improvement: TrendingUp, new: Plus };
   const typeColors = {
-    change: 'text-blue-600 bg-blue-50',
-    alert: 'text-orange-600 bg-orange-50',
-    improvement: 'text-green-600 bg-green-50',
+    change: 'text-evidence-700 bg-evidence-50',
+    alert: 'text-high-700 bg-high-50',
+    improvement: 'text-compliant bg-compliant-50',
     new: 'text-purple-600 bg-purple-50'
   };
 
@@ -372,13 +372,13 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
     <>
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl mb-5 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-light/50">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border-light/50">
           <button onClick={() => setExpanded(p => !p)} className="flex items-center gap-2 cursor-pointer">
             <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-primary-medium">
               <Sparkles size={13} className="text-white" />
             </div>
             <span className="text-[13px] font-semibold text-text">Alerts & Daily Digest</span>
-            {alertCount > 0 && <span className="text-[12px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold">{alertCount} alert{alertCount > 1 ? 's' : ''}</span>}
+            {alertCount > 0 && <span className="text-[12px] bg-risk-50 text-risk-700 px-2 py-0.5 rounded-full font-bold">{alertCount} alert{alertCount > 1 ? 's' : ''}</span>}
             <span className="text-[12px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">AI Summary</span>
             <ChevronDown size={14} className={`text-text-muted transition-transform ${expanded ? '' : '-rotate-90'}`} />
           </button>
@@ -392,10 +392,10 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
               {/* AI Summary */}
               <div className="px-5 pt-4 pb-3">
-                <div className="p-3.5 rounded-xl bg-gradient-to-r from-primary-xlight/60 via-white to-primary-xlight/40 border border-primary/10">
+                <div className="p-4 rounded-xl bg-gradient-to-r from-primary-xlight/60 via-white to-primary-xlight/40 border border-primary/10">
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <Sparkles size={11} className="text-primary" />
-                    <span className="text-[12px] font-bold text-primary uppercaser">AI Summary</span>
+                    <span className="text-[12px] font-bold text-primary">AI Summary</span>
                   </div>
                   <p className="text-[12px] text-text leading-relaxed">{summary}</p>
                 </div>
@@ -408,14 +408,14 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
                   const color = typeColors[item.type];
                   return (
                     <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                      className={`flex items-start gap-2.5 p-2.5 rounded-xl transition-colors ${item.type === 'alert' ? 'bg-orange-50/50 border border-high/50' : 'hover:bg-surface-2'}`}>
+                      className={`flex items-start gap-2.5 p-2.5 rounded-xl transition-colors ${item.type === 'alert' ? 'bg-high-50/50 border border-high/50' : 'hover:bg-surface-2'}`}>
                       <div className={`p-1.5 rounded-lg shrink-0 ${color}`}><Icon size={12} /></div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[12px] text-text leading-relaxed">{item.text}</div>
                         <div className="text-[12px] text-text-muted mt-0.5">{item.time}</div>
                       </div>
                       {item.type === 'alert' && (
-                        <span className="text-[12px] font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-full shrink-0">Action needed</span>
+                        <span className="text-[12px] font-bold text-high-700 bg-high-50 px-1.5 py-0.5 rounded-full shrink-0">Action needed</span>
                       )}
                     </motion.div>
                   );
@@ -456,7 +456,7 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
                 {/* Recipient */}
                 <div>
-                  <label className="text-[12px] font-semibold text-text-muted uppercaser block mb-1.5">Send to</label>
+                  <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Send to</label>
                   <input
                     value={recipient}
                     onChange={e => setRecipient(e.target.value)}
@@ -493,7 +493,7 @@ function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
                 {emailGenerated && (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-[12px] font-semibold text-text-muted uppercaser">Generated Email</label>
+                      <label className="text-[12px] font-semibold text-text-muted">Generated Email</label>
                       <button onClick={handleCopyEmail} className="flex items-center gap-1 text-[12px] font-medium text-primary hover:underline cursor-pointer">
                         {emailCopied ? <><CheckCircle2 size={10} /> Copied!</> : <><Copy size={10} /> Copy</>}
                       </button>
@@ -708,7 +708,7 @@ function MiniTable({ title, headers, rows }: { title: string; headers: string[];
           <thead>
             <tr className="border-b border-border">
               {headers.map(h => (
-                <th key={h} className="text-[12px] text-text-muted uppercaser font-medium pb-2 pr-4">{h}</th>
+                <th key={h} className="text-[12px] text-text-muted font-medium pb-2 pr-4">{h}</th>
               ))}
             </tr>
           </thead>
@@ -745,7 +745,7 @@ function Sidebar({ dashboards, activeId, onSelect }: {
   return (
     <div className="w-[200px] shrink-0 border-r border-border bg-surface-1/50 overflow-y-auto flex flex-col">
       <div className="px-4 pt-5 pb-3">
-        <div className="text-[12px] text-text-muted uppercasest font-semibold">Dashboards</div>
+        <div className="text-[12px] text-text-muted font-semibold">Dashboards</div>
       </div>
       <nav className="flex-1 px-2 pb-4 space-y-1">
         {dashboards.map(d => {
@@ -813,7 +813,7 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.25 }}
-            className="px-10 py-8"
+            className="p-8"
           >
             {/* Page header — Editorial: breadcrumb · serif title · context · actions */}
             <div className="mb-6">
@@ -889,7 +889,7 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[12px] font-semibold text-brand-600">FY26</span>
-                        <div className="flex items-center gap-1 text-[12px] font-semibold text-emerald-600">
+                        <div className="flex items-center gap-1 text-[12px] font-semibold text-compliant">
                           <TrendingUp size={11} />
                           +12.4%
                         </div>
@@ -932,7 +932,7 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                         <span className="text-[12px] font-semibold" style={{ color: '#92400E' }}>Money at Risk</span>
                       </div>
                       <div className="text-[32px] font-extrabold leading-none" style={{ color: '#1C1917' }}>{'\u20B9'}6.16L</div>
-                      <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold text-red-600">
+                      <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold text-risk-700">
                         <TrendingDown size={10} />
                         -{'\u20B9'}2.1L <span className="text-text-muted font-normal">vs last quarter</span>
                       </div>
@@ -987,7 +987,7 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                       <div className="text-[40px] font-extrabold leading-none" style={{ color: '#1C1917' }}>7</div>
                       <div className="text-[12px] text-text-muted mt-1.5">3 unassigned, 4 in progress</div>
                     </div>
-                    <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold text-red-600">
+                    <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold text-risk-700">
                       <TrendingUp size={10} />
                       +2 <span className="text-text-muted font-normal">this week</span>
                     </div>
@@ -1004,10 +1004,10 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
                         <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#16A34A' }}>
                           <Activity size={13} className="text-white" />
                         </div>
-                        <span className="text-[12px] font-semibold text-emerald-700">Savings YTD</span>
+                        <span className="text-[12px] font-semibold text-compliant-700">Savings YTD</span>
                       </div>
-                      <div className="text-[36px] font-extrabold leading-none text-emerald-700">{'\u20B9'}24L</div>
-                      <div className="text-[12px] text-emerald-600/70 mt-1.5">Cost avoided via AI workflows</div>
+                      <div className="text-[36px] font-extrabold leading-none text-compliant-700">{'\u20B9'}24L</div>
+                      <div className="text-[12px] text-compliant/70 mt-1.5">Cost avoided via AI workflows</div>
                     </div>
                     {/* Green bar chart */}
                     <div className="flex items-end gap-1.5 h-8 mt-2">

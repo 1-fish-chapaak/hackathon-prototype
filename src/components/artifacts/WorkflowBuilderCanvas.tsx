@@ -696,8 +696,8 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                   <div className="flex items-center gap-2">
                     <FileText size={14} className={colors.accent} />
                     <h2 className="text-[13px] font-semibold text-text">{config.name}</h2>
-                    <span className="text-[12px] font-bold bg-compliant-50 text-compliant-700 px-2 py-0.5 rounded-full uppercaser flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-compliant-500 animate-pulse" /> Live Preview
+                    <span className="text-[12px] font-bold bg-compliant-50 text-compliant-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-compliant animate-pulse" /> Live Preview
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -720,7 +720,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                       className="rounded-2xl p-3 relative overflow-hidden"
                       style={{ background: 'linear-gradient(145deg, #1e1230 0%, #160d24 100%)', border: '1px solid rgba(106,18,205,0.12)' }}>
                       <div className={`text-[16px] font-extrabold text-white leading-none`}>{stat.value}</div>
-                      <div className="text-[12px] text-white/40 uppercaser mt-1">{stat.label}</div>
+                      <div className="text-[12px] text-white/40 mt-1">{stat.label}</div>
                       <div className="absolute -top-4 -right-4 w-12 h-12 rounded-full opacity-20 blur-xl" style={{ background: config.color }} />
                     </motion.div>
                   ))}
@@ -729,7 +729,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                 {/* Mini Area Chart */}
                 <div className="bg-white rounded-xl border border-border-light shadow-sm p-3 mb-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[12px] font-bold text-text-muted uppercaser">Execution Trend — Last 7 Runs</span>
+                    <span className="text-[12px] font-bold text-text-muted">Execution Trend — Last 7 Runs</span>
                     <span className="text-[12px] font-semibold text-compliant-700">{'\u2191'} 12% improvement</span>
                   </div>
                   <svg width="100%" height="48" viewBox="0 0 400 48" preserveAspectRatio="none">
@@ -751,7 +751,7 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                   style={{ background: 'linear-gradient(135deg, rgba(106,18,205,0.04) 0%, rgba(255,255,255,0.8) 40%, rgba(106,18,205,0.02) 100%)', border: '1px solid rgba(106,18,205,0.08)' }}>
                   <div className="flex items-center gap-1.5 mb-2">
                     <Sparkles size={12} className="text-primary" />
-                    <span className="text-[12px] font-bold text-primary uppercaser">AI Summary</span>
+                    <span className="text-[12px] font-bold text-primary">AI Summary</span>
                   </div>
                   {config.id === 'reconciliation' && (
                     <p className="text-[12px] text-text leading-relaxed">
@@ -817,9 +817,9 @@ export default function WorkflowBuilderCanvas({ onClose, workflowType, buildStag
                     className="grid gap-0 bg-surface-2 px-3 py-2 border-b border-border-light"
                     style={{ gridTemplateColumns: `28px repeat(${enabledColumns.length}, minmax(0, 1fr))` }}
                   >
-                    <div className="text-[7px] font-bold uppercaser text-text-muted/40">#</div>
+                    <div className="text-[7px] font-bold text-text-muted/40">#</div>
                     {enabledColumns.map(col => (
-                      <div key={col.id} className="text-[12px] font-bold uppercaser text-text-muted/60 truncate pr-1">
+                      <div key={col.id} className="text-[12px] font-bold text-text-muted/60 truncate pr-1">
                         {col.name}
                       </div>
                     ))}

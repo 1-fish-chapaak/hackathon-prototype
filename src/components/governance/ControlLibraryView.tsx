@@ -38,14 +38,14 @@ const MOCK_CONTROLS: ControlRow[] = [
 ];
 
 const TYPE_STYLES: Record<string, { bg: string; text: string }> = {
-  Automated: { bg: 'bg-blue-100', text: 'text-blue-800' },
+  Automated: { bg: 'bg-evidence-50', text: 'text-evidence-700' },
   Manual: { bg: 'bg-gray-100', text: 'text-gray-700' },
   'IT Dependent': { bg: 'bg-purple-100', text: 'text-purple-800' },
 };
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
-  Active: { bg: 'bg-success-bg', text: 'text-green-800', dot: 'bg-success' },
-  Failed: { bg: 'bg-danger-bg', text: 'text-red-800', dot: 'bg-danger' },
+  Active: { bg: 'bg-success-bg', text: 'text-compliant-700', dot: 'bg-success' },
+  Failed: { bg: 'bg-danger-bg', text: 'text-risk-700', dot: 'bg-danger' },
   Draft: { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
 };
 
@@ -67,7 +67,7 @@ export default function ControlLibraryView({}: Props) {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-10 py-8 relative">
+      <div className="p-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
@@ -93,8 +93,8 @@ export default function ControlLibraryView({}: Props) {
         </div>
 
         {/* AI Insight */}
-        <div className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-2xl border border-primary/10 p-4 mb-6 flex items-center gap-4 ai-shimmer">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shrink-0 ai-pulse-ring">
+        <div className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-2xl border border-primary/10 p-4 mb-6 flex items-center gap-4">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shrink-0">
             <Sparkles size={16} className="text-white" />
           </div>
           <div className="flex-1">
@@ -109,8 +109,8 @@ export default function ControlLibraryView({}: Props) {
         {/* Summary badges */}
         <div className="flex items-center gap-3 mb-6">
           {[
-            { label: 'Key Controls', count: keyCount, bg: 'bg-amber-50', text: 'text-amber-800', dot: 'bg-amber-400' },
-            { label: 'Automated', count: autoCount, bg: 'bg-blue-50', text: 'text-blue-800', dot: 'bg-blue-400' },
+            { label: 'Key Controls', count: keyCount, bg: 'bg-mitigated-50', text: 'text-mitigated-700', dot: 'bg-mitigated' },
+            { label: 'Automated', count: autoCount, bg: 'bg-evidence-50', text: 'text-evidence-700', dot: 'bg-evidence' },
             { label: 'Total', count: totalCount, bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-400' },
           ].map((badge, i) => (
             <motion.div
@@ -232,8 +232,8 @@ export default function ControlLibraryView({}: Props) {
                 const ctrl = item as unknown as ControlRow;
                 if (ctrl.keyControl) {
                   return (
-                    <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[12px] font-semibold">
-                      <Star size={10} className="fill-amber-400 text-amber-400" />
+                    <span className="inline-flex items-center gap-1 bg-mitigated-50 text-mitigated-700 px-2 py-0.5 rounded text-[12px] font-semibold">
+                      <Star size={10} className="fill-mitigated text-mitigated" />
                       Key
                     </span>
                   );

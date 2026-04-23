@@ -95,7 +95,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-10 py-8 relative">
+      <div className="p-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
@@ -168,7 +168,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
         </div>
 
         {/* AI Insight Banner */}
-        <div className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-xl border border-primary/10 p-4 mb-6 flex items-center gap-4 ai-shimmer">
+        <div className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-xl border border-primary/10 p-4 mb-6 flex items-center gap-4">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shrink-0">
             <Sparkles size={16} className="text-white" />
           </div>
@@ -181,15 +181,15 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
           <div className="flex gap-6 shrink-0">
             <div className="text-center">
               <div className="text-lg font-bold font-mono text-text">{WORKFLOWS.length}</div>
-              <div className="text-[12px] text-text-muted uppercaser">Workflows</div>
+              <div className="text-[12px] text-text-muted">Workflows</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-bold font-mono text-primary">{totalRuns}</div>
-              <div className="text-[12px] text-text-muted uppercaser">Total Runs</div>
+              <div className="text-[12px] text-text-muted">Total Runs</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-bold font-mono text-success">{avgScore}</div>
-              <div className="text-[12px] text-text-muted uppercaser">Avg Score</div>
+              <div className="text-[12px] text-text-muted">Avg Score</div>
             </div>
           </div>
         </div>
@@ -198,7 +198,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-3">
             <Lightbulb size={13} className="text-primary/60" />
-            <span className="text-[12px] font-semibold text-text-muted uppercaser">AI Recommended for Your Audit</span>
+            <span className="text-[12px] font-semibold text-text-muted">AI Recommended for Your Audit</span>
           </div>
           <div className="grid grid-cols-3 gap-4">
             {[
@@ -233,7 +233,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                         </div>
                         <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/5">
                           <Sparkles size={9} className="text-primary" />
-                          <span className="text-[12px] font-bold text-primary uppercaser">{rw.score}% match</span>
+                          <span className="text-[12px] font-bold text-primary">{rw.score}% match</span>
                         </div>
                       </div>
                       <h4 className="text-[13px] font-semibold text-text group-hover:text-primary transition-colors mb-1.5">{rw.name}</h4>
@@ -322,7 +322,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                     <button
                       onClick={handleBulkRun}
                       disabled={bulkRunning}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary disabled:opacity-70 text-white rounded-xl text-[13px] font-semibold transition-all cursor-pointer shadow-md shadow-primary/20"
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary disabled:opacity-70 text-white rounded-xl text-[13px] font-semibold transition-all cursor-pointer shadow-md"
                     >
                       {bulkRunning ? (
                         <>
@@ -362,7 +362,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
                 onClick={() => onSelectWorkflow(wf.id)}
-                className="glass-card rounded-2xl p-5 cursor-pointer hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.998] transition-all duration-300 group relative overflow-hidden"
+                className="glass-card rounded-2xl p-5 cursor-pointer hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.998] transition-all duration-300 group relative overflow-hidden"
               >
                 {/* Bulk mode checkbox */}
                 {bulkMode && (
@@ -375,14 +375,14 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
 
                 {/* Top color strip on hover */}
                 <div className={`absolute top-0 left-0 right-0 h-[2px] opacity-0 group-hover:opacity-100 transition-opacity ${
-                  score >= 80 ? 'bg-gradient-to-r from-green-400 to-emerald-400' :
-                  score >= 60 ? 'bg-gradient-to-r from-amber-400 to-yellow-400' :
-                  'bg-gradient-to-r from-red-400 to-orange-400'
+                  score >= 80 ? 'bg-compliant' :
+                  score >= 60 ? 'bg-mitigated' :
+                  'bg-risk'
                 }`} />
 
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <div className="p-2 rounded-lg bg-primary-xlight text-primary shrink-0 mt-0.5 group-hover:scale-105 transition-transform duration-300">
+                    <div className="p-2 rounded-lg bg-primary-xlight text-primary shrink-0 mt-0.5 transition-transform duration-300">
                       <Icon size={16} />
                     </div>
                     <div className="min-w-0">
@@ -392,7 +392,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                   </div>
 
                   {/* Impact score ring */}
-                  <div className="text-center shrink-0 ml-4 group-hover:scale-105 group-hover:animate-pulse transition-transform duration-300">
+                  <div className="text-center shrink-0 ml-4 transition-transform duration-300">
                     <svg width="52" height="52" viewBox="0 0 52 52">
                       <circle cx="26" cy="26" r="22" fill="none" stroke="#f1edf9" strokeWidth="4" />
                       <circle cx="26" cy="26" r="22" fill="none"
@@ -415,7 +415,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                     { l: 'Success Rate', v: '98.5%', delta: '+0.5%', up: true },
                   ].map(m => (
                     <div key={m.l} className="bg-surface-2 rounded-lg p-3 border border-border-light">
-                      <div className="text-[12px] text-text-muted uppercaser mb-1">{m.l}</div>
+                      <div className="text-[12px] text-text-muted mb-1">{m.l}</div>
                       <div className="text-base font-bold font-mono text-text leading-none mb-1">{m.v}</div>
                       <div className={`text-[12px] font-mono font-medium ${m.up ? 'text-success' : 'text-danger'}`}>
                         {m.delta}
@@ -436,7 +436,7 @@ export default function WorkflowTemplates({ onSelectWorkflow, onBuildNew, onRunW
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <div className="text-[12px] text-text-muted uppercaser">7-day trend</div>
+                      <div className="text-[12px] text-text-muted">7-day trend</div>
                     </div>
                     <MiniSparkline data={sparkData} color={isUp ? '#16a34a' : '#dc2626'} />
                     <div className={`flex items-center gap-0.5 text-[12px] font-semibold font-mono ${isUp ? 'text-success' : 'text-danger'}`}>

@@ -103,7 +103,7 @@ function PlanTab() {
             'Currency: INR (converted at booking rate)',
           ].map((assumption, i) => (
             <div key={i} className="flex items-start gap-2">
-              <div className="w-1 h-1 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+              <div className="w-1 h-1 rounded-full bg-mitigated mt-1.5 shrink-0" />
               <span className="text-[12px] text-mitigated-700">{assumption}</span>
             </div>
           ))}
@@ -148,15 +148,15 @@ ORDER BY
         <div className="grid grid-cols-3 gap-3 pt-3">
           <div className="bg-surface-2 rounded-lg p-3 text-center">
             <div className="text-lg font-bold text-text">1.2M</div>
-            <div className="text-[12px] text-text-muted uppercaser">Records Scanned</div>
+            <div className="text-[12px] text-text-muted">Records Scanned</div>
           </div>
           <div className="bg-surface-2 rounded-lg p-3 text-center">
             <div className="text-lg font-bold text-text">0.3s</div>
-            <div className="text-[12px] text-text-muted uppercaser">Query Time</div>
+            <div className="text-[12px] text-text-muted">Query Time</div>
           </div>
           <div className="bg-surface-2 rounded-lg p-3 text-center">
             <div className="text-lg font-bold text-text">9</div>
-            <div className="text-[12px] text-text-muted uppercaser">Results</div>
+            <div className="text-[12px] text-text-muted">Results</div>
           </div>
         </div>
       </CollapsibleSection>
@@ -242,7 +242,7 @@ function ResultTab({ onManageExceptions, onAddToReport, onShareResults }: {
                     <td className="px-3 py-2.5 font-mono text-text-muted">{r.id}</td>
                     <td className="px-3 py-2.5 text-text font-medium">{r.name}</td>
                     <td className="px-3 py-2.5">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[12px] font-bold uppercase ${severityColor[r.severity]}`}>
+                      <span className={`inline-flex items-center px-2 h-6 rounded-full text-[12px] font-medium ${severityColor[r.severity]}`}>
                         {r.severity}
                       </span>
                     </td>
@@ -286,10 +286,10 @@ function ResultTab({ onManageExceptions, onAddToReport, onShareResults }: {
         {onManageExceptions && (
           <button
             onClick={onManageExceptions}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-[12px] font-semibold hover:from-orange-600 hover:to-amber-600 transition-all cursor-pointer shadow-sm"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-brand-600 text-white rounded-md text-[12px] font-semibold hover:bg-brand-500 transition-colors cursor-pointer"
           >
             <AlertTriangle size={12} />
-            Manage Exceptions
+            Manage exceptions
           </button>
         )}
         {onShareResults && (

@@ -42,7 +42,7 @@ function LinkControlsModal({ risk, onClose }: { risk: typeof RISKS[0]; onClose: 
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: 400, opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="relative w-[480px] h-full bg-white shadow-2xl overflow-y-auto"
+        className="relative w-[400px] h-full bg-white shadow-2xl overflow-y-auto"
       >
         <div className="sticky top-0 bg-white border-b border-border-light px-6 py-4 z-10">
           <div className="flex items-center justify-between mb-2">
@@ -53,7 +53,7 @@ function LinkControlsModal({ risk, onClose }: { risk: typeof RISKS[0]; onClose: 
           </div>
           <p className="text-[12px] text-text-muted">Select controls to mitigate this risk</p>
           <div className="mt-3 p-3 rounded-xl bg-primary-xlight border border-primary/10">
-            <div className="text-[12px] text-primary font-bold uppercaser mb-1">Risk</div>
+            <div className="text-[12px] text-primary font-bold mb-1">Risk</div>
             <div className="text-[13px] font-medium text-text">{risk.name}</div>
             <div className="text-[12px] text-text-muted mt-1">{risk.id} · <SeverityBadge severity={risk.severity} /></div>
           </div>
@@ -88,7 +88,7 @@ function LinkControlsModal({ risk, onClose }: { risk: typeof RISKS[0]; onClose: 
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[13px] font-semibold text-text">{ctl.name}</span>
                       {ctl.isKey && (
-                        <span className="text-[12px] font-bold bg-mitigated-50 text-mitigated-700 px-1.5 py-0.5 rounded uppercase">Key</span>
+                        <span className="text-[12px] font-medium bg-mitigated-50 text-mitigated-700 px-2 h-5 inline-flex items-center rounded-full">Key</span>
                       )}
                     </div>
                     <p className="text-[12px] text-text-muted leading-relaxed">{ctl.desc}</p>
@@ -129,7 +129,7 @@ function UploadSOPModal({ onClose }: { onClose: () => void }) {
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="relative bg-white rounded-2xl shadow-2xl w-[520px] overflow-hidden"
+        className="relative bg-white rounded-2xl shadow-2xl w-[560px] overflow-hidden"
       >
         <div className="px-10 py-5 border-b border-border-light">
           <div className="flex items-center justify-between">
@@ -180,10 +180,10 @@ function SOPFlowChart({ steps }: { steps: typeof SOP_FLOWS[string] }) {
     end: 'rounded-full px-4 py-2',
   };
   const nodeIcons: Record<string, string> = {
-    start: 'bg-green-400',
-    process: 'bg-blue-400',
-    decision: 'bg-amber-400',
-    end: 'bg-red-400',
+    start: 'bg-compliant',
+    process: 'bg-evidence',
+    decision: 'bg-mitigated',
+    end: 'bg-risk',
   };
 
   return (
@@ -232,14 +232,14 @@ function SOPRelationshipMap({ sopId, bpId }: { sopId: string; bpId: string }) {
       {/* SOP */}
       <div className="flex flex-col items-center shrink-0 min-w-[120px]">
         <div className="px-3 py-2.5 bg-primary/10 border border-primary/20 rounded-xl text-center w-full">
-          <div className="text-[12px] font-bold text-primary uppercaser mb-0.5">SOP</div>
+          <div className="text-[12px] font-bold text-primary mb-0.5">SOP</div>
           <div className="text-[12px] font-semibold text-text leading-tight">{sop?.name || sopId}</div>
         </div>
       </div>
       <div className="flex items-center self-center shrink-0"><ArrowRight size={16} className="text-text-muted" /></div>
       {/* RACMs */}
       <div className="flex flex-col gap-1.5 shrink-0 min-w-[130px]">
-        <div className="text-[12px] font-bold text-text-muted uppercaser">RACMs</div>
+        <div className="text-[12px] font-bold text-text-muted">RACMs</div>
         {relatedRacms.length > 0 ? relatedRacms.map(r => (
           <div key={r.id} className="px-2.5 py-1.5 bg-evidence-50 border border-evidence rounded-lg">
             <div className="text-[12px] font-semibold text-evidence-700">{r.id}</div>
@@ -250,7 +250,7 @@ function SOPRelationshipMap({ sopId, bpId }: { sopId: string; bpId: string }) {
       <div className="flex items-center self-center shrink-0"><ArrowRight size={16} className="text-text-muted" /></div>
       {/* Risks */}
       <div className="flex flex-col gap-1.5 shrink-0 min-w-[140px]">
-        <div className="text-[12px] font-bold text-text-muted uppercaser">Risks</div>
+        <div className="text-[12px] font-bold text-text-muted">Risks</div>
         {relatedRisks.map(r => (
           <div key={r.id} className="px-2.5 py-1.5 bg-high-50 border border-high rounded-lg">
             <div className="text-[12px] font-semibold text-high-700">{r.id}</div>
@@ -261,7 +261,7 @@ function SOPRelationshipMap({ sopId, bpId }: { sopId: string; bpId: string }) {
       <div className="flex items-center self-center shrink-0"><ArrowRight size={16} className="text-text-muted" /></div>
       {/* Controls */}
       <div className="flex flex-col gap-1.5 shrink-0 min-w-[140px]">
-        <div className="text-[12px] font-bold text-text-muted uppercaser">Controls</div>
+        <div className="text-[12px] font-bold text-text-muted">Controls</div>
         {relatedControls.map(c => (
           <div key={c.id} className="px-2.5 py-1.5 bg-compliant-50 border border-compliant rounded-lg">
             <div className="text-[12px] font-semibold text-compliant-700">{c.id}</div>
@@ -330,7 +330,7 @@ function SOPAIRecommendations({ sopId }: { sopId: string }) {
                     </div>
                     <div className="flex-1">
                       <div className="text-[12px] text-ink-500 leading-relaxed">{rec.text}</div>
-                      <div className={`text-[12px] font-bold uppercaser mt-1 ${impactColors[rec.impact]}`}>
+                      <div className={`text-[12px] font-bold mt-1 ${impactColors[rec.impact]}`}>
                         {rec.impact} impact
                       </div>
                     </div>
@@ -557,18 +557,18 @@ function BPDetailView({ bp, onBack }: {
           {/* Process Metadata — always visible */}
           <div className="flex items-center gap-6 mb-4 pb-4 border-b border-border-light">
             <div className="flex items-center gap-2">
-              <span className="text-[12px] font-bold text-text-muted uppercaser">Owner:</span>
+              <span className="text-[12px] font-bold text-text-muted">Owner:</span>
               <span className="text-[12px] font-medium text-text">Tushar Goel</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[12px] font-bold text-text-muted uppercaser">Status:</span>
+              <span className="text-[12px] font-bold text-text-muted">Status:</span>
               <span className="inline-flex items-center gap-1.5 bg-success-bg text-compliant-700 px-2.5 py-0.5 rounded-full text-[12px] font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-success" />
                 Active
               </span>
             </div>
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className="text-[12px] font-bold text-text-muted uppercaser shrink-0">Description:</span>
+              <span className="text-[12px] font-bold text-text-muted shrink-0">Description:</span>
               <span className="text-[12px] text-text-secondary truncate">End-to-end {bp.name.toLowerCase()} process covering all related risks, controls, and compliance workflows.</span>
             </div>
           </div>
@@ -590,7 +590,7 @@ function BPDetailView({ bp, onBack }: {
                 className="text-center p-4 rounded-xl bg-surface-2/80 border border-border-light/50 cursor-pointer hover:border-primary/20 hover:shadow-sm transition-all"
               >
                 <div className="text-xl font-bold text-text leading-none mb-1">{s.v}</div>
-                <div className="text-[12px] text-text-muted uppercaser font-medium">{s.l}</div>
+                <div className="text-[12px] text-text-muted font-medium">{s.l}</div>
               </motion.div>
             ))}
           </div>
@@ -659,7 +659,7 @@ function BPDetailView({ bp, onBack }: {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className="bg-white rounded-xl border border-border-light p-5 ai-card hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300"
+                    className="bg-white rounded-xl border border-border-light p-5 ai-card hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300"
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-success-bg flex items-center justify-center shrink-0">
@@ -727,7 +727,7 @@ function BPDetailView({ bp, onBack }: {
                           className="overflow-hidden"
                         >
                           <div className="mt-3 pt-3 border-t border-border-light">
-                            <div className="text-[12px] font-bold text-ink-500 uppercaser mb-2">Process Flow</div>
+                            <div className="text-[12px] font-bold text-ink-500 mb-2">Process Flow</div>
                             <div className="bg-paper-50 rounded-xl p-4 border border-gray-200">
                               <SOPFlowChart steps={flowSteps} />
                             </div>
@@ -743,7 +743,7 @@ function BPDetailView({ bp, onBack }: {
                           className="overflow-hidden"
                         >
                           <div className="mt-3 pt-3 border-t border-border-light">
-                            <div className="text-[12px] font-bold text-ink-500 uppercaser mb-2">Relationship Map</div>
+                            <div className="text-[12px] font-bold text-ink-500 mb-2">Relationship Map</div>
                             <div className="bg-paper-50 rounded-xl p-4 border border-gray-200">
                               <SOPRelationshipMap sopId={sop.id} bpId={sop.bpId} />
                             </div>
@@ -821,7 +821,7 @@ function BPDetailView({ bp, onBack }: {
                             <div className="mt-3 p-3 bg-gradient-to-r from-primary-xlight/50 to-white rounded-xl border border-primary/10">
                               <div className="flex items-center gap-1.5 mb-2">
                                 <Sparkles size={12} className="text-primary" />
-                                <span className="text-[12px] font-bold text-primary uppercaser">AI Recommended Controls</span>
+                                <span className="text-[12px] font-bold text-primary">AI Recommended Controls</span>
                               </div>
                               <div className="space-y-2">
                                 {RACM_RECOMMENDED_CONTROLS[r.id].map((rec, idx) => (
@@ -871,7 +871,7 @@ function BPDetailView({ bp, onBack }: {
           <div>
             {/* RACM tag filter chips */}
             <div className="flex items-center gap-2 mb-4">
-              <span className="text-[12px] font-bold text-text-muted uppercaser shrink-0">RACM Filter:</span>
+              <span className="text-[12px] font-bold text-text-muted shrink-0">RACM Filter:</span>
               <button
                 onClick={() => setRacmFilterTag('all')}
                 className={`px-2.5 py-1 rounded-full text-[12px] font-semibold transition-all cursor-pointer ${
@@ -921,7 +921,7 @@ function BPDetailView({ bp, onBack }: {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
                   onClick={() => bulkMode && toggleWorkflow(wf.id)}
-                  className={`bg-white rounded-xl border p-5 ai-card hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.998] transition-all duration-300 group ${
+                  className={`bg-white rounded-xl border p-5 ai-card hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.998] transition-all duration-300 group ${
                     bulkMode && selectedWorkflows.has(wf.id)
                       ? 'border-primary bg-primary-xlight/30'
                       : 'border-border-light'
@@ -1066,7 +1066,7 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP }: Props) {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-10 py-8 relative">
+      <div className="p-8 relative">
         <div className="flex items-end justify-between mb-6">
           <div>
             <h1 className="text-xl font-bold text-text">Business Processes</h1>
@@ -1079,7 +1079,7 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP }: Props) {
         </div>
 
         {/* AI Insight Banner */}
-        <div className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-2xl border border-primary/10 p-5 mb-6 flex items-center gap-4 ai-shimmer">
+        <div className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-2xl border border-primary/10 p-5 mb-6 flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shrink-0">
             <Sparkles size={18} className="text-white" />
           </div>
@@ -1092,11 +1092,11 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP }: Props) {
           <div className="flex gap-4 shrink-0">
             <div className="text-center">
               <div className="text-lg font-bold font-mono text-text">{BUSINESS_PROCESSES.length}</div>
-              <div className="text-[12px] text-text-muted uppercaser">Processes</div>
+              <div className="text-[12px] text-text-muted">Processes</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-bold font-mono text-primary">{Math.round(BUSINESS_PROCESSES.reduce((s, b) => s + b.coverage, 0) / BUSINESS_PROCESSES.length)}%</div>
-              <div className="text-[12px] text-text-muted uppercaser">Avg Coverage</div>
+              <div className="text-[12px] text-text-muted">Avg Coverage</div>
             </div>
           </div>
         </div>
@@ -1112,7 +1112,7 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP }: Props) {
             >
               <CardContainer containerClassName="w-full">
                 <CardBody
-                  className="bg-white rounded-2xl border border-border-light p-6 cursor-pointer hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.998] transition-all duration-300 group relative overflow-hidden"
+                  className="bg-white rounded-2xl border border-border-light p-6 cursor-pointer hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.998] transition-all duration-300 group relative overflow-hidden"
                 >
                   {/* Accent gradient orb */}
                   <div
@@ -1127,7 +1127,7 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP }: Props) {
                   <div onClick={() => onSelectBP(bp.id)} className="relative">
                     <CardItem translateZ={40}>
                       <div className="flex items-center gap-3 mb-5">
-                        <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300" style={{ background: bp.color + '1a' }}>
+                        <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm transition-transform duration-300" style={{ background: bp.color + '1a' }}>
                           <span className="text-sm font-bold" style={{ color: bp.color }}>{bp.abbr}</span>
                         </div>
                         <div className="flex-1">
@@ -1148,7 +1148,7 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP }: Props) {
                         ].map(s => (
                           <div key={s.l} className="text-center p-2 rounded-lg bg-surface-2/80 border border-border-light/50">
                             <div className="text-lg font-bold text-text leading-none mb-0.5">{s.v}</div>
-                            <div className="text-[12px] text-text-muted uppercaser font-medium">{s.l}</div>
+                            <div className="text-[12px] text-text-muted font-medium">{s.l}</div>
                           </div>
                         ))}
                       </div>

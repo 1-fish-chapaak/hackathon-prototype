@@ -60,7 +60,7 @@ export default function ShareModal({ onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label="Share"
-        className="relative glass-card-strong rounded-2xl shadow-2xl w-[480px] overflow-hidden"
+        className="relative glass-card-strong rounded-2xl shadow-2xl w-[400px] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -119,7 +119,7 @@ export default function ShareModal({ onClose }: Props) {
 
               {RECENT_SHARES.length > 0 && (
                 <div>
-                  <div className="text-[12px] font-semibold text-text-muted uppercaser mb-2">Shared with</div>
+                  <div className="text-[12px] font-semibold text-text-muted mb-2">Shared with</div>
                   <div className="space-y-2">
                     {RECENT_SHARES.map(share => (
                       <div key={share.email} className="flex items-center gap-3 p-2.5 rounded-lg bg-surface-2">

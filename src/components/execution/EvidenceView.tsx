@@ -92,9 +92,9 @@ const FILES: FileRow[] = [
 
 function FileIcon({ type }: { type: 'xlsx' | 'csv' | 'pdf' }) {
   const config = {
-    xlsx: { icon: FileSpreadsheet, color: 'text-green-600', bg: 'bg-green-50' },
-    csv: { icon: File, color: 'text-blue-600', bg: 'bg-blue-50' },
-    pdf: { icon: FileText, color: 'text-red-600', bg: 'bg-red-50' },
+    xlsx: { icon: FileSpreadsheet, color: 'text-compliant', bg: 'bg-compliant-50' },
+    csv: { icon: File, color: 'text-evidence-700', bg: 'bg-evidence-50' },
+    pdf: { icon: FileText, color: 'text-risk-700', bg: 'bg-risk-50' },
   };
   const c = config[type];
   const Icon = c.icon;
@@ -107,10 +107,10 @@ function FileIcon({ type }: { type: 'xlsx' | 'csv' | 'pdf' }) {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
-    'Mapped': { bg: 'bg-green-50', text: 'text-green-700', icon: <CheckCircle2 size={11} /> },
-    'Processed': { bg: 'bg-blue-50', text: 'text-blue-700', icon: <Sparkles size={11} /> },
-    'Pending Mapping': { bg: 'bg-amber-50', text: 'text-amber-700', icon: <Clock size={11} /> },
-    'Error': { bg: 'bg-red-50', text: 'text-red-700', icon: <XCircle size={11} /> },
+    'Mapped': { bg: 'bg-compliant-50', text: 'text-compliant-700', icon: <CheckCircle2 size={11} /> },
+    'Processed': { bg: 'bg-evidence-50', text: 'text-evidence-700', icon: <Sparkles size={11} /> },
+    'Pending Mapping': { bg: 'bg-mitigated-50', text: 'text-mitigated-700', icon: <Clock size={11} /> },
+    'Error': { bg: 'bg-risk-50', text: 'text-risk-700', icon: <XCircle size={11} /> },
   };
   const s = map[status] || map['Pending Mapping'];
   return (
@@ -126,8 +126,8 @@ function ActionBtn({ label }: { label: string }) {
     'View': 'text-text-secondary hover:text-primary',
     'Download': 'text-text-secondary hover:text-primary',
     'Forensics': 'text-purple-600 hover:text-purple-800 bg-purple-50 hover:bg-purple-100',
-    'Map Schema': 'text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100',
-    'Re-upload': 'text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100',
+    'Map Schema': 'text-mitigated-700 hover:text-mitigated-700 bg-mitigated-50 hover:bg-mitigated-50',
+    'Re-upload': 'text-risk-700 hover:text-risk-700 bg-risk-50 hover:bg-risk-50',
   };
   const icons: Record<string, React.ReactNode> = {
     'View': <Eye size={10} />,
@@ -157,7 +157,7 @@ export default function EvidenceView() {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={160} opacity={0.08} />
-      <div className="px-10 py-8 relative">
+      <div className="p-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
@@ -165,15 +165,15 @@ export default function EvidenceView() {
             <p className="text-sm text-text-secondary mt-1">Manage uploaded populations, evidence, and master data.</p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-3 py-2 border border-border-light bg-white text-text-secondary rounded-lg text-[12px] font-medium hover:shadow-md hover:border-primary/20 transition-all cursor-pointer">
+            <button className="flex items-center gap-2 px-3 py-2 border border-border-light bg-white text-text-secondary rounded-lg text-[12px] font-medium hover:border-primary/20 transition-all cursor-pointer">
               <Sparkles size={14} className="text-purple-500" />
               Analyze with AI
             </button>
-            <button className="flex items-center gap-2 px-3 py-2 border border-border-light bg-white text-text-secondary rounded-lg text-[12px] font-medium hover:shadow-md hover:border-primary/20 transition-all cursor-pointer">
+            <button className="flex items-center gap-2 px-3 py-2 border border-border-light bg-white text-text-secondary rounded-lg text-[12px] font-medium hover:border-primary/20 transition-all cursor-pointer">
               <Shield size={14} className="text-indigo-500" />
               Check Forensics
             </button>
-            <button className="flex items-center gap-2 px-3 py-2 border border-border-light bg-white text-text-secondary rounded-lg text-[12px] font-medium hover:shadow-md hover:border-primary/20 transition-all cursor-pointer">
+            <button className="flex items-center gap-2 px-3 py-2 border border-border-light bg-white text-text-secondary rounded-lg text-[12px] font-medium hover:border-primary/20 transition-all cursor-pointer">
               <TableProperties size={14} className="text-teal-500" />
               Extract Tables
             </button>
@@ -227,9 +227,9 @@ export default function EvidenceView() {
             { label: 'Pending', value: '21', color: 'text-warning' },
             { label: 'Errors', value: '8', color: 'text-danger' },
           ].map(card => (
-            <div key={card.label} className="bg-white rounded-xl border border-border-light p-3 text-center hover:shadow-md transition-all duration-200">
+            <div key={card.label} className="bg-white rounded-xl border border-border-light p-3 text-center transition-all duration-200">
               <div className={`text-xl font-bold ${card.color}`}>{card.value}</div>
-              <div className="text-[12px] text-text-muted uppercaser">{card.label}</div>
+              <div className="text-[12px] text-text-muted">{card.label}</div>
             </div>
           ))}
         </div>
@@ -258,7 +258,7 @@ export default function EvidenceView() {
               <thead>
                 <tr className="border-b border-border-light bg-surface-2/50">
                   {['File Name', 'Source', 'Type', 'Linked Control', 'Engagement', 'Rows', 'Size', 'Status', 'Actions'].map(h => (
-                    <th key={h} className="px-3 py-3 text-left text-[12px] font-semibold text-text-muted uppercaser">
+                    <th key={h} className="px-3 py-3 text-left text-[12px] font-semibold text-text-muted">
                       {h}
                     </th>
                   ))}

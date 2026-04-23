@@ -508,7 +508,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
             ].map(d => (
               <div key={d.id} className="rounded-xl border border-border-light p-4 hover:shadow-sm transition-shadow">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-md bg-risk-500">{d.id}</span>
+                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-md bg-risk">{d.id}</span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${d.severity === 'Material Weakness' ? 'text-risk-700 bg-risk-50' : 'text-high-700 bg-high-50'}`}>{d.severity}</span>
                   <span className="text-[10px] font-semibold text-evidence-700 bg-evidence-50 px-2 py-0.5 rounded-full">{d.status}</span>
                 </div>
@@ -540,10 +540,10 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
     ];
     const riskColor = (l: number, i: number) => {
       const score = l * i;
-      if (score >= 12) return 'bg-risk-500';
-      if (score >= 8) return 'bg-orange-400';
-      if (score >= 4) return 'bg-amber-300';
-      return 'bg-emerald-300';
+      if (score >= 12) return 'bg-risk';
+      if (score >= 8) return 'bg-high';
+      if (score >= 4) return 'bg-mitigated';
+      return 'bg-compliant';
     };
     return (
       <div className="space-y-5">
@@ -577,7 +577,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
             <div className="w-48">
               <div className="text-[10px] font-semibold text-text mb-2">Legend</div>
               <div className="space-y-1.5">
-                {[{ c: 'bg-risk-500', l: 'Critical (12-25)' }, { c: 'bg-orange-400', l: 'High (8-11)' }, { c: 'bg-amber-300', l: 'Medium (4-7)' }, { c: 'bg-emerald-300', l: 'Low (1-3)' }].map(item => (
+                {[{ c: 'bg-risk', l: 'Critical (12-25)' }, { c: 'bg-high', l: 'High (8-11)' }, { c: 'bg-mitigated', l: 'Medium (4-7)' }, { c: 'bg-compliant', l: 'Low (1-3)' }].map(item => (
                   <div key={item.l} className="flex items-center gap-2 text-[10px] text-text-secondary"><div className={`w-3 h-3 rounded ${item.c}`} /> {item.l}</div>
                 ))}
               </div>
@@ -637,7 +637,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         {/* Effectiveness Scorecards */}
         <div className="grid grid-cols-4 gap-3">
           {processes.map(p => (
-            <div key={p.name} className="bg-white rounded-xl border border-border-light p-4 hover:shadow-md hover:shadow-primary/5 transition-all">
+            <div key={p.name} className="bg-white rounded-xl border border-border-light p-4 hover:shadow-primary/5 transition-all">
               <div className="text-[11px] font-semibold text-text-muted mb-2">{p.name}</div>
               <div className="text-[28px] font-bold text-text leading-none">{p.rate}%</div>
               <div className="text-[10px] text-text-muted mt-1 mb-3">Effectiveness Rate</div>
@@ -719,7 +719,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
         {/* Workflow Performance Cards */}
         <div className="grid grid-cols-2 gap-3">
           {workflows.map(w => (
-            <div key={w.name} className="bg-white rounded-xl border border-border-light p-4 hover:shadow-md hover:shadow-primary/5 transition-all">
+            <div key={w.name} className="bg-white rounded-xl border border-border-light p-4 hover:shadow-primary/5 transition-all">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-[12px] font-semibold text-text">{w.name}</h4>
                 <span className="text-[10px] font-bold text-compliant-700 bg-compliant-50 px-2 py-0.5 rounded-full">{w.accuracy}% accuracy</span>
@@ -893,7 +893,7 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
               Query · {query.id}
             </span>
             <span className={`px-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide ${query.status === 'Completed' ? 'text-compliant-700' : 'text-mitigated-700'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${query.status === 'Completed' ? 'bg-compliant-500' : 'bg-mitigated-500'}`} />
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${query.status === 'Completed' ? 'bg-compliant' : 'bg-mitigated'}`} />
               {query.status}
             </span>
             <span className="px-2 text-[11px] font-semibold text-primary uppercase tracking-wide">
@@ -1371,7 +1371,7 @@ function ReportView({ report, onBack, onShare }: {
         {/* Summary Stats Bar */}
         <div className="grid grid-cols-4 gap-3 mb-5">
           {activeStats.map(stat => (
-            <div key={stat.label} className="glass-card rounded-xl p-4 flex items-center gap-3 hover:shadow-md hover:shadow-primary/5 transition-all">
+            <div key={stat.label} className="glass-card rounded-xl p-4 flex items-center gap-3 hover:shadow-primary/5 transition-all">
               <div className={`p-2 rounded-lg ${stat.color}`}><stat.icon size={16} /></div>
               <div>
                 <div className="text-xl font-bold text-text">{stat.value}</div>
@@ -1610,7 +1610,7 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
               {filteredReports.map((r, i) => {
                 return (
                   <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                    className="glass-card rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all group cursor-pointer flex flex-col"
+                    className="glass-card rounded-xl p-4 hover:border-primary/20 transition-all group cursor-pointer flex flex-col"
                     onClick={() => setViewingReport(r)}
                   >
                     <div className="flex items-center justify-between mb-3">
@@ -1618,7 +1618,7 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Download"><Download size={15} /></button>
                         <button onClick={(e) => { e.stopPropagation(); onShare ? onShare(r.id) : addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Share"><Share2 size={15} /></button>
-                        <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="hover:text-red-500 transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Delete"><Trash2 size={15} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="hover:text-risk transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Delete"><Trash2 size={15} /></button>
                       </div>
                     </div>
                     <div className="font-medium text-text group-hover:text-primary transition-colors mb-1" style={{ fontSize: '14px', lineHeight: '20px' }}>{r.name}</div>
@@ -1695,7 +1695,7 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
             <div className="p-4 grid grid-cols-3 gap-4 items-start">
               {SHARED_REPORTS.map((r, i) => (
                 <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                  className="glass-card rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all group cursor-pointer flex flex-col"
+                  className="glass-card rounded-xl p-4 hover:border-primary/20 transition-all group cursor-pointer flex flex-col"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center justify-center shrink-0" style={{ width: '42px', height: '42px', background: 'rgba(106,18,205,0.04)', borderRadius: '8px' }}><FileText size={20} style={{ color: '#6a12cd' }} /></div>
@@ -1737,15 +1737,15 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
               { key: 'vendor', label: 'Vendor' },
               { key: 'amount', label: 'Amount', align: 'right', width: '110px', render: (item) => `$${Number(item.amount).toLocaleString()}` },
               { key: 'matchScore', label: 'Match %', align: 'center', width: '90px', render: (item) => (
-                <span className={`font-semibold ${Number(item.matchScore) >= 90 ? 'text-red-600' : 'text-amber-600'}`}>{String(item.matchScore)}%</span>
+                <span className={`font-semibold ${Number(item.matchScore) >= 90 ? 'text-risk-700' : 'text-mitigated-700'}`}>{String(item.matchScore)}%</span>
               )},
               { key: 'status', label: 'Status', width: '120px', render: (item) => {
                 const map: Record<string, string> = {
                   unassigned: 'bg-gray-100 text-gray-600',
-                  assigned: 'bg-blue-50 text-blue-700',
-                  'in-progress': 'bg-amber-50 text-amber-700',
+                  assigned: 'bg-evidence-50 text-evidence-700',
+                  'in-progress': 'bg-mitigated-50 text-mitigated-700',
                   notified: 'bg-purple-50 text-purple-700',
-                  resolved: 'bg-green-50 text-green-700',
+                  resolved: 'bg-compliant-50 text-compliant-700',
                 };
                 const label = String(item.status).replace('-', ' ');
                 return <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize ${map[String(item.status)] ?? 'bg-gray-100 text-gray-600'}`}>{label}</span>;
@@ -1766,12 +1766,12 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="glass-card rounded-2xl p-5 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.98] transition-all duration-300 group cursor-pointer"
+                  className="glass-card rounded-2xl p-5 hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.98] transition-all duration-300 group cursor-pointer"
                   onClick={() => setPreviewingTemplate(rt)}
                 >
                   <div className="mb-3">
                     <div className="flex items-start justify-between mb-2">
-                      <div className={`p-2.5 shrink-0 ${color} group-hover:scale-110 transition-transform duration-300`} style={{ borderRadius: '8px' }}><Icon size={18} /></div>
+                      <div className={`p-2.5 shrink-0 ${color} transition-colors`} style={{ borderRadius: '8px' }}><Icon size={18} /></div>
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }}
                         className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer shrink-0"
@@ -1853,7 +1853,7 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
               {/* Form */}
               <div className="p-6 space-y-5">
                 <div>
-                  <label className="block text-[12px] font-semibold text-text mb-1.5">Report <span className="text-red-500">*</span></label>
+                  <label className="block text-[12px] font-semibold text-text mb-1.5">Report <span className="text-risk">*</span></label>
                   <input
                     value={newReportName}
                     onChange={e => setNewReportName(e.target.value)}

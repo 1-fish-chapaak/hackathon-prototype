@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import {
-  Search, Filter, ChevronRight, MessageSquare,
-  CheckCircle2, Clock, AlertTriangle, Circle,
-  ShieldCheck, XCircle, ArrowRight
+  Search, Filter, ChevronRight, MessageSquare, ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Orb from '../shared/Orb';
@@ -116,59 +114,55 @@ const CONTROLS: ControlRow[] = [
 ];
 
 function TestingBadge({ status }: { status: string }) {
-  const map: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
-    'Complete': { bg: 'bg-green-50', text: 'text-green-700', icon: <CheckCircle2 size={11} /> },
-    'In Progress': { bg: 'bg-blue-50', text: 'text-blue-700', icon: <Clock size={11} /> },
-    'Not Started': { bg: 'bg-gray-100', text: 'text-gray-500', icon: <Circle size={11} /> },
+  const map: Record<string, string> = {
+    'Complete': 'bg-compliant-50 text-compliant-700',
+    'In Progress': 'bg-evidence-50 text-evidence-700',
+    'Not Started': 'bg-paper-100 text-ink-500',
   };
-  const s = map[status] || map['Not Started'];
   return (
-    <span className={`inline-flex items-center gap-1 ${s.bg} ${s.text} px-2 py-0.5 rounded-full text-[12px] font-bold whitespace-nowrap`}>
-      {s.icon}
+    <span className={`inline-flex items-center px-2 h-6 rounded-full text-[12px] font-medium whitespace-nowrap ${map[status] ?? map['Not Started']}`}>
       {status}
     </span>
   );
 }
 
 function ConclusionBadge({ conclusion }: { conclusion: string }) {
-  if (!conclusion) return <span className="text-gray-300 text-[12px]">-</span>;
-  const map: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
-    'Effective': { bg: 'bg-green-50', text: 'text-green-700', icon: <ShieldCheck size={11} /> },
-    'Ineffective': { bg: 'bg-red-50', text: 'text-red-700', icon: <XCircle size={11} /> },
-    'Exception': { bg: 'bg-amber-50', text: 'text-amber-700', icon: <AlertTriangle size={11} /> },
-    'Pending': { bg: 'bg-gray-100', text: 'text-gray-500', icon: <Clock size={11} /> },
+  if (!conclusion) return <span className="text-ink-400 text-[12px]">—</span>;
+  const map: Record<string, string> = {
+    'Effective': 'bg-compliant-50 text-compliant-700',
+    'Ineffective': 'bg-risk-50 text-risk-700',
+    'Exception': 'bg-mitigated-50 text-mitigated-700',
+    'Pending': 'bg-paper-100 text-ink-500',
   };
-  const s = map[conclusion] || map['Pending'];
   return (
-    <span className={`inline-flex items-center gap-1 ${s.bg} ${s.text} px-2 py-0.5 rounded-full text-[12px] font-bold whitespace-nowrap`}>
-      {s.icon}
+    <span className={`inline-flex items-center px-2 h-6 rounded-full text-[12px] font-medium whitespace-nowrap ${map[conclusion] ?? map['Pending']}`}>
       {conclusion}
     </span>
   );
 }
 
 function EvidenceBadge({ label, status }: { label: string; status: 'complete' | 'partial' | 'none' }) {
-  if (label === '-') return <span className="text-gray-300 text-[12px]">-</span>;
+  if (label === '-') return <span className="text-ink-400 text-[12px]">—</span>;
   const colors = {
-    complete: 'text-green-600',
-    partial: 'text-amber-600',
-    none: 'text-gray-400',
+    complete: 'text-compliant',
+    partial: 'text-mitigated-700',
+    none: 'text-ink-400',
   };
-  return <span className={`text-[12px] font-medium ${colors[status]}`}>{label}</span>;
+  return <span className={`text-[12px] font-medium tabular-nums ${colors[status]}`}>{label}</span>;
 }
 
 function ActionButton({ label, type, onClick }: { label: string; type: string; onClick?: () => void }) {
   const styles: Record<string, string> = {
-    success: 'bg-green-50 text-green-700 hover:bg-green-100 border-green-200',
-    warning: 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200',
-    primary: 'bg-primary/5 text-primary hover:bg-primary/10 border-primary/20',
-    danger: 'bg-red-50 text-red-700 hover:bg-red-100 border-red-200',
-    default: 'bg-gray-50 text-gray-600 hover:bg-gray-100 border-gray-200',
+    success: 'bg-canvas-elevated border-canvas-border text-ink-700 hover:bg-compliant-50 hover:text-compliant-700 hover:border-compliant-50',
+    warning: 'bg-canvas-elevated border-canvas-border text-ink-700 hover:bg-mitigated-50 hover:text-mitigated-700 hover:border-mitigated-50',
+    primary: 'bg-brand-600 border-brand-600 text-white hover:bg-brand-500 hover:border-brand-500',
+    danger: 'bg-canvas-elevated border-canvas-border text-ink-700 hover:bg-risk hover:text-white hover:border-risk',
+    default: 'bg-canvas-elevated border-canvas-border text-ink-600 hover:border-brand-200 hover:text-ink-800',
   };
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[12px] font-semibold transition-all cursor-pointer active:scale-[0.97] ${styles[type] || styles.default}`}
+      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[12px] font-semibold transition-colors cursor-pointer ${styles[type] || styles.default}`}
     >
       {label}
       <ArrowRight size={10} />
@@ -196,7 +190,7 @@ export default function ControlTestingView({ onAskAI }: Props) {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={210} opacity={0.08} />
-      <div className="px-10 py-8 relative">
+      <div className="p-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
@@ -220,7 +214,7 @@ export default function ControlTestingView({ onAskAI }: Props) {
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-[12px] font-medium transition-all cursor-pointer ${
                 activeFilter === f.key
                   ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary/20'
-                  : 'border-border-light bg-white text-text-secondary hover:shadow-md hover:border-primary/20 active:scale-[0.98]'
+                  : 'border-border-light bg-white text-text-secondary hover:border-primary/20 active:scale-[0.98]'
               }`}
             >
               {f.label}
@@ -242,9 +236,9 @@ export default function ControlTestingView({ onAskAI }: Props) {
             { label: 'Exceptions', value: '5', color: 'text-danger' },
             { label: 'Completion', value: '62%', color: 'text-primary', progress: 62 },
           ].map(card => (
-            <div key={card.label} className="bg-white rounded-xl border border-border-light p-3 text-center hover:shadow-md transition-all duration-200">
+            <div key={card.label} className="bg-white rounded-xl border border-border-light p-3 text-center transition-all duration-200">
               <div className={`text-xl font-bold ${card.color}`}>{card.value}</div>
-              <div className="text-[12px] text-text-muted uppercaser">{card.label}</div>
+              <div className="text-[12px] text-text-muted">{card.label}</div>
               {card.progress !== undefined && (
                 <div className="mt-1.5 h-1.5 bg-border-light rounded-full overflow-hidden">
                   <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${card.progress}%` }} />
@@ -273,7 +267,7 @@ export default function ControlTestingView({ onAskAI }: Props) {
               <thead>
                 <tr className="border-b border-border-light bg-surface-2/50">
                   {['Control', 'Engagement', 'Population', 'Sample', 'Evidence', 'Testing', 'Reviewer', 'Conclusion', 'Next Action', ''].map(h => (
-                    <th key={h} className="px-3 py-3 text-left text-[12px] font-semibold text-text-muted uppercaser">
+                    <th key={h} className="px-3 py-3 text-left text-[12px] font-semibold text-text-muted">
                       {h}
                     </th>
                   ))}
@@ -301,8 +295,8 @@ export default function ControlTestingView({ onAskAI }: Props) {
                       </td>
                       <td className="px-3 py-3">
                         <span className={`text-[12px] font-medium ${
-                          row.populationStatus === 'validated' ? 'text-green-600' :
-                          row.populationStatus === 'received' ? 'text-blue-600' :
+                          row.populationStatus === 'validated' ? 'text-compliant' :
+                          row.populationStatus === 'received' ? 'text-evidence-700' :
                           'text-gray-400'
                         }`}>
                           {row.population}

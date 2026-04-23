@@ -624,7 +624,7 @@ function OutputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
   return (
     <div className="space-y-3">
       {/* Dashboard KPIs */}
-      <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-3.5">
+      <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
         <div className="text-[12.5px] font-semibold text-ink-800 mb-3">Dashboard KPIs</div>
         <div className="space-y-2.5">
           {KPI_ITEMS.map(({ key, label, badge }) => {
@@ -660,7 +660,7 @@ function OutputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
       </div>
 
       {/* Output Layout */}
-      <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-3.5">
+      <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
         <div className="text-[12.5px] font-semibold text-ink-800 mb-3">Output Layout</div>
         <div className="flex gap-2">
           {(
@@ -696,7 +696,7 @@ function OutputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
       </div>
 
       {/* Delivery & Routing */}
-      <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-3.5">
+      <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
         <div className="flex items-center gap-2 mb-3">
           <Send size={13} className="text-ink-400" />
           <span className="text-[12.5px] font-semibold text-ink-800">Delivery & Routing</span>

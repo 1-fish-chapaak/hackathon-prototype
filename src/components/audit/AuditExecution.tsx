@@ -36,7 +36,7 @@ export default function AuditExecution({ onAskAboutControl: _unused }: Props) {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-10 py-8 relative">
+      <div className="p-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
@@ -54,7 +54,7 @@ export default function AuditExecution({ onAskAboutControl: _unused }: Props) {
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-[13px] font-medium transition-all cursor-pointer ${
                 selectedEngId === e.id
                   ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary/20'
-                  : 'border-border-light bg-white text-text-secondary hover:shadow-md hover:border-primary/20 active:scale-[0.98]'
+                  : 'border-border-light bg-white text-text-secondary hover:border-primary/20 active:scale-[0.98]'
               }`}
             >
               <FrameworkBadge fw={e.type} />
@@ -82,23 +82,23 @@ export default function AuditExecution({ onAskAboutControl: _unused }: Props) {
           <div className="grid grid-cols-5 gap-4">
             <div className="bg-surface-2 rounded-lg p-3 text-center hover:bg-surface-2/80 transition-colors duration-200">
               <div className="text-xl font-bold text-text">{eng.controls}</div>
-              <div className="text-[12px] text-text-muted uppercaser">Total Controls</div>
+              <div className="text-[12px] text-text-muted">Total Controls</div>
             </div>
             <div className="bg-surface-2 rounded-lg p-3 text-center hover:bg-surface-2/80 transition-colors duration-200">
               <div className="text-xl font-bold text-info">{eng.tested}</div>
-              <div className="text-[12px] text-text-muted uppercaser">Tested</div>
+              <div className="text-[12px] text-text-muted">Tested</div>
             </div>
             <div className="bg-surface-2 rounded-lg p-3 text-center hover:bg-surface-2/80 transition-colors duration-200">
               <div className="text-xl font-bold text-success">{eng.effective}</div>
-              <div className="text-[12px] text-text-muted uppercaser">Effective</div>
+              <div className="text-[12px] text-text-muted">Effective</div>
             </div>
             <div className="bg-surface-2 rounded-lg p-3 text-center hover:bg-surface-2/80 transition-colors duration-200">
               <div className="text-xl font-bold text-danger">{eng.deficiencies}</div>
-              <div className="text-[12px] text-text-muted uppercaser">Deficiencies</div>
+              <div className="text-[12px] text-text-muted">Deficiencies</div>
             </div>
             <div className="bg-surface-2 rounded-lg p-3 text-center hover:bg-surface-2/80 transition-colors duration-200">
               <div className="text-xl font-bold text-primary">{progress}%</div>
-              <div className="text-[12px] text-text-muted uppercaser">Progress</div>
+              <div className="text-[12px] text-text-muted">Progress</div>
               <div className="mt-1.5 h-1.5 bg-border-light rounded-full overflow-hidden">
                 <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progress}%` }} />
               </div>

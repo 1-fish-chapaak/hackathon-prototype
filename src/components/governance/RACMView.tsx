@@ -43,8 +43,8 @@ const MOCK_RACMS: RACMRow[] = [
 ];
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
-  Active: { bg: 'bg-success-bg', text: 'text-green-800', dot: 'bg-success' },
-  'In Mapping': { bg: 'bg-warning-bg', text: 'text-amber-800', dot: 'bg-warning' },
+  Active: { bg: 'bg-success-bg', text: 'text-compliant-700', dot: 'bg-success' },
+  'In Mapping': { bg: 'bg-warning-bg', text: 'text-mitigated-700', dot: 'bg-warning' },
   Draft: { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
 };
 
@@ -98,10 +98,10 @@ const RISK_HIERARCHY = [
 ];
 
 const SEVERITY_STYLES: Record<string, { bg: string; text: string }> = {
-  critical: { bg: 'bg-red-100', text: 'text-red-800' },
-  high: { bg: 'bg-orange-100', text: 'text-orange-800' },
-  medium: { bg: 'bg-amber-100', text: 'text-amber-800' },
-  low: { bg: 'bg-green-100', text: 'text-green-800' },
+  critical: { bg: 'bg-risk-50', text: 'text-risk-700' },
+  high: { bg: 'bg-high-50', text: 'text-high-700' },
+  medium: { bg: 'bg-mitigated-50', text: 'text-mitigated-700' },
+  low: { bg: 'bg-compliant-50', text: 'text-compliant-700' },
 };
 
 /* ─── 3-Level Risk Hierarchy Component ─── */
@@ -136,12 +136,12 @@ function RiskHierarchy() {
             {/* Level 1: Risk */}
             <button
               onClick={() => toggleRisk(risk.id)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-surface-2 transition-colors cursor-pointer"
+              className="w-full flex items-center gap-3 px-4 py-4 hover:bg-surface-2 transition-colors cursor-pointer"
             >
               <div className="shrink-0">
                 {isExpanded ? <ChevronDown size={14} className="text-text-muted" /> : <ChevronRight size={14} className="text-text-muted" />}
               </div>
-              <div className="p-1.5 rounded-lg bg-red-50 text-red-500 shrink-0">
+              <div className="p-1.5 rounded-lg bg-risk-50 text-risk shrink-0">
                 <AlertTriangle size={14} />
               </div>
               <div className="flex-1 text-left">
@@ -164,7 +164,7 @@ function RiskHierarchy() {
                         <button onClick={() => toggleControl(control.id)} className="shrink-0 cursor-pointer">
                           {ctlExpanded ? <ChevronDown size={12} className="text-text-muted" /> : <ChevronRight size={12} className="text-text-muted" />}
                         </button>
-                        <div className="p-1 rounded-md bg-blue-50 text-blue-500 shrink-0">
+                        <div className="p-1 rounded-md bg-evidence-50 text-evidence shrink-0">
                           <Shield size={12} />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -178,8 +178,8 @@ function RiskHierarchy() {
                           }}
                           className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer ${
                             control.linked
-                              ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                              : 'bg-green-50 text-green-600 hover:bg-green-100'
+                              ? 'bg-risk-50 text-risk-700 hover:bg-risk-50'
+                              : 'bg-compliant-50 text-compliant hover:bg-compliant-50'
                           }`}
                         >
                           {control.linked ? <><Unlink size={10} /> Unlink</> : <><Link2 size={10} /> Link</>}
@@ -191,7 +191,7 @@ function RiskHierarchy() {
                         <div className="bg-surface-2/50">
                           {control.workflows.map((wf) => (
                             <div key={wf.id} className="flex items-center gap-3 px-4 pl-20 py-2.5 hover:bg-surface-2 transition-colors">
-                              <div className="p-1 rounded-md bg-emerald-50 text-emerald-500 shrink-0">
+                              <div className="p-1 rounded-md bg-compliant-50 text-compliant shrink-0">
                                 <Workflow size={11} />
                               </div>
                               <div className="flex-1 min-w-0">
@@ -202,8 +202,8 @@ function RiskHierarchy() {
                                 onClick={() => addToast({ message: wf.linked ? `Unlinked ${wf.id}` : `Linked ${wf.id}`, type: 'info' })}
                                 className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer ${
                                   wf.linked
-                                    ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                                    : 'bg-green-50 text-green-600 hover:bg-green-100'
+                                    ? 'bg-risk-50 text-risk-700 hover:bg-risk-50'
+                                    : 'bg-compliant-50 text-compliant hover:bg-compliant-50'
                                 }`}
                               >
                                 {wf.linked ? <><Unlink size={9} /> Unlink</> : <><Link2 size={9} /> Link</>}
@@ -242,7 +242,7 @@ export default function RACMView({}: Props) {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="px-10 py-8 relative">
+      <div className="p-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
@@ -268,8 +268,8 @@ export default function RACMView({}: Props) {
         </div>
 
         {/* AI Insight */}
-        <div className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-2xl border border-primary/10 p-4 mb-6 flex items-center gap-4 ai-shimmer">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shrink-0 ai-pulse-ring">
+        <div className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-2xl border border-primary/10 p-4 mb-6 flex items-center gap-4">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shrink-0">
             <Sparkles size={16} className="text-white" />
           </div>
           <div className="flex-1">
@@ -353,7 +353,7 @@ export default function RACMView({}: Props) {
                 </div>
                 {/* Risk → Control → Workflow hierarchy */}
                 <div>
-                  <div className="text-[12px] font-bold text-text-muted uppercaser mb-2">Risk Hierarchy</div>
+                  <div className="text-[12px] font-bold text-text-muted mb-2">Risk Hierarchy</div>
                   <RiskHierarchy />
                 </div>
               </div>
@@ -457,7 +457,7 @@ export default function RACMView({}: Props) {
                 const racm = item as unknown as RACMRow;
                 if (racm.completeness >= 100) return null;
                 return (
-                  <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[12px] font-semibold whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1 bg-mitigated-50 text-mitigated-700 px-2 py-0.5 rounded text-[12px] font-semibold whitespace-nowrap">
                     <AlertTriangle size={10} />
                     Missing
                   </span>

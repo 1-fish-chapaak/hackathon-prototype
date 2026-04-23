@@ -130,7 +130,7 @@ export default function StepWritePrompt({
                     <span className="text-[13px] font-semibold text-ink-800 truncate">
                       {w.name}
                     </span>
-                    <span className="text-[12px] font-semibold uppercaser rounded-full px-1.5 py-0.5 bg-compliant-50 text-compliant-700">
+                    <span className="text-[12px] font-semibold rounded-full px-1.5 py-0.5 bg-compliant-50 text-compliant-700">
                       Template
                     </span>
                   </div>
@@ -174,10 +174,10 @@ export default function StepWritePrompt({
                     <span className="text-[13px] font-semibold text-ink-800 truncate">
                       {w.name}
                     </span>
-                    <span className="text-[12px] font-semibold uppercaser rounded-full px-1.5 py-0.5 bg-compliant-50 text-compliant-700">
+                    <span className="text-[12px] font-semibold rounded-full px-1.5 py-0.5 bg-compliant-50 text-compliant-700">
                       {w.status === 'active' ? 'Active' : 'Draft'}
                     </span>
-                    <span className="text-[12px] font-semibold uppercaser rounded-full px-1.5 py-0.5 bg-brand-50 text-brand-700">
+                    <span className="text-[12px] font-semibold rounded-full px-1.5 py-0.5 bg-brand-50 text-brand-700">
                       {w.type}
                     </span>
                   </div>

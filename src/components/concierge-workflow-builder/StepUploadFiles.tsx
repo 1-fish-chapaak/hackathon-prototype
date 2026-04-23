@@ -103,7 +103,7 @@ export default function StepUploadFiles({ workflow, files, setFiles }: Props) {
                   ].join(' ')}
                 >
                   {input.name}
-                  <span className="text-[12px] uppercaser font-bold opacity-70">
+                  <span className="text-[12px] font-bold opacity-70">
                     {input.type}
                   </span>
                   {uploaded > 0 && (
@@ -112,7 +112,7 @@ export default function StepUploadFiles({ workflow, files, setFiles }: Props) {
                     </span>
                   )}
                   {input.required && uploaded === 0 && (
-                    <span className="text-[9.5px] uppercaser font-bold text-risk">
+                    <span className="text-[9.5px] font-bold text-risk">
                       Required
                     </span>
                   )}
@@ -196,7 +196,7 @@ export default function StepUploadFiles({ workflow, files, setFiles }: Props) {
 
       {/* OR LINK FROM EXISTING DATA SOURCE */}
       <section className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
-        <div className="text-center text-[12px] font-bold uppercaser text-ink-400 mb-3">
+        <div className="text-center text-[12px] font-bold text-ink-400 mb-3">
           Or link from existing data source
         </div>
         <div className="relative mb-3">

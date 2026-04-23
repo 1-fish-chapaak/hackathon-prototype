@@ -55,7 +55,7 @@ export default function PowerBIImportWizard({ onClose }: Props) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ duration: 0.2 }}
-        className="relative glass-card-strong rounded-2xl shadow-2xl w-[600px] overflow-hidden"
+        className="relative glass-card-strong rounded-2xl shadow-2xl w-[560px] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -93,25 +93,25 @@ export default function PowerBIImportWizard({ onClose }: Props) {
         <div className="px-5 py-5 min-h-[300px]">
           <AnimatePresence mode="wait">
             {step === 'connect' && (
-              <motion.div key="connect" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col items-center text-center py-8">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center mb-4 shadow-lg">
-                  <BarChart3 size={28} className="text-white" />
+              <motion.div key="connect" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} className="flex flex-col items-start text-left py-8">
+                <div className="w-12 h-12 rounded-xl bg-mitigated-50 border border-mitigated-50 flex items-center justify-center mb-4">
+                  <BarChart3 size={24} className="text-mitigated-700" />
                 </div>
-                <h4 className="text-[16px] font-semibold text-text mb-1">Connect to Power BI</h4>
-                <p className="text-[13px] text-text-muted mb-6 max-w-[300px]">Sign in to your Power BI account to browse and import dashboards.</p>
+                <h4 className="text-[16px] font-semibold text-ink-800 mb-1">Connect to Power BI</h4>
+                <p className="text-[13px] text-ink-500 mb-6 max-w-[300px]">Sign in to your Power BI account to browse and import dashboards.</p>
                 {connected ? (
                   <div className="flex items-center gap-2 text-compliant-700">
                     <CheckCircle size={20} />
-                    <span className="text-[14px] font-semibold">Connected!</span>
+                    <span className="text-[14px] font-semibold">Connected.</span>
                   </div>
                 ) : (
                   <button
                     onClick={handleConnect}
                     disabled={connecting}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-xl text-[14px] font-semibold hover:from-yellow-600 hover:to-yellow-700 disabled:opacity-60 transition-all cursor-pointer shadow-sm"
+                    className="flex items-center gap-2 px-5 h-10 bg-brand-600 text-white rounded-md text-[13px] font-semibold hover:bg-brand-500 disabled:opacity-60 transition-colors cursor-pointer"
                   >
                     {connecting ? <Loader2 size={16} className="animate-spin" /> : <BarChart3 size={16} />}
-                    {connecting ? 'Connecting...' : 'Connect to Power BI'}
+                    {connecting ? 'Connecting…' : 'Connect to Power BI'}
                   </button>
                 )}
               </motion.div>
@@ -131,7 +131,7 @@ export default function PowerBIImportWizard({ onClose }: Props) {
                           : 'border-border-light hover:border-primary/30 bg-white'
                       }`}
                     >
-                      <div className="h-12 rounded-lg bg-gradient-to-br from-yellow-100 to-orange-100 mb-2.5 flex items-center justify-center">
+                      <div className="h-12 rounded-lg bg-mitigated-50 border border-mitigated-50 mb-2.5 flex items-center justify-center">
                         <BarChart3 size={20} className="text-mitigated-700" />
                       </div>
                       <div className="text-[12px] font-semibold text-text mb-0.5">{dash.name}</div>
@@ -161,12 +161,12 @@ export default function PowerBIImportWizard({ onClose }: Props) {
                 <div className="rounded-xl border border-border-light bg-surface-2 p-4 mb-4">
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     {Array.from({ length: Math.min(selectedData.tiles, 6) }).map((_, i) => (
-                      <div key={i} className={`h-16 rounded-lg ${
-                        i % 3 === 0 ? 'bg-gradient-to-br from-blue-100 to-blue-200' :
-                        i % 3 === 1 ? 'bg-gradient-to-br from-green-100 to-green-200' :
-                        'bg-gradient-to-br from-purple-100 to-purple-200'
-                      } flex items-center justify-center`}>
-                        <div className="w-8 h-2 bg-white/50 rounded" />
+                      <div key={i} className={`h-16 rounded-lg flex items-center justify-center ${
+                        i % 3 === 0 ? 'bg-evidence-50' :
+                        i % 3 === 1 ? 'bg-compliant-50' :
+                        'bg-brand-50'
+                      }`}>
+                        <div className="w-8 h-2 bg-white/60 rounded" />
                       </div>
                     ))}
                   </div>

@@ -34,7 +34,7 @@ function DetectionOutput() {
       <div className="grid grid-cols-[4px_70px_1fr_100px_60px_70px_160px] gap-3 px-4 py-2.5 bg-surface-2 border-b border-border-light">
         <span />
         {['Flag', 'Description', 'Amount', 'Score', 'Date', 'Actions'].map(h => (
-          <span key={h} className="text-[12px] font-bold text-text-muted uppercaser">{h}</span>
+          <span key={h} className="text-[12px] font-bold text-text-muted">{h}</span>
         ))}
       </div>
       {rows.map((r, i) => (
@@ -81,9 +81,9 @@ function MonitoringOutput() {
   ];
 
   const statusColor: Record<string, { bg: string; dot: string; label: string }> = {
-    red: { bg: 'bg-risk-50', dot: 'bg-risk-500', label: 'Critical' },
-    amber: { bg: 'bg-mitigated-50', dot: 'bg-mitigated-500', label: 'Warning' },
-    green: { bg: 'bg-compliant-50', dot: 'bg-compliant-500', label: 'Normal' },
+    red: { bg: 'bg-risk-50', dot: 'bg-risk', label: 'Critical' },
+    amber: { bg: 'bg-mitigated-50', dot: 'bg-mitigated', label: 'Warning' },
+    green: { bg: 'bg-compliant-50', dot: 'bg-compliant', label: 'Normal' },
   };
 
   return (
@@ -154,20 +154,20 @@ function ComplianceOutput() {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-[20px] font-bold font-mono text-text">{pct}%</span>
-            <span className="text-[12px] text-text-muted uppercaser">Compliant</span>
+            <span className="text-[12px] text-text-muted">Compliant</span>
           </div>
         </div>
         <div className="flex-1 grid grid-cols-3 gap-4">
           <div>
-            <div className="text-[12px] text-text-muted uppercaser mb-0.5">Passed</div>
+            <div className="text-[12px] text-text-muted mb-0.5">Passed</div>
             <div className="text-[20px] font-bold font-mono text-compliant-700">{passCount}</div>
           </div>
           <div>
-            <div className="text-[12px] text-text-muted uppercaser mb-0.5">Failed</div>
+            <div className="text-[12px] text-text-muted mb-0.5">Failed</div>
             <div className="text-[20px] font-bold font-mono text-risk-700">{total - passCount}</div>
           </div>
           <div>
-            <div className="text-[12px] text-text-muted uppercaser mb-0.5">Total Checks</div>
+            <div className="text-[12px] text-text-muted mb-0.5">Total Checks</div>
             <div className="text-[20px] font-bold font-mono text-text">{total}</div>
           </div>
         </div>
@@ -228,8 +228,8 @@ function ReconciliationOutput() {
             className={`grid grid-cols-[1fr_auto_1fr] gap-0 rounded-xl border overflow-hidden ${m.status === 'unmatched' ? 'border-risk' : m.status === 'variance' ? 'border-mitigated' : 'border-border-light'}`}
           >
             {/* PO Side */}
-            <div className="p-3.5 bg-white">
-              <div className="text-[12px] font-bold text-text-muted uppercaser mb-1">Purchase Order</div>
+            <div className="p-4 bg-white">
+              <div className="text-[12px] font-bold text-text-muted mb-1">Purchase Order</div>
               <div className="text-[13px] font-mono font-semibold text-primary">{m.po}</div>
               <div className="text-[12px] font-mono text-text mt-0.5">{m.poAmt}</div>
             </div>
@@ -247,9 +247,9 @@ function ReconciliationOutput() {
             </div>
 
             {/* Invoice Side */}
-            <div className="p-3.5 bg-white">
-              <div className="text-[12px] font-bold text-text-muted uppercaser mb-1">Invoice</div>
-              <div className={`text-[13px] font-mono font-semibold ${m.inv === '—' ? 'text-red-400' : 'text-primary'}`}>{m.inv}</div>
+            <div className="p-4 bg-white">
+              <div className="text-[12px] font-bold text-text-muted mb-1">Invoice</div>
+              <div className={`text-[13px] font-mono font-semibold ${m.inv === '—' ? 'text-risk-700' : 'text-primary'}`}>{m.inv}</div>
               <div className={`text-[12px] font-mono mt-0.5 ${m.inv === '—' ? 'text-text-muted' : 'text-text'}`}>{m.invAmt}</div>
               {m.grn !== '—' && (
                 <div className="text-[12px] text-text-muted mt-0.5">GRN: {m.grn} · {m.grnAmt}</div>

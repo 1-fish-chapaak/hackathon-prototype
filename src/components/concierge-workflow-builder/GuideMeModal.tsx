@@ -260,7 +260,7 @@ export default function GuideMeModal({ open, onClose, onPick }: Props) {
                             onPick(t.basePrompt, t.name);
                             onClose();
                           }}
-                          className="w-full text-left group rounded-xl border border-canvas-border bg-canvas-elevated hover:border-brand-300 hover:bg-brand-50/40 transition-colors p-3.5 cursor-pointer"
+                          className="w-full text-left group rounded-xl border border-canvas-border bg-canvas-elevated hover:border-brand-300 hover:bg-brand-50/40 transition-colors p-4 cursor-pointer"
                         >
                           <div className="flex items-center justify-between gap-3 mb-1">
                             <span className="text-[13px] font-semibold text-ink-800">

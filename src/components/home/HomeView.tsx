@@ -327,12 +327,12 @@ function HealthDashboardSection() {
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-[12px] font-semibold text-brand-600">FY26</span>
-              <div className="flex items-center gap-1 text-[12px] font-semibold text-emerald-600">
+              <div className="flex items-center gap-1 text-[12px] font-semibold text-compliant">
                 <TrendingUp size={11} />
-                +{completionPct > 0 ? Math.round(completionPct * 0.13) : 0}%
+                +<span className="tabular-nums">{completionPct > 0 ? Math.round(completionPct * 0.13) : 0}</span>%
               </div>
             </div>
-            <div className="text-[48px] font-extrabold leading-none text-ink-900">{completionPct}%</div>
+            <div className="text-[48px] font-semibold leading-none tabular-nums text-ink-900">{completionPct}%</div>
             <p className="text-[13px] text-ink-500 mt-2 leading-relaxed max-w-[280px]">
               {executed} of {planned} controls executed across {active.length} active engagements.
             </p>
@@ -358,26 +358,25 @@ function HealthDashboardSection() {
         {/* ── Risk Overview — top middle ── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-          className="col-span-4 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
-          style={{ background: '#FFF9EB', borderColor: '#F5E6C0' }}
+          className="col-span-4 rounded-2xl p-5 flex flex-col justify-between cursor-default border bg-mitigated-50 border-mitigated-50"
         >
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#F59E0B' }}>
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-mitigated">
                 <AlertTriangle size={13} className="text-white" />
               </div>
-              <span className="text-[12px] font-semibold" style={{ color: '#92400E' }}>Risk Overview</span>
+              <span className="text-[12px] font-semibold text-mitigated-700">Risk overview</span>
             </div>
-            <div className="text-[32px] font-extrabold leading-none" style={{ color: '#1C1917' }}>{riskTotal} risks</div>
-            <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold text-red-600">
+            <div className="text-[32px] font-semibold leading-none tabular-nums text-ink-900">{riskTotal} risks</div>
+            <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold text-risk-700">
               <Shield size={10} />
-              {riskFailed} critical/high <span className="text-ink-500 font-normal">· {riskHealthy} mitigated</span>
+              <span className="tabular-nums">{riskFailed}</span> critical/high <span className="text-ink-500 font-normal">· <span className="tabular-nums">{riskHealthy}</span> mitigated</span>
             </div>
           </div>
           <div className="flex items-end gap-1.5 h-7 mt-3">
             {riskBySev.map((v, j) => (
               <motion.div key={j} initial={{ height: 0 }} animate={{ height: `${(v / riskBarMax) * 100}%` }} transition={{ delay: 0.25 + j * 0.04, duration: 0.3 }}
-                className="flex-1 rounded-sm min-h-[3px]" style={{ background: j >= riskBySev.length - 1 ? '#EF4444' : 'rgba(239,68,68,0.18)' }} />
+                className={`flex-1 rounded-sm min-h-[3px] ${j >= riskBySev.length - 1 ? 'bg-risk' : 'bg-risk/20'}`} />
             ))}
           </div>
         </motion.div>
@@ -385,23 +384,22 @@ function HealthDashboardSection() {
         {/* ── Controls — top right ── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-          className="col-span-3 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
-          style={{ background: '#F3EAFF', borderColor: '#DBC4F7' }}
+          className="col-span-3 rounded-2xl p-5 flex flex-col justify-between cursor-default border bg-brand-50 border-brand-100"
         >
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#8838DE' }}>
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-brand-600">
                 <Shield size={13} className="text-white" />
               </div>
               <span className="text-[12px] font-semibold text-brand-700">Controls</span>
             </div>
-            <div className="text-[40px] font-extrabold leading-none text-brand-700">{ctlTotal}</div>
-            <div className="text-[13px] font-semibold text-brand-600 mt-1">in library</div>
+            <div className="text-[40px] font-semibold leading-none tabular-nums text-brand-700">{ctlTotal}</div>
+            <div className="text-[13px] font-semibold text-brand-700 mt-1">in library</div>
           </div>
           <div className="mt-3 space-y-1.5">
             <div className="flex items-center justify-between text-[12px]">
-              <span className="text-ink-500">{ctlPending} pending</span>
-              <span className="font-semibold text-amber-600">{ctlOverdue} overdue</span>
+              <span className="text-ink-500"><span className="tabular-nums">{ctlPending}</span> pending</span>
+              <span className="font-semibold text-mitigated-700"><span className="tabular-nums">{ctlOverdue}</span> overdue</span>
             </div>
             <div className="h-1.5 rounded-full bg-brand-100 overflow-hidden">
               <motion.div initial={{ width: 0 }} animate={{ width: `${((ctlTotal - ctlPending - ctlOverdue) / ctlTotal) * 100}%` }} transition={{ delay: 0.3, duration: 0.5 }}
@@ -413,46 +411,44 @@ function HealthDashboardSection() {
         {/* ── Deficiencies — bottom middle ── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-          className="col-span-4 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
-          style={{ background: '#FFF9EB', borderColor: '#F5E6C0' }}
+          className="col-span-4 rounded-2xl p-5 flex flex-col justify-between cursor-default border bg-risk-50 border-risk-50"
         >
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#EF4444' }}>
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-risk">
                 <ShieldAlert size={13} className="text-white" />
               </div>
-              <span className="text-[12px] font-semibold" style={{ color: '#92400E' }}>Open Deficiencies</span>
+              <span className="text-[12px] font-semibold text-risk-700">Open deficiencies</span>
               <span className="ml-auto text-[12px] text-ink-500 font-medium">Active</span>
             </div>
-            <div className="text-[40px] font-extrabold leading-none" style={{ color: '#1C1917' }}>{defTotal}</div>
-            <div className="text-[12px] text-ink-500 mt-1.5">{defOpen} open, {defInProgress} in progress</div>
+            <div className="text-[40px] font-semibold leading-none tabular-nums text-ink-900">{defTotal}</div>
+            <div className="text-[12px] text-ink-500 mt-1.5"><span className="tabular-nums">{defOpen}</span> open, <span className="tabular-nums">{defInProgress}</span> in progress</div>
           </div>
-          <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold text-red-600">
+          <div className="flex items-center gap-1.5 mt-2 text-[12px] font-semibold text-risk-700">
             <AlertTriangle size={10} />
-            {DEFICIENCIES.filter(d => d.severity === 'MW').length} material weakness
+            <span className="tabular-nums">{DEFICIENCIES.filter(d => d.severity === 'MW').length}</span> material weakness
           </div>
         </motion.div>
 
         {/* ── Workflow Runs — bottom right ── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="col-span-3 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
-          style={{ background: '#ECFDF5', borderColor: '#A7F3D0' }}
+          className="col-span-3 rounded-2xl p-5 flex flex-col justify-between cursor-default border bg-compliant-50 border-compliant-50"
         >
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#16A34A' }}>
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-compliant">
                 <Activity size={13} className="text-white" />
               </div>
-              <span className="text-[12px] font-semibold text-emerald-700">Workflow Runs</span>
+              <span className="text-[12px] font-semibold text-compliant-700">Workflow runs</span>
             </div>
-            <div className="text-[36px] font-extrabold leading-none text-emerald-700">{totalWorkflowRuns}</div>
-            <div className="text-[12px] text-emerald-600/70 mt-1.5">{WORKFLOWS.length} active workflows</div>
+            <div className="text-[36px] font-semibold leading-none tabular-nums text-compliant-700">{totalWorkflowRuns}</div>
+            <div className="text-[12px] text-compliant-700/70 mt-1.5"><span className="tabular-nums">{WORKFLOWS.length}</span> active workflows</div>
           </div>
           <div className="flex items-end gap-1.5 h-8 mt-2">
             {wfBars.map((v, j) => (
               <motion.div key={j} initial={{ height: 0 }} animate={{ height: `${(v / wfMax) * 100}%` }} transition={{ delay: 0.35 + j * 0.04, duration: 0.3 }}
-                className="flex-1 rounded-sm min-h-[3px]" style={{ background: j >= wfBars.length - 2 ? '#16A34A' : 'rgba(22,163,74,0.18)' }} />
+                className={`flex-1 rounded-sm min-h-[3px] ${j >= wfBars.length - 2 ? 'bg-compliant' : 'bg-compliant/20'}`} />
             ))}
           </div>
         </motion.div>
@@ -565,9 +561,7 @@ export default function HomeView({ setView }: Props) {
     <div className="h-full overflow-y-auto bg-canvas">
       {/* Page header */}
       <div className="border-b border-canvas-border bg-canvas-elevated relative overflow-hidden">
-        {/* Subtle gradient accent bar */}
-        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(90deg, #8838DE, #A366F0, #16A34A, #F59E0B)' }} />
-        <div className="px-10 pt-8 pb-6">
+        <div className="p-8">
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -620,7 +614,7 @@ export default function HomeView({ setView }: Props) {
       </div>
 
       {/* Body */}
-      <div className="px-10 py-8 space-y-8">
+      <div className="p-8 space-y-8">
         {!dismissed && <QuickActionPanel setView={setView} onDismiss={dismiss} />}
         {dismissed && (
           <button

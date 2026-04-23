@@ -105,7 +105,7 @@ function StatusBadge({ status }: { status: PastRun['status'] }) {
   };
   const s = map[status];
   return (
-    <span className={`text-[12px] font-bold uppercaser px-2 py-0.5 rounded ${s.bg}`}>
+    <span className={`text-[12px] font-bold px-2 py-0.5 rounded ${s.bg}`}>
       {s.label}
     </span>
   );
@@ -194,7 +194,7 @@ function FileDropZone({
             Drop file here or <span className="text-primary font-medium">browse</span>
           </div>
           {slot.required && (
-            <span className="absolute top-3 right-3 text-[12px] font-bold text-danger uppercaser">Required</span>
+            <span className="absolute top-3 right-3 text-[12px] font-bold text-danger">Required</span>
           )}
         </>
       )}
@@ -296,7 +296,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
 
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
-      <div className="px-10 py-8 relative">
+      <div className="p-8 relative">
         {/* ─── Back Button ─── */}
         <button
           onClick={onBack}
@@ -318,7 +318,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-2 text-[12px] text-text-muted mb-2">
-                <div className="flex items-center gap-1 text-success font-semibold uppercaser">
+                <div className="flex items-center gap-1 text-success font-semibold">
                   <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                   {WORKFLOW_META.status === 'active' ? 'Active' : 'Inactive'}
                 </div>
@@ -373,14 +373,14 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
           className="rounded-2xl border border-border-light p-6 mb-8"
           style={glassStyle}
         >
-          <h2 className="text-[13px] font-bold text-text uppercaser mb-5 flex items-center gap-2">
+          <h2 className="text-[13px] font-bold text-text mb-5 flex items-center gap-2">
             <FileText size={14} className="text-primary" />
             Input Configuration
           </h2>
 
           {/* File Uploads */}
           <div className="mb-6">
-            <div className="text-[12px] font-semibold text-text-muted uppercaser mb-3">
+            <div className="text-[12px] font-semibold text-text-muted mb-3">
               Data Sources
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -397,7 +397,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
 
           {/* Parameters */}
           <div className="mb-6">
-            <div className="text-[12px] font-semibold text-text-muted uppercaser mb-3">
+            <div className="text-[12px] font-semibold text-text-muted mb-3">
               Parameters
             </div>
             <div className="grid grid-cols-3 gap-4">
@@ -489,7 +489,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
             {phase === 'running' ? (
               <button
                 onClick={stopExecution}
-                className="flex items-center gap-2 px-5 py-2.5 bg-danger hover:bg-red-700 text-white rounded-xl text-[13px] font-semibold transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-5 py-2.5 bg-danger hover:bg-risk-700 text-white rounded-xl text-[13px] font-semibold transition-colors cursor-pointer"
               >
                 <Square size={14} />
                 Stop Execution
@@ -610,12 +610,12 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="bg-surface-2 border border-border-light rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all duration-300 group cursor-default"
+                    className="bg-surface-2 border border-border-light rounded-xl p-4 hover:border-primary/20 transition-all duration-300 group cursor-default"
                   >
-                    <div className={`w-7 h-7 rounded-lg ${card.color} flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform duration-300`}>
+                    <div className={`w-7 h-7 rounded-lg ${card.color} flex items-center justify-center mb-2.5 transition-transform duration-300`}>
                       <card.icon size={14} />
                     </div>
-                    <div className="text-[12px] text-text-muted uppercaser mb-1">{card.label}</div>
+                    <div className="text-[12px] text-text-muted mb-1">{card.label}</div>
                     <div className="text-2xl font-bold font-mono text-text leading-none mb-1">{card.value}</div>
                     <div className="text-[12px] text-text-secondary">{card.note}</div>
                   </motion.div>
@@ -636,7 +636,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
                   {/* Table header */}
                   <div className="grid grid-cols-[140px_1fr_120px_110px_90px] gap-3 px-5 py-3 bg-surface-2 border-b border-border-light min-w-[600px]">
                     {['Invoice #', 'Vendor', 'Amount', 'Dup. Group', 'Confidence'].map((h) => (
-                      <span key={h} className="text-[12px] font-bold text-text-muted uppercaser">{h}</span>
+                      <span key={h} className="text-[12px] font-bold text-text-muted">{h}</span>
                     ))}
                   </div>
 
@@ -647,7 +647,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3 + i * 0.04 }}
-                      className="grid grid-cols-[140px_1fr_120px_110px_90px] gap-3 px-5 py-3.5 border-b border-border-light last:border-0 hover:bg-primary-xlight/30 transition-colors items-center min-w-[600px]"
+                      className="grid grid-cols-[140px_1fr_120px_110px_90px] gap-3 px-5 py-4 border-b border-border-light last:border-0 hover:bg-primary-xlight/30 transition-colors items-center min-w-[600px]"
                     >
                       <span className="text-[12px] font-mono text-primary font-medium">{row.invoiceNo}</span>
                       <span className="text-[12px] text-text truncate">{row.vendor}</span>
@@ -697,7 +697,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
           {/* Table header */}
           <div className="grid grid-cols-[90px_1fr_90px_80px_80px_70px] gap-3 px-5 py-3 bg-surface-2 border-b border-border-light">
             {['Run', 'Date', 'Findings', 'Status', 'Duration', ''].map((h) => (
-              <span key={h || 'action'} className="text-[12px] font-bold text-text-muted uppercaser">{h}</span>
+              <span key={h || 'action'} className="text-[12px] font-bold text-text-muted">{h}</span>
             ))}
           </div>
 
@@ -708,7 +708,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: i * 0.04 }}
-              className="grid grid-cols-[90px_1fr_90px_80px_80px_70px] gap-3 px-5 py-3.5 border-b border-border-light last:border-0 hover:bg-primary-xlight/30 transition-colors items-center"
+              className="grid grid-cols-[90px_1fr_90px_80px_80px_70px] gap-3 px-5 py-4 border-b border-border-light last:border-0 hover:bg-primary-xlight/30 transition-colors items-center"
             >
               <span className="text-[12px] font-mono text-primary font-medium">{run.id}</span>
               <span className="text-[12px] font-mono text-text-secondary">{run.date}</span>

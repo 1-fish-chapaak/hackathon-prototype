@@ -304,7 +304,7 @@ export default function ExceptionManagementModal({ onClose, onGenerateReport, on
         </div>
 
         {/* Footer */}
-        <div className="px-10 py-3.5 border-t border-border-light flex items-center justify-between bg-white shrink-0">
+        <div className="px-10 py-4 border-t border-border-light flex items-center justify-between bg-white shrink-0">
           <div className="flex items-center gap-4 text-[12px] text-text-muted">
             <span><strong className="text-text">{stats.assigned}</strong> assigned</span>
             <span><strong className="text-text">{stats.notified}</strong> notified</span>
