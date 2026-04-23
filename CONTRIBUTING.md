@@ -92,10 +92,22 @@ npm run lint
             │  (stops on conflict — you resolve, then `git push` again)
             ▼
    ┌────────────────────────────────────┐
+   │  MULTI-PAGE GATE                   │
+   │  if diff spans 2+ pages:           │
+   │  prompt "YES <reason>"             │
+   │  (or bypass with MULTI_PAGE_OK=…)  │
+   │  aborts push without a reason      │
+   └────────────────────────────────────┘
+            │
+            ▼
+   ┌────────────────────────────────────┐
    │  CLAUDE PREFLIGHT REVIEW           │
    │  · design conflicts vs main        │
    │  · feature redundancy              │
    │  · UX / flow gaps                  │
+   │  multi-page → stricter rubric      │
+   │   (per-page diff, cross-page       │
+   │    conflicts, intent check)        │
    │  (~30-60s, advisory, never blocks) │
    └────────────────────────────────────┘
             │
@@ -116,7 +128,7 @@ npm run lint
 ### 3.2 The preflight, in detail
 
 When you `git push`, the hook runs `tools/preflight-review.sh`, which does
-two things in order:
+three things in order:
 
 **Step 1 — auto-rebase.** Fetches `<remote>/main` and, if your local main is
 behind, runs `git pull --rebase --autostash` to stack your work on top of
@@ -124,7 +136,73 @@ whatever other pods pushed. If the rebase is clean, the script keeps going.
 If the rebase hits a conflict, the script aborts the push with instructions:
 resolve the markers, `git add`, `git rebase --continue`, then `git push` again.
 
-**Step 2 — Claude review.** Calls the Claude CLI with a prompt focused on
+**Step 2 — multi-page hard-review gate.** Every sidebar nav entry counts as
+one **page**. If your push touches **2+ pages**, the script BLOCKS and asks
+for a one-line reason before continuing. This catches the single biggest
+cause of pod friction: one team's "cleanup" silently breaks another team's
+page (dropped columns, moved tabs, restyled shared components, etc.).
+
+The pages the script recognizes (mapped from `src/components/` paths):
+
+| Page | Sourced from |
+|---|---|
+| Ask IRA | `chat/` |
+| Home | `home/` |
+| Recents | `recents/` |
+| Planning | `audit/AuditPlanning*`, `audit/AuditExecution*` |
+| Process Hub | `audit/BusinessProcesses*` |
+| Risk Register | `audit/RiskRegister*` |
+| Control Library | `governance/`, `execution/` |
+| Dashboard | `dashboard/` |
+| Report | `reports/` |
+| Workflow Library | `workflow/` |
+| AI Concierge | `intelligence/`, `concierge-workflow-builder/` |
+| Knowledge Hub | `knowledge/`, `data-sources/` |
+| Admin | `admin/` |
+
+Everything else (`shared/`, `sidebar/`, `modals/`, `artifacts/`, `hooks/`,
+`data/`, `index.css`, `App.tsx`, configs) is treated as a **shared surface**
+— it's still reviewed, but does NOT count toward the page total. So a
+single-page polish commit that also tweaks `shared/StatusBadge.tsx` still
+counts as one page.
+
+When the gate fires you'll see:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ⚠  MULTI-PAGE PUSH — hard review required (3 pages)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  • AI Concierge
+      src/components/concierge-workflow-builder/GuideMeModal.tsx
+  • Report
+      src/components/reports/ReportsView.tsx
+  • Workflow Library
+      src/components/workflow/WorkflowTemplates.tsx
+
+This push touches 2+ pages — exactly the kind of change that silently
+breaks another pod's work …
+
+To continue, type:   YES <one-line reason>
+  e.g.   YES global typography sweep — coordinated with design
+
+Proceed?
+```
+
+Type `YES <reason>`. Anything else aborts the push. The reason is forwarded
+to the Claude reviewer so it can judge whether every affected page really
+matches your stated intent (and flag collateral-damage pages).
+
+If you can't prompt interactively (CI, scripts, agents), set:
+
+```bash
+MULTI_PAGE_OK="<one-line reason>" git push
+```
+
+`MULTI_PAGE_OK` must be a **non-empty** string — an empty value does not
+bypass the gate.
+
+**Step 3 — Claude review.** Calls the Claude CLI with a prompt focused on
 **three axes only**:
 
 1. **Design conflicts** — new colors / typography / spacing / card patterns
@@ -135,23 +213,48 @@ resolve the markers, `git add`, `git rebase --continue`, then `git push` again.
 3. **UX / flow gaps** — dead-end states, broken back button, "two screens
    with the same name doing different things", CTAs that lead nowhere.
 
-**Explicitly NOT raised:** perf, scaling, type-nits, tests, "best practices",
-refactor suggestions, accessibility-unless-broken, security. This is a demo.
+For **multi-page** pushes (after the Step 2 gate), the Claude reviewer uses
+a **stricter rubric** that additionally demands:
 
-The output appears directly in your terminal. The push **always proceeds**
-(advisory only). You and your Claude session decide whether to address the
-findings now, fix-forward in a follow-up commit, or ignore them.
+- A per-page **Added / Modified / Dropped** list (user-visible language only
+  — no code, no class names, no LOC counts).
+- An explicit **cross-page conflicts** section (same pattern diverging
+  across two pages, moved features without redirects, global CSS that
+  unintentionally restyles a page you didn't mention, dropped elements still
+  linked from elsewhere, etc.).
+- An **intent check** against the `YES <reason>` you typed: every affected
+  page is marked ✓ (matches reason), ⚠  (looks like collateral damage),
+  or 🚨 (contradicts the reason).
+- A final **verdict**: ✅ Coordinated · ⚠  Mixed · 🚨 HARD STOP recommended.
+
+**Explicitly NOT raised** (both rubrics): perf, scaling, type-nits, tests,
+"best practices", refactor suggestions, accessibility-unless-broken, security.
+This is a demo.
+
+The output appears directly in your terminal. For single-page pushes the
+review is **advisory only** (push always proceeds). For multi-page pushes
+the Step 2 gate is a hard block, but the Step 3 review remains advisory —
+if the reviewer returns 🚨 HARD STOP RECOMMENDED, it's on you to abort and
+fix, or to push anyway with `SKIP_PREFLIGHT=1` on the next attempt.
 
 ### 3.3 Skipping the preflight
 
-For a doc-only commit or an emergency fix (skips **both** the rebase and the
-Claude review — you become responsible for the rebase):
+For a doc-only commit or an emergency fix (skips **all three steps** —
+rebase, multi-page gate, and Claude review — you become responsible for
+rebasing yourself):
 
 ```bash
 SKIP_PREFLIGHT=1 git push
 ```
 
-Or run the Claude review on demand without pushing (no rebase in this mode):
+Bypass **only** the multi-page gate (still rebases + runs the stricter
+Claude review) — useful for planned coordinated sweeps:
+
+```bash
+MULTI_PAGE_OK="editorial token sweep — coordinated in #hackathon-pod" git push
+```
+
+Or run the Claude review on demand without pushing (no rebase, no gate):
 
 ```bash
 npm run review:local
@@ -212,7 +315,7 @@ You can re-run the review on a PR by commenting `@claude` in the PR thread.
 
 | File | Purpose | Triggers when |
 | --- | --- | --- |
-| `tools/preflight-review.sh` | Auto-rebase onto remote main, then run the focused Claude review (design / redundancy / UX). Aborts on rebase conflict so you resolve before pushing. | You run `git push` (after `npm run setup-hooks`) — or `npm run review:local` (review only, no rebase) |
+| `tools/preflight-review.sh` | Auto-rebase onto remote main, gate multi-page pushes behind a typed-reason prompt (or `MULTI_PAGE_OK=...`), then run the focused Claude review (design / redundancy / UX — strict rubric when multi-page). Aborts on rebase conflict, aborts if a multi-page push has no reason. | You run `git push` (after `npm run setup-hooks`) — or `npm run review:local` (review only, no rebase, no gate) |
 | `.githooks/pre-push` | Calls the preflight from git's hook system | Same |
 | `.github/workflows/deploy.yml` | Build Docker → push to Artifact Registry → deploy to Cloud Run. **`cancel-in-progress: true`** so a newer push kills any in-flight older build — the live revision always matches the latest tip of main. | Push to `main` |
 | `.github/workflows/claude-review.yml` | Same focused review, posted as PR comment | PR opened / `@claude` comment |
@@ -264,6 +367,8 @@ gcloud run services update-traffic hackathon-demo \
 - **The deploy auto-fires on every main push, including doc-only changes.** That's fine (Docker build is fast and cached) but be aware. If two pushes race, the older deploy is **cancelled mid-flight** so the newest commit wins.
 - **Two pods edit the same file → real git merge conflict.** The preflight tries to rebase you onto remote main automatically. If the rebase is clean, your push proceeds. If it conflicts, the push aborts with a message telling you to fix the markers, `git add`, `git rebase --continue`, then `git push` again (the hook runs once more on the merged result). To bail: `git rebase --abort`.
 - **Preflight told you about a conflict — what now?** Talk to the other pod in your team channel before fixing forward. The whole point of the review is to surface coordination issues you'd otherwise discover at demo time.
+- **Multi-page push got blocked.** You touched 2+ sidebar pages in one push and didn't supply a reason. Type `YES <one-line reason>` at the prompt, or re-push with `MULTI_PAGE_OK="<reason>" git push`. If you honestly don't have a cross-page reason, that's the signal — split the push into per-page commits. See §3.2 for the page list.
+- **Multi-page reviewer came back 🚨 HARD STOP.** The stricter Claude rubric thinks one of the pages you touched is collateral damage (you didn't mean to change it). Read the "Intent check" section of the output — it'll name the offending page and say what incidentally changed. Most common causes: global CSS / shared component change that restyled a page outside your stated reason, or a file you opened in the editor and saved without meaningful edits.
 
 ---
 
@@ -279,7 +384,7 @@ gcloud run services update-traffic hackathon-demo \
 > - Live URL: https://hackathon-demo-ujihgyhrpa-uc.a.run.app
 > - GCP project: `gen-lang-client-0250661731` · region `us-central1` · service `hackathon-demo`
 >
-> **Pre-push preflight (already enabled if `npm run setup-hooks` was run):** when you `git push`, `tools/preflight-review.sh` first **auto-rebases** you onto remote main if you are behind (aborting the push on a rebase conflict so you resolve manually), then shows a Claude review focused on **design conflicts**, **feature redundancy**, and **UX/flow gaps**. The Claude review is advisory and never blocks. Skip both with `SKIP_PREFLIGHT=1 git push`. Run review on demand with `npm run review:local`. The deploy workflow is set to **`cancel-in-progress: true`** so a newer push always wins — the live revision matches the latest tip of main.
+> **Pre-push preflight (already enabled if `npm run setup-hooks` was run):** when you `git push`, `tools/preflight-review.sh` runs three things in order. **(1) Auto-rebase** onto remote main if you are behind (aborts on rebase conflict so you resolve manually). **(2) Multi-page hard-review gate:** if the diff spans 2+ sidebar pages (Home, Recents, Ask IRA, Planning, Process Hub, Risk Register, Control Library, Dashboard, Report, Workflow Library, AI Concierge, Knowledge Hub, Admin), the push is **blocked** until you type `YES <one-line reason>` at the interactive prompt — or pass `MULTI_PAGE_OK="<reason>" git push` (non-empty reason required). Shared files (`shared/`, `sidebar/`, `modals/`, `hooks/`, CSS, configs) don't count toward the page total. **(3) Claude review** focused on **design conflicts**, **feature redundancy**, and **UX/flow gaps** — advisory only; never blocks the push. Multi-page pushes get a **stricter rubric** that demands per-page Added/Modified/Dropped, cross-page conflicts, and an intent check against your typed reason. Skip everything with `SKIP_PREFLIGHT=1 git push`. Run review on demand with `npm run review:local` (no rebase, no gate). The deploy workflow is set to **`cancel-in-progress: true`** so a newer push always wins — the live revision matches the latest tip of main.
 >
 > **Review priorities (mirror these in your own thinking before pushing):**
 > 1. Design conflicts — does this contradict the existing bento / charcoal / purple-accent design system? Different colors/typography/spacing/shapes from what's already in `src/components/`?
