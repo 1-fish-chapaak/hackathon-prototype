@@ -126,7 +126,7 @@ export default function SmartTable<T extends Record<string, unknown>>({
                 value={search}
                 onChange={e => { setSearch(e.target.value); setPage(0); }}
                 placeholder={searchPlaceholder}
-                className="w-full pl-8 pr-8 py-1.5 rounded-lg border border-border bg-white text-[12px] outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
+                className="w-full pl-8 pr-8 py-1.5 border border-border bg-white text-[12px] outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all" style={{ borderRadius: '8px' }}
               />
               {search && (
                 <button

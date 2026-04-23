@@ -1379,6 +1379,7 @@ function ReportView({ report, onBack, onShare }: {
 export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps = {}) {
   const [activeTab, setActiveTab] = useState<'templates' | 'my-reports' | 'shared-reports'>('my-reports');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [tagFilter, setTagFilter] = useState<string>('All');
   const [viewingReport, setViewingReport] = useState<typeof GENERATED_REPORTS[0] | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [previewingTemplate, setPreviewingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
@@ -1387,18 +1388,23 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
   const [showNewReportTemplateSelector, setShowNewReportTemplateSelector] = useState(false);
   const { addToast } = useToast();
 
-  // Approval statuses for reports
-  const REPORT_APPROVAL: Record<string, string> = {
-    'gr-001': 'Approved',
-    'gr-002': 'Pending Approval',
-    'gr-003': 'Draft',
-  };
+  const filteredReports = tagFilter === 'All'
+    ? GENERATED_REPORTS
+    : GENERATED_REPORTS.filter(r => r.tag === tagFilter);
 
-  const approvalColor = (status: string) => {
-    if (status === 'Approved') return 'text-compliant-700 bg-compliant-50';
-    if (status === 'Pending Approval') return 'text-mitigated-700 bg-mitigated-50';
-    return 'text-ink-500 bg-paper-50';
-  };
+  const TAG_FILTER_OPTIONS = ['All', 'Internal Audit', 'Bulk Audit'];
+
+  const TagFilterDropdown = () => (
+    <select
+      value={tagFilter}
+      onChange={e => setTagFilter(e.target.value)}
+      className="h-7 px-2 pr-6 text-[11px] font-medium text-text-secondary bg-paper-50 border border-border-light cursor-pointer appearance-none focus:outline-none focus:ring-1 focus:ring-primary/30"
+      style={{ borderRadius: '8px', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236a12cd' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 6px center' }}
+    >
+      {TAG_FILTER_OPTIONS.map(t => <option key={t} value={t}>{t === 'All' ? 'All Tags' : t}</option>)}
+    </select>
+  );
+
 
   if (viewingReport) {
     return (
@@ -1422,11 +1428,11 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowUploadModal(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-border-light hover:border-primary/30 text-text-secondary hover:text-primary bg-white rounded-lg text-[13px] font-medium transition-colors cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 border border-border-light hover:border-primary/30 text-text-secondary hover:text-primary bg-white text-[13px] font-medium transition-colors cursor-pointer" style={{ borderRadius: '8px' }}
             >
               <Upload size={14} /> Upload Template
             </button>
-            <button onClick={() => setShowNewReportTemplateSelector(true)} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
+            <button onClick={() => setShowNewReportTemplateSelector(true)} className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold transition-colors cursor-pointer" style={{ borderRadius: '8px' }}>
               <FileText size={14} /> New Report
             </button>
           </div>
@@ -1469,15 +1475,18 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
         {/* My Reports */}
         {activeTab === 'my-reports' && viewMode === 'list' && (
           <SmartTable
-            data={GENERATED_REPORTS as unknown as Record<string, unknown>[]}
+            data={filteredReports as unknown as Record<string, unknown>[]}
             keyField="id"
             searchPlaceholder="Search reports..."
             searchKeys={['name', 'generatedBy']}
             paginated={false}
             headerExtra={
-              <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-lg">
-                <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="List view"><List size={15} /></button>
-                <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
+              <div className="flex items-center gap-2">
+                <TagFilterDropdown />
+                <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-[8px]">
+                  <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="List view"><List size={15} /></button>
+                  <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
+                </div>
               </div>
             }
             columns={[
@@ -1492,6 +1501,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-text font-medium hover:text-primary transition-colors">{String(item.name)}</span>
+                      {Boolean(item.tag) && (() => { const t = String(item.tag); return <span className="inline-flex items-center px-2 h-5 text-[10px] font-semibold whitespace-nowrap shrink-0" style={{ borderRadius: '8px', background: t === 'Internal Audit' ? '#FFE8F6' : '#FFFAEB', color: t === 'Internal Audit' ? '#BF2E84' : '#A74108' }}>{t}</span>; })()}
                       {reportAppliedTemplates[String(item.id)] && (
                         <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
                           <Layout size={8} /> {reportAppliedTemplates[String(item.id)].name}
@@ -1506,10 +1516,6 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                 <span className="text-text-muted text-[12px]">{String(item.generatedAt)}</span>
               )},
               { key: 'status', label: 'Status', width: '100px', render: (item) => <StatusBadge status={String(item.status)} /> },
-              { key: 'approval', label: 'Approval', width: '130px', render: (item) => {
-                const approval = REPORT_APPROVAL[String(item.id)] || 'Draft';
-                return <span className={`inline-flex items-center px-2.5 h-6 rounded-full text-[12px] leading-[16px] font-medium whitespace-nowrap ${approvalColor(approval)}`}>{approval}</span>;
-              }},
               { key: 'actions', label: '', width: '110px', sortable: false, align: 'right', render: (item) => (
                 <div className="flex items-center justify-end gap-1">
                   <button onClick={() => addToast({ type: 'success', message: `Downloading ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={14} /></button>
@@ -1524,17 +1530,20 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
         {activeTab === 'my-reports' && viewMode === 'grid' && (
           <div className="bg-white rounded-xl border border-border-light overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border-light bg-surface-2/50">
-              <p className="text-[12px] text-text-muted">{GENERATED_REPORTS.length} reports</p>
-              <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-lg">
-                <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="List view"><List size={15} /></button>
-                <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
+              <p className="text-[12px] text-text-muted">{filteredReports.length} reports</p>
+              <div className="flex items-center gap-2">
+                <TagFilterDropdown />
+                <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-[8px]">
+                  <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="List view"><List size={15} /></button>
+                  <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
+                </div>
               </div>
             </div>
             <div className="p-4 grid grid-cols-3 gap-4 items-start">
-              {GENERATED_REPORTS.map((r, i) => {
+              {filteredReports.map((r, i) => {
                 return (
                   <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                    className="glass-card rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all group cursor-pointer"
+                    className="glass-card rounded-xl p-4 hover:shadow-md hover:border-primary/20 transition-all group cursor-pointer flex flex-col"
                     onClick={() => setViewingReport(r)}
                   >
                     <div className="flex items-center justify-between mb-3">
@@ -1545,13 +1554,12 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
                         <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="hover:text-red-500 transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Delete"><Trash2 size={15} /></button>
                       </div>
                     </div>
-                    <div className="font-medium text-[13px] text-text mb-1 group-hover:text-primary transition-colors leading-snug">{r.name}</div>
+                    <div className="font-medium text-[13px] text-text group-hover:text-primary transition-colors leading-snug mb-1">{r.name}</div>
                     <div className="text-[11px] text-text-muted mb-3">{r.pages} pages · {r.generatedAt}</div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">
-                        {r.generatedBy.split(' ').map(n => n[0]).join('')}
-                      </div>
-                      <span className="text-[11px] text-text-secondary">{r.generatedBy}</span>
+                    <div className="mt-auto">
+                      {r.tag && (
+                        <span className="inline-flex items-center px-2 h-5 text-[10px] font-semibold whitespace-nowrap" style={{ borderRadius: '8px', background: r.tag === 'Internal Audit' ? '#FFE8F6' : '#FFFAEB', color: r.tag === 'Internal Audit' ? '#BF2E84' : '#A74108' }}>{r.tag}</span>
+                      )}
                     </div>
                   </motion.div>
                 );
@@ -1569,7 +1577,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
             searchKeys={['name', 'sharedBy', 'sharedWith']}
             paginated={false}
             headerExtra={
-              <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-lg">
+              <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-[8px]">
                 <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="List view"><List size={15} /></button>
                 <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
               </div>
@@ -1597,7 +1605,6 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
               { key: 'sharedAt', label: 'Date', width: '120px', render: (item) => (
                 <span className="text-text-muted text-[12px]">{String(item.sharedAt)}</span>
               )},
-              { key: 'status', label: 'Status', width: '100px', render: (item) => <StatusBadge status={String(item.status)} /> },
               { key: 'actions', label: '', width: '110px', sortable: false, align: 'right', render: (item) => (
                 <div className="flex items-center justify-end gap-1">
                   <button onClick={() => addToast({ type: 'success', message: `Downloading ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={14} /></button>
@@ -1613,7 +1620,7 @@ export default function ReportsView({ onOpenBuilder, onShare }: ReportsViewProps
           <div className="bg-white rounded-xl border border-border-light overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border-light bg-surface-2/50">
               <p className="text-[12px] text-text-muted">{SHARED_REPORTS.length} reports</p>
-              <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-lg">
+              <div className="flex items-center gap-0.5 p-0.5 bg-paper-50 rounded-[8px]">
                 <button onClick={() => setViewMode('list')} className="p-1.5 rounded-md text-text-muted hover:text-text-secondary cursor-pointer" title="List view"><List size={15} /></button>
                 <button onClick={() => setViewMode('grid')} className="p-1.5 rounded-md bg-white shadow-sm text-primary cursor-pointer" title="Grid view"><LayoutGrid size={15} /></button>
               </div>
