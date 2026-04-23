@@ -46,7 +46,7 @@ export interface WorkflowDraft {
   output: OutputSpec;
 }
 
-export type UploadedFile = { name: string; size: number };
+export type UploadedFile = { name: string; size: number; linkedSource?: boolean };
 export type JourneyFiles = Record<string, UploadedFile[]>;
 
 // mappings keyed as: stepId -> inputId -> [{ column, role }]

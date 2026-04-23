@@ -8,6 +8,7 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  Check,
 } from 'lucide-react';
 import type { WorkflowDraft, JourneyFiles, UploadedFile } from './types';
 import { DATA_SOURCES } from '../../data/mockData';
@@ -18,22 +19,19 @@ interface Props {
   setFiles: (f: JourneyFiles) => void;
 }
 
-function humanSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+/* Use a dedicated bucket for linked data-source files */
+const LINKED_KEY = '__linked__';
 
 export default function StepUploadFiles({ workflow, files, setFiles }: Props) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [requiredOpen, setRequiredOpen] = useState(true);
+  const [requiredOpen, setRequiredOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [activeInputId, setActiveInputId] = useState<string>(
-    workflow.inputs[0]?.id ?? '',
-  );
+  const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
 
-  const handlePick = (inputId: string, picked: FileList | null) => {
+  /* ---- file pick / remove (for real uploads, stored under first input) ---- */
+  const handlePick = (picked: FileList | null) => {
     if (!picked || picked.length === 0) return;
+    const inputId = workflow.inputs[0]?.id ?? '_default';
     const existing = files[inputId] ?? [];
     const next: UploadedFile[] = [
       ...existing,
@@ -42,19 +40,67 @@ export default function StepUploadFiles({ workflow, files, setFiles }: Props) {
     setFiles({ ...files, [inputId]: next });
   };
 
-  const handleRemove = (inputId: string, index: number) => {
+  const handleRemoveFile = (inputId: string, index: number) => {
     const existing = files[inputId] ?? [];
     const next = existing.filter((_, i) => i !== index);
     setFiles({ ...files, [inputId]: next });
   };
 
-  const totalCount = Object.values(files).reduce((n, arr) => n + arr.length, 0);
-  const activeInput = workflow.inputs.find((i) => i.id === activeInputId);
-  const activeList = activeInput ? (files[activeInput.id] ?? []) : [];
+  /* ---- data-source link / unlink ---- */
+  const toggleSource = (sourceId: string, sourceName: string) => {
+    setSelectedSources((prev) => {
+      const next = new Set(prev);
+      if (next.has(sourceId)) {
+        next.delete(sourceId);
+        // remove from linked bucket
+        const existing = files[LINKED_KEY] ?? [];
+        setFiles({
+          ...files,
+          [LINKED_KEY]: existing.filter((f) => f.name !== sourceName),
+        });
+      } else {
+        next.add(sourceId);
+        // add to linked bucket
+        const existing = files[LINKED_KEY] ?? [];
+        setFiles({
+          ...files,
+          [LINKED_KEY]: [...existing, { name: sourceName, size: 0, linkedSource: true }],
+        });
+      }
+      return next;
+    });
+  };
+
+  const handleRemoveLinked = (index: number) => {
+    const existing = files[LINKED_KEY] ?? [];
+    const removed = existing[index];
+    if (removed) {
+      // deselect the matching data source
+      const ds = DATA_SOURCES.find((d) => d.name === removed.name);
+      if (ds) setSelectedSources((prev) => { const n = new Set(prev); n.delete(ds.id); return n; });
+    }
+    setFiles({ ...files, [LINKED_KEY]: existing.filter((_, i) => i !== index) });
+  };
+
+  /* ---- collect all files for display ---- */
+  const allFiles: { name: string; size: number; linked?: boolean; inputId: string; idx: number }[] = [];
+  for (const [inputId, arr] of Object.entries(files)) {
+    arr.forEach((f, idx) => {
+      allFiles.push({
+        name: f.name,
+        size: f.size,
+        linked: inputId === LINKED_KEY || (f as any).linkedSource,
+        inputId,
+        idx,
+      });
+    });
+  }
 
   const filteredSources = DATA_SOURCES.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const requiredInputs = workflow.inputs.filter((i) => i.required);
 
   return (
     <motion.div
@@ -73,94 +119,98 @@ export default function StepUploadFiles({ workflow, files, setFiles }: Props) {
           <div className="flex items-center gap-2">
             <FileIcon size={14} className="text-brand-600" />
             <span className="text-[13px] font-semibold text-ink-800">Required Files</span>
-            <span className="text-[10.5px] text-ink-400">
-              {workflow.inputs.filter((i) => i.required).length} required ·{' '}
-              {workflow.inputs.length} total
-            </span>
           </div>
           <span className="text-[11px] text-ink-500 inline-flex items-center gap-1">
-            {requiredOpen ? 'Click to collapse' : 'Click to expand'}
+            {requiredOpen ? 'Click to Collapse' : 'Click to Expand'}
             {requiredOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </span>
         </button>
-        {requiredOpen && (
+
+        {/* Collapsed: name + type badges in a row */}
+        {!requiredOpen && (
           <div className="px-4 pb-4 flex flex-wrap gap-2">
-            {workflow.inputs.map((input) => {
-              const uploaded = (files[input.id] ?? []).length;
-              const isActive = input.id === activeInputId;
-              return (
-                <button
+            {requiredInputs.map((input) => (
+              <div
+                key={input.id}
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12px] font-semibold border bg-canvas border-canvas-border text-ink-700"
+              >
+                {input.name}
+                <span className="text-[10px] uppercase tracking-wider font-bold opacity-60">
+                  {input.type}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Expanded: 2-column grid with descriptions */}
+        {requiredOpen && (
+          <div className="px-4 pb-4">
+            <div className="border-t border-canvas-border mb-3" />
+            <div className="grid grid-cols-2 gap-3">
+              {requiredInputs.map((input) => (
+                <div
                   key={input.id}
-                  type="button"
-                  onClick={() => setActiveInputId(input.id)}
-                  className={[
-                    'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors cursor-pointer border',
-                    isActive
-                      ? 'bg-brand-50 border-brand-300 text-brand-700'
-                      : uploaded > 0
-                        ? 'bg-compliant-50 border-compliant/30 text-compliant-700'
-                        : 'bg-canvas border-canvas-border text-ink-700 hover:border-brand-300',
-                  ].join(' ')}
+                  className="rounded-xl border border-canvas-border bg-canvas p-3"
                 >
-                  {input.name}
-                  <span className="text-[10px] uppercase tracking-wider font-bold opacity-70">
-                    {input.type}
-                  </span>
-                  {uploaded > 0 && (
-                    <span className="text-[10px] rounded-full bg-white/70 px-1.5 py-0.5 text-compliant-700">
-                      {uploaded}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[12.5px] font-semibold text-ink-800">{input.name}</span>
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-ink-400 bg-canvas-elevated px-1.5 py-0.5 rounded">
+                      {input.type}
                     </span>
-                  )}
-                  {input.required && uploaded === 0 && (
-                    <span className="text-[9.5px] uppercase tracking-wider font-bold text-risk">
-                      Required
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+                  </div>
+                  <p className="text-[11px] text-ink-400 leading-snug">{input.description}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </section>
 
       {/* Add Files */}
       <section className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <UploadCloud size={14} className="text-brand-600" />
-            <span className="text-[13px] font-semibold text-ink-800">Add Files</span>
-            <span className="text-[10.5px] text-ink-400 rounded-full bg-canvas px-2 py-0.5 border border-canvas-border">
-              {totalCount}
-            </span>
-          </div>
-          {activeInput && (
-            <span className="text-[11px] text-ink-500">
-              Uploading to <strong className="text-brand-700">{activeInput.name}</strong>
+        <div className="flex items-center gap-2 mb-3">
+          <UploadCloud size={14} className="text-brand-600" />
+          <span className="text-[13px] font-semibold text-ink-800">Add Files</span>
+          {allFiles.length > 0 && (
+            <span className="text-[10.5px] text-white rounded-full bg-brand-600 px-2 py-0.5 font-bold">
+              {allFiles.length}
             </span>
           )}
         </div>
 
-        {activeInput && activeList.length > 0 ? (
-          <ul className="flex flex-col gap-1.5 mb-3">
-            {activeList.map((f, i) => (
-              <li
+        {/* Files in 2-column grid */}
+        {allFiles.length > 0 ? (
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {allFiles.map((f, i) => (
+              <div
                 key={`${f.name}-${i}`}
-                className="flex items-center gap-2 bg-canvas rounded-lg border border-canvas-border px-3 py-2"
+                className="flex items-center gap-2 bg-canvas rounded-xl border border-canvas-border px-3 py-2.5"
               >
-                <FileIcon size={14} className="text-brand-600 shrink-0" />
-                <span className="text-[12.5px] text-ink-800 truncate flex-1">{f.name}</span>
-                <span className="text-[11px] text-ink-400 shrink-0">{humanSize(f.size)}</span>
+                <FileIcon size={14} className="text-ink-400 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-medium text-ink-800 truncate">{f.name}</p>
+                  {f.linked && (
+                    <p className="text-[10px] text-ink-400 truncate">Linked from data source</p>
+                  )}
+                </div>
+                <span className="text-[9px] uppercase tracking-wider font-bold text-ink-400 bg-canvas-elevated px-1.5 py-0.5 rounded shrink-0">
+                  {f.name.split('.').pop()?.toUpperCase() || 'FILE'}
+                </span>
                 <button
                   type="button"
-                  onClick={() => handleRemove(activeInput.id, i)}
-                  className="text-ink-400 hover:text-risk transition-colors cursor-pointer"
+                  onClick={() => {
+                    if (f.linked) handleRemoveLinked(f.idx);
+                    else handleRemoveFile(f.inputId, f.idx);
+                  }}
+                  className="text-ink-400 hover:text-risk transition-colors cursor-pointer shrink-0"
                   aria-label={`Remove ${f.name}`}
                 >
                   <X size={14} />
                 </button>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         ) : (
           <div className="rounded-xl border border-canvas-border bg-canvas py-3 px-4 text-center text-[11.5px] text-ink-400 mb-3">
             No files added yet. Drop files below or link an existing data source.
@@ -186,9 +236,9 @@ export default function StepUploadFiles({ workflow, files, setFiles }: Props) {
           ref={fileInputRef}
           type="file"
           hidden
-          multiple={activeInput?.multiple}
+          multiple
           onChange={(e) => {
-            if (activeInput) handlePick(activeInput.id, e.target.files);
+            handlePick(e.target.files);
             e.target.value = '';
           }}
         />
@@ -213,26 +263,38 @@ export default function StepUploadFiles({ workflow, files, setFiles }: Props) {
           />
         </div>
         <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {filteredSources.map((s) => (
-            <li key={s.id}>
-              <button
-                type="button"
-                className="w-full text-left group rounded-lg border border-canvas-border bg-canvas hover:bg-brand-50/40 hover:border-brand-300 px-3 py-2 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-2 mb-0.5">
-                  <div className="w-6 h-6 rounded-md bg-brand-50 flex items-center justify-center shrink-0">
-                    <Database size={12} className="text-brand-600" />
+          {filteredSources.map((s) => {
+            const isSelected = selectedSources.has(s.id);
+            return (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onClick={() => toggleSource(s.id, s.name)}
+                  className={[
+                    'w-full text-left group rounded-lg border px-3 py-2 transition-all cursor-pointer',
+                    isSelected
+                      ? 'border-brand-400 bg-brand-50 ring-2 ring-brand-200'
+                      : 'border-canvas-border bg-canvas hover:bg-brand-50/40 hover:border-brand-300',
+                  ].join(' ')}
+                >
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <div className="w-6 h-6 rounded-md bg-brand-50 flex items-center justify-center shrink-0">
+                      <Database size={12} className="text-brand-600" />
+                    </div>
+                    <span className="text-[12.5px] font-semibold text-ink-800 truncate flex-1">
+                      {s.name}
+                    </span>
+                    {isSelected && (
+                      <Check size={14} className="text-brand-600 shrink-0" />
+                    )}
                   </div>
-                  <span className="text-[12.5px] font-semibold text-ink-800 truncate">
-                    {s.name}
-                  </span>
-                </div>
-                <div className="text-[10.5px] text-ink-400 ml-8">
-                  {s.records} records · last sync {s.lastSync}
-                </div>
-              </button>
-            </li>
-          ))}
+                  <div className="text-[10.5px] text-ink-400 ml-8">
+                    {s.records} records · last sync {s.lastSync}
+                  </div>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </section>
     </motion.div>

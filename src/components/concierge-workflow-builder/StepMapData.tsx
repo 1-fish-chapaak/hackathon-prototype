@@ -108,63 +108,97 @@ export default function StepMapData({ workflow, files, alignments, setAlignments
               </div>
             </button>
 
-            {/* Mapped sources row */}
-            <div className="px-5 pb-3 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-semibold text-ink-500">Mapped Sources</span>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold text-brand-700 hover:bg-brand-50 transition-colors cursor-pointer"
-              >
-                <Eye size={11} />
-                Preview
-              </button>
+            {/* Mapped sources */}
+            <div className="px-5 pb-4">
+              <div className="border-t border-canvas-border mb-3" />
 
-              <div className="flex items-center flex-wrap gap-1.5 ml-1 flex-1">
-                {uploaded.length === 0 ? (
-                  <span className="text-[11px] text-ink-400">No files linked yet.</span>
-                ) : (
-                  <>
-                    {uploaded.slice(0, 2).map((f, i) => (
-                      <span
-                        key={`${f.name}-${i}`}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-canvas-border bg-white px-2 py-0.5 text-[11px] text-ink-700"
-                      >
-                        <FileIcon size={10} className="text-brand-600" />
-                        <span className="max-w-[160px] truncate">{f.name}</span>
-                        <X size={10} className="text-ink-400" />
-                      </span>
-                    ))}
-                    {uploaded.length > 2 && (
-                      <span className="text-[10.5px] text-ink-500 font-semibold">
-                        + {uploaded.length - 2} more
-                      </span>
-                    )}
-                  </>
+              {/* Row 1: label + preview · match */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400">
+                    Mapped Sources
+                  </span>
+                  {uploaded.length > 0 && (
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-canvas-border bg-canvas-elevated hover:border-ink-300 hover:text-ink-800 px-2.5 py-0.5 text-[11px] font-semibold text-ink-600 transition-colors cursor-pointer"
+                    >
+                      <Eye size={11} />
+                      Preview
+                    </button>
+                  )}
+                </div>
+                {list.length > 0 && (
+                  <div
+                    className={[
+                      'inline-flex items-center gap-1 tabular-nums',
+                      matchPct >= 85
+                        ? 'text-compliant-700'
+                        : matchPct >= 65
+                          ? 'text-mitigated-700'
+                          : 'text-risk-700',
+                    ].join(' ')}
+                    title="Aggregate match score across all column alignments"
+                  >
+                    <span className="text-[11px] font-bold uppercase tracking-wider">
+                      {matchPct}% Match
+                    </span>
+                    <Info
+                      size={12}
+                      className={
+                        matchPct >= 85
+                          ? 'text-compliant/70'
+                          : matchPct >= 65
+                            ? 'text-mitigated/80'
+                            : 'text-risk/80'
+                      }
+                    />
+                  </div>
                 )}
+              </div>
+
+              {/* Row 2: file pills · select button */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center flex-wrap gap-1.5 min-w-0">
+                  {uploaded.length === 0 ? (
+                    <span className="text-[11.5px] text-ink-400 italic">
+                      No files mapped. Upload or choose a file to get started.
+                    </span>
+                  ) : (
+                    <>
+                      {uploaded.slice(0, 2).map((f, i) => (
+                        <span
+                          key={`${f.name}-${i}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50/60 pl-2.5 pr-1.5 py-1 text-[11.5px] text-ink-700"
+                        >
+                          <FileIcon size={11} className="text-brand-600/70 shrink-0" />
+                          <span className="max-w-[160px] truncate">{f.name}</span>
+                          <button
+                            type="button"
+                            className="p-0.5 rounded text-ink-400 hover:text-risk-600 hover:bg-risk-50 transition-colors"
+                            aria-label="Remove file"
+                          >
+                            <X size={11} />
+                          </button>
+                        </span>
+                      ))}
+                      {uploaded.length > 2 && (
+                        <span className="inline-flex items-center rounded-lg border border-brand-200/60 bg-brand-50/40 px-2.5 py-1 text-[11.5px] font-semibold text-brand-700">
+                          + {uploaded.length - 2} more
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 rounded-md border border-canvas-border bg-canvas hover:bg-brand-50 hover:border-brand-300 px-2 py-0.5 text-[11px] font-semibold text-ink-600 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 bg-canvas-elevated hover:bg-brand-50 px-3 py-1.5 text-[11.5px] font-semibold text-brand-700 transition-colors cursor-pointer shrink-0"
                 >
-                  <ArrowLeftRight size={10} />
+                  <ArrowLeftRight size={12} />
                   Select File(s)
                 </button>
               </div>
-
-              {list.length > 0 && (
-                <span
-                  className={[
-                    'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wider',
-                    matchPct >= 85
-                      ? 'bg-compliant-50 text-compliant-700'
-                      : matchPct >= 65
-                        ? 'bg-mitigated-50 text-mitigated-700'
-                        : 'bg-risk-50 text-risk-700',
-                  ].join(' ')}
-                  title="Aggregate match score across all column alignments"
-                >
-                  {matchPct}% Match
-                </span>
-              )}
             </div>
 
             {/* Column Alignment */}

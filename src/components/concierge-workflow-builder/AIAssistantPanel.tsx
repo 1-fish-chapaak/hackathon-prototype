@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Plus, Send, Sparkles, Bot } from 'lucide-react';
 import type { JourneyStep } from './Stepper';
 
@@ -22,6 +22,8 @@ interface Props {
   quickReplies?: QuickReply[];
   onSend: (text: string) => void;
   onOpenGuideMe: () => void;
+  input: string;
+  setInput: (v: string) => void;
 }
 
 const STEPS: { id: JourneyStep; label: string }[] = [
@@ -37,8 +39,9 @@ export default function AIAssistantPanel({
   quickReplies,
   onSend,
   onOpenGuideMe,
+  input,
+  setInput,
 }: Props) {
-  const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
