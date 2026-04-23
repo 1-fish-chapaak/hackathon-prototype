@@ -36,6 +36,8 @@ import WorkflowExecutor from './components/workflow/WorkflowExecutor';
 import WorkingPaperPanel from './components/execution/WorkingPaperPanel';
 import WorkflowExecutionPanel from './components/execution/WorkflowExecutionPanel';
 import TraceabilityPanel from './components/execution/TraceabilityPanel';
+import EngagementDetailView from './components/engagement/EngagementDetailView';
+import ControlDetailDrawer from './components/engagement/ControlDetailDrawer';
 
 export default function App() {
   const {
@@ -69,6 +71,7 @@ export default function App() {
 
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [controlDrawerId, setControlDrawerId] = useState<string | null>(null);
 
   useEffect(() => {
     if (mainScrollRef.current) {
@@ -211,6 +214,15 @@ export default function App() {
       case 'audit-execution':
         return <AuditExecution />;
 
+      case 'engagement-detail':
+        return (
+          <EngagementDetailView
+            engagementId={state.selectedEngagementId ?? undefined}
+            onBack={() => setView('audit-planning')}
+            onOpenControl={(controlId) => setControlDrawerId(controlId)}
+          />
+        );
+
       case 'dashboards':
         return (
           <DashboardView
@@ -237,7 +249,10 @@ export default function App() {
         );
 
       case 'audit-planning':
-        return <AuditPlanningView onNavigateToExecution={openAuditExecution} />;
+        return <AuditPlanningView onNavigateToExecution={(engId) => {
+          openAuditExecution(engId);
+          setView('engagement-detail' as any);
+        }} />;
 
       case 'knowledge-hub':
         return <KnowledgeHubView />;
@@ -393,6 +408,16 @@ export default function App() {
               onClose={closeExecutionPanel}
               onOpenWorkingPaper={() => openExecutionPanel('working-paper', state.executionPanelControlId ?? undefined)}
               onOpenWorkflow={() => openExecutionPanel('workflow-execution', state.executionPanelControlId ?? undefined)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Control Detail Drawer */}
+        <AnimatePresence>
+          {controlDrawerId && (
+            <ControlDetailDrawer
+              controlId={controlDrawerId}
+              onClose={() => setControlDrawerId(null)}
             />
           )}
         </AnimatePresence>

@@ -21,6 +21,7 @@ export type View =
   | 'audit-planning'
   // Execution
   | 'audit-execution'
+  | 'engagement-detail'
   | 'execution-testing'
   | 'execution-evidence'
   // Intelligence
