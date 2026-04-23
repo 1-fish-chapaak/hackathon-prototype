@@ -159,16 +159,16 @@ function EditUserModal({ user, onClose }: { user: MockUser; onClose: () => void 
         <div className="px-6 py-5 space-y-4">
           <div>
             <label className="text-[13px] font-medium text-text mb-1.5 block">Full Name</label>
-            <input defaultValue={user.name} className="w-full h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none focus:border-primary/50 transition-colors" />
+            <input defaultValue={user.name} className="w-full h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none focus:border-primary/40 transition-colors" />
           </div>
           <div>
             <label className="text-[13px] font-medium text-text mb-1.5 block">Email</label>
-            <input defaultValue={user.email} className="w-full h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none focus:border-primary/50 transition-colors" />
+            <input defaultValue={user.email} className="w-full h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none focus:border-primary/40 transition-colors" />
           </div>
           <div>
             <label className="text-[13px] font-medium text-text mb-1.5 block">Role</label>
             <div className="relative">
-              <select defaultValue={user.role} className="w-full h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none appearance-none cursor-pointer focus:border-primary/50 transition-colors">
+              <select defaultValue={user.role} className="w-full h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none appearance-none cursor-pointer focus:border-primary/40 transition-colors">
                 <option>test role per final</option>
                 <option>test invite permission</option>
                 <option>Enabler</option>
@@ -182,7 +182,7 @@ function EditUserModal({ user, onClose }: { user: MockUser; onClose: () => void 
           <div>
             <label className="text-[13px] font-medium text-text mb-1.5 block">Team</label>
             <div className="relative">
-              <select defaultValue={user.team} className="w-full h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none appearance-none cursor-pointer focus:border-primary/50 transition-colors">
+              <select defaultValue={user.team} className="w-full h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none appearance-none cursor-pointer focus:border-primary/40 transition-colors">
                 <option>SOX Audit</option>
                 <option>IFC Team</option>
                 <option>Engineering</option>
@@ -317,6 +317,7 @@ const AVAILABLE_ROLES = [
 
 function InviteUserModal({ onClose }: { onClose: () => void }) {
   const [selectedRole, setSelectedRole] = useState(AVAILABLE_ROLES[0].name);
+  const [previewRole, setPreviewRole] = useState<string | null>(null);
 
   return (
     <>
@@ -345,20 +346,22 @@ function InviteUserModal({ onClose }: { onClose: () => void }) {
               <label className="text-[13px] text-ink-700 mb-2 block" style={{ fontWeight: 560 }}>Full Name <span className="text-risk-700">*</span></label>
               <input placeholder="Enter full name" className="w-full h-10 px-3 rounded-md border border-paper-200 bg-paper-0 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand-600 transition-colors" style={{ boxShadow: 'none' }} />
             </div>
-            <div>
-              <label className="text-[13px] text-ink-700 mb-2 block" style={{ fontWeight: 560 }}>Email <span className="text-risk-700">*</span></label>
-              <input placeholder="Enter email address" className="w-full h-10 px-3 rounded-md border border-paper-200 bg-paper-0 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand-600 transition-colors" style={{ boxShadow: 'none' }} />
-            </div>
-            <div>
-              <label className="text-[13px] text-ink-700 mb-2 block" style={{ fontWeight: 560 }}>Team <span className="text-risk-700">*</span></label>
-              <div className="relative">
-                <select className="w-full h-10 px-3 rounded-md border border-paper-200 bg-paper-0 text-[13px] text-ink-400 outline-none appearance-none cursor-pointer focus:border-brand-600 transition-colors">
-                  <option>Select teams</option>
-                  <option>SOX Audit Team</option>
-                  <option>IFC Team</option>
-                  <option>Management</option>
-                </select>
-                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[13px] text-ink-700 mb-2 block" style={{ fontWeight: 560 }}>Email <span className="text-risk-700">*</span></label>
+                <input placeholder="Enter email address" className="w-full h-10 px-3 rounded-md border border-paper-200 bg-paper-0 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand-600 transition-colors" style={{ boxShadow: 'none' }} />
+              </div>
+              <div>
+                <label className="text-[13px] text-ink-700 mb-2 block" style={{ fontWeight: 560 }}>Team <span className="text-risk-700">*</span></label>
+                <div className="relative">
+                  <select className="w-full h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none appearance-none cursor-pointer focus:border-primary/40 transition-colors">
+                    <option>Select teams</option>
+                    <option>SOX Audit Team</option>
+                    <option>IFC Team</option>
+                    <option>Management</option>
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none" />
+                </div>
               </div>
             </div>
           </div>
@@ -377,25 +380,52 @@ function InviteUserModal({ onClose }: { onClose: () => void }) {
                   <div
                     key={role.name}
                     onClick={() => setSelectedRole(role.name)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${
-                      isSelected ? 'border-primary bg-primary-light' : 'border-border hover:border-primary/30'
+                    className={`rounded-lg border cursor-pointer transition-colors ${
+                      isSelected ? 'border-border bg-white' : 'border-border hover:bg-gray-50'
                     }`}
                   >
-                    <div className={`w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                      isSelected ? 'border-primary' : 'border-gray-300'
-                    }`}>
-                      {isSelected && <div className="w-2 h-2 rounded-full bg-primary" />}
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <div className={`w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                        isSelected ? 'border-brand-400' : 'border-gray-300'
+                      }`}>
+                        {isSelected && <div className="w-2 h-2 rounded-full bg-brand-400" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] text-text" style={{ fontWeight: 600 }}>{role.name}</div>
+                        <div className="text-[12px] text-text-muted">{role.desc}</div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-[12px] text-text-muted tabular-nums">{role.perms} permissions</span>
+                        <button
+                          onClick={e => { e.stopPropagation(); setPreviewRole(previewRole === role.name ? null : role.name); }}
+                          className="text-[12px] font-medium text-text-secondary hover:text-text cursor-pointer"
+                        >
+                          {previewRole === role.name ? 'Hide' : 'Details'}
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[13px] text-text" style={{ fontWeight: 600 }}>{role.name}</div>
-                      <div className="text-[12px] text-text-muted">{role.desc}</div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {role.access.map(a => (
-                        <span key={a} className="px-1.5 py-0.5 rounded text-[12px] bg-gray-100 text-text-muted">{a}</span>
-                      ))}
-                      <span className="text-[12px] text-text-muted tabular-nums ml-1">{role.perms}</span>
-                    </div>
+                    {previewRole === role.name && (
+                      <div className="px-4 pb-3 border-t border-border/50 mt-2 pt-2 max-h-[200px] overflow-y-auto">
+                        {DETAILED_PERMISSIONS.map((group, gi) => (
+                          <div key={group.group}>
+                            <div className={`py-2 ${gi > 0 ? 'border-t border-border mt-1' : ''}`}>
+                              <span className="text-[13px] font-semibold text-text">{group.group}</span>
+                            </div>
+                            {group.perms.map(p => (
+                              <div key={p.key} className="flex items-center justify-between py-2 pl-3 border-t border-border/30">
+                                <div>
+                                  <div className="text-[12px] font-medium text-text">{p.name}</div>
+                                  <div className="text-[12px] text-text-muted">{p.desc}</div>
+                                </div>
+                                <div className="w-9 h-[20px] rounded-full shrink-0 bg-brand-400 ml-3 relative">
+                                  <div className="absolute top-[2px] left-[18px] w-4 h-4 rounded-full bg-white" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -835,7 +865,7 @@ function EditTeamModal({ team, onClose }: { team: { name: string; members: strin
         <div className="flex-1 overflow-y-auto">
           <div className="px-6 py-5">
             <label className="text-[13px] font-medium text-text mb-1.5 block">Team Name</label>
-            <input defaultValue={team.name} className="w-full h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none focus:border-primary/50 transition-colors" />
+            <input defaultValue={team.name} className="w-full h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none focus:border-primary/40 transition-colors" />
           </div>
 
           <div className="h-px bg-border-light" />
@@ -929,12 +959,14 @@ interface MockRole {
 
 /* ── View Role Modal ── */
 function ViewRoleModal({ role, onClose }: { role: MockRole; onClose: () => void }) {
-  // Simulate some enabled permissions for the role
+  // Simulate enabled permissions based on role
+  const allKeys = DETAILED_PERMISSIONS.flatMap(g => g.perms.map(p => p.key));
+  const viewKeys = DETAILED_PERMISSIONS.flatMap(g => g.perms.length > 0 ? [g.perms[0].key] : []);
   const rolePerms = role.name === 'System Admin'
-    ? PERM_RESOURCES.flatMap(r => r.available.map(p => `${r.name}.${p}`))
+    ? allKeys
     : role.name === 'Enabler'
-    ? PERM_RESOURCES.flatMap(r => ['View', 'Create', 'Edit'].filter(p => r.available.includes(p as PermCol)).map(p => `${r.name}.${p}`))
-    : PERM_RESOURCES.flatMap(r => r.available.includes('View') ? [`${r.name}.View`] : []);
+    ? allKeys.filter((_, i) => i % 2 === 0 || i < 10) // ~half permissions
+    : viewKeys; // view-only for others
 
   const enabledSet = new Set(rolePerms);
 
@@ -973,44 +1005,34 @@ function ViewRoleModal({ role, onClose }: { role: MockRole; onClose: () => void 
             </div>
           </div>
 
-          {/* Permission matrix (read-only) */}
+          {/* Permissions (read-only) */}
           <div className="px-6 py-5">
-            <h4 className="text-[13px] font-semibold text-text mb-3">Permission Matrix</h4>
-            <div className="border border-border rounded-md overflow-hidden">
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-border">
-                    <th className="text-left px-3 py-2 text-[12px] font-semibold text-text-secondary w-[160px]">Resource</th>
-                    {PERM_COLUMNS.map(col => (
-                      <th key={col} className="px-2 py-2 text-center text-[12px] font-medium text-text-secondary">{col}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {PERM_RESOURCES.map((resource, ri) => (
-                    <tr key={resource.name} className={ri > 0 ? 'border-t border-border/60' : ''}>
-                      <td className="px-3 py-2 text-[13px] font-medium text-text">{resource.name}</td>
-                      {PERM_COLUMNS.map(col => {
-                        const isAvailable = resource.available.includes(col);
-                        const isOn = isAvailable && enabledSet.has(`${resource.name}.${col}`);
-                        return (
-                          <td key={col} className="px-2 py-2 text-center">
-                            {!isAvailable ? (
-                              <span className="text-text-muted/30">—</span>
-                            ) : isOn ? (
-                              <div className="w-4 h-4 rounded bg-primary flex items-center justify-center mx-auto">
-                                <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                              </div>
-                            ) : (
-                              <div className="w-4 h-4 rounded border border-gray-300 mx-auto" />
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-[13px] font-semibold text-text">Permissions</h4>
+              <span className="text-[12px] text-text-muted tabular-nums">{enabledSet.size} enabled</span>
+            </div>
+            <div>
+              {DETAILED_PERMISSIONS.map((group, gi) => (
+                <div key={group.group}>
+                  <div className={`py-2.5 ${gi > 0 ? 'border-t border-border mt-1' : ''}`}>
+                    <span className="text-[13px] font-semibold text-text">{group.group}</span>
+                  </div>
+                  {group.perms.map(perm => {
+                    const isOn = enabledSet.has(perm.key);
+                    return (
+                      <div key={perm.key} className="flex items-center justify-between py-2.5 pl-3 border-t border-border/30">
+                        <div>
+                          <div className="text-[13px] font-medium text-text">{perm.name}</div>
+                          <div className="text-[12px] text-text-muted">{perm.desc}</div>
+                        </div>
+                        <div className={`w-10 h-[22px] rounded-full shrink-0 ml-4 relative ${isOn ? 'bg-brand-400' : 'bg-gray-200'}`}>
+                          <div className={`absolute top-[3px] w-4 h-4 rounded-full bg-white ${isOn ? 'left-[22px]' : 'left-[3px]'}`} style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -1182,64 +1204,67 @@ function RolesTab({ onCreateRole }: { onCreateRole: () => void }) {
   );
 }
 
-const PERM_COLUMNS = ['View', 'Create', 'Edit', 'Delete', 'Manage'] as const;
-type PermCol = typeof PERM_COLUMNS[number];
+// Using DETAILED_PERMISSIONS for all permission UI
 
-const PERM_RESOURCES = [
-  { name: 'Business Process', available: ['View', 'Create', 'Edit', 'Delete', 'Manage'] as PermCol[] },
-  { name: 'Dashboard', available: ['View', 'Create', 'Edit', 'Delete', 'Manage'] as PermCol[] },
-  { name: 'Data Source', available: ['View', 'Create', 'Edit', 'Delete', 'Manage'] as PermCol[] },
-  { name: 'Report', available: ['View', 'Create', 'Edit', 'Delete', 'Manage'] as PermCol[] },
-  { name: 'Workflow', available: ['View', 'Create', 'Edit', 'Delete', 'Manage'] as PermCol[] },
-  { name: 'Risk', available: ['View', 'Create', 'Edit', 'Delete'] as PermCol[] },
-  { name: 'Control', available: ['View', 'Create', 'Edit', 'Delete'] as PermCol[] },
-  { name: 'Role', available: ['View', 'Create', 'Edit', 'Delete', 'Manage'] as PermCol[] },
-  { name: 'User', available: ['View', 'Create', 'Edit', 'Delete', 'Manage'] as PermCol[] },
-  { name: 'Team', available: ['View', 'Create', 'Edit', 'Delete'] as PermCol[] },
+// Detailed permission structure matching the real platform
+const DETAILED_PERMISSIONS = [
+  { group: 'Business Process', perms: [
+    { key: 'bp_view', name: 'View', desc: 'View business process and their details' },
+    { key: 'bp_create', name: 'Create and Update', desc: 'Build and updates business processes' },
+    { key: 'bp_delete', name: 'Delete', desc: 'Remove workflows permanently' },
+    { key: 'bp_share', name: 'Sharing Permission', desc: 'Share with specific users and team' },
+  ]},
+  { group: 'Workflows', perms: [
+    { key: 'wf_view', name: 'View', desc: 'View workflow & their details' },
+    { key: 'wf_create', name: 'Create', desc: 'Create a copy of the workflow' },
+    { key: 'wf_update_delete', name: 'Update & Delete', desc: 'Modify the existing workflows' },
+    { key: 'wf_output', name: 'View Output', desc: 'Preview and download generated outputs' },
+    { key: 'wf_run', name: 'Run', desc: 'Distribute the workflows with team members' },
+    { key: 'wf_upload', name: 'Upload Data', desc: 'Add workflows from external sources' },
+  ]},
+  { group: 'Reports', perms: [
+    { key: 'rp_view', name: 'View', desc: 'Create new queries to streamline data retrieval' },
+    { key: 'rp_edit', name: 'Edit/Update', desc: 'Update report structure and content' },
+    { key: 'rp_comment', name: 'Comment on Queries', desc: 'Add comments and attach proofs to queries' },
+    { key: 'rp_share', name: 'Share', desc: 'Share reports for review and collaboration' },
+    { key: 'rp_delete', name: 'Delete Queries', desc: 'Remove existing queries' },
+  ]},
+  { group: 'Dashboard', perms: [
+    { key: 'db_view', name: 'View', desc: 'View dashboards and insights' },
+    { key: 'db_add', name: 'Add Queries', desc: 'Add queries to dashboards' },
+    { key: 'db_share', name: 'Share Queries', desc: 'Share queries for team access and collaboration' },
+    { key: 'db_delete', name: 'Delete Queries', desc: 'Delete dashboard permanently' },
+    { key: 'db_comment', name: 'Comment on Queries', desc: 'Comment on dashboard outputs and insights' },
+  ]},
+  { group: 'Datasource', perms: [
+    { key: 'ds_upload', name: 'Manually Upload', desc: 'Upload data files manually' },
+    { key: 'ds_live', name: 'Live Datasource List', desc: 'View active data sources' },
+  ]},
+  { group: 'Admin', perms: [
+    { key: 'ad_logs', name: 'Compliance Logs', desc: 'Viewing compliance-related logs and audit trails' },
+    { key: 'ad_tech', name: 'Tech Specialist', desc: 'Supports system troubleshooting and optimization' },
+  ]},
 ];
 
 function CreateRoleModal({ onClose }: { onClose: () => void }) {
   const [enabled, setEnabled] = useState<Set<string>>(new Set());
+  const totalPerms = DETAILED_PERMISSIONS.reduce((s, g) => s + g.perms.length, 0);
 
-  const toggle = (resource: string, perm: string) => {
-    const id = `${resource}.${perm}`;
-    setEnabled(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const togglePerm = (key: string) => {
+    setEnabled(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
   };
 
-  const toggleRow = (resource: string, available: PermCol[]) => {
-    setEnabled(prev => {
-      const n = new Set(prev);
-      const ids = available.map(p => `${resource}.${p}`);
-      const allOn = ids.every(id => n.has(id));
-      ids.forEach(id => allOn ? n.delete(id) : n.add(id));
-      return n;
-    });
-  };
-
-  const toggleCol = (perm: PermCol) => {
-    setEnabled(prev => {
-      const n = new Set(prev);
-      const ids = PERM_RESOURCES.filter(r => r.available.includes(perm)).map(r => `${r.name}.${perm}`);
-      const allOn = ids.every(id => n.has(id));
-      ids.forEach(id => allOn ? n.delete(id) : n.add(id));
-      return n;
-    });
-  };
-
-  const totalPerms = PERM_RESOURCES.reduce((s, r) => s + r.available.length, 0);
+  void 0; // toggleGroup removed — individual toggles only
 
   const applyPreset = (preset: 'none' | 'readonly' | 'full') => {
     if (preset === 'none') { setEnabled(new Set()); return; }
     const n = new Set<string>();
-    PERM_RESOURCES.forEach(r => {
-      if (preset === 'readonly') { if (r.available.includes('View')) n.add(`${r.name}.View`); }
-      else { r.available.forEach(p => n.add(`${r.name}.${p}`)); }
+    DETAILED_PERMISSIONS.forEach(g => {
+      if (preset === 'full') g.perms.forEach(p => n.add(p.key));
+      else if (g.perms[0]) n.add(g.perms[0].key); // first perm is usually "View"
     });
     setEnabled(n);
   };
-
-  const colAllOn = (perm: PermCol) => PERM_RESOURCES.filter(r => r.available.includes(perm)).every(r => enabled.has(`${r.name}.${perm}`));
-  const colSomeOn = (perm: PermCol) => PERM_RESOURCES.some(r => r.available.includes(perm) && enabled.has(`${r.name}.${perm}`));
 
   return (
     <>
@@ -1249,7 +1274,7 @@ function CreateRoleModal({ onClose }: { onClose: () => void }) {
         transition={{ duration: 0.15, ease: [0.2, 0, 0, 1] }}
         className="fixed inset-0 z-50 flex items-center justify-center p-6" onClick={onClose}
       >
-      <div className="w-[640px] max-h-[90vh] bg-white rounded-lg border border-border flex flex-col" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={e => e.stopPropagation()}>
+      <div className="w-[520px] max-h-[90vh] bg-white rounded-lg border border-border flex flex-col" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 h-12 border-b border-border shrink-0">
           <h2 className="text-[14px] font-semibold text-text">Create New Role</h2>
           <button onClick={onClose} className="w-7 h-7 rounded flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer text-text-muted">
@@ -1261,102 +1286,64 @@ function CreateRoleModal({ onClose }: { onClose: () => void }) {
           <div className="px-6 py-5 space-y-4">
             <div>
               <label className="text-[13px] font-medium text-text mb-1.5 block">Role Name <span className="text-red-500">*</span></label>
-              <input placeholder="Enter role name" className="w-full h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none focus:border-primary/50 transition-colors" />
+              <input placeholder="Enter role name" className="w-full h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none focus:border-primary/40 transition-colors" />
             </div>
             <div>
               <label className="text-[13px] font-medium text-text mb-1.5 block">Description <span className="text-red-500">*</span></label>
-              <textarea placeholder="Enter a description..." rows={2} className="w-full px-3 py-2 rounded-md border border-border bg-white text-[13px] text-text outline-none resize-none focus:border-primary/50 transition-colors" />
+              <textarea placeholder="Enter a description..." rows={2} className="w-full px-3 py-2 rounded-md border border-border bg-white text-[13px] text-text outline-none resize-none focus:border-primary/40 transition-colors" />
             </div>
           </div>
 
           <div className="h-px bg-border" />
 
           <div className="px-6 py-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-[14px] font-semibold text-text">Permissions</h3>
-                <p className="text-[12px] text-text-muted mt-0.5 tabular-nums">{enabled.size} of {totalPerms} enabled</p>
-              </div>
-              {/* Presets */}
+            {/* Header with progress */}
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[14px] font-semibold text-text">Set permissions for this role</h3>
               <div className="flex items-center gap-1.5">
-                <button onClick={() => applyPreset('none')} className="px-2.5 py-1 rounded-md text-[12px] font-medium text-text-muted border border-border hover:bg-gray-50 transition-colors cursor-pointer">None</button>
-                <button onClick={() => applyPreset('readonly')} className="px-2.5 py-1 rounded-md text-[12px] font-medium text-text-muted border border-border hover:bg-gray-50 transition-colors cursor-pointer">Read Only</button>
-                <button onClick={() => applyPreset('full')} className="px-2.5 py-1 rounded-md text-[12px] font-medium text-text-muted border border-border hover:bg-gray-50 transition-colors cursor-pointer">Full Access</button>
+                <button onClick={() => applyPreset('none')} className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-colors cursor-pointer ${enabled.size === 0 ? 'bg-primary-light text-primary' : 'text-text-muted hover:bg-gray-50'}`}>None</button>
+                <button onClick={() => applyPreset('readonly')} className="px-2.5 py-1 rounded-full text-[12px] font-medium text-text-muted hover:bg-gray-50 transition-colors cursor-pointer">View Only</button>
+                <button onClick={() => applyPreset('full')} className={`px-2.5 py-1 rounded-full text-[12px] font-medium transition-colors cursor-pointer ${enabled.size === totalPerms ? 'bg-primary-light text-primary' : 'text-text-muted hover:bg-gray-50'}`}>Full Access</button>
               </div>
             </div>
 
-            {/* Permission matrix */}
-            <div className="border border-border rounded-md overflow-hidden">
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-border">
-                    <th className="text-left px-3 py-2 text-[12px] font-semibold text-text-secondary w-[180px]">Resource</th>
-                    {PERM_COLUMNS.map(col => {
-                      const all = colAllOn(col);
-                      const some = colSomeOn(col);
-                      return (
-                        <th key={col} className="px-2 py-2 text-center w-[72px]">
-                          <div className="flex flex-col items-center gap-1">
-                            <button
-                              onClick={() => toggleCol(col)}
-                              className={`w-4 h-4 rounded flex items-center justify-center shrink-0 cursor-pointer transition-colors ${
-                                all ? 'bg-primary' : some ? 'bg-primary/50' : 'border border-gray-300'
-                              }`}
-                            >
-                              {(all || some) && <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d={all ? "M1 3L3 5L7 1" : "M2 3H6"} stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                            </button>
-                            <span className="text-[12px] font-medium text-text-secondary">{col}</span>
-                          </div>
-                        </th>
-                      );
-                    })}
-                    <th className="px-2 py-2 text-center w-[48px]">
-                      <span className="text-[12px] font-medium text-text-secondary">All</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {PERM_RESOURCES.map((resource, ri) => {
-                    const rowAllOn = resource.available.every(p => enabled.has(`${resource.name}.${p}`));
-                    const rowSomeOn = resource.available.some(p => enabled.has(`${resource.name}.${p}`));
+            {/* Progress bar */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                <div className="h-full rounded-full bg-primary transition-all duration-200" style={{ width: `${(enabled.size / totalPerms) * 100}%` }} />
+              </div>
+              <span className="text-[12px] text-text-muted tabular-nums shrink-0">{enabled.size}/{totalPerms}</span>
+            </div>
+
+            {/* Permission groups */}
+            <div>
+              {DETAILED_PERMISSIONS.map((group, gi) => (
+                <div key={group.group}>
+                  {/* Group header */}
+                  <div className={`flex items-center justify-between py-3 ${gi > 0 ? 'border-t border-border mt-2' : ''}`}>
+                    <span className="text-[14px] font-semibold text-text">{group.group}</span>
+                  </div>
+                  {/* Permissions */}
+                  {group.perms.map(perm => {
+                    const isOn = enabled.has(perm.key);
                     return (
-                      <tr key={resource.name} className={`${ri > 0 ? 'border-t border-border/60' : ''} ${rowSomeOn ? 'bg-primary-light/20' : 'hover:bg-gray-50'} transition-colors`}>
-                        <td className="px-3 py-2.5 text-[13px] font-medium text-text">{resource.name}</td>
-                        {PERM_COLUMNS.map(col => {
-                          const isAvailable = resource.available.includes(col);
-                          const isOn = isAvailable && enabled.has(`${resource.name}.${col}`);
-                          return (
-                            <td key={col} className="px-2 py-2.5 text-center">
-                              {isAvailable ? (
-                                <button
-                                  onClick={() => toggle(resource.name, col)}
-                                  className={`w-4 h-4 rounded flex items-center justify-center mx-auto cursor-pointer transition-colors ${
-                                    isOn ? 'bg-primary' : 'border border-gray-300 hover:border-primary/50'
-                                  }`}
-                                >
-                                  {isOn && <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                                </button>
-                              ) : (
-                                <span className="text-text-muted/30">—</span>
-                              )}
-                            </td>
-                          );
-                        })}
-                        <td className="px-2 py-2.5 text-center">
-                          <button
-                            onClick={() => toggleRow(resource.name, resource.available)}
-                            className={`w-4 h-4 rounded flex items-center justify-center mx-auto cursor-pointer transition-colors ${
-                              rowAllOn ? 'bg-primary' : rowSomeOn ? 'bg-primary/50' : 'border border-gray-300'
-                            }`}
-                          >
-                            {(rowAllOn || rowSomeOn) && <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d={rowAllOn ? "M1 3L3 5L7 1" : "M2 3H6"} stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                          </button>
-                        </td>
-                      </tr>
+                      <div
+                        key={perm.key}
+                        onClick={() => togglePerm(perm.key)}
+                        className="flex items-center justify-between py-3 pl-3 border-t border-border/50 cursor-pointer"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-medium text-text">{perm.name}</div>
+                          <div className="text-[12px] text-text-muted">{perm.desc}</div>
+                        </div>
+                        <div className={`w-10 h-[22px] rounded-full transition-colors shrink-0 ml-4 relative ${isOn ? 'bg-brand-400' : 'bg-gray-200'}`}>
+                          <div className={`absolute top-[3px] w-4 h-4 rounded-full bg-white transition-transform ${isOn ? 'left-[22px]' : 'left-[3px]'}`} style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                        </div>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -1489,26 +1476,35 @@ function AuditLogsTab() {
           <Filter size={13} />
           Filters
         </div>
-        <select value={userFilter} onChange={e => setUserFilter(e.target.value)} className="h-8 px-2.5 rounded-md border border-border bg-white text-[12px] text-text outline-none cursor-pointer focus:border-primary/50 transition-colors">
-          <option value="all">All Users</option>
-          {uniqueUsers.map(u => <option key={u} value={u}>{u}</option>)}
-        </select>
-        <select value={actionFilter} onChange={e => setActionFilter(e.target.value)} className="h-8 px-2.5 rounded-md border border-border bg-white text-[12px] text-text outline-none cursor-pointer focus:border-primary/50 transition-colors">
-          <option value="all">All Actions</option>
-          <option value="Create">Create</option>
-          <option value="Update">Update</option>
-          <option value="Delete">Delete</option>
-          <option value="Login">Login</option>
-          <option value="Export">Export</option>
-        </select>
-        <select value={resultFilter} onChange={e => setResultFilter(e.target.value)} className="h-8 px-2.5 rounded-md border border-border bg-white text-[12px] text-text outline-none cursor-pointer focus:border-primary/50 transition-colors">
-          <option value="all">All Results</option>
-          <option value="Success">Success</option>
-          <option value="Failed">Failed</option>
-        </select>
-        <input type="date" className="h-8 px-2.5 rounded-md border border-border bg-white text-[12px] text-text outline-none cursor-pointer focus:border-primary/50 transition-colors" />
+        <div className="relative">
+          <select value={userFilter} onChange={e => setUserFilter(e.target.value)} className="h-9 pl-3 pr-8 rounded-md border border-border bg-white text-[13px] text-text outline-none appearance-none cursor-pointer focus:border-primary/40 transition-colors">
+            <option value="all">All Users</option>
+            {uniqueUsers.map(u => <option key={u} value={u}>{u}</option>)}
+          </select>
+          <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+        </div>
+        <div className="relative">
+          <select value={actionFilter} onChange={e => setActionFilter(e.target.value)} className="h-9 pl-3 pr-8 rounded-md border border-border bg-white text-[13px] text-text outline-none appearance-none cursor-pointer focus:border-primary/40 transition-colors">
+            <option value="all">All Actions</option>
+            <option value="Create">Create</option>
+            <option value="Update">Update</option>
+            <option value="Delete">Delete</option>
+            <option value="Login">Login</option>
+            <option value="Export">Export</option>
+          </select>
+          <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+        </div>
+        <div className="relative">
+          <select value={resultFilter} onChange={e => setResultFilter(e.target.value)} className="h-9 pl-3 pr-8 rounded-md border border-border bg-white text-[13px] text-text outline-none appearance-none cursor-pointer focus:border-primary/40 transition-colors">
+            <option value="all">All Results</option>
+            <option value="Success">Success</option>
+            <option value="Failed">Failed</option>
+          </select>
+          <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+        </div>
+        <input type="date" className="h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none cursor-pointer focus:border-primary/40 transition-colors" />
         <span className="text-[12px] text-text-muted">to</span>
-        <input type="date" className="h-8 px-2.5 rounded-md border border-border bg-white text-[12px] text-text outline-none cursor-pointer focus:border-primary/50 transition-colors" />
+        <input type="date" className="h-9 px-3 rounded-md border border-border bg-white text-[13px] text-text outline-none cursor-pointer focus:border-primary/40 transition-colors" />
       </div>
 
       <SmartTable
