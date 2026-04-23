@@ -1,21 +1,28 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ListChecks,
   Table2,
   FileOutput,
   Check,
+  CheckCircle2,
   ShieldCheck,
   ChevronRight,
-  SlidersHorizontal,
+  ChevronDown,
   BookOpenText,
-  DollarSign,
-  CalendarDays,
-  Type as TypeIcon,
   Lightbulb,
   Plus,
   X,
+  PanelRightClose,
+  Send,
+  Sparkles,
+  Mail,
+  MessageSquare,
+  Database,
+  Globe,
+  FileSpreadsheet,
 } from 'lucide-react';
-import type { WorkflowDraft, ToleranceRule, InputNote } from './types';
+import type { WorkflowDraft, InputNote } from './types';
+import ToleranceSection from './ToleranceSection';
 
 type Tab = 'plan' | 'input' | 'output';
 
@@ -77,22 +84,73 @@ const MAPPED_RISKS: MappedRisk[] = [
 
 interface Props {
   workflow: WorkflowDraft | null;
+  step?: number;
+  open: boolean;
+  onToggleOpen: () => void;
 }
 
-export default function PlanPanel({ workflow }: Props) {
-  const [tab, setTab] = useState<Tab>('plan');
+const TABS: { key: Tab; label: string; icon: typeof ListChecks }[] = [
+  { key: 'plan', label: 'Plan', icon: ListChecks },
+  { key: 'input', label: 'Input Config', icon: Table2 },
+  { key: 'output', label: 'Output Config', icon: FileOutput },
+];
+
+export default function PlanPanel({ workflow, step, open, onToggleOpen }: Props) {
+  const [tab, setTab] = useState<Tab>(step === 3 ? 'input' : 'plan');
+
+  // Switch to input config tab when entering step 3
+  const prevStepRef = useRef(step);
+  if (step !== prevStepRef.current) {
+    prevStepRef.current = step;
+    if (step === 3) {
+      setTab('input');
+    }
+  }
+
+  if (!open) {
+    return (
+      <aside className="flex flex-col h-full bg-canvas-elevated border-l border-canvas-border min-h-0 w-12 shrink-0">
+        <div className="flex flex-col items-center pt-3 gap-1">
+          {TABS.map((t) => {
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                title={t.label}
+                onClick={() => {
+                  setTab(t.key);
+                  onToggleOpen();
+                }}
+                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                  active
+                    ? 'bg-brand-100 text-brand-700'
+                    : 'text-ink-400 hover:bg-canvas hover:text-ink-700'
+                }`}
+              >
+                <t.icon size={15} />
+              </button>
+            );
+          })}
+          <div className="w-6 h-px bg-canvas-border my-2" />
+          <button
+            type="button"
+            title="Expand panel"
+            onClick={onToggleOpen}
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-ink-400 hover:bg-canvas hover:text-ink-700 transition-colors cursor-pointer"
+          >
+            <PanelRightClose size={15} className="rotate-180" />
+          </button>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="flex flex-col h-full bg-canvas-elevated border-l border-canvas-border min-h-0">
       {/* Tabs */}
       <div className="h-14 border-b border-canvas-border flex items-end px-2 shrink-0">
-        {(
-          [
-            { key: 'plan', label: 'Plan', icon: ListChecks },
-            { key: 'input', label: 'Input Config', icon: Table2 },
-            { key: 'output', label: 'Output Config', icon: FileOutput },
-          ] as { key: Tab; label: string; icon: typeof ListChecks }[]
-        ).map((t) => {
+        {TABS.map((t) => {
           const active = tab === t.key;
           return (
             <button
@@ -111,6 +169,14 @@ export default function PlanPanel({ workflow }: Props) {
             </button>
           );
         })}
+        <button
+          type="button"
+          title="Collapse panel"
+          onClick={onToggleOpen}
+          className="ml-auto mb-2 w-7 h-7 rounded-md flex items-center justify-center text-ink-400 hover:bg-canvas hover:text-ink-700 transition-colors cursor-pointer"
+        >
+          <PanelRightClose size={14} />
+        </button>
       </div>
 
       {/* Content */}
@@ -132,7 +198,7 @@ function PlanSection({ workflow }: { workflow: WorkflowDraft | null }) {
   if (!workflow) {
     return (
       <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
-        <p className="text-[12px] text-ink-400">
+        <p className="text-[11.5px] text-ink-400">
           The execution plan appears once you generate a workflow.
         </p>
       </div>
@@ -140,14 +206,14 @@ function PlanSection({ workflow }: { workflow: WorkflowDraft | null }) {
   }
   return (
     <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
-      <div className="text-[12px] font-bold uppercaser text-ink-400 mb-3">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-ink-400 mb-3">
         Query Execution Plan
       </div>
       <ol className="space-y-3">
         {workflow.steps.map((s, idx) => (
           <li key={s.id} className="flex items-start gap-3">
             <div className="flex flex-col items-center shrink-0">
-              <div className="w-6 h-6 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-[12px] font-bold">
+              <div className="w-6 h-6 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-[11px] font-bold">
                 {idx + 1}
               </div>
               {idx < workflow.steps.length - 1 && (
@@ -156,7 +222,7 @@ function PlanSection({ workflow }: { workflow: WorkflowDraft | null }) {
             </div>
             <div className="min-w-0 pb-1">
               <div className="text-[12px] font-semibold text-ink-800 truncate">{s.name}</div>
-              <div className="text-[12px] text-ink-400 leading-relaxed">{s.description}</div>
+              <div className="text-[11px] text-ink-400 leading-relaxed">{s.description}</div>
             </div>
           </li>
         ))}
@@ -166,7 +232,7 @@ function PlanSection({ workflow }: { workflow: WorkflowDraft | null }) {
           <Check size={11} />
         </div>
         <div className="min-w-0">
-          <div className="text-[12px] font-bold uppercaser text-compliant-700">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-compliant-700">
             {workflow.output.type === 'flags'
               ? 'Flags Output'
               : workflow.output.type === 'table'
@@ -196,7 +262,7 @@ function RACMSection() {
           <div className="text-[12px] font-semibold text-ink-800 leading-tight">
             Risk &amp; Control Matrix
           </div>
-          <div className="text-[12px] text-ink-400">
+          <div className="text-[10.5px] text-ink-400">
             {MAPPED_RISKS.length} risks · {MAPPED_RISKS.reduce((n, r) => n + r.controlsCount, 0)}{' '}
             controls
           </div>
@@ -205,10 +271,10 @@ function RACMSection() {
 
       <div className="mt-3 mb-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[12px] font-bold uppercaser text-ink-400">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-ink-400">
             Control Coverage
           </span>
-          <span className="text-[12px] font-semibold text-ink-600">
+          <span className="text-[10.5px] font-semibold text-ink-600">
             {mapped}/{total}
             {total - mapped > 0 && (
               <span className="ml-1 text-mitigated-700">
@@ -225,7 +291,7 @@ function RACMSection() {
         </div>
       </div>
 
-      <div className="text-[12px] font-bold uppercaser text-ink-400 mb-2">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-ink-400 mb-2">
         Mapped Risks
       </div>
       <ul className="space-y-2">
@@ -236,15 +302,15 @@ function RACMSection() {
           >
             <div className="flex items-center gap-2 mb-1">
               <ChevronRight size={11} className="text-ink-400 shrink-0" />
-              <span className="text-[12px] font-semibold text-ink-800">{r.id}</span>
+              <span className="text-[11px] font-semibold text-ink-800">{r.id}</span>
               <span
-                className={`text-[9.5px] uppercaser font-bold rounded-full px-1.5 py-0.5 ${SEVERITY_COLORS[r.severity]}`}
+                className={`text-[9.5px] uppercase tracking-wider font-bold rounded-full px-1.5 py-0.5 ${SEVERITY_COLORS[r.severity]}`}
               >
                 {r.severity}
               </span>
               <span
                 className={[
-                  'text-[9.5px] uppercaser font-bold rounded-full px-1.5 py-0.5',
+                  'text-[9.5px] uppercase tracking-wider font-bold rounded-full px-1.5 py-0.5',
                   r.status === 'Mapped'
                     ? 'text-evidence bg-evidence-50'
                     : 'text-mitigated bg-mitigated-50',
@@ -253,8 +319,8 @@ function RACMSection() {
                 {r.status}
               </span>
             </div>
-            <div className="text-[12px] text-ink-700 leading-snug mb-1">{r.title}</div>
-            <div className="flex items-center gap-2 text-[12px] text-ink-400">
+            <div className="text-[11px] text-ink-700 leading-snug mb-1">{r.title}</div>
+            <div className="flex items-center gap-2 text-[10px] text-ink-400">
               <span>{r.process}</span>
               <span>·</span>
               <span className="font-mono">{r.evidence}</span>
@@ -267,24 +333,6 @@ function RACMSection() {
     </div>
   );
 }
-
-const SEVERITY_BADGE: Record<ToleranceRule['severity'], string> = {
-  Strict: 'bg-risk-50 text-risk-700',
-  Moderate: 'bg-mitigated-50 text-mitigated-700',
-  Relaxed: 'bg-compliant-50 text-compliant-700',
-};
-
-const DEFAULT_TOLERANCE_RULES: ToleranceRule[] = [
-  { id: 'amount', label: 'Amount', description: '±5%', severity: 'Moderate', enabled: false },
-  { id: 'date', label: 'Date', description: '±3 calendar days', severity: 'Moderate', enabled: false },
-  { id: 'text', label: 'Text similarity', description: '≥80% fuzzy match', severity: 'Moderate', enabled: false },
-];
-
-const TOLERANCE_ICON: Record<ToleranceRule['id'], typeof DollarSign> = {
-  amount: DollarSign,
-  date: CalendarDays,
-  text: TypeIcon,
-};
 
 const DEFAULT_NOTES: InputNote[] = [
   {
@@ -314,20 +362,14 @@ function nextNoteId(): string {
 }
 
 function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
-  const [rules, setRules] = useState<ToleranceRule[]>(DEFAULT_TOLERANCE_RULES);
   const [notes, setNotes] = useState<InputNote[]>(DEFAULT_NOTES);
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_AI_SUGGESTIONS);
   const [addingNote, setAddingNote] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
 
-  const toggleRule = (id: ToleranceRule['id']) =>
-    setRules((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)));
-
   const toggleNote = (id: string) =>
     setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, enabled: !n.enabled } : n)));
-
-  const activeRuleCount = rules.filter((r) => r.enabled).length;
 
   const acceptSuggestion = (idx: number) => {
     const text = suggestions[idx];
@@ -359,59 +401,14 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
 
   return (
     <div className="space-y-3">
-      {/* Tolerance rules */}
-      <div className="rounded-xl border border-canvas-border bg-canvas-elevated">
-        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-canvas-border">
-          <SlidersHorizontal size={13} className="text-ink-400" />
-          <span className="text-[12px] font-semibold text-ink-700 flex-1">
-            Tolerance rules
-          </span>
-          <span className="text-[12px] font-semibold text-ink-400">
-            {activeRuleCount} active
-          </span>
-        </div>
-        <div className="p-2 space-y-1.5">
-          {rules.map((r) => {
-            const Icon = TOLERANCE_ICON[r.id];
-            return (
-              <div
-                key={r.id}
-                className={`rounded-lg transition-opacity ${r.enabled ? '' : 'opacity-55'} flex items-center gap-2.5 px-2.5 py-2 hover:bg-brand-50/40`}
-              >
-                <div className="w-7 h-7 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
-                  <Icon size={12} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[12px] font-semibold text-ink-800">{r.label}</div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[12px] text-ink-400">{r.description}</span>
-                    <span
-                      className={`text-[9.5px] font-bold uppercaser rounded px-1.5 py-0.5 ${SEVERITY_BADGE[r.severity]}`}
-                    >
-                      {r.severity}
-                    </span>
-                  </div>
-                </div>
-                <Toggle enabled={r.enabled} onToggle={() => toggleRule(r.id)} />
-              </div>
-            );
-          })}
-        </div>
-        <button
-          type="button"
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[12px] font-semibold text-ink-400 hover:text-brand-700 hover:bg-brand-50/40 border-t border-dashed border-canvas-border transition-colors cursor-pointer"
-        >
-          <Plus size={12} />
-          Add tolerance parameter
-        </button>
-      </div>
+      <ToleranceSection />
 
       {/* Notes */}
       <div className="rounded-xl border border-canvas-border bg-canvas-elevated">
         <div className="flex items-center gap-2 px-3 py-2.5 border-b border-canvas-border">
           <BookOpenText size={13} className="text-ink-400" />
           <span className="text-[12px] font-semibold text-ink-700 flex-1">Notes</span>
-          <span className="text-[12px] font-semibold text-ink-400">
+          <span className="text-[10.5px] font-semibold text-ink-400">
             {notes.length} ref{notes.length === 1 ? '' : 's'}
           </span>
         </div>
@@ -447,7 +444,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
                       </span>
                     )}
                   </div>
-                  <p className="text-[12px] text-ink-400 mt-0.5 leading-relaxed">
+                  <p className="text-[10.5px] text-ink-400 mt-0.5 leading-relaxed">
                     {n.description}
                   </p>
                 </div>
@@ -460,7 +457,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
             <div className="rounded-lg border border-brand-200 bg-brand-50/40 p-2.5">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Lightbulb size={11} className="text-brand-600" />
-                <span className="text-[12px] font-bold text-brand-700 uppercaser">
+                <span className="text-[10.5px] font-bold text-brand-700 uppercase tracking-wider">
                   AI Suggestions
                 </span>
               </div>
@@ -473,7 +470,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
                     className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/70 border border-brand-100 hover:bg-white hover:border-brand-300 transition-colors cursor-pointer group"
                   >
                     <Plus size={11} className="text-brand-400 group-hover:text-brand-700" />
-                    <span className="text-[12px] text-brand-700 text-left flex-1">{s}</span>
+                    <span className="text-[11.5px] text-brand-700 text-left flex-1">{s}</span>
                   </button>
                 ))}
               </div>
@@ -503,14 +500,14 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
                     setNewDesc('');
                   }
                 }}
-                className="w-full rounded-md border border-canvas-border bg-canvas-elevated px-2 py-1.5 text-[12px] text-ink-600 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/30 transition-all"
+                className="w-full rounded-md border border-canvas-border bg-canvas-elevated px-2 py-1.5 text-[11.5px] text-ink-600 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/30 transition-all"
               />
               <div className="flex items-center gap-1.5 pt-0.5">
                 <button
                   type="button"
                   onClick={addNote}
                   disabled={!newName.trim()}
-                  className={`inline-flex items-center gap-1 rounded-md text-[12px] font-semibold px-2 py-1 transition-colors ${
+                  className={`inline-flex items-center gap-1 rounded-md text-[11px] font-semibold px-2 py-1 transition-colors ${
                     newName.trim()
                       ? 'bg-brand-600 hover:bg-brand-500 text-white cursor-pointer'
                       : 'bg-brand-100 text-brand-300 cursor-not-allowed'
@@ -526,7 +523,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
                     setNewName('');
                     setNewDesc('');
                   }}
-                  className="inline-flex items-center gap-1 rounded-md text-[12px] font-semibold px-2 py-1 text-ink-500 hover:bg-canvas transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 rounded-md text-[11px] font-semibold px-2 py-1 text-ink-500 hover:bg-canvas transition-colors cursor-pointer"
                 >
                   <X size={10} />
                   Cancel
@@ -537,7 +534,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
             <button
               type="button"
               onClick={() => setAddingNote(true)}
-              className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-canvas-border bg-canvas hover:border-brand-300 hover:text-brand-700 text-ink-400 text-[12px] font-semibold px-3 py-2 transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-canvas-border bg-canvas hover:border-brand-300 hover:text-brand-700 text-ink-400 text-[11.5px] font-semibold px-3 py-2 transition-colors cursor-pointer"
             >
               <Plus size={12} />
               Add Note
@@ -548,7 +545,7 @@ function InputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
 
       {/* Context: which workflow */}
       {workflow && (
-        <div className="text-center text-[12px] uppercaser text-ink-400 font-semibold">
+        <div className="text-center text-[10px] uppercase tracking-wider text-ink-400 font-semibold">
           For {workflow.name}
         </div>
       )}
@@ -577,21 +574,338 @@ function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void 
   );
 }
 
+type OutputLayout = 'table' | 'dashboard' | 'summary';
+type KpiKey = 'total' | 'duplicates' | 'amount' | 'comparison' | 'trend';
+type ChannelKey = 'email' | 'slack' | 'erp' | 'webhook' | 'csv';
+
+interface DeliveryChannel {
+  enabled: boolean;
+  to: string;
+  frequency: 'every' | 'critical' | 'daily';
+}
+
+const KPI_ITEMS: { key: KpiKey; label: string; badge?: string }[] = [
+  { key: 'total', label: 'Total Records Scanned' },
+  { key: 'duplicates', label: 'Duplicates Found' },
+  { key: 'amount', label: 'Amount at Risk' },
+  { key: 'comparison', label: 'Comparison vs Last Run', badge: 'DELTA' },
+  { key: 'trend', label: 'Duplicate Trend (30 days)' },
+];
+
+const CHANNEL_META: Record<
+  ChannelKey,
+  { label: string; icon: typeof Mail; placeholder: string }
+> = {
+  email: { label: 'Email digest', icon: Mail, placeholder: 'finance-team@company.com' },
+  slack: { label: 'Slack channel', icon: MessageSquare, placeholder: '#ap-alerts' },
+  erp: { label: 'ERP push', icon: Database, placeholder: 'SAP endpoint URL' },
+  webhook: { label: 'Webhook', icon: Globe, placeholder: 'https://hooks.example.com/...' },
+  csv: { label: 'Auto-export CSV', icon: FileSpreadsheet, placeholder: '/shared/exports/' },
+};
+
 function OutputConfigSection({ workflow }: { workflow: WorkflowDraft | null }) {
-  if (!workflow) return <PlanSection workflow={null} />;
+  const [kpiChecks, setKpiChecks] = useState<Record<KpiKey, boolean>>({
+    total: true,
+    duplicates: true,
+    amount: true,
+    comparison: false,
+    trend: false,
+  });
+  const [outputLayout, setOutputLayout] = useState<OutputLayout>('dashboard');
+  const [channels, setChannels] = useState<Record<ChannelKey, DeliveryChannel>>({
+    email: { enabled: true, to: '', frequency: 'critical' },
+    slack: { enabled: true, to: '', frequency: 'every' },
+    erp: { enabled: false, to: '', frequency: 'every' },
+    webhook: { enabled: false, to: '', frequency: 'every' },
+    csv: { enabled: false, to: '', frequency: 'every' },
+  });
+  const [expandedChannel, setExpandedChannel] = useState<ChannelKey | null>('email');
+
   return (
-    <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
-      <div className="text-[12px] font-bold uppercaser text-ink-400 mb-3">
-        Output Configuration
+    <div className="space-y-3">
+      {/* Dashboard KPIs */}
+      <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-3.5">
+        <div className="text-[12.5px] font-semibold text-ink-800 mb-3">Dashboard KPIs</div>
+        <div className="space-y-2.5">
+          {KPI_ITEMS.map(({ key, label, badge }) => {
+            const checked = kpiChecks[key];
+            return (
+              <label key={key} className="flex items-center gap-2.5 cursor-pointer group">
+                <button
+                  type="button"
+                  onClick={() => setKpiChecks((p) => ({ ...p, [key]: !p[key] }))}
+                  className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all cursor-pointer ${
+                    checked
+                      ? 'bg-brand-600 border-brand-600'
+                      : 'border-canvas-border bg-canvas-elevated group-hover:border-brand-400'
+                  }`}
+                  aria-pressed={checked}
+                >
+                  {checked && <Check size={10} className="text-white" strokeWidth={3} />}
+                </button>
+                <span
+                  className={`text-[12.5px] flex-1 ${checked ? 'text-ink-700 font-semibold' : 'text-ink-400'}`}
+                >
+                  {label}
+                </span>
+                {badge && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-mitigated-50 text-mitigated-700 border border-mitigated/30">
+                    {badge}
+                  </span>
+                )}
+              </label>
+            );
+          })}
+        </div>
       </div>
-      <div className="rounded-lg border border-compliant/40 bg-compliant-50 p-3">
-        <div className="text-[12px] font-bold uppercaser text-compliant-700 mb-1">
-          {workflow.output.type} output
+
+      {/* Output Layout */}
+      <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-3.5">
+        <div className="text-[12.5px] font-semibold text-ink-800 mb-3">Output Layout</div>
+        <div className="flex gap-2">
+          {(
+            [
+              { key: 'table', label: 'Table' },
+              { key: 'dashboard', label: 'Dashboard' },
+              { key: 'summary', label: 'Summary' },
+            ] as const
+          ).map(({ key, label }) => {
+            const selected = outputLayout === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setOutputLayout(key)}
+                className={`flex-1 inline-flex items-center justify-center gap-1 py-2 px-2 rounded-xl border text-[11.5px] font-semibold transition-all cursor-pointer ${
+                  selected
+                    ? 'border-brand-400 bg-brand-50 text-brand-700 shadow-[0_0_0_3px_rgba(139,92,246,0.08)]'
+                    : 'border-canvas-border bg-canvas text-ink-400 hover:border-brand-200 hover:text-brand-500 hover:bg-brand-50/40'
+                }`}
+              >
+                {selected && <CheckCircle2 size={12} className="text-brand-600 shrink-0" />}
+                {label}
+              </button>
+            );
+          })}
         </div>
-        <div className="text-[12px] font-semibold text-ink-800 leading-tight mb-1">
-          {workflow.output.title}
+
+        {/* Preview */}
+        <div className="mt-3 rounded-lg border border-canvas-border bg-canvas overflow-hidden">
+          <OutputLayoutPreview layout={outputLayout} />
         </div>
-        <p className="text-[12px] text-ink-600 leading-relaxed">{workflow.output.description}</p>
+      </div>
+
+      {/* Delivery & Routing */}
+      <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-3.5">
+        <div className="flex items-center gap-2 mb-3">
+          <Send size={13} className="text-ink-400" />
+          <span className="text-[12.5px] font-semibold text-ink-800">Delivery & Routing</span>
+          <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-brand-50 text-brand-600 uppercase tracking-wide">
+            New
+          </span>
+        </div>
+
+        {/* AI tip banner */}
+        <div className="flex items-start gap-2 rounded-lg bg-brand-50 border border-brand-100 px-3 py-2.5 mb-3.5">
+          <Sparkles size={13} className="text-brand-600 shrink-0 mt-0.5" />
+          <p className="text-[11.5px] text-brand-700 leading-relaxed">
+            Most AP teams route critical findings to Slack and email a summary to leadership.
+            Configure once, auto-deliver on every run.
+          </p>
+        </div>
+
+        <p className="text-[10px] font-bold text-ink-400 uppercase tracking-wider mb-2">
+          After execution, send results to:
+        </p>
+
+        {/* Channel pills */}
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {(Object.keys(CHANNEL_META) as ChannelKey[]).map((key) => {
+            const meta = CHANNEL_META[key];
+            const active = channels[key].enabled;
+            const Icon = meta.icon;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() =>
+                  setChannels((p) => ({
+                    ...p,
+                    [key]: { ...p[key], enabled: !p[key].enabled },
+                  }))
+                }
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition-all cursor-pointer ${
+                  active
+                    ? 'bg-brand-50 text-brand-700 border-brand-300'
+                    : 'bg-canvas-elevated text-ink-400 border-canvas-border hover:border-ink-300'
+                }`}
+              >
+                <Icon size={12} />
+                {meta.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Expanded channel config */}
+        {(Object.entries(channels) as [ChannelKey, DeliveryChannel][])
+          .filter(([, v]) => v.enabled)
+          .map(([key, ch]) => {
+            const meta = CHANNEL_META[key];
+            const isExpanded = expandedChannel === key;
+            const Icon = meta.icon;
+            return (
+              <div
+                key={key}
+                className="border border-canvas-border rounded-lg mb-2 overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => setExpandedChannel(isExpanded ? null : key)}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-canvas transition-colors cursor-pointer"
+                >
+                  <Icon size={13} className="text-ink-500" />
+                  <span className="text-[12px] font-semibold text-ink-700">{meta.label}</span>
+                  <ChevronDown
+                    size={13}
+                    className={`text-ink-400 ml-auto transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {isExpanded && (
+                  <div className="px-3 pb-3 space-y-2.5 border-t border-canvas-border pt-2.5">
+                    <div>
+                      <label className="text-[9.5px] font-bold text-ink-400 uppercase tracking-wider">
+                        To:
+                      </label>
+                      <input
+                        type="text"
+                        value={ch.to}
+                        onChange={(e) =>
+                          setChannels((p) => ({
+                            ...p,
+                            [key]: { ...p[key], to: e.target.value },
+                          }))
+                        }
+                        placeholder={meta.placeholder}
+                        className="w-full mt-1 px-2.5 py-1.5 text-[12px] border border-canvas-border rounded-md bg-canvas-elevated text-ink-700 placeholder:text-ink-300 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9.5px] font-bold text-ink-400 uppercase tracking-wider">
+                        Send:
+                      </label>
+                      <div className="flex gap-1.5 mt-1 flex-wrap">
+                        {(
+                          [
+                            { value: 'every', label: 'Every run' },
+                            { value: 'critical', label: 'Only if critical' },
+                            { value: 'daily', label: 'Daily digest' },
+                          ] as const
+                        ).map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() =>
+                              setChannels((p) => ({
+                                ...p,
+                                [key]: { ...p[key], frequency: opt.value },
+                              }))
+                            }
+                            className={`px-2.5 py-1 text-[11px] rounded-md border transition-all cursor-pointer ${
+                              ch.frequency === opt.value
+                                ? 'bg-brand-50 text-brand-700 border-brand-300 font-semibold'
+                                : 'bg-canvas-elevated text-ink-400 border-canvas-border hover:border-ink-300'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+      </div>
+
+      {workflow && (
+        <div className="text-center text-[10px] uppercase tracking-wider text-ink-400 font-semibold">
+          For {workflow.name}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OutputLayoutPreview({ layout }: { layout: OutputLayout }) {
+  if (layout === 'dashboard') {
+    return (
+      <div className="p-3">
+        <div className="grid grid-cols-4 gap-1.5 mb-2">
+          {['#C7E9DA', '#F7D7DB', '#C7E9DA', '#D9D4F5'].map((c, i) => (
+            <div key={i} className="rounded-md bg-canvas-elevated border border-canvas-border p-1.5">
+              <div className="h-0.5 w-[70%] rounded-full bg-ink-200 mb-1" />
+              <div className="h-1.5 rounded-full" style={{ background: c }} />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          <div className="rounded-md bg-canvas-elevated border border-canvas-border p-2 h-16 flex items-end">
+            <svg viewBox="0 0 100 40" className="w-full h-10" preserveAspectRatio="none">
+              <path d="M0 32 L20 24 L40 28 L60 16 L80 12 L100 6" stroke="#6A12CD" strokeWidth="2" fill="none" />
+              <path d="M0 36 L20 30 L40 32 L60 22 L80 20 L100 14" stroke="#C4B5FD" strokeWidth="1.5" fill="none" strokeDasharray="3 2" />
+            </svg>
+          </div>
+          <div className="space-y-1.5">
+            <div className="rounded-md bg-canvas-elevated border border-canvas-border p-2 h-7 flex items-center justify-center">
+              <div className="w-5 h-5 rounded-full border-[3px] border-brand-600" />
+            </div>
+            <div className="rounded-md bg-canvas-elevated border border-canvas-border p-2 h-7 flex flex-col gap-1 justify-center">
+              <div className="h-1 rounded-full bg-brand-200 w-[70%]" />
+              <div className="h-1 rounded-full bg-brand-100 w-[50%]" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (layout === 'table') {
+    return (
+      <div className="p-3">
+        <div className="rounded-md border border-canvas-border bg-canvas-elevated overflow-hidden">
+          <div className="grid grid-cols-4 gap-2 px-2 py-1.5 bg-canvas border-b border-canvas-border">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-1.5 rounded-full bg-ink-300/60" />
+            ))}
+          </div>
+          {[...Array(4)].map((_, r) => (
+            <div
+              key={r}
+              className="grid grid-cols-4 gap-2 px-2 py-1.5 border-b border-canvas-border last:border-b-0"
+            >
+              {[...Array(4)].map((_, c) => (
+                <div key={c} className="h-1 rounded-full bg-ink-200/80" />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  // summary
+  return (
+    <div className="p-3 space-y-2">
+      <div className="h-1.5 rounded-full bg-ink-300/70 w-[40%]" />
+      <div className="space-y-1">
+        <div className="h-1 rounded-full bg-ink-200/80 w-full" />
+        <div className="h-1 rounded-full bg-ink-200/80 w-[90%]" />
+        <div className="h-1 rounded-full bg-ink-200/80 w-[75%]" />
+      </div>
+      <div className="h-1.5 rounded-full bg-ink-300/70 w-[35%] mt-2" />
+      <div className="space-y-1">
+        <div className="h-1 rounded-full bg-ink-200/80 w-full" />
+        <div className="h-1 rounded-full bg-ink-200/80 w-[80%]" />
       </div>
     </div>
   );

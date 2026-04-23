@@ -90,14 +90,77 @@ export type JourneyAlignments = Record<string, ColumnAlignment[]>;
 
 // ── Right-panel Input Config state (tolerance rules + notes) ───────────
 
-export type ToleranceRuleId = 'amount' | 'date' | 'text';
+export type ToleranceDot = 'f1' | 'f2' | 'f3';
+export type ToleranceSeverity = 'strict' | 'moderate' | 'relaxed';
+export type ToleranceCompareType = 'numeric' | 'date' | 'text' | 'exact';
 
-export interface ToleranceRule {
-  id: ToleranceRuleId;
-  label: string;
-  description: string;
-  severity: 'Strict' | 'Moderate' | 'Relaxed';
+export interface ToleranceColumns {
+  src: string;
+  srcFile: string;
+  srcDot: ToleranceDot;
+  tgt: string;
+  tgtFile: string;
+  tgtDot: ToleranceDot;
+}
+
+export interface ToleranceAmt {
   enabled: boolean;
+  expanded: boolean;
+  mode: 'percentage' | 'absolute';
+  val: number;
+  absVal: number;
+  columns: ToleranceColumns;
+}
+
+export interface ToleranceDate {
+  enabled: boolean;
+  expanded: boolean;
+  val: number;
+  dayType: 'calendar' | 'business';
+  columns: ToleranceColumns;
+}
+
+export interface ToleranceText {
+  enabled: boolean;
+  expanded: boolean;
+  val: number;
+  normalize: {
+    ignoreCase: boolean;
+    trimSpaces: boolean;
+    stripSpecial: boolean;
+    removePrefixes: boolean;
+  };
+  columns: ToleranceColumns;
+}
+
+export interface ToleranceQty {
+  enabled: boolean;
+  expanded: boolean;
+  mode: 'percentage' | 'absolute';
+  val: number;
+  unitVal: number;
+  columns: ToleranceColumns;
+}
+
+export interface ToleranceRules {
+  amt: ToleranceAmt;
+  date: ToleranceDate;
+  text: ToleranceText;
+  qty: ToleranceQty;
+}
+
+export type ToleranceBuiltinId = keyof ToleranceRules;
+
+export interface CustomToleranceRule {
+  id: string;
+  name: string;
+  icon: string;
+  cls: 'qty' | 'fx' | 'round' | 'agg' | 'custom';
+  type: ToleranceCompareType;
+  threshold: string;
+  enabled: boolean;
+  expanded: boolean;
+  columns: ToleranceColumns | null;
 }
 
 export interface InputNote {
