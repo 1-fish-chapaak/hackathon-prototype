@@ -3,8 +3,8 @@ import { motion } from 'motion/react';
 import {
   Check, X, Calendar, ChevronDown, GripVertical, Sparkles,
   Workflow as WorkflowIcon, ShieldAlert, ClipboardCheck,
-  ArrowRight, Plus, DollarSign, Clock, AlertTriangle, Activity,
-  TrendingUp, TrendingDown, Shield,
+  ArrowRight, Plus, AlertTriangle, Activity,
+  TrendingUp, Shield,
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
 import { RISKS, CONTROLS, ENGAGEMENTS, ENGAGEMENT_CONTROLS, DEFICIENCIES, WORKFLOWS } from '../../data/mockData';
@@ -272,30 +272,6 @@ function WorkQueueSection({ setView }: { setView: Props['setView'] }) {
 }
 
 // ─── Health Dashboard ────────────────────────────────────────────────────────
-
-function PieDonut({ value, total, size = 120 }: { value: number; total: number; size?: number }) {
-  const r = (size - 14) / 2;
-  const circ = 2 * Math.PI * r;
-  const pct = total > 0 ? value / total : 0;
-  const dash = pct * circ;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-label="planned vs executed">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-canvas-border)" strokeWidth="10" />
-      <circle
-        cx={size / 2} cy={size / 2} r={r} fill="none"
-        stroke="var(--color-brand-600)" strokeWidth="10"
-        strokeDasharray={`${dash} ${circ - dash}`}
-        strokeDashoffset={circ / 4}
-        strokeLinecap="round"
-        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-      />
-      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle"
-        className="font-display tabular-nums" style={{ fontSize: 22, fill: 'var(--color-ink-900)' }}>
-        {Math.round(pct * 100)}%
-      </text>
-    </svg>
-  );
-}
 
 function HealthDashboardSection() {
   const active = ENGAGEMENTS.filter(e => e.status === 'active');

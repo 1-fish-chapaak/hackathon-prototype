@@ -7,7 +7,7 @@ import StepUploadFiles from './StepUploadFiles';
 import StepMapData from './StepMapData';
 import StepReviewRun from './StepReviewRun';
 import { SAMPLE_WORKFLOWS } from './sampleWorkflows';
-import { generateWorkflow, runWorkflow } from './mockApi';
+import { generateWorkflow } from './mockApi';
 import type { JourneyFiles, JourneyMappings, RunResult, WorkflowDraft } from './types';
 
 interface Props {
@@ -20,7 +20,7 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
   const [workflow, setWorkflow] = useState<WorkflowDraft | null>(null);
   const [files, setFiles] = useState<JourneyFiles>({});
   const [mappings, setMappings] = useState<JourneyMappings>({});
-  const [running, setRunning] = useState(false);
+  const [running] = useState(false);
   const [result, setResult] = useState<RunResult | null>(null);
 
   const completed = useMemo(() => {
@@ -54,25 +54,7 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
     setStep(2);
   }, []);
 
-  const handleRun = useCallback(async () => {
-    if (!workflow) return;
-    setRunning(true);
-    try {
-      const r = await runWorkflow(workflow, files, mappings);
-      setResult(r);
-    } finally {
-      setRunning(false);
-    }
-  }, [workflow, files, mappings]);
-
-  const handleRestart = useCallback(() => {
-    setWorkflow(null);
-    setPrompt('');
-    setFiles({});
-    setMappings({});
-    setResult(null);
-    setStep(1);
-  }, []);
+  // handleRestart removed — sub-components manage their own restart flow
 
   return (
     <div
@@ -130,8 +112,9 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
           <StepWritePrompt
             prompt={prompt}
             setPrompt={setPrompt}
-            onNext={handleGenerate}
+            onGenerate={handleGenerate}
             onPickTemplate={handlePickTemplate}
+            onOpenGuideMe={() => {}}
           />
         )}
 
@@ -140,18 +123,15 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
             workflow={workflow}
             files={files}
             setFiles={setFiles}
-            onNext={() => setStep(3)}
-            onBack={() => setStep(1)}
           />
         )}
 
         {step === 3 && workflow && (
           <StepMapData
             workflow={workflow}
-            mappings={mappings}
-            setMappings={setMappings}
-            onNext={() => setStep(4)}
-            onBack={() => setStep(2)}
+            files={files}
+            alignments={{}}
+            setAlignments={() => {}}
           />
         )}
 
@@ -162,9 +142,6 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
             mappings={mappings}
             running={running}
             result={result}
-            onRun={handleRun}
-            onBack={() => setStep(3)}
-            onRestart={handleRestart}
           />
         )}
       </div>
