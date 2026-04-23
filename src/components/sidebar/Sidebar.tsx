@@ -261,7 +261,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
           {/* ── SYSTEM ── */}
           <Divider label="System" expanded={isExpanded} />
 
-          <NavItem icon={Database} label="Configuration" active={view === 'data-sources' || view === 'configuration'} expanded={isExpanded} onClick={() => setView('data-sources')} />
+          <NavItem icon={Database} label="Knowledge Hub" active={view === 'knowledge-hub' || view === 'data-sources' || view === 'configuration'} expanded={isExpanded} onClick={() => setView('knowledge-hub')} />
           <NavItem icon={Settings} label="Admin" active={adminViews.includes(view)} expanded={isExpanded} onClick={() => setView('admin-users')} />
 
         </div>

@@ -17,6 +17,7 @@ import ReportsView from './components/reports/ReportsView';
 import DataSourcesView from './components/data-sources/DataSourcesView';
 import HomeView from './components/home/HomeView';
 import RecentsView from './components/recents/RecentsView';
+import KnowledgeHubView from './components/knowledge/KnowledgeHubView';
 import ExceptionManagementModal from './components/modals/ExceptionManagementModal';
 import EmailPreviewModal from './components/modals/EmailPreviewModal';
 import ShareModal from './components/modals/ShareModal';
@@ -232,6 +233,9 @@ export default function App() {
 
       case 'audit-planning':
         return <AuditPlanningView />;
+
+      case 'knowledge-hub':
+        return <KnowledgeHubView />;
 
       case 'data-sources':
       case 'configuration':

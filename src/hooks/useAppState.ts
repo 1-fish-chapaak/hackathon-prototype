@@ -36,6 +36,7 @@ export type View =
   // System
   | 'configuration'
   | 'data-sources'
+  | 'knowledge-hub'
   | 'admin-users'
   | 'admin-roles'
   | 'admin-settings'
