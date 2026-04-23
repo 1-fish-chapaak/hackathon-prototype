@@ -1,19 +1,20 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Lock, CheckCircle2, Flag, Target, Calendar,
   Users, ShieldCheck, ClipboardList, LayoutGrid,
-  X, ChevronDown, Plus, Edit3, Trash2, AlertTriangle,
-  DollarSign, BarChart3, Grid3X3, UserCheck,
-  TrendingUp, Clock, Zap
+  X, ChevronDown, Plus, Edit3, AlertTriangle,
+  DollarSign, BarChart3, Clock, Zap, ArrowRight,
+  Play, FileCheck, Eye, Copy
 } from 'lucide-react';
 import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types (Finalized Engagement Model) ──────────────────────────────────────
 
-type AuditStatus = 'planned' | 'active' | 'completed' | 'on-hold';
+type EngagementLifecycle = 'draft' | 'planned' | 'frozen' | 'signed-off' | 'active' | 'in-progress' | 'pending-review' | 'closed';
 type AuditType = 'SOX' | 'IFC' | 'ITGC' | 'Internal' | 'Risk';
+type FrameworkType = 'COSO' | 'COBIT' | 'ISO 27001' | 'NIST' | 'Custom';
 type ProcessType = 'P2P' | 'O2C' | 'R2R' | 'S2C' | 'Cross';
 type PriorityLevel = 'Critical' | 'High' | 'Medium' | 'Low';
 type TabId = 'timeline' | 'resources' | 'risk-matrix' | 'budget';
@@ -21,18 +22,29 @@ type TabId = 'timeline' | 'resources' | 'risk-matrix' | 'budget';
 interface AuditEngagement {
   id: string;
   name: string;
-  process: ProcessType;
-  type: AuditType;
+  auditType: AuditType;
+  framework: FrameworkType;
+  auditPeriodStart: string;
+  auditPeriodEnd: string;
+  plannedStartDate: string;
+  plannedEndDate: string;
+  actualStartDate: string;
+  actualEndDate: string;
   owner: string;
-  start: number;
-  duration: number;
-  color: string;
-  status: AuditStatus;
+  reviewer: string;
+  description: string;
+  sourceRacmVersionId: string;
+  engagementSnapshotId: string | null;
+  businessProcess: ProcessType;
+  status: EngagementLifecycle;
   controls: number;
   plannedHours: number;
   priority: PriorityLevel;
   riskScore: number;
-  notes: string;
+  // Gantt positioning (relative to FY months)
+  start: number;
+  duration: number;
+  color: string;
 }
 
 interface TeamMember {
@@ -53,11 +65,17 @@ const COLOR_PALETTE = [
 ];
 
 const MONTHS = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
-
 const PROCESSES: ProcessType[] = ['P2P', 'O2C', 'R2R', 'S2C', 'Cross'];
 const AUDIT_TYPES: AuditType[] = ['SOX', 'IFC', 'ITGC', 'Internal', 'Risk'];
-const STATUSES: AuditStatus[] = ['planned', 'active', 'completed', 'on-hold'];
+const FRAMEWORKS: FrameworkType[] = ['COSO', 'COBIT', 'ISO 27001', 'NIST', 'Custom'];
 const PRIORITIES: PriorityLevel[] = ['Critical', 'High', 'Medium', 'Low'];
+
+const RACM_VERSIONS = [
+  { id: 'racm-v2.1', label: 'RACM v2.1 (Current — Feb 2026)' },
+  { id: 'racm-v2.0', label: 'RACM v2.0 (Nov 2025)' },
+  { id: 'racm-v1.9', label: 'RACM v1.9 (Aug 2025)' },
+  { id: 'racm-v1.8', label: 'RACM v1.8 (May 2025)' },
+];
 
 const TEAM_MEMBERS: TeamMember[] = [
   { id: 'tm-1', name: 'Tushar Goel', role: 'Senior Auditor', avatar: 'TG', capacity: 160, skills: ['P2P', 'SOX', 'AP'] },
@@ -70,14 +88,94 @@ const TEAM_MEMBERS: TeamMember[] = [
 ];
 
 const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
-  { id: 'ap-1', name: 'P2P — SOX Audit', process: 'P2P', type: 'SOX', owner: 'Tushar Goel', start: 0, duration: 3, color: '#6a12cd', status: 'active', controls: 24, plannedHours: 480, priority: 'Critical', riskScore: 85, notes: 'Covers AP, PO, and vendor master controls.' },
-  { id: 'ap-2', name: 'O2C — SOX Audit', process: 'O2C', type: 'SOX', owner: 'Neha Joshi', start: 1, duration: 3, color: '#0284c7', status: 'active', controls: 18, plannedHours: 360, priority: 'High', riskScore: 72, notes: 'Revenue recognition and AR controls.' },
-  { id: 'ap-3', name: 'R2R — SOX Audit', process: 'R2R', type: 'SOX', owner: 'Karan Mehta', start: 0, duration: 4, color: '#d97706', status: 'active', controls: 31, plannedHours: 520, priority: 'Critical', riskScore: 90, notes: 'Journal entries, reconciliations, close process.' },
-  { id: 'ap-4', name: 'S2C — Contract Review', process: 'S2C', type: 'Internal', owner: 'Rohan Patel', start: 3, duration: 3, color: '#059669', status: 'planned', controls: 14, plannedHours: 240, priority: 'Medium', riskScore: 45, notes: 'New contract lifecycle review.' },
-  { id: 'ap-5', name: 'P2P — IFC Assessment', process: 'P2P', type: 'IFC', owner: 'Sneha Desai', start: 4, duration: 3, color: '#6a12cd', status: 'planned', controls: 18, plannedHours: 300, priority: 'High', riskScore: 68, notes: 'Internal financial controls assessment for P2P.' },
-  { id: 'ap-6', name: 'IT General Controls', process: 'Cross', type: 'ITGC', owner: 'Deepak Bansal', start: 2, duration: 6, color: '#7c3aed', status: 'active', controls: 15, plannedHours: 640, priority: 'Critical', riskScore: 82, notes: 'Access mgmt, change mgmt, operations, SDLC.' },
-  { id: 'ap-7', name: 'Vendor Risk Assessment', process: 'P2P', type: 'Risk', owner: 'Priya Singh', start: 6, duration: 2, color: '#dc2626', status: 'planned', controls: 8, plannedHours: 160, priority: 'Medium', riskScore: 55, notes: 'Third-party vendor risk evaluation.' },
-  { id: 'ap-8', name: 'Year-End Close Review', process: 'R2R', type: 'SOX', owner: 'Karan Mehta', start: 9, duration: 2, color: '#d97706', status: 'planned', controls: 12, plannedHours: 200, priority: 'High', riskScore: 60, notes: 'Year-end closing procedures and adjustments.' },
+  {
+    id: 'ap-1', name: 'P2P — SOX Audit', auditType: 'SOX', framework: 'COSO', businessProcess: 'P2P',
+    auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
+    plannedStartDate: '2025-04-01', plannedEndDate: '2025-06-30',
+    actualStartDate: '2025-04-05', actualEndDate: '',
+    owner: 'Tushar Goel', reviewer: 'Karan Mehta',
+    description: 'Comprehensive SOX audit covering AP, PO, and vendor master controls with focus on segregation of duties and transaction authorization.',
+    sourceRacmVersionId: 'racm-v2.1', engagementSnapshotId: 'snap-001',
+    status: 'active', controls: 24, plannedHours: 480, priority: 'Critical', riskScore: 85,
+    start: 0, duration: 3, color: '#6a12cd',
+  },
+  {
+    id: 'ap-2', name: 'O2C — SOX Audit', auditType: 'SOX', framework: 'COSO', businessProcess: 'O2C',
+    auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
+    plannedStartDate: '2025-05-01', plannedEndDate: '2025-07-31',
+    actualStartDate: '2025-05-02', actualEndDate: '',
+    owner: 'Neha Joshi', reviewer: 'Sneha Desai',
+    description: 'SOX compliance audit for Order-to-Cash process including revenue recognition and AR controls.',
+    sourceRacmVersionId: 'racm-v2.1', engagementSnapshotId: 'snap-002',
+    status: 'active', controls: 18, plannedHours: 360, priority: 'High', riskScore: 72,
+    start: 1, duration: 3, color: '#0284c7',
+  },
+  {
+    id: 'ap-3', name: 'R2R — SOX Audit', auditType: 'SOX', framework: 'COSO', businessProcess: 'R2R',
+    auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
+    plannedStartDate: '2025-04-01', plannedEndDate: '2025-08-31',
+    actualStartDate: '2025-04-03', actualEndDate: '',
+    owner: 'Karan Mehta', reviewer: 'Abhinav S',
+    description: 'Record-to-Report SOX audit covering journal entries, reconciliations, and financial close processes.',
+    sourceRacmVersionId: 'racm-v2.1', engagementSnapshotId: 'snap-003',
+    status: 'in-progress', controls: 31, plannedHours: 520, priority: 'Critical', riskScore: 90,
+    start: 0, duration: 5, color: '#d97706',
+  },
+  {
+    id: 'ap-4', name: 'S2C — Contract Review', auditType: 'Internal', framework: 'Custom', businessProcess: 'S2C',
+    auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
+    plannedStartDate: '2025-07-01', plannedEndDate: '2025-09-30',
+    actualStartDate: '', actualEndDate: '',
+    owner: 'Rohan Patel', reviewer: 'Priya Singh',
+    description: 'Internal audit of Source-to-Contract process focusing on new contract lifecycle and vendor management.',
+    sourceRacmVersionId: 'racm-v1.8', engagementSnapshotId: null,
+    status: 'planned', controls: 14, plannedHours: 240, priority: 'Medium', riskScore: 45,
+    start: 3, duration: 3, color: '#059669',
+  },
+  {
+    id: 'ap-5', name: 'P2P — IFC Assessment', auditType: 'IFC', framework: 'COBIT', businessProcess: 'P2P',
+    auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
+    plannedStartDate: '2025-08-01', plannedEndDate: '2025-10-31',
+    actualStartDate: '', actualEndDate: '',
+    owner: 'Sneha Desai', reviewer: 'Karan Mehta',
+    description: 'Internal Financial Controls assessment for Procure-to-Pay process using COBIT framework.',
+    sourceRacmVersionId: 'racm-v2.0', engagementSnapshotId: null,
+    status: 'planned', controls: 18, plannedHours: 300, priority: 'High', riskScore: 68,
+    start: 4, duration: 3, color: '#6a12cd',
+  },
+  {
+    id: 'ap-6', name: 'IT General Controls', auditType: 'ITGC', framework: 'ISO 27001', businessProcess: 'Cross',
+    auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
+    plannedStartDate: '2025-06-01', plannedEndDate: '2026-01-31',
+    actualStartDate: '2025-06-03', actualEndDate: '',
+    owner: 'Deepak Bansal', reviewer: 'Tushar Goel',
+    description: 'IT General Controls audit covering access management, change management, operations, and SDLC controls.',
+    sourceRacmVersionId: 'racm-v2.1', engagementSnapshotId: 'snap-006',
+    status: 'active', controls: 15, plannedHours: 640, priority: 'Critical', riskScore: 82,
+    start: 2, duration: 8, color: '#7c3aed',
+  },
+  {
+    id: 'ap-7', name: 'Vendor Risk Assessment', auditType: 'Risk', framework: 'NIST', businessProcess: 'P2P',
+    auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
+    plannedStartDate: '2025-10-01', plannedEndDate: '2025-11-30',
+    actualStartDate: '', actualEndDate: '',
+    owner: 'Priya Singh', reviewer: 'Neha Joshi',
+    description: 'Third-party vendor risk assessment focusing on vendor master data and procurement controls.',
+    sourceRacmVersionId: 'racm-v1.9', engagementSnapshotId: null,
+    status: 'draft', controls: 8, plannedHours: 160, priority: 'Medium', riskScore: 55,
+    start: 6, duration: 2, color: '#dc2626',
+  },
+  {
+    id: 'ap-8', name: 'Year-End Close Review', auditType: 'SOX', framework: 'COSO', businessProcess: 'R2R',
+    auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
+    plannedStartDate: '2026-01-01', plannedEndDate: '2026-02-28',
+    actualStartDate: '', actualEndDate: '',
+    owner: 'Karan Mehta', reviewer: 'Abhinav S',
+    description: 'Year-end closing procedures and adjustments review for SOX compliance.',
+    sourceRacmVersionId: 'racm-v2.1', engagementSnapshotId: null,
+    status: 'planned', controls: 12, plannedHours: 200, priority: 'High', riskScore: 60,
+    start: 9, duration: 2, color: '#d97706',
+  },
 ];
 
 const MILESTONES = [
@@ -95,45 +193,42 @@ const SIGNOFF_LOG = [
 
 const SIGNERS = ['Karan Mehta', 'Sneha Desai', 'Abhinav S'];
 
-const RESOURCE_ALLOCATION: Record<string, Record<number, number>> = {
-  'Tushar Goel':  { 0: 80, 1: 80, 2: 60, 3: 0, 4: 40, 5: 40, 6: 80, 7: 40 },
-  'Deepak Bansal': { 2: 60, 3: 80, 4: 80, 5: 80, 6: 60, 7: 60 },
-  'Neha Joshi':   { 1: 80, 2: 80, 3: 60, 4: 0, 5: 0, 6: 0, 7: 40, 8: 40 },
-  'Karan Mehta':  { 0: 60, 1: 60, 2: 80, 3: 40, 4: 0, 5: 20, 6: 20, 7: 20, 8: 20, 9: 60, 10: 60 },
-  'Sneha Desai':  { 4: 80, 5: 80, 6: 60, 7: 0, 8: 40, 9: 40 },
-  'Rohan Patel':  { 3: 60, 4: 60, 5: 60, 6: 0, 7: 40, 8: 40 },
-  'Priya Singh':  { 6: 80, 7: 80, 8: 0, 9: 40, 10: 40 },
-};
+function getCurrentMonth(): number { return 11; }
 
-const ENGAGEMENT_RISKS = [
-  { id: 'ap-1', name: 'P2P SOX', likelihood: 4, impact: 5, score: 20 },
-  { id: 'ap-2', name: 'O2C SOX', likelihood: 3, impact: 4, score: 12 },
-  { id: 'ap-3', name: 'R2R SOX', likelihood: 3, impact: 5, score: 15 },
-  { id: 'ap-4', name: 'S2C Review', likelihood: 2, impact: 3, score: 6 },
-  { id: 'ap-5', name: 'P2P IFC', likelihood: 3, impact: 3, score: 9 },
-  { id: 'ap-6', name: 'ITGC', likelihood: 4, impact: 4, score: 16 },
-  { id: 'ap-7', name: 'Vendor Risk', likelihood: 5, impact: 3, score: 15 },
-  { id: 'ap-8', name: 'Year-End', likelihood: 2, impact: 4, score: 8 },
-];
-
-const BUDGET_DATA = [
-  { id: 'ap-1', name: 'P2P — SOX Audit', plannedHours: 480, actualHours: 320, budget: 48000, spent: 32000, variance: -16000 },
-  { id: 'ap-2', name: 'O2C — SOX Audit', plannedHours: 360, actualHours: 180, budget: 36000, spent: 18000, variance: -18000 },
-  { id: 'ap-3', name: 'R2R — SOX Audit', plannedHours: 520, actualHours: 400, budget: 52000, spent: 40000, variance: -12000 },
-  { id: 'ap-4', name: 'S2C — Contract Review', plannedHours: 240, actualHours: 0, budget: 24000, spent: 0, variance: -24000 },
-  { id: 'ap-5', name: 'P2P — IFC Assessment', plannedHours: 300, actualHours: 0, budget: 30000, spent: 0, variance: -30000 },
-  { id: 'ap-6', name: 'IT General Controls', plannedHours: 640, actualHours: 380, budget: 64000, spent: 38000, variance: -26000 },
-  { id: 'ap-7', name: 'Vendor Risk Assessment', plannedHours: 160, actualHours: 0, budget: 16000, spent: 0, variance: -16000 },
-  { id: 'ap-8', name: 'Year-End Close Review', plannedHours: 200, actualHours: 0, budget: 20000, spent: 0, variance: -20000 },
-];
-
-// FY26: Apr 2025 = 0, Mar 2026 = 11.
-function getCurrentMonth(): number {
-  return 11;
+function formatDate(d: string): string {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function getCurrentMonthProgress(): number {
-  return 11 + 0.8;
+// ─── Lifecycle helpers ───────────────────────────────────────────────────────
+
+const LIFECYCLE_ORDER: EngagementLifecycle[] = ['draft', 'planned', 'frozen', 'signed-off', 'active', 'in-progress', 'pending-review', 'closed'];
+
+function lifecycleLabel(s: EngagementLifecycle): string {
+  const map: Record<EngagementLifecycle, string> = {
+    'draft': 'Draft', 'planned': 'Planned', 'frozen': 'Frozen', 'signed-off': 'Signed Off',
+    'active': 'Active', 'in-progress': 'In Progress', 'pending-review': 'Pending Review', 'closed': 'Closed',
+  };
+  return map[s];
+}
+
+function lifecycleTone(s: EngagementLifecycle): string {
+  const map: Record<EngagementLifecycle, string> = {
+    'draft': 'bg-draft-50 text-draft-700',
+    'planned': 'bg-evidence-50 text-evidence-700',
+    'frozen': 'bg-brand-50 text-brand-700',
+    'signed-off': 'bg-compliant-50 text-compliant-700',
+    'active': 'bg-compliant-50 text-compliant-700',
+    'in-progress': 'bg-evidence-50 text-evidence-700',
+    'pending-review': 'bg-high-50 text-high-700',
+    'closed': 'bg-draft-50 text-draft-700',
+  };
+  return map[s];
+}
+
+function isExecutionPhase(s: EngagementLifecycle): boolean {
+  return ['active', 'in-progress', 'pending-review', 'closed'].includes(s);
 }
 
 // ─── Custom Dropdown ─────────────────────────────────────────────────────────
@@ -141,12 +236,8 @@ function getCurrentMonthProgress(): number {
 function Dropdown<T extends string>({
   label, value, options, onChange, disabled = false, renderOption,
 }: {
-  label: string;
-  value: T;
-  options: T[];
-  onChange: (val: T) => void;
-  disabled?: boolean;
-  renderOption?: (opt: T) => React.ReactNode;
+  label: string; value: T; options: T[]; onChange: (val: T) => void;
+  disabled?: boolean; renderOption?: (opt: T) => React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -212,7 +303,7 @@ function KpiCard({ label, value, icon: Icon, color, index }: {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 + index * 0.06 }}
-      className="glass-card rounded-2xl p-5 hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300 group cursor-default"
+      className="glass-card rounded-2xl p-5 hover:border-primary/20 transition-all duration-300 cursor-default"
     >
       <div className="flex items-start justify-between mb-3">
         <div className={`p-2 rounded-lg ${color} transition-transform duration-300`}>
@@ -240,9 +331,13 @@ function GanttTooltip({ item, position }: { item: AuditEngagement; position: { x
       className="fixed z-[60] pointer-events-none"
       style={{ left: position.x + 12, top: position.y - 8 }}
     >
-      <div className="glass-card-strong rounded-xl p-3 shadow-xl min-w-[220px]">
+      <div className="glass-card-strong rounded-xl p-3 shadow-xl min-w-[240px]">
         <div className="text-[12px] font-bold text-text mb-1.5">{item.name}</div>
         <div className="space-y-1">
+          <div className="flex justify-between text-[12px]">
+            <span className="text-text-muted">Type / Framework</span>
+            <span className="text-text font-medium">{item.auditType} / {item.framework}</span>
+          </div>
           <div className="flex justify-between text-[12px]">
             <span className="text-text-muted">Owner</span>
             <span className="text-text font-medium">{item.owner}</span>
@@ -256,13 +351,12 @@ function GanttTooltip({ item, position }: { item: AuditEngagement; position: { x
             <span className="text-text font-medium">{item.controls}</span>
           </div>
           <div className="flex justify-between text-[12px]">
+            <span className="text-text-muted">RACM Version</span>
+            <span className="text-text font-medium">{item.sourceRacmVersionId}</span>
+          </div>
+          <div className="flex justify-between text-[12px]">
             <span className="text-text-muted">Status</span>
-            <span className={`font-bold px-1.5 py-0.5 rounded-full ${
-              item.status === 'active' ? 'bg-compliant-50 text-compliant-700' :
-              item.status === 'completed' ? 'bg-evidence-50 text-evidence-700' :
-              item.status === 'on-hold' ? 'bg-high-50 text-high-700' :
-              'bg-paper-50 text-ink-500'
-            }`}>{item.status}</span>
+            <span className={`font-bold px-1.5 py-0.5 rounded-full ${lifecycleTone(item.status)}`}>{lifecycleLabel(item.status)}</span>
           </div>
           <div className="flex justify-between text-[12px]">
             <span className="text-text-muted">Priority</span>
@@ -272,10 +366,6 @@ function GanttTooltip({ item, position }: { item: AuditEngagement; position: { x
               item.priority === 'Medium' ? 'text-mitigated-700' :
               'text-compliant-700'
             }`}>{item.priority}</span>
-          </div>
-          <div className="flex justify-between text-[12px]">
-            <span className="text-text-muted">Risk Score</span>
-            <span className="text-text font-medium">{item.riskScore}/100</span>
           </div>
         </div>
       </div>
@@ -297,120 +387,82 @@ function GanttChart({
   const totalMonths = 12;
   const currentMonth = getCurrentMonth();
   const [hoveredItem, setHoveredItem] = useState<AuditEngagement | null>(null);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const filtered = items.filter(item => {
-    if (processFilter !== 'All' && item.process !== processFilter) return false;
-    if (statusFilter !== 'All' && item.status !== statusFilter.toLowerCase()) return false;
+    if (processFilter !== 'All' && item.businessProcess !== processFilter) return false;
+    if (statusFilter !== 'All') {
+      if (statusFilter === 'Active' && !isExecutionPhase(item.status)) return false;
+      if (statusFilter === 'Planned' && !['draft', 'planned', 'frozen', 'signed-off'].includes(item.status)) return false;
+    }
     return true;
   });
 
-  const handleMouseMove = useCallback((e: React.MouseEvent, item: AuditEngagement) => {
-    setTooltipPos({ x: e.clientX, y: e.clientY });
-    setHoveredItem(item);
-  }, []);
-
   return (
-    <div className="glass-card rounded-2xl overflow-hidden relative">
-      {frozen && (
-        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2 py-1 bg-evidence-50 border border-evidence-50 rounded-md">
-          <Lock size={10} className="text-evidence-700" />
-          <span className="text-[12px] font-semibold text-evidence-700">Locked</span>
-        </div>
-      )}
-
-      {/* Header row */}
-      <div className="flex border-b border-border-light">
-        <div className="w-[280px] shrink-0 px-4 py-3 bg-surface-2 border-r border-border-light">
-          <span className="text-[12px] font-bold text-text-muted">Engagement</span>
-        </div>
-        <div className="flex-1 flex">
+    <div className="glass-card rounded-2xl p-5 overflow-hidden">
+      <div className="relative">
+        {/* Month headers */}
+        <div className="flex border-b border-border-light pb-2 mb-3">
           {MONTHS.map((m, i) => (
             <div
               key={m}
-              className={`flex-1 px-2 py-3 text-center text-[12px] font-bold border-r border-border-light last:border-0 ${
-                i === currentMonth ? 'bg-primary/5 text-primary' : 'bg-surface-2 text-text-muted'
+              className={`flex-1 text-center text-[12px] font-semibold ${
+                i === currentMonth ? 'text-primary' : 'text-text-muted'
               }`}
             >
               {m}
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Rows */}
-      {filtered.length === 0 ? (
-        <div className="p-8 text-center text-[13px] text-text-muted">No engagements match the current filters.</div>
-      ) : filtered.map((item, idx) => (
-        <motion.div
-          key={item.id}
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: idx * 0.05 }}
-          className="flex border-b border-border-light last:border-0 hover:bg-primary-xlight/30 transition-colors group"
+        {/* Current month indicator */}
+        <div
+          className="absolute top-0 bottom-0 w-px bg-primary/30 z-10"
+          style={{ left: `${((currentMonth + 0.8) / totalMonths) * 100}%` }}
         >
-          {/* Label */}
-          <div
-            className="w-[280px] shrink-0 px-4 py-3 border-r border-border-light cursor-pointer"
-            onClick={() => onClickEngagement(item)}
-          >
-            <div className="text-[12px] font-semibold text-text group-hover:text-primary transition-colors flex items-center gap-1.5">
-              {item.name}
-              <Edit3 size={10} className="text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-[12px] text-text-muted">{item.owner}</span>
-              <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${
-                item.status === 'active' ? 'bg-compliant-50 text-compliant-700' :
-                item.status === 'completed' ? 'bg-evidence-50 text-evidence-700' :
-                item.status === 'on-hold' ? 'bg-high-50 text-high-700' :
-                'bg-paper-50 text-ink-500'
-              }`}>{item.status}</span>
-              <span className="text-[12px] text-text-muted">{item.controls} controls</span>
-            </div>
-          </div>
+          <div className="absolute -top-1 -translate-x-1/2 w-2 h-2 rounded-full bg-primary" />
+        </div>
 
-          {/* Bar area */}
-          <div className="flex-1 relative py-2 flex items-center">
-            <div className="absolute inset-0 flex">
-              {MONTHS.map((_, i) => (
-                <div key={i} className={`flex-1 border-r border-border-light/50 ${i === currentMonth ? 'bg-primary/[0.03]' : ''}`} />
-              ))}
+        {/* Bars */}
+        <div className="space-y-2 relative">
+          {filtered.map((item, idx) => (
+            <div key={item.id} className="relative h-9 flex items-center">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${(item.duration / totalMonths) * 100}%` }}
+                transition={{ duration: 0.6, delay: 0.2 + idx * 0.05 }}
+                className={`absolute h-7 rounded-lg shadow-sm flex items-center px-2 transition-all ${
+                  frozen ? 'cursor-pointer' : 'cursor-pointer hover:shadow-md hover:brightness-110'
+                }`}
+                style={{
+                  left: `${(item.start / totalMonths) * 100}%`,
+                  background: `linear-gradient(135deg, ${item.color}dd, ${item.color}99)`,
+                }}
+                onClick={() => onClickEngagement(item)}
+                onMouseEnter={(e) => {
+                  setHoveredItem(item);
+                  setMousePos({ x: e.clientX, y: e.clientY });
+                }}
+                onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                onMouseLeave={() => setHoveredItem(null)}
+              >
+                <span className="text-white text-[12px] font-semibold truncate drop-shadow-sm">
+                  {item.name}
+                </span>
+                {item.engagementSnapshotId && (
+                  <div className="ml-auto shrink-0 w-4 h-4 rounded-full bg-white/30 flex items-center justify-center" title="Snapshot created">
+                    <Copy size={8} className="text-white" />
+                  </div>
+                )}
+              </motion.div>
             </div>
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${(item.duration / totalMonths) * 100}%` }}
-              transition={{ duration: 0.6, delay: 0.2 + idx * 0.05 }}
-              className="absolute h-7 rounded-lg shadow-sm flex items-center px-2 cursor-pointer hover:brightness-110 transition-all"
-              style={{
-                left: `${(item.start / totalMonths) * 100}%`,
-                background: `linear-gradient(135deg, ${item.color}dd, ${item.color}99)`,
-              }}
-              onClick={() => onClickEngagement(item)}
-              onMouseMove={(e) => handleMouseMove(e, item)}
-              onMouseLeave={() => setHoveredItem(null)}
-            >
-              <span className="text-[12px] font-bold text-white truncate">{item.type}</span>
-            </motion.div>
-          </div>
-        </motion.div>
-      ))}
-
-      {/* Today marker */}
-      <div
-        className="absolute top-0 bottom-0 w-px bg-risk z-10 pointer-events-none"
-        style={{
-          left: `calc(280px + ((100% - 280px) * ${getCurrentMonthProgress() / 12}))`,
-        }}
-      >
-        <div className="absolute -top-0 -translate-x-1/2 bg-risk text-white text-[12px] font-bold px-1.5 py-0.5 rounded-b-md">
-          Today
+          ))}
         </div>
       </div>
 
       {/* Tooltip */}
       <AnimatePresence>
-        {hoveredItem && <GanttTooltip item={hoveredItem} position={tooltipPos} />}
+        {hoveredItem && <GanttTooltip item={hoveredItem} position={mousePos} />}
       </AnimatePresence>
     </div>
   );
@@ -419,41 +471,19 @@ function GanttChart({
 // ─── Milestones ──────────────────────────────────────────────────────────────
 
 function MilestonesStrip() {
-  const currentMonth = getCurrentMonth();
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.6 }}
-      className="glass-card rounded-2xl p-4 mt-4"
-    >
-      <div className="text-[12px] font-bold text-text-muted mb-3">Key Milestones</div>
-      <div className="relative flex items-center">
-        <div className="absolute left-0 right-0 h-px bg-border-light top-1/2" />
-        <div className="flex-1 flex justify-between relative">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mt-3">
+      <div className="glass-card rounded-2xl px-5 py-3">
+        <div className="flex items-center">
           {MILESTONES.map((ms, i) => {
-            const isPast = ms.month <= currentMonth;
+            const Icon = ms.icon;
             return (
-              <motion.div
-                key={ms.label}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.7 + i * 0.08 }}
-                className="flex flex-col items-center gap-1.5 relative"
-              >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                  isPast
-                    ? 'bg-compliant-50 border-compliant text-compliant-700'
-                    : 'bg-white border-border-light text-text-muted'
-                } transition-colors`}>
-                  <ms.icon size={13} />
+              <div key={ms.label} className="flex items-center" style={{ marginLeft: i === 0 ? `${(ms.month / 12) * 100}%` : `${((ms.month - MILESTONES[i - 1].month) / 12) * 100 - 3}%` }}>
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/5 border border-primary/10">
+                  <Icon size={11} className="text-primary" />
+                  <span className="text-[12px] font-medium text-primary whitespace-nowrap">{ms.label}</span>
                 </div>
-                <span className={`text-[12px] font-semibold ${isPast ? 'text-compliant-700' : 'text-text-muted'}`}>
-                  {ms.label}
-                </span>
-                <span className="text-[12px] text-text-muted">{MONTHS[ms.month]}</span>
-              </motion.div>
+              </div>
             );
           })}
         </div>
@@ -462,391 +492,45 @@ function MilestonesStrip() {
   );
 }
 
-// ─── Resources Tab ───────────────────────────────────────────────────────────
+// ─── Lifecycle Stepper ───────────────────────────────────────────────────────
 
-function ResourcesTab() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 }}
-      className="space-y-6"
-    >
-      {/* Team Roster */}
-      <div>
-        <h3 className="text-[13px] font-bold text-text mb-3 flex items-center gap-2">
-          <Users size={14} className="text-primary" />
-          Team Roster
-        </h3>
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {TEAM_MEMBERS.map((member, idx) => {
-            const alloc = RESOURCE_ALLOCATION[member.name] || {};
-            const totalHours = Object.values(alloc).reduce((s, h) => s + h, 0);
-            const totalCapacity = member.capacity * 12;
-            const utilization = Math.round((totalHours / totalCapacity) * 100);
-            const barColor = utilization > 100 ? 'bg-risk' : utilization > 80 ? 'bg-mitigated' : 'bg-compliant';
-
-            return (
-              <motion.div
-                key={member.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 * idx }}
-                className="glass-card rounded-2xl p-4 hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary-medium text-white flex items-center justify-center text-[12px] font-bold">
-                    {member.avatar}
-                  </div>
-                  <div>
-                    <div className="text-[12px] font-semibold text-text">{member.name}</div>
-                    <div className="text-[12px] text-text-muted">{member.role}</div>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {member.skills.map(skill => (
-                    <span key={skill} className="text-[12px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between text-[12px] mb-1.5">
-                  <span className="text-text-muted">{totalHours}h / {totalCapacity}h</span>
-                  <span className={`font-bold ${utilization > 100 ? 'text-risk-700' : utilization > 80 ? 'text-mitigated-700' : 'text-compliant-700'}`}>
-                    {utilization}%
-                  </span>
-                </div>
-                <div className="w-full h-1.5 rounded-full bg-surface-2 overflow-hidden">
-                  <div className={`h-full rounded-full ${barColor} transition-all duration-500`} style={{ width: `${Math.min(utilization, 100)}%` }} />
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Resource Heatmap */}
-      <div>
-        <h3 className="text-[13px] font-bold text-text mb-3 flex items-center gap-2">
-          <Grid3X3 size={14} className="text-primary" />
-          Resource Heatmap
-        </h3>
-        <div className="glass-card rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border-light">
-                  <th className="text-[12px] font-bold text-text-muted px-4 py-3 text-left bg-surface-2 min-w-[160px]">Team Member</th>
-                  {MONTHS.map(m => (
-                    <th key={m} className="text-[12px] font-bold text-text-muted px-1 py-3 text-center bg-surface-2 min-w-[56px]">{m}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {TEAM_MEMBERS.map((member, idx) => {
-                  const alloc = RESOURCE_ALLOCATION[member.name] || {};
-                  return (
-                    <motion.tr
-                      key={member.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.03 * idx }}
-                      className="border-b border-border-light/50 last:border-0"
-                    >
-                      <td className="px-4 py-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary-medium text-white flex items-center justify-center text-[12px] font-bold shrink-0">
-                            {member.avatar}
-                          </div>
-                          <span className="text-[12px] font-medium text-text">{member.name}</span>
-                        </div>
-                      </td>
-                      {MONTHS.map((_, mIdx) => {
-                        const hours = alloc[mIdx] || 0;
-                        return (
-                          <td key={mIdx} className="px-1 py-1.5">
-                            <div className={`w-full h-8 rounded flex items-center justify-center text-[12px] font-bold ${
-                              hours > 100 ? 'bg-risk-50 text-risk-700' :
-                              hours > 60 ? 'bg-mitigated-50 text-mitigated-700' :
-                              hours > 0 ? 'bg-compliant-50 text-compliant-700' :
-                              'bg-surface-2 text-text-muted/30'
-                            }`}>
-                              {hours > 0 ? `${hours}h` : '\u2014'}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </motion.tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          {/* Legend */}
-          <div className="px-4 py-2.5 border-t border-border-light flex items-center gap-4">
-            <span className="text-[12px] font-semibold text-text-muted">Legend:</span>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-compliant-50 border border-compliant" /><span className="text-[12px] text-text-muted">&lt; 40h (Available)</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-mitigated-50 border border-mitigated" /><span className="text-[12px] text-text-muted">40–80h (Loaded)</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-risk-50 border border-risk" /><span className="text-[12px] text-text-muted">&gt; 100h (Overloaded)</span></div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// ─── Risk Matrix Tab ─────────────────────────────────────────────────────────
-
-function RiskMatrixTab() {
-  const gridColors: Record<string, string> = {};
-  for (let l = 1; l <= 5; l++) {
-    for (let i = 1; i <= 5; i++) {
-      const score = l * i;
-      gridColors[`${l}-${i}`] =
-        score >= 15 ? 'bg-risk-50/80 border-risk' :
-        score >= 10 ? 'bg-high-50/80 border-high' :
-        score >= 5 ? 'bg-mitigated-50/80 border-mitigated' :
-        'bg-compliant-50/80 border-compliant';
-    }
-  }
-
-  const sorted = [...ENGAGEMENT_RISKS].sort((a, b) => b.score - a.score);
+function LifecycleStepper({ status }: { status: EngagementLifecycle }) {
+  const planningSteps: EngagementLifecycle[] = ['draft', 'planned', 'frozen', 'signed-off'];
+  const executionSteps: EngagementLifecycle[] = ['active', 'in-progress', 'pending-review', 'closed'];
+  const currentIdx = LIFECYCLE_ORDER.indexOf(status);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 }}
-      className="space-y-6"
-    >
-      {/* 5×5 Matrix */}
-      <div className="glass-card rounded-2xl p-6">
-        <h3 className="text-[13px] font-bold text-text mb-4 flex items-center gap-2">
-          <AlertTriangle size={14} className="text-primary" />
-          Risk Heat Map — Likelihood vs Impact
-        </h3>
-        <div className="flex">
-          {/* Y axis label */}
-          <div className="flex flex-col items-center justify-center mr-2">
-            <span className="text-[12px] font-bold text-text-muted [writing-mode:vertical-lr] rotate-180">
-              Likelihood
-            </span>
-          </div>
-          <div className="flex-1">
-            {/* Grid */}
-            <div className="grid grid-cols-5 gap-1.5">
-              {[5, 4, 3, 2, 1].map(likelihood =>
-                [1, 2, 3, 4, 5].map(impact => {
-                  const cellKey = `${likelihood}-${impact}`;
-                  const engagements = ENGAGEMENT_RISKS.filter(e => e.likelihood === likelihood && e.impact === impact);
-                  return (
-                    <div
-                      key={cellKey}
-                      className={`aspect-square rounded-xl border flex flex-col items-center justify-center gap-0.5 p-1 ${gridColors[cellKey]} transition-all`}
-                    >
-                      {engagements.length > 0 ? engagements.map(e => (
-                        <span key={e.id} className="text-[12px] font-bold bg-canvas-elevated border border-canvas-border rounded px-1 py-0.5 text-ink-700 truncate max-w-full text-center">
-                          {e.name}
-                        </span>
-                      )) : (
-                        <span className="text-[12px] text-text-muted/30 font-medium">{likelihood * impact}</span>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-            {/* X axis label */}
-            <div className="flex justify-between mt-2 px-1">
-              {[1, 2, 3, 4, 5].map(n => (
-                <span key={n} className="text-[12px] font-semibold text-text-muted flex-1 text-center">{n}</span>
-              ))}
-            </div>
-            <div className="text-center mt-1">
-              <span className="text-[12px] font-bold text-text-muted">Impact</span>
-            </div>
-          </div>
-        </div>
+    <div className="mb-4">
+      <div className="text-[10px] font-bold text-text-muted uppercase mb-2">Lifecycle</div>
+      <div className="flex gap-1">
+        {[...planningSteps, ...executionSteps].map((step, i) => {
+          const isActive = step === status;
+          const isPast = LIFECYCLE_ORDER.indexOf(step) < currentIdx;
+          const isFuture = LIFECYCLE_ORDER.indexOf(step) > currentIdx;
+          const isExec = executionSteps.includes(step);
 
-        {/* Legend */}
-        <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border-light">
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-compliant-50 border border-compliant" /><span className="text-[12px] text-text-muted">Low (1-4)</span></div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-mitigated-50 border border-mitigated" /><span className="text-[12px] text-text-muted">Medium (5-9)</span></div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-high-50 border border-high" /><span className="text-[12px] text-text-muted">High (10-14)</span></div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-risk-50 border border-risk" /><span className="text-[12px] text-text-muted">Critical (15+)</span></div>
-        </div>
-      </div>
-
-      {/* Sorted priority list */}
-      <div className="glass-card rounded-2xl p-5">
-        <h3 className="text-[13px] font-bold text-text mb-3 flex items-center gap-2">
-          <TrendingUp size={14} className="text-primary" />
-          Suggested Priority Order
-        </h3>
-        <div className="space-y-2">
-          {sorted.map((item, idx) => (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.03 * idx }}
-              className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-2 transition-colors"
-            >
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[12px] font-bold text-white ${
-                idx === 0 ? 'bg-risk' : idx < 3 ? 'bg-high' : idx < 5 ? 'bg-mitigated' : 'bg-compliant'
+          return (
+            <div key={step} className="flex items-center gap-1">
+              {i === 4 && <div className="w-px h-5 bg-border-light mx-1" />}
+              <div className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${
+                isActive ? lifecycleTone(step) + ' ring-1 ring-current/20' :
+                isPast ? 'bg-compliant-50/60 text-compliant-700/60' :
+                'bg-paper-50 text-ink-400'
               }`}>
-                {idx + 1}
+                {lifecycleLabel(step)}
               </div>
-              <div className="flex-1">
-                <span className="text-[12px] font-semibold text-text">{item.name}</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-[12px] text-text-muted">
-                  L={item.likelihood} / I={item.impact}
-                </div>
-                <div className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${
-                  item.score >= 15 ? 'bg-risk-50 text-risk-700' :
-                  item.score >= 10 ? 'bg-high-50 text-high-700' :
-                  item.score >= 5 ? 'bg-mitigated-50 text-mitigated-700' :
-                  'bg-compliant-50 text-compliant-700'
-                }`}>
-                  Score: {item.score}
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+            </div>
+          );
+        })}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-// ─── Budget Tab ──────────────────────────────────────────────────────────────
-
-function BudgetTab() {
-  const totalBudget = BUDGET_DATA.reduce((s, b) => s + b.budget, 0);
-  const totalSpent = BUDGET_DATA.reduce((s, b) => s + b.spent, 0);
-  const remaining = totalBudget - totalSpent;
-  const utilization = Math.round((totalSpent / totalBudget) * 100);
-
-  const fmt = (n: number) => {
-    if (n >= 1000) return `$${(n / 1000).toFixed(0)}K`;
-    return `$${n}`;
-  };
-
-  const budgetKpis = [
-    { label: 'Total Budget', value: fmt(totalBudget), icon: DollarSign, color: 'text-primary bg-primary-xlight' },
-    { label: 'Spent', value: fmt(totalSpent), icon: TrendingUp, color: 'text-evidence-700 bg-evidence-50' },
-    { label: 'Remaining', value: fmt(remaining), icon: Clock, color: 'text-compliant-700 bg-compliant-50' },
-    { label: 'Utilization', value: `${utilization}%`, icon: Zap, color: 'text-high-700 bg-high-50' },
-  ];
-
-  const maxBudget = Math.max(...BUDGET_DATA.map(b => b.budget));
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 }}
-      className="space-y-6"
-    >
-      {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-4">
-        {budgetKpis.map((kpi, idx) => (
-          <KpiCard key={kpi.label} label={kpi.label} value={kpi.value} icon={kpi.icon} color={kpi.color} index={idx} />
-        ))}
-      </div>
-
-      {/* Budget Table */}
-      <div className="glass-card rounded-2xl overflow-hidden">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-border-light">
-              {['Engagement', 'Planned Hrs', 'Actual Hrs', '% Complete', 'Budget', 'Spent', 'Variance'].map(col => (
-                <th key={col} className="text-[12px] font-bold text-text-muted px-4 py-3 bg-surface-2">{col}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {BUDGET_DATA.map((row, idx) => {
-              const pct = row.plannedHours > 0 ? Math.round((row.actualHours / row.plannedHours) * 100) : 0;
-              return (
-                <motion.tr
-                  key={row.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.03 * idx }}
-                  className="border-b border-border-light/50 last:border-0 hover:bg-primary-xlight/30 transition-colors"
-                >
-                  <td className="text-[12px] font-semibold text-text px-4 py-3">{row.name}</td>
-                  <td className="text-[12px] text-text-secondary px-4 py-3">{row.plannedHours}</td>
-                  <td className="text-[12px] text-text-secondary px-4 py-3">{row.actualHours}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-1.5 rounded-full bg-surface-2 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all duration-500"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="text-[12px] font-bold text-text-muted">{pct}%</span>
-                    </div>
-                  </td>
-                  <td className="text-[12px] text-text-secondary px-4 py-3">${row.budget.toLocaleString()}</td>
-                  <td className="text-[12px] text-text-secondary px-4 py-3">${row.spent.toLocaleString()}</td>
-                  <td className={`text-[12px] font-semibold px-4 py-3 ${row.variance < 0 ? 'text-compliant-700' : 'text-risk-700'}`}>
-                    {row.variance < 0 ? '-' : '+'}${Math.abs(row.variance).toLocaleString()}
-                  </td>
-                </motion.tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Budget vs Actual bars */}
-      <div className="glass-card rounded-2xl p-5">
-        <h3 className="text-[13px] font-bold text-text mb-4 flex items-center gap-2">
-          <BarChart3 size={14} className="text-primary" />
-          Budget vs Actual
-        </h3>
-        <div className="space-y-3">
-          {BUDGET_DATA.map((row, idx) => (
-            <motion.div
-              key={row.id}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.03 * idx }}
-            >
-              <div className="flex items-center gap-3 mb-1">
-                <span className="text-[12px] font-medium text-text w-[180px] truncate">{row.name}</span>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 rounded-r bg-primary/30" style={{ width: `${(row.budget / maxBudget) * 100}%` }} />
-                    <span className="text-[12px] text-text-muted whitespace-nowrap">{fmt(row.budget)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 rounded-r bg-primary" style={{ width: `${(row.spent / maxBudget) * 100}%` }} />
-                    <span className="text-[12px] text-text-secondary font-semibold whitespace-nowrap">{fmt(row.spent)}</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-        <div className="flex items-center gap-6 mt-4 pt-3 border-t border-border-light">
-          <div className="flex items-center gap-1.5"><div className="w-4 h-2.5 rounded bg-primary/30" /><span className="text-[12px] text-text-muted">Planned Budget</span></div>
-          <div className="flex items-center gap-1.5"><div className="w-4 h-2.5 rounded bg-primary" /><span className="text-[12px] text-text-muted">Actual Spend</span></div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// ─── Engagement Drawer ───────────────────────────────────────────────────────
+// ─── Engagement Drawer (Upgraded) ────────────────────────────────────────────
 
 function EngagementDrawer({
-  engagement, isCreate, frozen, onClose, onSave, onDelete,
+  engagement, isCreate, frozen, onClose, onSave, onDelete, onActivate, onViewExecution,
 }: {
   engagement: AuditEngagement;
   isCreate: boolean;
@@ -854,19 +538,21 @@ function EngagementDrawer({
   onClose: () => void;
   onSave: (updated: AuditEngagement) => void;
   onDelete: (id: string) => void;
+  onActivate: (id: string) => void;
+  onViewExecution?: (id: string) => void;
 }) {
   const [form, setForm] = useState<AuditEngagement>({ ...engagement });
-  const [assignDropdownOpen, setAssignDropdownOpen] = useState(false);
 
   const update = <K extends keyof AuditEngagement>(key: K, value: AuditEngagement[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
   const readOnly = frozen && !isCreate;
+  const canActivate = form.status === 'signed-off' && !isCreate;
+  const isInExecution = isExecutionPhase(form.status);
 
   return (
     <>
-      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -875,238 +561,272 @@ function EngagementDrawer({
         className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm"
         onClick={onClose}
       />
-      {/* Drawer */}
       <motion.div
-        initial={{ x: 420 }}
+        initial={{ x: 480 }}
         animate={{ x: 0 }}
-        exit={{ x: 420 }}
+        exit={{ x: 480 }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed right-0 top-0 bottom-0 w-[400px] z-50 glass-card-strong border-l border-border-light shadow-2xl overflow-y-auto"
+        className="fixed right-0 top-0 bottom-0 w-[460px] z-50 glass-card-strong border-l border-border-light shadow-2xl overflow-y-auto"
       >
         <div className="p-6">
           {/* Header */}
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="text-[15px] font-bold text-text">
-              {isCreate ? 'Add Engagement' : 'Edit Engagement'}
+              {isCreate ? 'Create Engagement' : isInExecution ? 'Engagement Detail' : 'Edit Engagement'}
             </h3>
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
               <X size={16} className="text-text-muted" />
             </button>
           </div>
 
+          {/* Lifecycle stepper */}
+          {!isCreate && <LifecycleStepper status={form.status} />}
+
           {/* Frozen banner */}
-          {readOnly && (
-            <div className="flex items-center gap-2.5 p-3 bg-evidence-50 rounded-xl mb-5 border border-evidence">
+          {readOnly && !isInExecution && (
+            <div className="flex items-center gap-2.5 p-3 bg-evidence-50 rounded-xl mb-4 border border-evidence">
               <Lock size={14} className="text-evidence-700 shrink-0" />
               <span className="text-[12px] text-evidence-700 font-medium">Plan is frozen — fields are read-only.</span>
             </div>
           )}
 
-          {/* Fields */}
+          {/* Execution banner */}
+          {isInExecution && (
+            <div className="flex items-center justify-between p-3 bg-compliant-50 rounded-xl mb-4 border border-compliant">
+              <div className="flex items-center gap-2.5">
+                <Play size={14} className="text-compliant-700 shrink-0" />
+                <div>
+                  <span className="text-[12px] text-compliant-700 font-semibold block">In Execution</span>
+                  <span className="text-[11px] text-compliant-700/80">Snapshot: {form.engagementSnapshotId || '—'}</span>
+                </div>
+              </div>
+              {onViewExecution && (
+                <button onClick={() => onViewExecution(form.id)} className="px-3 py-1.5 bg-compliant hover:brightness-110 text-white rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1.5">
+                  <ArrowRight size={11} />
+                  Open Hub
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Activation CTA */}
+          {canActivate && (
+            <button
+              onClick={() => onActivate(form.id)}
+              className="w-full flex items-center justify-center gap-2 py-3 mb-4 bg-gradient-to-r from-primary to-primary-medium hover:brightness-110 text-white rounded-xl text-[13px] font-bold transition-all cursor-pointer"
+            >
+              <Zap size={14} />
+              Activate Engagement
+            </button>
+          )}
+
+          {/* ── Fields ── */}
           <div className="space-y-0">
             {/* Name */}
             <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Engagement Name</label>
+              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Engagement Name *</label>
               <input
                 type="text"
                 value={form.name}
                 onChange={(e) => update('name', e.target.value)}
-                disabled={readOnly}
+                disabled={readOnly || isInExecution}
+                placeholder="e.g., P2P — SOX Audit FY26"
                 className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${
-                  readOnly ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'
+                  (readOnly || isInExecution) ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'
                 }`}
               />
             </div>
 
+            {/* Audit Type & Framework side by side */}
+            <div className="grid grid-cols-2 gap-3">
+              <Dropdown<AuditType>
+                label="Audit Type *"
+                value={form.auditType}
+                options={AUDIT_TYPES}
+                onChange={(v) => update('auditType', v)}
+                disabled={readOnly || isInExecution}
+              />
+              <Dropdown<FrameworkType>
+                label="Framework *"
+                value={form.framework}
+                options={FRAMEWORKS}
+                onChange={(v) => update('framework', v)}
+                disabled={readOnly || isInExecution}
+              />
+            </div>
+
+            {/* Business Process */}
             <Dropdown<ProcessType>
-              label="Process"
-              value={form.process}
+              label="Business Process *"
+              value={form.businessProcess}
               options={PROCESSES}
-              onChange={(v) => update('process', v)}
-              disabled={readOnly}
+              onChange={(v) => update('businessProcess', v)}
+              disabled={readOnly || isInExecution}
             />
 
-            <Dropdown<AuditType>
-              label="Audit Type"
-              value={form.type}
-              options={AUDIT_TYPES}
-              onChange={(v) => update('type', v)}
-              disabled={readOnly}
-            />
-
-            <Dropdown<AuditStatus>
-              label="Status"
-              value={form.status}
-              options={STATUSES}
-              onChange={(v) => update('status', v)}
-              disabled={readOnly}
-            />
-
-            <Dropdown<string>
-              label="Lead Auditor"
-              value={form.owner}
-              options={TEAM_MEMBERS.map(m => m.name)}
-              onChange={(v) => update('owner', v)}
-              disabled={readOnly}
-            />
-
-            <Dropdown<string>
-              label="Start Month"
-              value={MONTHS[form.start]}
-              options={MONTHS}
-              onChange={(v) => update('start', MONTHS.indexOf(v))}
-              disabled={readOnly}
-            />
-
-            {/* Duration */}
-            <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Duration (months)</label>
-              <input
-                type="number"
-                min={1}
-                max={12}
-                value={form.duration}
-                onChange={(e) => update('duration', Math.max(1, Math.min(12, parseInt(e.target.value) || 1)))}
-                disabled={readOnly}
-                className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${
-                  readOnly ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'
-                }`}
-              />
-            </div>
-
-            {/* Planned Hours */}
-            <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Planned Hours</label>
-              <input
-                type="number"
-                min={0}
-                value={form.plannedHours}
-                onChange={(e) => update('plannedHours', Math.max(0, parseInt(e.target.value) || 0))}
-                disabled={readOnly}
-                className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${
-                  readOnly ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'
-                }`}
-              />
-            </div>
-
-            <Dropdown<PriorityLevel>
-              label="Priority"
-              value={form.priority}
-              options={PRIORITIES}
-              onChange={(v) => update('priority', v)}
-              disabled={readOnly}
-              renderOption={(opt) => (
-                <span className={`font-semibold ${
-                  opt === 'Critical' ? 'text-risk-700' :
-                  opt === 'High' ? 'text-high-700' :
-                  opt === 'Medium' ? 'text-mitigated-700' :
-                  'text-compliant-700'
-                }`}>{opt}</span>
-              )}
-            />
-
-            {/* Risk Score */}
-            <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Risk Score (1-100)</label>
-              <input
-                type="number"
-                min={1}
-                max={100}
-                value={form.riskScore}
-                onChange={(e) => update('riskScore', Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                disabled={readOnly}
-                className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${
-                  readOnly ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'
-                }`}
-              />
-            </div>
-
-            {/* Notes */}
-            <div className="mb-3">
-              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Notes</label>
-              <textarea
-                value={form.notes}
-                onChange={(e) => update('notes', e.target.value)}
-                disabled={readOnly}
-                placeholder="Additional notes..."
-                className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all resize-none h-20 ${
-                  readOnly ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white placeholder:text-text-muted/50'
-                }`}
-              />
-            </div>
-
-            {/* Assign Resource */}
-            {!readOnly && (
+            {/* Audit Period */}
+            <div className="grid grid-cols-2 gap-3">
               <div className="mb-3">
-                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Assign Resource</label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setAssignDropdownOpen(p => !p)}
-                    className="w-full flex items-center justify-between px-3 py-2.5 border border-border rounded-lg text-[13px] text-text hover:border-primary/30 transition-colors cursor-pointer bg-white"
-                  >
-                    <span className="flex items-center gap-2">
-                      <UserCheck size={13} className="text-primary" />
-                      Assign team member...
-                    </span>
-                    <ChevronDown size={14} className={`text-text-muted transition-transform ${assignDropdownOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  <AnimatePresence>
-                    {assignDropdownOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        transition={{ duration: 0.12 }}
-                        className="absolute left-0 right-0 top-full mt-1 bg-white border border-border-light rounded-xl shadow-lg overflow-hidden z-50 max-h-60 overflow-y-auto"
-                      >
-                        {TEAM_MEMBERS.map(member => {
-                          const hasSkillMatch = member.skills.some(s =>
-                            s === form.process || s === form.type ||
-                            form.name.toLowerCase().includes(s.toLowerCase())
-                          );
-                          return (
-                            <button
-                              key={member.id}
-                              type="button"
-                              onClick={() => {
-                                update('owner', member.name);
-                                setAssignDropdownOpen(false);
-                              }}
-                              className={`w-full text-left px-3 py-2.5 text-[12px] transition-colors cursor-pointer hover:bg-surface-2 ${
-                                form.owner === member.name ? 'bg-primary/10' : ''
-                              }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary-medium text-white flex items-center justify-center text-[12px] font-bold">
-                                    {member.avatar}
-                                  </div>
-                                  <div>
-                                    <div className="text-[12px] font-medium text-text">{member.name}</div>
-                                    <div className="text-[12px] text-text-muted">{member.role}</div>
-                                  </div>
-                                </div>
-                                {hasSkillMatch && (
-                                  <span className="text-[12px] font-bold px-1.5 py-0.5 rounded-full bg-compliant-50 text-compliant-700">
-                                    Skill Match
-                                  </span>
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Audit Period Start *</label>
+                <input type="date" value={form.auditPeriodStart} onChange={e => update('auditPeriodStart', e.target.value)}
+                  disabled={readOnly || isInExecution}
+                  className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${(readOnly || isInExecution) ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'}`}
+                />
+              </div>
+              <div className="mb-3">
+                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Audit Period End *</label>
+                <input type="date" value={form.auditPeriodEnd} onChange={e => update('auditPeriodEnd', e.target.value)}
+                  disabled={readOnly || isInExecution}
+                  className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${(readOnly || isInExecution) ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'}`}
+                />
+              </div>
+            </div>
+
+            {/* Planned Start/End */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="mb-3">
+                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Planned Start *</label>
+                <input type="date" value={form.plannedStartDate} onChange={e => update('plannedStartDate', e.target.value)}
+                  disabled={readOnly || isInExecution}
+                  className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${(readOnly || isInExecution) ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'}`}
+                />
+              </div>
+              <div className="mb-3">
+                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Planned End *</label>
+                <input type="date" value={form.plannedEndDate} onChange={e => update('plannedEndDate', e.target.value)}
+                  disabled={readOnly || isInExecution}
+                  className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${(readOnly || isInExecution) ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'}`}
+                />
+              </div>
+            </div>
+
+            {/* Actual dates (read-only, shown only in execution) */}
+            {isInExecution && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="mb-3">
+                  <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Actual Start</label>
+                  <div className="px-3 py-2.5 border border-border rounded-lg text-[13px] bg-surface-2 text-text-secondary">
+                    {formatDate(form.actualStartDate)}
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Actual End</label>
+                  <div className="px-3 py-2.5 border border-border rounded-lg text-[13px] bg-surface-2 text-text-secondary">
+                    {formatDate(form.actualEndDate)}
+                  </div>
                 </div>
               </div>
             )}
+
+            {/* Owner & Reviewer */}
+            <div className="grid grid-cols-2 gap-3">
+              <Dropdown<string>
+                label="Owner *"
+                value={form.owner}
+                options={TEAM_MEMBERS.map(m => m.name)}
+                onChange={(v) => update('owner', v)}
+                disabled={readOnly || isInExecution}
+              />
+              <Dropdown<string>
+                label="Reviewer *"
+                value={form.reviewer}
+                options={[...TEAM_MEMBERS.map(m => m.name), 'Abhinav S']}
+                onChange={(v) => update('reviewer', v)}
+                disabled={readOnly || isInExecution}
+              />
+            </div>
+
+            {/* RACM Version */}
+            <div className="mb-3">
+              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">RACM Version *</label>
+              <div className="relative">
+                <Dropdown<string>
+                  label=""
+                  value={RACM_VERSIONS.find(r => r.id === form.sourceRacmVersionId)?.label || form.sourceRacmVersionId}
+                  options={RACM_VERSIONS.map(r => r.label)}
+                  onChange={(v) => {
+                    const found = RACM_VERSIONS.find(r => r.label === v);
+                    if (found) update('sourceRacmVersionId', found.id);
+                  }}
+                  disabled={readOnly || isInExecution}
+                />
+              </div>
+            </div>
+
+            {/* Snapshot info (if exists) */}
+            {form.engagementSnapshotId && (
+              <div className="mb-3 p-3 bg-brand-50/50 rounded-xl border border-brand-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <Copy size={12} className="text-brand-600" />
+                  <span className="text-[11px] font-bold text-brand-700 uppercase">Engagement Snapshot</span>
+                </div>
+                <div className="text-[12px] text-brand-700 font-mono">{form.engagementSnapshotId}</div>
+                <div className="text-[11px] text-brand-600 mt-0.5">Immutable copy of RACM {form.sourceRacmVersionId} created at activation</div>
+              </div>
+            )}
+
+            {/* Gantt positioning */}
+            <div className="grid grid-cols-2 gap-3">
+              <Dropdown<string>
+                label="Start Month"
+                value={MONTHS[form.start]}
+                options={MONTHS}
+                onChange={(v) => update('start', MONTHS.indexOf(v))}
+                disabled={readOnly || isInExecution}
+              />
+              <div className="mb-3">
+                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Duration (months)</label>
+                <input type="number" min={1} max={12} value={form.duration}
+                  onChange={(e) => update('duration', Math.max(1, Math.min(12, parseInt(e.target.value) || 1)))}
+                  disabled={readOnly || isInExecution}
+                  className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${(readOnly || isInExecution) ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'}`}
+                />
+              </div>
+            </div>
+
+            {/* Priority & Risk Score */}
+            <div className="grid grid-cols-2 gap-3">
+              <Dropdown<PriorityLevel>
+                label="Priority"
+                value={form.priority}
+                options={PRIORITIES}
+                onChange={(v) => update('priority', v)}
+                disabled={readOnly || isInExecution}
+                renderOption={(opt) => (
+                  <span className={`font-semibold ${
+                    opt === 'Critical' ? 'text-risk-700' : opt === 'High' ? 'text-high-700' :
+                    opt === 'Medium' ? 'text-mitigated-700' : 'text-compliant-700'
+                  }`}>{opt}</span>
+                )}
+              />
+              <div className="mb-3">
+                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Risk Score (1-100)</label>
+                <input type="number" min={1} max={100} value={form.riskScore}
+                  onChange={(e) => update('riskScore', Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                  disabled={readOnly || isInExecution}
+                  className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${(readOnly || isInExecution) ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'}`}
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="mb-3">
+              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Description</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => update('description', e.target.value)}
+                disabled={readOnly || isInExecution}
+                placeholder="Describe the scope and objectives of this engagement..."
+                className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all resize-none h-24 ${
+                  (readOnly || isInExecution) ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white placeholder:text-text-muted/50'
+                }`}
+              />
+            </div>
           </div>
 
           {/* Actions */}
-          {!readOnly && (
-            <div className="mt-6 pt-4 border-t border-border-light">
+          {!(readOnly || isInExecution) && (
+            <div className="mt-5 pt-4 border-t border-border-light">
               <button
                 onClick={() => onSave(form)}
                 className="w-full py-2.5 bg-primary hover:bg-primary-hover text-white rounded-xl text-[13px] font-semibold transition-colors cursor-pointer mb-3"
@@ -1116,10 +836,9 @@ function EngagementDrawer({
               {!isCreate && (
                 <button
                   onClick={() => onDelete(form.id)}
-                  className="w-full py-2 text-risk-700 hover:text-risk-700 hover:bg-risk-50 rounded-xl text-[12px] font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full py-2 text-risk-700 hover:bg-risk-50 rounded-xl text-[12px] font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  <Trash2 size={13} />
-                  Delete Engagement
+                  Remove from Plan
                 </button>
               )}
             </div>
@@ -1158,13 +877,18 @@ function ModalBackdrop({ children, onClose }: { children: React.ReactNode; onClo
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export default function AuditPlanningView() {
+interface Props {
+  onNavigateToExecution?: (engagementId: string) => void;
+}
+
+export default function AuditPlanningView({ onNavigateToExecution }: Props) {
   const { addToast } = useToast();
   const [plan, setPlan] = useState<AuditEngagement[]>(INITIAL_AUDIT_PLAN);
   const [planFrozen, setPlanFrozen] = useState(false);
   const [signedOff, setSignedOff] = useState(false);
   const [showFreezeModal, setShowFreezeModal] = useState(false);
   const [showSignOffModal, setShowSignOffModal] = useState(false);
+  const [showActivateModal, setShowActivateModal] = useState<string | null>(null);
   const [selectedSigner, setSelectedSigner] = useState(SIGNERS[0]);
   const [signOffComment, setSignOffComment] = useState('');
   const [signerDropdownOpen, setSignerDropdownOpen] = useState(false);
@@ -1173,7 +897,6 @@ export default function AuditPlanningView() {
   const [processFilter, setProcessFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
 
-  // Drawer state
   const [drawerEngagement, setDrawerEngagement] = useState<AuditEngagement | null>(null);
   const [drawerIsCreate, setDrawerIsCreate] = useState(false);
 
@@ -1181,8 +904,12 @@ export default function AuditPlanningView() {
 
   const confirmFreeze = () => {
     setPlanFrozen(true);
+    // Move all draft/planned engagements to frozen
+    setPlan(prev => prev.map(p =>
+      ['draft', 'planned'].includes(p.status) ? { ...p, status: 'frozen' as EngagementLifecycle } : p
+    ));
     setShowFreezeModal(false);
-    addToast({ type: 'success', message: 'Audit plan frozen successfully' });
+    addToast({ type: 'success', message: 'Audit plan frozen — scheduling locked' });
   };
 
   const handleSignOff = () => {
@@ -1192,9 +919,38 @@ export default function AuditPlanningView() {
 
   const confirmSignOff = () => {
     setSignedOff(true);
+    // Move frozen engagements to signed-off
+    setPlan(prev => prev.map(p =>
+      p.status === 'frozen' ? { ...p, status: 'signed-off' as EngagementLifecycle } : p
+    ));
     setShowSignOffModal(false);
     setSignOffComment('');
-    addToast({ type: 'success', message: 'Audit plan signed off successfully' });
+    addToast({ type: 'success', message: 'Audit plan signed off — engagements ready for activation' });
+  };
+
+  const handleActivate = (id: string) => {
+    setShowActivateModal(id);
+  };
+
+  const confirmActivate = () => {
+    if (!showActivateModal) return;
+    const engId = showActivateModal;
+    const snapshotId = `snap-${Date.now().toString(36)}`;
+    setPlan(prev => prev.map(p =>
+      p.id === engId ? {
+        ...p,
+        status: 'active' as EngagementLifecycle,
+        engagementSnapshotId: snapshotId,
+        actualStartDate: new Date().toISOString().split('T')[0],
+      } : p
+    ));
+    setShowActivateModal(null);
+    setDrawerEngagement(null);
+    addToast({ type: 'success', message: `Engagement activated — immutable snapshot ${snapshotId} created` });
+    // Navigate to engagement execution hub
+    if (onNavigateToExecution) {
+      setTimeout(() => onNavigateToExecution(engId), 600);
+    }
   };
 
   const openEditDrawer = (item: AuditEngagement) => {
@@ -1208,18 +964,28 @@ export default function AuditPlanningView() {
     setDrawerEngagement({
       id: newId,
       name: '',
-      process: 'P2P',
-      type: 'SOX',
+      auditType: 'SOX',
+      framework: 'COSO',
+      businessProcess: 'P2P',
+      auditPeriodStart: '2025-04-01',
+      auditPeriodEnd: '2026-03-31',
+      plannedStartDate: '',
+      plannedEndDate: '',
+      actualStartDate: '',
+      actualEndDate: '',
       owner: TEAM_MEMBERS[0].name,
-      start: 0,
-      duration: 3,
-      color: COLOR_PALETTE[colorIdx],
-      status: 'planned',
+      reviewer: TEAM_MEMBERS[3].name,
+      description: '',
+      sourceRacmVersionId: 'racm-v2.1',
+      engagementSnapshotId: null,
+      status: 'draft',
       controls: 0,
       plannedHours: 0,
       priority: 'Medium',
       riskScore: 50,
-      notes: '',
+      start: 0,
+      duration: 3,
+      color: COLOR_PALETTE[colorIdx],
     });
     setDrawerIsCreate(true);
   };
@@ -1227,10 +993,10 @@ export default function AuditPlanningView() {
   const handleSaveEngagement = (updated: AuditEngagement) => {
     if (drawerIsCreate) {
       setPlan(prev => [...prev, updated]);
-      addToast({ type: 'success', message: `"${updated.name}" created successfully` });
+      addToast({ type: 'success', message: `"${updated.name}" created as Draft` });
     } else {
       setPlan(prev => prev.map(p => p.id === updated.id ? updated : p));
-      addToast({ type: 'success', message: `"${updated.name}" updated successfully` });
+      addToast({ type: 'success', message: `"${updated.name}" updated` });
     }
     setDrawerEngagement(null);
   };
@@ -1243,8 +1009,8 @@ export default function AuditPlanningView() {
   };
 
   const totalControls = plan.reduce((sum, a) => sum + a.controls, 0);
-  const uniqueProcesses = new Set(plan.map(a => a.process)).size;
-  const uniqueOwners = new Set(plan.map(a => a.owner)).size;
+  const uniqueProcesses = new Set(plan.map(a => a.businessProcess)).size;
+  const activeCount = plan.filter(p => isExecutionPhase(p.status)).length;
 
   const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
     { id: 'timeline', label: 'Timeline', icon: Calendar },
@@ -1254,7 +1020,7 @@ export default function AuditPlanningView() {
   ];
 
   const processFilterOptions = ['All', ...PROCESSES];
-  const statusFilterOptions = ['All', 'Active', 'Planned', 'Completed'];
+  const statusFilterOptions = ['All', 'Active', 'Planned'];
 
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
@@ -1275,7 +1041,8 @@ export default function AuditPlanningView() {
           <div className="flex items-center gap-3">
             <button
               onClick={openCreateDrawer}
-              className="flex items-center gap-1.5 px-3 py-2 border border-primary/30 bg-primary/5 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+              disabled={planFrozen && !signedOff}
+              className="flex items-center gap-1.5 px-3 py-2 border border-primary/30 bg-primary/5 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Plus size={13} />
               Add Engagement
@@ -1284,7 +1051,6 @@ export default function AuditPlanningView() {
               <div className="flex items-center gap-2 px-3 py-1.5 bg-evidence-50 border border-evidence rounded-lg">
                 <Lock size={13} className="text-evidence-700" />
                 <span className="text-[12px] font-semibold text-evidence-700">Plan Frozen</span>
-                <span className="text-[12px] text-evidence-700">by Karan Mehta — Mar 1, 2026</span>
               </div>
             ) : (
               <button
@@ -1297,7 +1063,8 @@ export default function AuditPlanningView() {
             )}
             <button
               onClick={handleSignOff}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer ${
+              disabled={!planFrozen}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                 signedOff
                   ? 'bg-compliant text-white'
                   : 'bg-primary hover:bg-primary-hover text-white'
@@ -1309,12 +1076,37 @@ export default function AuditPlanningView() {
           </div>
         </div>
 
+        {/* Lifecycle Banner */}
+        <div className="flex items-center gap-4 mb-6 p-3 rounded-xl bg-surface-2/50 border border-border-light">
+          <div className="text-[11px] font-bold text-text-muted uppercase shrink-0">Plan Status:</div>
+          {['Draft', 'Planned', 'Frozen', 'Signed Off', 'Activated'].map((step, i) => {
+            const isDone = (i === 0) || (i === 1) || (i === 2 && planFrozen) || (i === 3 && signedOff) || (i === 4 && plan.some(p => isExecutionPhase(p.status)));
+            const isCurrent = (i === 0 && !planFrozen && !signedOff) ||
+                             (i === 2 && planFrozen && !signedOff) ||
+                             (i === 3 && signedOff && !plan.some(p => p.status === 'active')) ||
+                             (i === 4 && plan.some(p => isExecutionPhase(p.status)));
+            return (
+              <div key={step} className="flex items-center gap-2">
+                {i > 0 && <ArrowRight size={10} className="text-text-muted/40" />}
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold ${
+                  isCurrent ? 'bg-primary text-white' :
+                  isDone ? 'bg-compliant-50 text-compliant-700' :
+                  'bg-paper-50 text-ink-400'
+                }`}>
+                  {isDone && !isCurrent && <CheckCircle2 size={10} />}
+                  {step}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         {/* KPI Strip */}
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <KpiCard label="Planned Engagements" value={plan.length} icon={ClipboardList} color="text-primary bg-primary-xlight" index={0} />
+          <KpiCard label="Total Engagements" value={plan.length} icon={ClipboardList} color="text-primary bg-primary-xlight" index={0} />
           <KpiCard label="Processes Covered" value={uniqueProcesses} icon={LayoutGrid} color="text-evidence-700 bg-evidence-50" index={1} />
           <KpiCard label="Total Controls" value={totalControls} icon={ShieldCheck} color="text-compliant-700 bg-compliant-50" index={2} />
-          <KpiCard label="Team Members" value={uniqueOwners} icon={Users} color="text-high-700 bg-high-50" index={3} />
+          <KpiCard label="In Execution" value={activeCount} icon={Zap} color="text-high-700 bg-high-50" index={3} />
         </div>
 
         {/* Tabs */}
@@ -1342,34 +1134,18 @@ export default function AuditPlanningView() {
             );
           })}
         </div>
-        {/* v2 note */}
-        <div className="text-[12px] text-text-muted mb-4 flex items-center gap-1.5">
-          <span className="text-[12px] font-medium px-2 h-5 inline-flex items-center rounded-full bg-paper-100 text-ink-500">Note</span>
-          Resources, risk matrix, and budget tabs coming in v2.
-        </div>
 
-        {/* Filters (show for timeline, resources, budget) */}
-        {(activeTab === 'timeline' || activeTab === 'resources' || activeTab === 'budget') && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-4 mb-4"
-          >
+        {/* Filters */}
+        {activeTab === 'timeline' && (
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4 mb-4">
             <div className="flex items-center gap-2">
               <span className="text-[12px] font-bold text-text-muted">Process:</span>
               <div className="flex gap-1">
                 {processFilterOptions.map(opt => (
-                  <button
-                    key={opt}
-                    onClick={() => setProcessFilter(opt)}
+                  <button key={opt} onClick={() => setProcessFilter(opt)}
                     className={`px-2.5 py-1 rounded-full text-[12px] font-semibold transition-all cursor-pointer ${
-                      processFilter === opt
-                        ? 'bg-primary text-white shadow-sm'
-                        : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
-                    }`}
-                  >
-                    {opt}
-                  </button>
+                      processFilter === opt ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
+                    }`}>{opt}</button>
                 ))}
               </div>
             </div>
@@ -1378,17 +1154,10 @@ export default function AuditPlanningView() {
               <span className="text-[12px] font-bold text-text-muted">Status:</span>
               <div className="flex gap-1">
                 {statusFilterOptions.map(opt => (
-                  <button
-                    key={opt}
-                    onClick={() => setStatusFilter(opt)}
+                  <button key={opt} onClick={() => setStatusFilter(opt)}
                     className={`px-2.5 py-1 rounded-full text-[12px] font-semibold transition-all cursor-pointer ${
-                      statusFilter === opt
-                        ? 'bg-primary text-white shadow-sm'
-                        : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
-                    }`}
-                  >
-                    {opt}
-                  </button>
+                      statusFilter === opt ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
+                    }`}>{opt}</button>
                 ))}
               </div>
             </div>
@@ -1398,124 +1167,58 @@ export default function AuditPlanningView() {
         {/* Tab Content */}
         <AnimatePresence mode="wait">
           {activeTab === 'timeline' && (
-            <motion.div
-              key="timeline"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div className="flex items-center gap-2 mb-3 text-[12px] text-text-muted">
-                <Calendar size={12} className="text-primary/60" />
-                <span>Timeline bars are draggable for Manager+ roles. Click an engagement to edit details.</span>
-              </div>
-              <GanttChart
-                items={plan}
-                frozen={planFrozen}
-                onClickEngagement={openEditDrawer}
-                processFilter={processFilter}
-                statusFilter={statusFilter}
-              />
+            <motion.div key="timeline" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+              <GanttChart items={plan} frozen={planFrozen} onClickEngagement={openEditDrawer} processFilter={processFilter} statusFilter={statusFilter} />
               <MilestonesStrip />
 
-              {/* Current Audit Progress */}
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="mt-6">
-                <h2 className="text-[15px] font-semibold text-text mb-3">Current Progress</h2>
-                <div className="glass-card rounded-2xl p-5">
-                  <div className="space-y-4">
-                    {plan.filter(p => p.status === 'active' || p.status === 'completed').map((eng, i) => {
-                      // Mock progress based on status and position in year
-                      const progressMap: Record<string, number> = {
-                        'ap-1': 72, 'ap-2': 44, 'ap-3': 85, 'ap-6': 60,
-                      };
-                      const progress = progressMap[eng.id] || (eng.status === 'completed' ? 100 : 0);
-                      const tested = Math.round((progress / 100) * eng.controls);
+              {/* Current Execution Progress */}
+              {plan.some(p => isExecutionPhase(p.status)) && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="mt-6">
+                  <h2 className="text-[15px] font-semibold text-text mb-3">Execution Progress</h2>
+                  <div className="glass-card rounded-2xl p-5">
+                    <div className="space-y-4">
+                      {plan.filter(p => isExecutionPhase(p.status)).map((eng, i) => {
+                        const progressMap: Record<string, number> = { 'ap-1': 72, 'ap-2': 44, 'ap-3': 85, 'ap-6': 60 };
+                        const progress = progressMap[eng.id] || 0;
+                        const tested = Math.round((progress / 100) * eng.controls);
 
-                      return (
-                        <div key={eng.id}>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2.5 h-2.5 rounded-full" style={{ background: eng.color }} />
-                              <span className="text-[12px] font-medium text-text">{eng.name}</span>
-                              <span className="text-[12px] text-text-muted">{eng.owner}</span>
+                        return (
+                          <div key={eng.id}>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full" style={{ background: eng.color }} />
+                                <span className="text-[12px] font-medium text-text">{eng.name}</span>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${lifecycleTone(eng.status)}`}>
+                                  {lifecycleLabel(eng.status)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[12px] text-text-muted">{tested}/{eng.controls} controls</span>
+                                <span className="text-[12px] font-bold font-mono text-text">{progress}%</span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-[12px] text-text-muted">{tested}/{eng.controls} controls</span>
-                              <span className="text-[12px] font-bold font-mono text-text">{progress}%</span>
+                            <div className="h-2 bg-surface-3 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${progress}%` }}
+                                transition={{ duration: 0.8, delay: 0.2 + i * 0.1 }}
+                                className="h-full rounded-full"
+                                style={{ background: eng.color }}
+                              />
                             </div>
                           </div>
-                          <div className="h-2 bg-surface-3 rounded-full overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${progress}%` }}
-                              transition={{ duration: 0.8, delay: 0.2 + i * 0.1 }}
-                              className="h-full rounded-full"
-                              style={{ background: eng.color }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-
-                  {/* Overall */}
-                  <div className="mt-4 pt-3 border-t border-border-light flex items-center justify-between">
-                    <span className="text-[12px] font-semibold text-text">Overall FY26 Progress</span>
-                    <span className="text-[14px] font-bold text-primary font-mono">62%</span>
-                  </div>
-                  <div className="h-2.5 bg-surface-3 rounded-full overflow-hidden mt-1.5">
-                    <motion.div initial={{ width: 0 }} animate={{ width: '62%' }} transition={{ duration: 1, delay: 0.5 }} className="h-full rounded-full bg-gradient-to-r from-primary to-primary-medium" />
-                  </div>
-                </div>
-              </motion.div>
-
-            </motion.div>
-          )}
-
-          {activeTab === 'resources' && (
-            <motion.div
-              key="resources"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ResourcesTab />
-            </motion.div>
-          )}
-
-          {activeTab === 'risk-matrix' && (
-            <motion.div
-              key="risk-matrix"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              <RiskMatrixTab />
-            </motion.div>
-          )}
-
-          {activeTab === 'budget' && (
-            <motion.div
-              key="budget"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              <BudgetTab />
+                </motion.div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Sign-off History */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="mt-6"
-        >
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} className="mt-6">
           <h2 className="text-[15px] font-semibold text-text mb-3">Sign-off History</h2>
           <div className="glass-card rounded-2xl overflow-hidden">
             <table className="w-full text-left">
@@ -1549,11 +1252,7 @@ export default function AuditPlanningView() {
                             ? 'bg-compliant-50 text-compliant-700'
                             : 'bg-high-50 text-high-700'
                       }`}>
-                        {entry.status === 'completed'
-                          ? 'Completed'
-                          : signedOff && entry.action === 'Final Sign-Off'
-                            ? 'Completed'
-                            : 'Pending'}
+                        {entry.status === 'completed' ? 'Completed' : signedOff && entry.action === 'Final Sign-Off' ? 'Completed' : 'Pending'}
                       </span>
                     </td>
                   </motion.tr>
@@ -1574,6 +1273,8 @@ export default function AuditPlanningView() {
             onClose={() => setDrawerEngagement(null)}
             onSave={handleSaveEngagement}
             onDelete={handleDeleteEngagement}
+            onActivate={handleActivate}
+            onViewExecution={onNavigateToExecution ? (id) => { setDrawerEngagement(null); onNavigateToExecution(id); } : undefined}
           />
         )}
       </AnimatePresence>
@@ -1591,23 +1292,14 @@ export default function AuditPlanningView() {
               </div>
               <div className="flex items-start gap-3 p-3 bg-evidence-50 rounded-xl mb-5">
                 <Lock size={16} className="text-evidence-700 mt-0.5 shrink-0" />
-                <p className="text-[13px] text-evidence-700">
-                  Freeze the FY26 audit plan? This will lock all scheduling changes.
-                </p>
+                <div>
+                  <p className="text-[13px] text-evidence-700 font-semibold">This will lock all scheduling changes.</p>
+                  <p className="text-[12px] text-evidence-700/80 mt-1">All Draft and Planned engagements will move to Frozen state. You'll need to sign off before activating any engagement.</p>
+                </div>
               </div>
               <div className="flex items-center gap-3 justify-end">
-                <button
-                  onClick={() => setShowFreezeModal(false)}
-                  className="px-4 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmFreeze}
-                  className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
-                >
-                  Freeze Plan
-                </button>
+                <button onClick={() => setShowFreezeModal(false)} className="px-4 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer">Cancel</button>
+                <button onClick={confirmFreeze} className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">Freeze Plan</button>
               </div>
             </div>
           </ModalBackdrop>
@@ -1625,75 +1317,79 @@ export default function AuditPlanningView() {
                   <X size={16} className="text-text-muted" />
                 </button>
               </div>
-
-              {/* Signer dropdown */}
+              <div className="flex items-start gap-3 p-3 bg-compliant-50 rounded-xl mb-4">
+                <CheckCircle2 size={16} className="text-compliant-700 mt-0.5 shrink-0" />
+                <p className="text-[12px] text-compliant-700">This is planning approval only. It does not approve test results or findings. After sign-off, individual engagements can be activated for execution.</p>
+              </div>
               <div className="mb-4">
                 <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Signer</label>
                 <div className="relative">
-                  <button
-                    onClick={() => setSignerDropdownOpen(p => !p)}
-                    className="w-full flex items-center justify-between px-3 py-2.5 border border-border rounded-lg text-[13px] text-text hover:border-primary/30 transition-colors cursor-pointer bg-white"
-                  >
+                  <button onClick={() => setSignerDropdownOpen(p => !p)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 border border-border rounded-lg text-[13px] text-text hover:border-primary/30 transition-colors cursor-pointer bg-white">
                     {selectedSigner}
                     <ChevronDown size={14} className={`text-text-muted transition-transform ${signerDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
                   <AnimatePresence>
                     {signerDropdownOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        transition={{ duration: 0.12 }}
-                        className="absolute left-0 right-0 top-full mt-1 bg-white border border-border-light rounded-xl shadow-lg overflow-hidden z-10"
-                      >
+                      <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }}
+                        className="absolute left-0 right-0 top-full mt-1 bg-white border border-border-light rounded-xl shadow-lg overflow-hidden z-10">
                         {SIGNERS.map(s => (
-                          <button
-                            key={s}
-                            onClick={() => { setSelectedSigner(s); setSignerDropdownOpen(false); }}
-                            className={`w-full text-left px-3 py-2 text-[12px] transition-colors cursor-pointer ${
-                              selectedSigner === s ? 'bg-primary/10 text-primary font-semibold' : 'text-text-secondary hover:bg-surface-2'
-                            }`}
-                          >
-                            {s}
-                          </button>
+                          <button key={s} onClick={() => { setSelectedSigner(s); setSignerDropdownOpen(false); }}
+                            className={`w-full text-left px-3 py-2 text-[12px] transition-colors cursor-pointer ${selectedSigner === s ? 'bg-primary/10 text-primary font-semibold' : 'text-text-secondary hover:bg-surface-2'}`}>{s}</button>
                         ))}
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
               </div>
-
-              {/* Date */}
-              <div className="mb-4">
-                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Date</label>
-                <div className="px-3 py-2.5 border border-border rounded-lg text-[13px] text-text-secondary bg-surface-2">
-                  March 25, 2026
-                </div>
-              </div>
-
-              {/* Comments */}
               <div className="mb-5">
                 <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Comments</label>
-                <textarea
-                  value={signOffComment}
-                  onChange={(e) => setSignOffComment(e.target.value)}
+                <textarea value={signOffComment} onChange={(e) => setSignOffComment(e.target.value)}
                   placeholder="Optional comments..."
                   className="w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text placeholder:text-text-muted/50 focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all resize-none h-20"
                 />
               </div>
-
               <div className="flex items-center gap-3 justify-end">
-                <button
-                  onClick={() => setShowSignOffModal(false)}
-                  className="px-4 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer"
-                >
-                  Cancel
+                <button onClick={() => setShowSignOffModal(false)} className="px-4 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer">Cancel</button>
+                <button onClick={confirmSignOff} className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">Submit Sign-Off</button>
+              </div>
+            </div>
+          </ModalBackdrop>
+        )}
+      </AnimatePresence>
+
+      {/* Activation Modal */}
+      <AnimatePresence>
+        {showActivateModal && (
+          <ModalBackdrop onClose={() => setShowActivateModal(null)}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[15px] font-bold text-text">Activate Engagement</h3>
+                <button onClick={() => setShowActivateModal(null)} className="p-1 rounded-md hover:bg-surface-2 transition-colors cursor-pointer">
+                  <X size={16} className="text-text-muted" />
                 </button>
-                <button
-                  onClick={confirmSignOff}
-                  className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
-                >
-                  Submit Sign-Off
+              </div>
+              <div className="flex items-start gap-3 p-3 bg-brand-50 rounded-xl mb-4">
+                <Zap size={16} className="text-brand-700 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[13px] text-brand-700 font-semibold">This will create an immutable Engagement Snapshot.</p>
+                  <p className="text-[12px] text-brand-700/80 mt-1">
+                    A point-in-time copy of the linked RACM version will be created. All execution (testing, evidence, findings) will run against this snapshot, not the live RACM. The engagement object itself is not duplicated.
+                  </p>
+                </div>
+              </div>
+              <div className="p-3 bg-surface-2 rounded-xl mb-5">
+                <div className="text-[12px] space-y-1">
+                  <div className="flex justify-between"><span className="text-text-muted">Engagement</span><span className="font-medium text-text">{plan.find(p => p.id === showActivateModal)?.name}</span></div>
+                  <div className="flex justify-between"><span className="text-text-muted">RACM Version</span><span className="font-medium text-text">{plan.find(p => p.id === showActivateModal)?.sourceRacmVersionId}</span></div>
+                  <div className="flex justify-between"><span className="text-text-muted">Controls</span><span className="font-medium text-text">{plan.find(p => p.id === showActivateModal)?.controls}</span></div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 justify-end">
+                <button onClick={() => setShowActivateModal(null)} className="px-4 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer">Cancel</button>
+                <button onClick={confirmActivate} className="px-4 py-2 bg-gradient-to-r from-primary to-primary-medium hover:brightness-110 text-white rounded-lg text-[12px] font-semibold transition-all cursor-pointer flex items-center gap-1.5">
+                  <Zap size={13} />
+                  Activate & Create Snapshot
                 </button>
               </div>
             </div>
