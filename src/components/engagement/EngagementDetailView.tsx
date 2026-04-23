@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import {
-  ArrowLeft, Calendar, Shield, Users, ShieldCheck, AlertTriangle,
-  Clock, CheckCircle2, XCircle, Search, ChevronRight, Workflow,
-  FileText, Zap, Eye, Target, BarChart3, Play, Copy, Filter
+  ArrowLeft, Calendar, Shield, Users,
+  Search, Workflow,
+  FileText, Target, Copy
 } from 'lucide-react';
 import Orb from '../shared/Orb';
 
