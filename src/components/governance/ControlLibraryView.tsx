@@ -9,6 +9,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import SmartTable from '../shared/SmartTable';
+import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
 
 interface Props {
@@ -37,15 +38,15 @@ const MOCK_CONTROLS: ControlRow[] = [
 ];
 
 const TYPE_STYLES: Record<string, { bg: string; text: string }> = {
-  Automated: { bg: 'bg-evidence-50', text: 'text-evidence-700' },
-  Manual: { bg: 'bg-paper-50', text: 'text-ink-500' },
-  'IT Dependent': { bg: 'bg-brand-50', text: 'text-brand-700' },
+  Automated: { bg: 'bg-blue-100', text: 'text-blue-800' },
+  Manual: { bg: 'bg-gray-100', text: 'text-gray-700' },
+  'IT Dependent': { bg: 'bg-purple-100', text: 'text-purple-800' },
 };
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
-  Active: { bg: 'bg-success-bg', text: 'text-compliant-700', dot: 'bg-success' },
-  Failed: { bg: 'bg-danger-bg', text: 'text-risk-700', dot: 'bg-danger' },
-  Draft: { bg: 'bg-paper-50', text: 'text-ink-500', dot: 'bg-ink-400' },
+  Active: { bg: 'bg-success-bg', text: 'text-green-800', dot: 'bg-success' },
+  Failed: { bg: 'bg-danger-bg', text: 'text-red-800', dot: 'bg-danger' },
+  Draft: { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
 };
 
 export default function ControlLibraryView({}: Props) {
@@ -64,8 +65,9 @@ export default function ControlLibraryView({}: Props) {
   const totalCount = MOCK_CONTROLS.length;
 
   return (
-    <div className="h-full overflow-y-auto bg-canvas">
-      <div className="max-w-6xl mx-auto px-8 py-8 relative">
+    <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
+      <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
+      <div className="px-6 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
@@ -107,9 +109,9 @@ export default function ControlLibraryView({}: Props) {
         {/* Summary badges */}
         <div className="flex items-center gap-3 mb-6">
           {[
-            { label: 'Key Controls', count: keyCount, bg: 'bg-mitigated-50', text: 'text-mitigated-700', dot: 'bg-mitigated' },
-            { label: 'Automated', count: autoCount, bg: 'bg-evidence-50', text: 'text-evidence-700', dot: 'bg-evidence' },
-            { label: 'Total', count: totalCount, bg: 'bg-paper-50', text: 'text-ink-500', dot: 'bg-ink-400' },
+            { label: 'Key Controls', count: keyCount, bg: 'bg-amber-50', text: 'text-amber-800', dot: 'bg-amber-400' },
+            { label: 'Automated', count: autoCount, bg: 'bg-blue-50', text: 'text-blue-800', dot: 'bg-blue-400' },
+            { label: 'Total', count: totalCount, bg: 'bg-gray-50', text: 'text-gray-700', dot: 'bg-gray-400' },
           ].map((badge, i) => (
             <motion.div
               key={badge.label}
@@ -230,14 +232,14 @@ export default function ControlLibraryView({}: Props) {
                 const ctrl = item as unknown as ControlRow;
                 if (ctrl.keyControl) {
                   return (
-                    <span className="inline-flex items-center gap-1 bg-mitigated-50 text-mitigated-700 px-2 py-0.5 rounded text-[11px] font-semibold">
+                    <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[11px] font-semibold">
                       <Star size={10} className="fill-amber-400 text-amber-400" />
                       Key
                     </span>
                   );
                 }
                 return (
-                  <span className="inline-flex items-center bg-paper-50 text-ink-500 px-2 py-0.5 rounded text-[11px] font-medium">
+                  <span className="inline-flex items-center bg-gray-50 text-gray-500 px-2 py-0.5 rounded text-[11px] font-medium">
                     Non-Key
                   </span>
                 );

@@ -296,7 +296,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
 
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
-      <div className="max-w-5xl mx-auto px-8 py-8 relative">
+      <div className="px-6 py-8 relative">
         {/* ─── Back Button ─── */}
         <button
           onClick={onBack}

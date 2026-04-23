@@ -42,7 +42,7 @@ export default function RiskRegister({ onRunWorkflow }: Props) {
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="max-w-6xl mx-auto px-8 py-8 relative">
+      <div className="px-6 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>

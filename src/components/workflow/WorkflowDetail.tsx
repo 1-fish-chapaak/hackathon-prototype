@@ -54,7 +54,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="max-w-6xl mx-auto px-8 py-8 relative">
+      <div className="px-6 py-8 relative">
         <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-primary mb-4 transition-colors cursor-pointer">
           <ArrowLeft size={14} />
           Workflows

@@ -3,7 +3,8 @@ import { motion } from 'motion/react';
 import {
   Check, X, Calendar, ChevronDown, GripVertical, Sparkles,
   Workflow as WorkflowIcon, ShieldAlert, ClipboardCheck,
-  ArrowRight, Plus,
+  ArrowRight, Plus, DollarSign, Clock, AlertTriangle, Activity,
+  TrendingUp, TrendingDown, Shield,
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
 import { RISKS, CONTROLS, ENGAGEMENTS, ENGAGEMENT_CONTROLS, DEFICIENCIES, WORKFLOWS } from '../../data/mockData';
@@ -310,66 +311,175 @@ function HealthDashboardSection() {
   const ctlPending = CONTROLS.filter(c => c.status === 'not-tested').length;
   const ctlOverdue = CONTROLS.filter(c => c.status === 'ineffective').length;
 
+  // Derived data from mock sources
+  const defOpen = DEFICIENCIES.filter(d => d.status === 'open').length;
+  const defInProgress = DEFICIENCIES.filter(d => d.status === 'in-progress').length;
+  const defTotal = defOpen + defInProgress;
+  const totalWorkflowRuns = WORKFLOWS.reduce((s, w) => s + w.runs, 0);
+
+  // Sparkline data derived from real engagement progression
+  const COMPLETION_TREND = active.map((_, i) => {
+    const slice = active.slice(0, i + 1);
+    const p = slice.reduce((s, e) => s + e.controls, 0);
+    const e2 = slice.reduce((s, e) => s + e.tested, 0);
+    return p > 0 ? Math.round((e2 / p) * 100) : 0;
+  });
+  // Pad to at least 8 points for a nice chart
+  while (COMPLETION_TREND.length < 8) COMPLETION_TREND.unshift(Math.max(0, COMPLETION_TREND[0] - Math.floor(Math.random() * 5 + 2)));
+  const compMax = Math.max(...COMPLETION_TREND);
+  const compMin = Math.min(...COMPLETION_TREND);
+
+  // Risk bars from severity distribution
+  const riskBySev = ['low', 'low', 'medium', 'medium', 'high', 'high', 'critical'].map(
+    sev => RISKS.filter(r => r.severity === sev).length
+  );
+  const riskBarMax = Math.max(...riskBySev, 1);
+
+  // Workflow runs trend
+  const wfSorted = [...WORKFLOWS].sort((a, b) => a.runs - b.runs);
+  const wfBars = wfSorted.map(w => w.runs);
+  const wfMax = Math.max(...wfBars, 1);
+
   return (
     <div>
-      <div className="flex items-end justify-between mb-3">
-        <div>
-          <div className="font-mono text-[11px] text-ink-500 tracking-tight tabular-nums">Health · {active.length} active engagement{active.length === 1 ? '' : 's'}</div>
-          <h2 className="font-display text-[24px] font-[420] text-ink-900 leading-tight">Audit health at a glance</h2>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-12 gap-4">
-        {/* Completion + Pie */}
-        <div className="col-span-6 rounded-xl border border-canvas-border bg-canvas-elevated p-5">
-          <div className="text-[11px] font-mono text-ink-500 tabular-nums mb-2">Engagement completion</div>
-          <div className="flex items-center gap-6">
-            <div>
-              <div className="font-display text-[44px] font-[420] tabular-nums text-ink-900 leading-none">{completionPct}%</div>
-              <div className="text-[12px] text-ink-500 mt-2">
-                <span className="text-ink-800 font-medium tabular-nums">{executed}</span> of <span className="text-ink-800 font-medium tabular-nums">{planned}</span> controls executed
+      <div className="grid grid-cols-12 grid-rows-2 gap-3" style={{ gridAutoRows: 'minmax(0, 1fr)' }}>
+        {/* ── FY26 Completion — left, spans 2 rows ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="col-span-5 row-span-2 rounded-2xl p-6 flex flex-col justify-between cursor-default border border-canvas-border bg-white relative overflow-hidden"
+        >
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[12px] font-semibold text-brand-600">FY26</span>
+              <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                <TrendingUp size={11} />
+                +{completionPct > 0 ? Math.round(completionPct * 0.13) : 0}%
               </div>
-              <div className="text-[12px] text-ink-500 mt-0.5">across {active.length} active engagement{active.length === 1 ? '' : 's'}</div>
             </div>
-            <div className="ml-auto">
-              <PieDonut value={executed} total={planned} />
-            </div>
+            <div className="text-[48px] font-extrabold leading-none tracking-tight text-ink-900">{completionPct}%</div>
+            <p className="text-[13px] text-ink-500 mt-2 leading-relaxed max-w-[280px]">
+              {executed} of {planned} controls executed across {active.length} active engagements.
+            </p>
           </div>
-        </div>
+          <svg width="100%" height="120" viewBox="0 0 240 120" preserveAspectRatio="none" className="mt-4">
+            <defs>
+              <linearGradient id="homeCompFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#8838DE" stopOpacity="0.25" />
+                <stop offset="100%" stopColor="#8838DE" stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+            <polyline
+              points={`0,120 ${COMPLETION_TREND.map((v, j) => `${j * (240 / (COMPLETION_TREND.length - 1))},${120 - (compMax === compMin ? 50 : ((v - compMin) / (compMax - compMin)) * 100)}`).join(' ')} 240,120`}
+              fill="url(#homeCompFill)" stroke="none"
+            />
+            <polyline
+              points={COMPLETION_TREND.map((v, j) => `${j * (240 / (COMPLETION_TREND.length - 1))},${120 - (compMax === compMin ? 50 : ((v - compMin) / (compMax - compMin)) * 100)}`).join(' ')}
+              fill="none" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            />
+          </svg>
+        </motion.div>
 
-        {/* Risk overview */}
-        <div className="col-span-3 rounded-xl border border-canvas-border bg-canvas-elevated p-5">
-          <div className="text-[11px] font-mono text-ink-500 tabular-nums mb-3">Risk overview</div>
-          <div className="font-display text-[36px] font-[420] tabular-nums text-ink-900 leading-none">{riskTotal}</div>
-          <div className="text-[12px] text-ink-500 mt-2">total risks tracked</div>
-          <div className="mt-4 space-y-2 pt-4 border-t border-canvas-border">
-            <div className="flex items-baseline justify-between">
-              <span className="text-[12px] text-ink-500">Failed</span>
-              <span className="font-display text-[20px] font-[420] tabular-nums text-risk-700">{riskFailed}</span>
+        {/* ── Risk Overview — top middle ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+          className="col-span-4 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
+          style={{ background: '#FFF9EB', borderColor: '#F5E6C0' }}
+        >
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#F59E0B' }}>
+                <AlertTriangle size={13} className="text-white" />
+              </div>
+              <span className="text-[12px] font-semibold" style={{ color: '#92400E' }}>Risk Overview</span>
             </div>
-            <div className="flex items-baseline justify-between">
-              <span className="text-[12px] text-ink-500">Healthy</span>
-              <span className="font-display text-[20px] font-[420] tabular-nums text-compliant-700">{riskHealthy}</span>
+            <div className="text-[32px] font-extrabold leading-none tracking-tight" style={{ color: '#1C1917' }}>{riskTotal} risks</div>
+            <div className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold text-red-600">
+              <Shield size={10} />
+              {riskFailed} critical/high <span className="text-ink-500 font-normal">· {riskHealthy} mitigated</span>
             </div>
           </div>
-        </div>
+          <div className="flex items-end gap-1.5 h-7 mt-3">
+            {riskBySev.map((v, j) => (
+              <motion.div key={j} initial={{ height: 0 }} animate={{ height: `${(v / riskBarMax) * 100}%` }} transition={{ delay: 0.25 + j * 0.04, duration: 0.3 }}
+                className="flex-1 rounded-sm min-h-[3px]" style={{ background: j >= riskBySev.length - 1 ? '#EF4444' : 'rgba(239,68,68,0.18)' }} />
+            ))}
+          </div>
+        </motion.div>
 
-        {/* Controls overview */}
-        <div className="col-span-3 rounded-xl border border-canvas-border bg-canvas-elevated p-5">
-          <div className="text-[11px] font-mono text-ink-500 tabular-nums mb-3">Controls overview</div>
-          <div className="font-display text-[36px] font-[420] tabular-nums text-ink-900 leading-none">{ctlTotal}</div>
-          <div className="text-[12px] text-ink-500 mt-2">total controls in library</div>
-          <div className="mt-4 space-y-2 pt-4 border-t border-canvas-border">
-            <div className="flex items-baseline justify-between">
-              <span className="text-[12px] text-ink-500">Pending</span>
-              <span className="font-display text-[20px] font-[420] tabular-nums text-mitigated-700">{ctlPending}</span>
+        {/* ── Controls — top right ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+          className="col-span-3 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
+          style={{ background: '#F3EAFF', borderColor: '#DBC4F7' }}
+        >
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#8838DE' }}>
+                <Shield size={13} className="text-white" />
+              </div>
+              <span className="text-[12px] font-semibold text-brand-700">Controls</span>
             </div>
-            <div className="flex items-baseline justify-between">
-              <span className="text-[12px] text-ink-500">Overdue</span>
-              <span className="font-display text-[20px] font-[420] tabular-nums text-risk-700">{ctlOverdue}</span>
+            <div className="text-[40px] font-extrabold leading-none tracking-tight text-brand-700">{ctlTotal}</div>
+            <div className="text-[13px] font-semibold text-brand-600 mt-1">in library</div>
+          </div>
+          <div className="mt-3 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-ink-500">{ctlPending} pending</span>
+              <span className="font-semibold text-amber-600">{ctlOverdue} overdue</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-brand-100 overflow-hidden">
+              <motion.div initial={{ width: 0 }} animate={{ width: `${((ctlTotal - ctlPending - ctlOverdue) / ctlTotal) * 100}%` }} transition={{ delay: 0.3, duration: 0.5 }}
+                className="h-full rounded-full bg-brand-500" />
             </div>
           </div>
-        </div>
+        </motion.div>
+
+        {/* ── Deficiencies — bottom middle ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+          className="col-span-4 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
+          style={{ background: '#FFF9EB', borderColor: '#F5E6C0' }}
+        >
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#EF4444' }}>
+                <ShieldAlert size={13} className="text-white" />
+              </div>
+              <span className="text-[12px] font-semibold" style={{ color: '#92400E' }}>Open Deficiencies</span>
+              <span className="ml-auto text-[10px] text-ink-500 font-medium">Active</span>
+            </div>
+            <div className="text-[40px] font-extrabold leading-none tracking-tight" style={{ color: '#1C1917' }}>{defTotal}</div>
+            <div className="text-[12px] text-ink-500 mt-1.5">{defOpen} open, {defInProgress} in progress</div>
+          </div>
+          <div className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold text-red-600">
+            <AlertTriangle size={10} />
+            {DEFICIENCIES.filter(d => d.severity === 'MW').length} material weakness
+          </div>
+        </motion.div>
+
+        {/* ── Workflow Runs — bottom right ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+          className="col-span-3 rounded-2xl p-5 flex flex-col justify-between cursor-default border"
+          style={{ background: '#ECFDF5', borderColor: '#A7F3D0' }}
+        >
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: '#16A34A' }}>
+                <Activity size={13} className="text-white" />
+              </div>
+              <span className="text-[12px] font-semibold text-emerald-700">Workflow Runs</span>
+            </div>
+            <div className="text-[36px] font-extrabold leading-none tracking-tight text-emerald-700">{totalWorkflowRuns}</div>
+            <div className="text-[12px] text-emerald-600/70 mt-1.5">{WORKFLOWS.length} active workflows</div>
+          </div>
+          <div className="flex items-end gap-1.5 h-8 mt-2">
+            {wfBars.map((v, j) => (
+              <motion.div key={j} initial={{ height: 0 }} animate={{ height: `${(v / wfMax) * 100}%` }} transition={{ delay: 0.35 + j * 0.04, duration: 0.3 }}
+                className="flex-1 rounded-sm min-h-[3px]" style={{ background: j >= wfBars.length - 2 ? '#16A34A' : 'rgba(22,163,74,0.18)' }} />
+            ))}
+          </div>
+        </motion.div>
       </div>
     </div>
   );
@@ -431,7 +541,7 @@ export default function HomeView({ setView }: Props) {
       const saved = JSON.parse(localStorage.getItem(ORDER_KEY) || '[]') as SectionKey[];
       if (saved.length === 2 && saved.every(k => k === 'queue' || k === 'health')) return saved;
     } catch { /* fall through */ }
-    return ['queue', 'health'];
+    return ['health', 'queue'];
   });
   useEffect(() => { localStorage.setItem(ORDER_KEY, JSON.stringify(order)); }, [order]);
 
@@ -478,9 +588,10 @@ export default function HomeView({ setView }: Props) {
   return (
     <div className="h-full overflow-y-auto bg-canvas">
       {/* Page header */}
-      <div className="border-b border-canvas-border bg-canvas-elevated">
-        <div className="max-w-6xl mx-auto px-8 pt-8 pb-6">
-          <div className="font-mono text-[11px] text-ink-500 mb-2 tracking-tight">Home</div>
+      <div className="border-b border-canvas-border bg-canvas-elevated relative overflow-hidden">
+        {/* Subtle gradient accent bar */}
+        <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(90deg, #8838DE, #A366F0, #16A34A, #F59E0B)' }} />
+        <div className="px-6 pt-8 pb-6">
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -488,10 +599,16 @@ export default function HomeView({ setView }: Props) {
             className="flex items-end justify-between"
           >
             <div>
-              <h1 className="font-display text-[40px] font-[420] tracking-tight text-ink-900 leading-[1.1] mb-2">
-                Good morning, Auditor.
+              <h1 className="text-[40px] tracking-tight leading-[1.1] mb-2">
+                <span className="font-extrabold" style={{ background: 'linear-gradient(135deg, #8838DE, #6A12CD)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Good morning,</span>
+                {' '}
+                <span className="font-[420] text-ink-900">Auditor</span>
               </h1>
-              <p className="text-[14px] text-ink-500 leading-relaxed">Here is your FY26 audit landscape at a glance.</p>
+              <p className="text-[14px] text-ink-500 leading-relaxed">Here's your FY26 audit landscape at a glance</p>
+              <div className="flex items-center gap-2 mt-3 text-[13px] text-ink-400">
+                <Sparkles size={13} className="text-brand-400" />
+                <span>Try: "What risks need attention this week?" or "Build a vendor payment workflow"</span>
+              </div>
             </div>
 
             <div className="relative">
@@ -527,7 +644,7 @@ export default function HomeView({ setView }: Props) {
       </div>
 
       {/* Body */}
-      <div className="max-w-6xl mx-auto px-8 py-8 space-y-8">
+      <div className="px-6 py-8 space-y-8">
         {!dismissed && <QuickActionPanel setView={setView} onDismiss={dismiss} />}
         {dismissed && (
           <button
@@ -554,8 +671,12 @@ export default function HomeView({ setView }: Props) {
           </DraggableSection>
         ))}
 
-        <div className="text-[11px] text-ink-400 text-center pt-4 pb-2">
-          Hover a section to drag it. The new order persists across reloads.
+        {/* Add Widget */}
+        <div className="flex justify-center pt-2 pb-4">
+          <button className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-dashed border-brand-200 text-[13px] font-semibold text-brand-600 hover:bg-brand-50 hover:border-brand-300 transition-colors cursor-pointer">
+            <Plus size={14} />
+            Add Widget
+          </button>
         </div>
       </div>
     </div>

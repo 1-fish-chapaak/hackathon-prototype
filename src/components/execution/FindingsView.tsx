@@ -4,6 +4,7 @@ import {
   CheckCircle2, AlertOctagon, ExternalLink, Bell, ArrowUpRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import Orb from '../shared/Orb';
 
 type FilterKey = 'all' | 'open' | 'in-remediation' | 'overdue' | 'closed';
 
@@ -122,9 +123,9 @@ const FINDINGS: Finding[] = [
 
 function SeverityBadge({ severity }: { severity: Severity }) {
   const map: Record<Severity, { bg: string; text: string }> = {
-    'Material Weakness': { bg: 'bg-risk-50 border-risk', text: 'text-risk-700' },
-    'Significant Deficiency': { bg: 'bg-high-50 border-high', text: 'text-high-700' },
-    'Control Deficiency': { bg: 'bg-mitigated-50 border-mitigated', text: 'text-mitigated-700' },
+    'Material Weakness': { bg: 'bg-red-50 border-red-200', text: 'text-red-700' },
+    'Significant Deficiency': { bg: 'bg-orange-50 border-orange-200', text: 'text-orange-700' },
+    'Control Deficiency': { bg: 'bg-yellow-50 border-yellow-200', text: 'text-yellow-700' },
   };
   const s = map[severity];
   return (
@@ -137,10 +138,10 @@ function SeverityBadge({ severity }: { severity: Severity }) {
 
 function StatusBadge({ status }: { status: Status }) {
   const map: Record<Status, { bg: string; text: string; icon: React.ReactNode; pulse?: boolean }> = {
-    'Open': { bg: 'bg-evidence-50 border-evidence', text: 'text-evidence-700', icon: <AlertOctagon size={10} /> },
-    'In Remediation': { bg: 'bg-mitigated-50 border-mitigated', text: 'text-mitigated-700', icon: <Clock size={10} /> },
-    'Overdue': { bg: 'bg-risk-50 border-risk', text: 'text-risk-700', icon: <AlertTriangle size={10} />, pulse: true },
-    'Closed': { bg: 'bg-compliant-50 border-compliant', text: 'text-compliant-700', icon: <CheckCircle2 size={10} /> },
+    'Open': { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-700', icon: <AlertOctagon size={10} /> },
+    'In Remediation': { bg: 'bg-yellow-50 border-yellow-200', text: 'text-yellow-700', icon: <Clock size={10} /> },
+    'Overdue': { bg: 'bg-red-50 border-red-200', text: 'text-red-700', icon: <AlertTriangle size={10} />, pulse: true },
+    'Closed': { bg: 'bg-green-50 border-green-200', text: 'text-green-700', icon: <CheckCircle2 size={10} /> },
   };
   const s = map[status];
   return (
@@ -175,8 +176,9 @@ export default function FindingsView() {
   });
 
   return (
-    <div className="h-full overflow-y-auto bg-canvas">
-      <div className="max-w-7xl mx-auto px-8 py-8 relative">
+    <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
+      <Orb hoverIntensity={0.09} rotateOnHover hue={350} opacity={0.08} />
+      <div className="px-6 py-8 relative">
         {/* Header */}
         <div className="flex items-end justify-between mb-6">
           <div>
@@ -189,10 +191,10 @@ export default function FindingsView() {
         <div className="grid grid-cols-5 gap-4 mb-6">
           {[
             { label: 'Total Findings', value: '47', color: 'text-text' },
-            { label: 'Open', value: '12', color: 'text-evidence-700' },
-            { label: 'In Remediation', value: '18', color: 'text-mitigated-700' },
-            { label: 'Overdue', value: '5', color: 'text-risk-700' },
-            { label: 'Closed', value: '12', color: 'text-compliant-700' },
+            { label: 'Open', value: '12', color: 'text-blue-600' },
+            { label: 'In Remediation', value: '18', color: 'text-yellow-600' },
+            { label: 'Overdue', value: '5', color: 'text-red-600' },
+            { label: 'Closed', value: '12', color: 'text-green-600' },
           ].map(card => (
             <div key={card.label} className="bg-white rounded-xl border border-border-light p-3 text-center hover:shadow-md transition-all duration-200">
               <div className={`text-xl font-bold ${card.color}`}>{card.value}</div>
@@ -215,7 +217,7 @@ export default function FindingsView() {
             >
               {f.label}
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                activeFilter === f.key ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'
+                activeFilter === f.key ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'
               }`}>
                 {f.count}
               </span>
@@ -278,10 +280,10 @@ export default function FindingsView() {
                           <span className="text-text font-medium text-[12px] max-w-[220px] truncate block">{row.title}</span>
                         </td>
                         <td className="px-3 py-3">
-                          <span className="text-text-secondary font-mono text-[10px] bg-paper-50 px-1.5 py-0.5 rounded">{row.engagement}</span>
+                          <span className="text-text-secondary font-mono text-[10px] bg-gray-50 px-1.5 py-0.5 rounded">{row.engagement}</span>
                         </td>
                         <td className="px-3 py-3">
-                          <span className="text-text-secondary font-mono text-[10px] bg-paper-50 px-1.5 py-0.5 rounded">{row.control}</span>
+                          <span className="text-text-secondary font-mono text-[10px] bg-gray-50 px-1.5 py-0.5 rounded">{row.control}</span>
                         </td>
                         <td className="px-3 py-3">
                           <SeverityBadge severity={row.severity} />
@@ -296,7 +298,7 @@ export default function FindingsView() {
                           <span className="text-text-secondary text-[11px]">{row.dueDate}</span>
                         </td>
                         <td className="px-3 py-3">
-                          <span className={`text-[11px] font-semibold ${isOverdue ? 'text-risk-700' : isClosed ? 'text-ink-500' : 'text-text-secondary'}`}>
+                          <span className={`text-[11px] font-semibold ${isOverdue ? 'text-red-600' : isClosed ? 'text-gray-400' : 'text-text-secondary'}`}>
                             {row.aging}
                           </span>
                         </td>
@@ -351,11 +353,11 @@ export default function FindingsView() {
                             <ArrowUpRight size={10} />
                             View in Engagement
                           </button>
-                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-mitigated bg-mitigated-50 text-mitigated-700 text-[10px] font-semibold hover:bg-mitigated-50/80 transition-all cursor-pointer">
+                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-[10px] font-semibold hover:bg-amber-100 transition-all cursor-pointer">
                             <Bell size={10} />
                             Send Reminder
                           </button>
-                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-risk bg-risk-50 text-risk-700 text-[10px] font-semibold hover:bg-risk-50/80 transition-all cursor-pointer">
+                          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 text-red-700 text-[10px] font-semibold hover:bg-red-100 transition-all cursor-pointer">
                             <AlertTriangle size={10} />
                             Escalate
                           </button>
@@ -375,7 +377,7 @@ export default function FindingsView() {
             </span>
             <div className="flex items-center gap-1">
               <span className="text-[11px] text-text-muted">Page 1 of 1</span>
-              <button className="p-1 rounded hover:bg-paper-50 text-text-muted cursor-pointer">
+              <button className="p-1 rounded hover:bg-gray-100 text-text-muted cursor-pointer">
                 <ChevronRight size={14} />
               </button>
             </div>

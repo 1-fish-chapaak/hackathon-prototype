@@ -813,7 +813,7 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.25 }}
-            className="max-w-6xl mx-auto px-8 py-8"
+            className="px-6 py-8"
           >
             {/* Page header — Editorial: breadcrumb · serif title · context · actions */}
             <div className="mb-6">

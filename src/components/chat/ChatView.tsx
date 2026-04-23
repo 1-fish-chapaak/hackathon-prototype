@@ -1017,7 +1017,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           onScroll={handleScroll}
           className="flex-1 overflow-y-auto"
         >
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+          <div className="px-6 sm:px-6 py-6 space-y-6">
             <AnimatePresence initial={false}>
               {messages.map((msg, msgIdx) => (
                 <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
