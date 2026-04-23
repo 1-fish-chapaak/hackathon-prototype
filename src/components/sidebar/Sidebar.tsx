@@ -5,7 +5,7 @@ import {
   FileBarChart, ChevronDown, PanelLeft,
   AlertTriangle, Sparkles, Building2, Home, Calendar,
   Shield, Search as SearchIcon, Settings, Clock, Check,
-  Wand2, MoreHorizontal, LogOut, HelpCircle
+  Wand2, MoreHorizontal, LogOut, HelpCircle, ExternalLink
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
 
@@ -74,7 +74,7 @@ function Divider({ label, expanded }: { label?: string; expanded: boolean }) {
   if (!expanded || !label) return <div className="h-px bg-sidebar-border my-2 mx-3" />;
   return (
     <div className="px-3.5 pt-2 pb-1">
-      <span className="text-[12px] font-medium uppercase text-sidebar-text-dim">{label}</span>
+      <span className="text-[12px] font-medium uppercase text-white">{label}</span>
     </div>
   );
 }
@@ -94,6 +94,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
   const teamRef = useRef<HTMLDivElement>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [signOutConfirm, setSignOutConfirm] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -160,10 +161,10 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                 <div className="text-[14px] font-bold text-sidebar-accent leading-tight whitespace-nowrap">IRAME.AI</div>
                 <button
                   onClick={() => { setTeamOpen(p => !p); setTeamSearch(''); }}
-                  className="text-[12px] text-sidebar-text-dim font-medium whitespace-nowrap flex items-center gap-1 hover:text-sidebar-text transition-colors cursor-pointer"
+                  className="text-[12px] text-white font-medium whitespace-nowrap flex items-center gap-1 hover:text-sidebar-text transition-colors cursor-pointer"
                 >
                   Audit Intelligence
-                  <ChevronDown size={8} className={`text-sidebar-text-muted transition-transform duration-150 ${teamOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={8} className={`text-white transition-transform duration-150 ${teamOpen ? 'rotate-180' : ''}`} />
                 </button>
               </motion.div>
             )}
@@ -178,7 +179,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -4, scale: 0.98 }}
               transition={{ duration: 0.15, ease: [0.22, 0.68, 0, 1] }}
-              className="absolute left-3 right-3 top-full mt-1.5 rounded-xl z-50 overflow-hidden border border-white/[0.12] bg-sidebar-bg shadow-2xl"
+              className="absolute left-3 right-3 top-full mt-0 rounded-xl z-50 overflow-hidden border border-white/[0.12] bg-sidebar-bg shadow-2xl"
             >
               {/* Search */}
               <div className="p-3">
@@ -189,13 +190,13 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                     background: 'rgba(163, 102, 240, 0.08)',
                   }}
                 >
-                  <SearchIcon size={14} className="text-white/50 shrink-0" />
+                  <SearchIcon size={14} className="text-white shrink-0" />
                   <input
                     type="text"
                     placeholder="Search Team"
                     value={teamSearch}
                     onChange={e => setTeamSearch(e.target.value)}
-                    className="flex-1 bg-transparent outline-none text-white placeholder:text-white/40 text-[13px]"
+                    className="flex-1 bg-transparent outline-none text-white placeholder:text-white/60 text-[13px]"
                     style={{ boxShadow: 'none' }}
                     autoFocus
                   />
@@ -212,7 +213,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                     <button
                       key={team.id}
                       onClick={() => { setActiveTeam(team.id); setTeamOpen(false); }}
-                      className={`w-full flex items-center justify-between px-4 py-3 text-[14px] transition-colors duration-100 cursor-pointer ${isActive ? 'text-white' : 'text-white/80 hover:bg-white/[0.05] hover:text-white/90'}`}
+                      className={`w-full flex items-center justify-between px-4 py-3 text-[14px] transition-colors duration-100 cursor-pointer ${isActive ? 'text-white' : 'text-white hover:bg-white/[0.05]'}`}
                     >
                       <span style={{ fontWeight: isActive ? 600 : 400 }}>{team.name}</span>
                       {isActive ? (
@@ -282,11 +283,11 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-semibold text-sidebar-accent truncate">John Doe</div>
-                <div className="text-[12px] text-sidebar-text-dim truncate">Lead Auditor</div>
+                <div className="text-[12px] text-white truncate">Lead Auditor</div>
               </div>
               <button
-                onClick={(e) => { e.stopPropagation(); setUserMenuOpen(p => !p); setSignOutConfirm(false); }}
-                className="p-1 rounded-md hover:bg-white/[0.08] transition-colors text-sidebar-text-muted hover:text-sidebar-text cursor-pointer"
+                onClick={(e) => { e.stopPropagation(); setUserMenuOpen(p => !p); setSignOutConfirm(false); setHelpOpen(false); }}
+                className="p-1 rounded-md hover:bg-white/[0.08] transition-colors text-white hover:text-sidebar-text cursor-pointer"
               >
                 <MoreHorizontal size={16} />
               </button>
@@ -302,7 +303,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 4, scale: 0.98 }}
               transition={{ duration: 0.12 }}
-              className="absolute left-3 right-3 bottom-full mb-1.5 rounded-xl z-50 overflow-hidden border border-white/[0.12] bg-sidebar-bg shadow-2xl"
+              className="absolute left-3 right-3 bottom-full mb-0 rounded-xl z-50 overflow-hidden border border-white/[0.12] bg-sidebar-bg shadow-2xl"
             >
               {signOutConfirm ? (
                 <div className="p-4">
@@ -324,22 +325,50 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                   </div>
                 </div>
               ) : (
-                <div className="py-1.5">
-                  <button
-                    onClick={() => { setUserMenuOpen(false); window.open('https://irame.ai', '_blank'); }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white/80 hover:bg-white/[0.06] hover:text-white transition-colors cursor-pointer"
-                  >
-                    <HelpCircle size={14} className="text-white/50" />
-                    Help & Support
-                  </button>
-                  <div className="h-px mx-3 my-1 bg-white/[0.08]" />
-                  <button
-                    onClick={() => setSignOutConfirm(true)}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-risk-700 hover:bg-white/[0.06] hover:text-risk transition-colors cursor-pointer"
-                  >
-                    <LogOut size={14} />
-                    Sign Out
-                  </button>
+                <div>
+                  <div className="py-1.5">
+                    <div className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white cursor-not-allowed">
+                      <Building2 size={14} className="text-white" />
+                      Irame Labs Pvt Ltd
+                    </div>
+                    <button
+                      onClick={() => setHelpOpen(p => !p)}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                    >
+                      <HelpCircle size={14} className="text-white" />
+                      <span className="flex-1 text-left">Help & Support</span>
+                      <ChevronDown size={12} className={`text-white transition-transform duration-150 ${helpOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {helpOpen && (
+                      <>
+                        <div className="h-px mx-3 bg-white/[0.08]" />
+                        <div className="py-1">
+                          {[
+                            { label: 'Get Started', url: 'https://irame.ai/get-started' },
+                            { label: 'Term of Use', url: 'https://irame.ai/terms' },
+                            { label: 'Privacy Policy', url: 'https://irame.ai/privacy' },
+                          ].map(item => (
+                            <button
+                              key={item.label}
+                              onClick={() => { setUserMenuOpen(false); setHelpOpen(false); window.open(item.url, '_blank'); }}
+                              className="w-full flex items-center justify-between px-4 py-2.5 text-[13px] text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                            >
+                              {item.label}
+                              <ExternalLink size={12} className="text-white" />
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    <div className="h-px mx-3 my-1 bg-white/[0.08]" />
+                    <button
+                      onClick={() => setSignOutConfirm(true)}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-red-400 hover:bg-white/[0.06] hover:text-red-300 transition-colors cursor-pointer"
+                    >
+                      <LogOut size={14} />
+                      Sign Out
+                    </button>
+                  </div>
                 </div>
               )}
             </motion.div>
@@ -349,7 +378,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
         {!isExpanded && (
           <button
             onClick={toggleSidebar}
-            className="w-full flex items-center justify-center text-sidebar-text-muted hover:text-sidebar-text transition-colors p-1.5 rounded-lg hover:bg-sidebar-surface-hover cursor-pointer"
+            className="w-full flex items-center justify-center text-white hover:text-sidebar-text transition-colors p-1.5 rounded-lg hover:bg-sidebar-surface-hover cursor-pointer"
             title="Expand"
             aria-label="Expand sidebar"
           >

@@ -41,6 +41,13 @@ const STATUS_TONE: Record<string, { tone: Tone; label: string }> = {
   'not-tested':   { tone: 'draft',     label: 'Not Tested' },
   'not-started':  { tone: 'draft',     label: 'Not Started' },
   final:          { tone: 'compliant', label: 'Final' },
+  invited:        { tone: 'info',      label: 'Invited' },
+  suspended:      { tone: 'high',      label: 'Suspended' },
+  locked:         { tone: 'risk',      label: 'Locked' },
+  inactive:       { tone: 'draft',     label: 'Inactive' },
+  pending:        { tone: 'mitigated', label: 'Pending' },
+  expired:        { tone: 'high',      label: 'Expired' },
+  blocked:        { tone: 'risk',      label: 'Blocked' },
 };
 
 const SEVERITY_TONE: Record<string, { tone: Tone; label: string }> = {
