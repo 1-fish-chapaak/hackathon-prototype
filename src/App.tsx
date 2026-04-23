@@ -36,6 +36,7 @@ import WorkflowExecutor from './components/workflow/WorkflowExecutor';
 import WorkingPaperPanel from './components/execution/WorkingPaperPanel';
 import WorkflowExecutionPanel from './components/execution/WorkflowExecutionPanel';
 import TraceabilityPanel from './components/execution/TraceabilityPanel';
+import ManageExceptionsView from './components/exceptions/ManageExceptionsView';
 
 export default function App() {
   const {
@@ -65,6 +66,7 @@ export default function App() {
     setSelectedChatId,
     openExecutionPanel,
     closeExecutionPanel,
+    setExceptionRole,
   } = useAppState();
 
   const mainScrollRef = useRef<HTMLDivElement>(null);
@@ -225,6 +227,16 @@ export default function App() {
           <ReportsView
             onOpenBuilder={() => openReportBuilder('new')}
             onShare={(id) => setShowShareModal(true, { type: 'report', id })}
+            onManageExceptions={() => setView('manage-exceptions')}
+          />
+        );
+
+      case 'manage-exceptions':
+        return (
+          <ManageExceptionsView
+            role={state.exceptionRole}
+            setRole={setExceptionRole}
+            onBack={() => setView('reports')}
           />
         );
 

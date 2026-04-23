@@ -44,10 +44,13 @@ export type View =
   | 'admin-logs'
   // One-Click Audit
   | 'one-click-audit'
+  // Case Management
+  | 'manage-exceptions'
   // Chat trash
   | 'chat-trash';
 
 export type ChatMode = 'chat' | 'workflow';
+export type ExceptionRole = 'risk-owner' | 'auditor';
 export type ArtifactTab = 'plan' | 'code' | 'sources' | 'result' | 'flow' | 'preview';
 export type ArtifactMode = 'query' | 'workflow';
 export type ExecutionPanel = 'working-paper' | 'workflow-execution' | 'traceability' | null;
@@ -86,6 +89,8 @@ export interface AppState {
   // Execution panels
   executionPanel: ExecutionPanel;
   executionPanelControlId: string | null;
+  // Manage Exceptions (Case Mgmt) active role
+  exceptionRole: ExceptionRole;
 }
 
 const INITIAL_STATE: AppState = {
@@ -115,6 +120,7 @@ const INITIAL_STATE: AppState = {
   queryAssumptions: [],
   executionPanel: null,
   executionPanelControlId: null,
+  exceptionRole: 'risk-owner',
 };
 
 export function useAppState() {
@@ -210,6 +216,10 @@ export function useAppState() {
     setState(prev => ({ ...prev, queryAssumptions: assumptions }));
   }, []);
 
+  const setExceptionRole = useCallback((role: ExceptionRole) => {
+    setState(prev => ({ ...prev, exceptionRole: role }));
+  }, []);
+
   const enterWorkflowMode = useCallback((context?: { templateId?: string; workflowId?: string }) => {
     setState(prev => ({
       ...prev,
@@ -260,5 +270,6 @@ export function useAppState() {
     setSelectedChatId,
     openExecutionPanel,
     closeExecutionPanel,
+    setExceptionRole,
   };
 }

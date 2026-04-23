@@ -51,6 +51,7 @@ const SECTION_ICONS: Record<string, React.ElementType> = {
 interface ReportsViewProps {
   onOpenBuilder?: () => void;
   onShare?: (id: string) => void;
+  onManageExceptions?: () => void;
 }
 
 // ─── Upload Template Modal ───
@@ -870,7 +871,7 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
 }
 
 // ─── Query Card Component ───
-function QueryCard({ query, index }: { query: { id: string; status: string; risk: string; severity: string; title: string; addedBy: string; kpis: { label: string; value: string; color: string }[]; summary: string; findings: string[]; observations: string[]; chartData: number[] }; index: number }) {
+function QueryCard({ query, index, onManageExceptions }: { query: { id: string; status: string; risk: string; severity: string; title: string; addedBy: string; kpis: { label: string; value: string; color: string }[]; summary: string; findings: string[]; observations: string[]; chartData: number[] }; index: number; onManageExceptions?: () => void }) {
   const [expanded, setExpanded] = useState(index === 0);
   const accentColor = query.severity === 'Critical' ? '#dc2626' : '#ea580c';
 
@@ -946,7 +947,11 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
             <ChevronDown size={14} className={`transition-transform ${expanded ? '' : '-rotate-90'}`} />
             {expanded ? 'Hide findings & observations' : 'Show findings & observations'}
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 border border-border-light bg-white text-[12px] font-medium text-ink-600 hover:border-primary/30 hover:text-primary transition-colors cursor-pointer" style={{ borderRadius: '8px' }}>
+          <button
+            onClick={onManageExceptions}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-border-light bg-white text-[12px] font-medium text-ink-600 hover:border-primary/30 hover:text-primary transition-colors cursor-pointer"
+            style={{ borderRadius: '8px' }}
+          >
             Manage Exceptions
             <ExternalLink size={13} />
           </button>
@@ -991,10 +996,11 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
 }
 
 // ─── Report View (with multiple queries) ───
-function ReportView({ report, onBack, onShare }: {
+function ReportView({ report, onBack, onShare, onManageExceptions }: {
   report: typeof GENERATED_REPORTS[0];
   onBack: () => void;
   onShare?: () => void;
+  onManageExceptions?: () => void;
 }) {
   const { addToast } = useToast();
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
@@ -1389,7 +1395,7 @@ function ReportView({ report, onBack, onShare }: {
             ) : (
               <>
                 {activeQueries.map((query, qi) => (
-                  <QueryCard key={query.id} query={query} index={qi} />
+                  <QueryCard key={query.id} query={query} index={qi} onManageExceptions={onManageExceptions} />
                 ))}
               </>
             )}
@@ -1401,7 +1407,7 @@ function ReportView({ report, onBack, onShare }: {
 }
 
 // ─── Main Reports View ───
-export default function ReportsView({ onShare }: ReportsViewProps = {}) {
+export default function ReportsView({ onShare, onManageExceptions }: ReportsViewProps = {}) {
   const [activeTab, setActiveTab] = useState<'templates' | 'my-reports' | 'shared-reports' | 'manage-exceptions'>('my-reports');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [tagFilter, setTagFilter] = useState<string>('All');
@@ -1469,6 +1475,7 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
         report={viewingReport}
         onBack={() => setViewingReport(null)}
         onShare={onShare ? () => onShare(viewingReport.id) : undefined}
+        onManageExceptions={onManageExceptions}
       />
     );
   }

@@ -238,6 +238,328 @@ export const ACTION_TAKEN_DATA = [
   { exceptionId: 'EXC-008', action: 'Initial review completed', actionBy: 'Karan Mehta', actionDate: 'Mar 24, 2026', resolution: 'Pending detailed analysis' },
 ];
 
+// ─── GRC Exceptions (Case Management · Manage Exceptions page) ───
+export type GrcExceptionSeverity = 'High' | 'Medium' | 'Low';
+export type GrcExceptionStatus = 'Open' | 'Under Review' | 'Closed';
+export type GrcExceptionClassification =
+  | 'Unclassified'
+  | 'Design Deficiency'
+  | 'System Deficiency'
+  | 'Procedural Non-Compliance'
+  | 'Business as Usual'
+  | 'False Positive';
+export type GrcReviewStatus = 'Pending' | 'Approved' | 'Rejected' | 'Implemented';
+
+export interface GrcException {
+  id: string;
+  riskCategory: string;
+  severity: GrcExceptionSeverity;
+  status: GrcExceptionStatus;
+  classification: GrcExceptionClassification;
+  classificationReview: GrcReviewStatus;
+  actionReview: GrcReviewStatus;
+  lastUpdated: string;
+  flags?: Array<'Overdue' | 'Bulk'>;
+  bulkId?: string;
+  title: string;
+  assignedTo: { name: string; initials: string };
+}
+
+export type GrcActivityAuthorRole = 'Auditor' | 'Risk Owner';
+export interface GrcActivityEntry {
+  id: string;
+  author: string;
+  role: GrcActivityAuthorRole;
+  timestamp: string;
+  message: string;
+  comment?: string;
+  attachment?: { name: string };
+}
+export type GrcActionStatus = 'Implemented' | 'Partially Implemented' | 'Pending';
+export interface GrcCaseDetail {
+  classificationJustification: string;
+  actionTitle: string;
+  actionDueDate: string;
+  actionDescription: string;
+  actionStatus: GrcActionStatus;
+  activityLog: GrcActivityEntry[];
+}
+export interface GrcBulkAction {
+  id: string;
+  caseIds: string[];
+  title: string;
+}
+
+const PERSON = {
+  RK: { name: 'Ravi Kumar',  initials: 'RK' },
+  SR: { name: 'Sunita Rao',  initials: 'SR' },
+  AS: { name: 'Arun Singh',  initials: 'AS' },
+};
+
+export const GRC_EXCEPTIONS: GrcException[] = [
+  { id: 'EX-2024-001', riskCategory: 'Access Control',    severity: 'High',   status: 'Under Review', classification: 'Design Deficiency',        classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '2 days ago',   flags: ['Overdue'], title: 'Unauthorized Admin Access via Legacy VPN Endpoint',                   assignedTo: PERSON.RK },
+  { id: 'EX-2024-002', riskCategory: 'Data Privacy',      severity: 'High',   status: 'Open',         classification: 'Unclassified',             classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '1 day ago',                        title: 'Customer PII Stored in Unencrypted S3 Buckets',                       assignedTo: PERSON.SR },
+  { id: 'EX-2024-003', riskCategory: 'Financial Controls',severity: 'High',   status: 'Closed',       classification: 'System Deficiency',        classificationReview: 'Approved',    actionReview: 'Implemented',lastUpdated: '3 days ago',   flags: ['Bulk'], bulkId: 'BA-2024-0001', title: 'Vendor Invoice Approval Bypassed for Transactions Over $50K',         assignedTo: PERSON.AS },
+  { id: 'EX-2024-004', riskCategory: 'IT Security',       severity: 'High',   status: 'Under Review', classification: 'System Deficiency',        classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '3 days ago',   flags: ['Bulk'], bulkId: 'BA-2024-0001', title: 'Missing MFA for C-Suite Remote Access',                               assignedTo: PERSON.AS },
+  { id: 'EX-2024-005', riskCategory: 'Compliance',        severity: 'High',   status: 'Open',         classification: 'Procedural Non-Compliance',classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '2 days ago',   flags: ['Overdue'], title: 'GDPR Data Subject Requests Exceeding 30-Day SLA',                     assignedTo: PERSON.SR },
+  { id: 'EX-2024-006', riskCategory: 'Financial Controls',severity: 'High',   status: 'Closed',       classification: 'Design Deficiency',        classificationReview: 'Approved',    actionReview: 'Implemented',lastUpdated: '15 days ago',                      title: 'Trading Desk Reconciliation Errors in Q3',                            assignedTo: PERSON.RK },
+  { id: 'EX-2024-007', riskCategory: 'IT Security',       severity: 'Medium', status: 'Open',         classification: 'Unclassified',             classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: 'about 7 hours ago',                title: 'Firewall Rule Permits Unrestricted Outbound Traffic',                 assignedTo: PERSON.AS },
+  { id: 'EX-2024-008', riskCategory: 'Compliance',        severity: 'High',   status: 'Open',         classification: 'Business as Usual',        classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '4 days ago',                       title: 'Missing Security Log Retention on Payment Processing System',         assignedTo: PERSON.SR },
+  { id: 'EX-2024-009', riskCategory: 'Operational Risk',  severity: 'Medium', status: 'Open',         classification: 'Unclassified',             classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '5 days ago',                       title: 'Inadequate Access Review for Terminated Contractors',                 assignedTo: PERSON.RK },
+  { id: 'EX-2024-010', riskCategory: 'Financial Controls',severity: 'High',   status: 'Closed',       classification: 'System Deficiency',        classificationReview: 'Approved',    actionReview: 'Implemented',lastUpdated: '12 days ago',                      title: 'Duplicate Payments to 3 Vendors (Oct-Nov)',                           assignedTo: PERSON.AS },
+  { id: 'EX-2024-011', riskCategory: 'IT Security',       severity: 'Medium', status: 'Open',         classification: 'False Positive',           classificationReview: 'Approved',    actionReview: 'Implemented',lastUpdated: '6 days ago',                       title: 'Service Account API Key Usage — policy-exempt accounts',              assignedTo: PERSON.SR },
+  { id: 'EX-2024-012', riskCategory: 'Data Privacy',      severity: 'High',   status: 'Open',         classification: 'Procedural Non-Compliance',classificationReview: 'Pending',     actionReview: 'Rejected',   lastUpdated: '1 day ago',                        title: 'Customer Data Shared with Unauthorized Third-Party',                  assignedTo: PERSON.RK },
+  { id: 'EX-2024-013', riskCategory: 'Compliance',        severity: 'Low',    status: 'Open',         classification: 'Procedural Non-Compliance',classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '20 days ago',                      title: 'CAB Approval Bypassed for Production Change',                         assignedTo: PERSON.RK },
+  { id: 'EX-2024-014', riskCategory: 'Access Control',    severity: 'Medium', status: 'Open',         classification: 'Design Deficiency',        classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '8 days ago',                       title: 'Change Management System — CAB approval not enforced',                assignedTo: PERSON.SR },
+];
+
+export const GRC_BULK_ACTIONS: Record<string, GrcBulkAction> = {
+  'BA-2024-0001': { id: 'BA-2024-0001', caseIds: ['EX-2024-003', 'EX-2024-004'], title: 'MFA enforcement — executive accounts' },
+};
+
+const DEFAULT_ACTIVITY: GrcActivityEntry[] = [
+  {
+    id: 'act-1',
+    author: 'Priya Mehta',
+    role: 'Auditor',
+    timestamp: '21 Apr 2026, 18:00',
+    message: 'Accepted action — marked Under Review pending implementation verification',
+    comment: 'Action plan is comprehensive. Monitoring the completion of the decommission ticket by Nov 30.',
+  },
+  {
+    id: 'act-2',
+    author: 'Priya Mehta',
+    role: 'Auditor',
+    timestamp: '20 Apr 2026, 18:00',
+    message: 'Reviewed case and submitted for final decision',
+  },
+  {
+    id: 'act-3',
+    author: 'Ravi Kumar',
+    role: 'Risk Owner',
+    timestamp: '18 Apr 2026, 18:00',
+    message: 'Action submitted: Access Control Remediation',
+    attachment: { name: 'vpn_remediation_plan.pdf' },
+  },
+  {
+    id: 'act-4',
+    author: 'Ravi Kumar',
+    role: 'Risk Owner',
+    timestamp: '16 Apr 2026, 10:30',
+    message: 'Classified exception as Design Deficiency',
+  },
+  {
+    id: 'act-5',
+    author: 'System',
+    role: 'Auditor',
+    timestamp: '15 Apr 2026, 09:00',
+    message: 'Case assigned to Ravi Kumar (Risk Owner)',
+  },
+];
+
+export const GRC_CASE_DETAILS: Record<string, GrcCaseDetail> = {
+  'EX-2024-001': {
+    classificationJustification:
+      '"The VPN endpoint was intentionally kept active for legacy integrations, but lacked proper access controls. This is a design gap that requires immediate remediation."',
+    actionTitle: 'Access Control Remediation — legacy VPN endpoint',
+    actionDueDate: 'Due 30 Apr 2026',
+    actionDescription:
+      'Decommissioned the legacy VPN endpoint and routed remaining integrations through the corporate SSO gateway. MFA enforced, audit logs shipped to Splunk, and evidence captured in the remediation workbook.',
+    actionStatus: 'Pending',
+    activityLog: DEFAULT_ACTIVITY,
+  },
+  'EX-2024-003': {
+    classificationJustification:
+      '"Unauthorized MFA bypass was configured at the system level without Security Committee approval. This is a system deficiency."',
+    actionTitle: 'MFA Policy Enforcement for Executive Accounts',
+    actionDueDate: 'Due 05 May 2026',
+    actionDescription:
+      'Removed MFA bypass configuration for all 6 C-suite accounts. Implemented hardware security key (FIDO2) as primary MFA method for executive accounts with a 30-day transition window. Security Committee formally notified and approval process documented.',
+    actionStatus: 'Partially Implemented',
+    activityLog: DEFAULT_ACTIVITY,
+  },
+  'EX-2024-004': {
+    classificationJustification:
+      '"Same MFA bypass pattern observed on engineering administrator accounts. Classified as system deficiency pending remediation."',
+    actionTitle: 'MFA Policy Enforcement for Admin Accounts',
+    actionDueDate: 'Due 12 May 2026',
+    actionDescription:
+      'Admin account MFA bypass is being removed in waves. Wave 1 complete; waves 2–3 scheduled before due date.',
+    actionStatus: 'Pending',
+    activityLog: DEFAULT_ACTIVITY,
+  },
+  'EX-2024-005': {
+    classificationJustification:
+      '"Vendor onboarding checklist was skipped for three engagements in Q1. Procedural gap, not a design or system flaw."',
+    actionTitle: 'Vendor Onboarding Checklist Backfill',
+    actionDueDate: 'Due 02 May 2026',
+    actionDescription:
+      'Backfilling onboarding documentation for the three engagements; adding a gating control in the intake workflow so future engagements cannot proceed without a signed checklist.',
+    actionStatus: 'Pending',
+    activityLog: DEFAULT_ACTIVITY,
+  },
+  'EX-2024-008': {
+    classificationJustification:
+      '"Control operated as designed; the observed variance is within tolerance. No remediation required."',
+    actionTitle: 'No action required — documented rationale',
+    actionDueDate: 'Due 28 Apr 2026',
+    actionDescription:
+      'Auditor requested confirmation that variance is within tolerance. Evidence pack attached.',
+    actionStatus: 'Implemented',
+    activityLog: DEFAULT_ACTIVITY,
+  },
+  'EX-2024-012': {
+    classificationJustification:
+      '"Endpoint isolation policy was not enforced on the engineering ring — system-level gap in the MDM baseline."',
+    actionTitle: 'Endpoint Isolation Baseline Rollout',
+    actionDueDate: 'Due 20 May 2026',
+    actionDescription:
+      'Rolling out the hardened isolation baseline to the engineering ring. Staged pilot complete; full rollout scheduled over next 10 business days.',
+    actionStatus: 'Pending',
+    activityLog: DEFAULT_ACTIVITY,
+  },
+};
+
+// ─── Action Hub (Case Mgmt > Action Hub tab) ───
+export type ActionHubActorRole = 'Risk Owner' | 'Auditor' | 'Ira (AI)' | 'System';
+
+export interface ActionHubEvent {
+  id: string;
+  date: string;              // "23 Apr 2026"
+  time: string;              // "19:06"
+  relative: string;          // "29 minutes ago"
+  actor: string;             // "Priya Mehta" / "Ira (AI)" / "System"
+  role: ActionHubActorRole;
+  message: string;
+  exceptionId: string;
+  comment?: string;
+  attachment?: { name: string };
+}
+
+export const ACTION_HUB_SUMMARY = {
+  auditPeriod: 'FY 2024–25',
+  viewedBy: 'Ravi Kumar',
+  reportHealthPct: 72,
+  reportHealthLabel: 'Good' as const,
+  atrReadiness: {
+    completedSteps: 0,
+    totalSteps: 4,
+    overallPct: 60,
+    steps: [
+      { id: 'step-1', label: 'All exceptions classified',     current: 10, total: 14 },
+      { id: 'step-2', label: 'Action plan documented',        current: 6,  total: 8  },
+      { id: 'step-3', label: 'Actions submitted by Risk Owner', current: 5, total: 8 },
+      { id: 'step-4', label: 'Auditor review complete',       current: 3,  total: 10 },
+    ],
+  },
+  overdue: [
+    { id: 'EX-2024-001', overdueLabel: '5d overdue' },
+    { id: 'EX-2024-005', overdueLabel: '3d overdue' },
+  ],
+  counts: {
+    total: 14,
+    classified: 10,
+    actionPlans: 6,
+    underReview: 2,
+    resolved: 3,
+    overdue: 2,
+  },
+  riskOwner: {
+    name: 'Ravi Kumar',
+    initials: 'RK',
+    role: 'Risk Owner' as const,
+    totalActions: 16,
+    tiles: [
+      { label: 'Classifications',     value: 10, tone: 'brand'     as const },
+      { label: 'Action Plans Filed',  value: 6,  tone: 'compliant' as const },
+      { label: 'Bulk Actions',        value: 2,  tone: 'brand'     as const },
+      { label: 'Individual Actions',  value: 4,  tone: 'evidence'  as const },
+    ],
+  },
+  auditor: {
+    name: 'Priya Mehta',
+    initials: 'PM',
+    role: 'Auditor' as const,
+    totalActions: 6,
+    tiles: [
+      { label: 'Reviews Performed',   value: 5, tone: 'brand'     as const },
+      { label: 'Approved / Accepted', value: 2, tone: 'compliant' as const },
+      { label: 'Rejected',            value: 1, tone: 'risk'      as const },
+      { label: 'Cases Closed',        value: 3, tone: 'brand'     as const },
+    ],
+  },
+  classificationBreakdown: {
+    classified: 10,
+    unclassified: 4,
+    bulk: 2,
+    individual: 8,
+    rows: [
+      { label: 'Design Deficiency',         count: 3, tone: 'high'      as const },
+      { label: 'System Deficiency',         count: 3, tone: 'risk'      as const, underline: true },
+      { label: 'Procedural Non-Compliance', count: 2, tone: 'brand'     as const },
+      { label: 'Business as Usual',         count: 1, tone: 'compliant' as const },
+      { label: 'False Positive',            count: 1, tone: 'draft'     as const },
+    ],
+  },
+};
+
+export const ACTION_HUB_TIMELINE: ActionHubEvent[] = [
+  { id: 'ev-01', date: '23 Apr 2026', time: '19:06', relative: '29 minutes ago', actor: 'Priya Mehta', role: 'Auditor',    message: 'Case accepted — marked as Partially Implemented',                 exceptionId: 'EX-2024-003' },
+
+  { id: 'ev-02', date: '22 Apr 2026', time: '18:00', relative: '1 day ago',     actor: 'System',      role: 'System',     message: 'Case reopened after auditor rejection',                            exceptionId: 'EX-2024-012' },
+  { id: 'ev-03', date: '22 Apr 2026', time: '18:00', relative: '1 day ago',     actor: 'Priya Mehta', role: 'Auditor',    message: 'Rejected — Discrepancy raised',                                    exceptionId: 'EX-2024-012', comment: '"The submitted action does not adequately address the regulatory notification requirement under GDPR Article 33."' },
+  { id: 'ev-04', date: '22 Apr 2026', time: '18:00', relative: '1 day ago',     actor: 'Arun Singh',  role: 'Risk Owner', message: 'Classified as Design Deficiency',                                  exceptionId: 'EX-2024-014', comment: '"Change management system does not enforce CAB approval before production deployments."' },
+
+  { id: 'ev-05', date: '21 Apr 2026', time: '18:00', relative: '2 days ago',    actor: 'Priya Mehta', role: 'Auditor',    message: 'Accepted action — marked Under Review pending implementation verification', exceptionId: 'EX-2024-001', comment: '"Action plan is comprehensive. Monitoring the completion of the decommission ticket by Nov 30."' },
+  { id: 'ev-06', date: '21 Apr 2026', time: '18:00', relative: '2 days ago',    actor: 'Sunita Rao',  role: 'Risk Owner', message: 'Classified as Procedural Non-Compliance',                          exceptionId: 'EX-2024-005', comment: '"The DSR process lacks automation and escalation rules."' },
+  { id: 'ev-07', date: '21 Apr 2026', time: '18:00', relative: '2 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 72% confidence',                exceptionId: 'EX-2024-013' },
+
+  { id: 'ev-08', date: '20 Apr 2026', time: '18:00', relative: '3 days ago',    actor: 'Priya Mehta', role: 'Auditor',    message: 'Reviewed case and submitted for final decision',                   exceptionId: 'EX-2024-001' },
+  { id: 'ev-09', date: '20 Apr 2026', time: '18:00', relative: '3 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 82% confidence',                exceptionId: 'EX-2024-007' },
+  { id: 'ev-10', date: '20 Apr 2026', time: '18:00', relative: '3 days ago',    actor: 'Sunita Rao',  role: 'Risk Owner', message: 'Classified as False Positive',                                     exceptionId: 'EX-2024-011', comment: '"API keys flagged are exempt service accounts per Security Policy Exception SEC-EX-2023-14."' },
+
+  { id: 'ev-11', date: '19 Apr 2026', time: '18:00', relative: '4 days ago',    actor: 'Sunita Rao',  role: 'Risk Owner', message: 'Classified as Business as Usual',                                  exceptionId: 'EX-2024-008', comment: '"Logging gap was an operational oversight during maintenance. Compensating controls documented."' },
+  { id: 'ev-12', date: '19 Apr 2026', time: '18:00', relative: '4 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 81% confidence',                exceptionId: 'EX-2024-014' },
+
+  { id: 'ev-13', date: '18 Apr 2026', time: '18:00', relative: '5 days ago',    actor: 'Ravi Kumar',  role: 'Risk Owner', message: 'Action submitted: Access Control Remediation',                     exceptionId: 'EX-2024-001', attachment: { name: 'vpn_remediation_plan.pdf' } },
+  { id: 'ev-14', date: '18 Apr 2026', time: '18:00', relative: '5 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 94% confidence',                exceptionId: 'EX-2024-002' },
+  { id: 'ev-15', date: '18 Apr 2026', time: '18:00', relative: '5 days ago',    actor: 'Ravi Kumar',  role: 'Risk Owner', message: 'Action submitted: Unauthorized Data Share Remediation',            exceptionId: 'EX-2024-012' },
+
+  { id: 'ev-16', date: '17 Apr 2026', time: '18:00', relative: '6 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 79% confidence',                exceptionId: 'EX-2024-009' },
+
+  { id: 'ev-17', date: '16 Apr 2026', time: '18:00', relative: '7 days ago',    actor: 'Ravi Kumar',  role: 'Risk Owner', message: 'Classified as Design Deficiency',                                  exceptionId: 'EX-2024-001', comment: '"The VPN endpoint was intentionally kept active for legacy integrations, but lacked proper access controls."' },
+  { id: 'ev-18', date: '16 Apr 2026', time: '18:00', relative: '7 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 86% confidence',                exceptionId: 'EX-2024-005' },
+
+  { id: 'ev-19', date: '15 Apr 2026', time: '18:00', relative: '8 days ago',    actor: 'Arun Singh',  role: 'Risk Owner', message: 'Bulk action submitted under BA-2024-0001',                         exceptionId: 'EX-2024-003', attachment: { name: 'erp_config_patch_notes.pdf' } },
+  { id: 'ev-20', date: '15 Apr 2026', time: '18:00', relative: '8 days ago',    actor: 'Arun Singh',  role: 'Risk Owner', message: 'Bulk action submitted under BA-2024-0001',                         exceptionId: 'EX-2024-004' },
+  { id: 'ev-21', date: '15 Apr 2026', time: '18:00', relative: '8 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 84% confidence',                exceptionId: 'EX-2024-010' },
+
+  { id: 'ev-22', date: '14 Apr 2026', time: '18:00', relative: '9 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 88% confidence',                exceptionId: 'EX-2024-008' },
+
+  { id: 'ev-23', date: '13 Apr 2026', time: '18:00', relative: '10 days ago',   actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 97% confidence',                exceptionId: 'EX-2024-001' },
+
+  { id: 'ev-24', date: '11 Apr 2026', time: '18:00', relative: '12 days ago',   actor: 'Arun Singh',  role: 'Risk Owner', message: 'Bulk classified as System Deficiency under BA-2024-0001',          exceptionId: 'EX-2024-003', comment: '"ERP configuration error in v2.3 upgrade removed the dual-approval requirement."' },
+  { id: 'ev-25', date: '11 Apr 2026', time: '18:00', relative: '12 days ago',   actor: 'Arun Singh',  role: 'Risk Owner', message: 'Bulk classified as System Deficiency under BA-2024-0001',          exceptionId: 'EX-2024-004', comment: '"Unauthorized MFA bypass configured at system level without proper approval."' },
+
+  { id: 'ev-26', date: '09 Apr 2026', time: '18:00', relative: '14 days ago',   actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 91% confidence',                exceptionId: 'EX-2024-003' },
+  { id: 'ev-27', date: '09 Apr 2026', time: '18:00', relative: '14 days ago',   actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 89% confidence',                exceptionId: 'EX-2024-004' },
+
+  { id: 'ev-28', date: '08 Apr 2026', time: '18:00', relative: '15 days ago',   actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 78% confidence',                exceptionId: 'EX-2024-006' },
+  { id: 'ev-29', date: '08 Apr 2026', time: '18:00', relative: '15 days ago',   actor: 'Ravi Kumar',  role: 'Risk Owner', message: 'Classified as Design Deficiency',                                  exceptionId: 'EX-2024-006', comment: '"Quarterly vendor review was skipped; design-level remediation scheduled."' },
+
+  { id: 'ev-30', date: '06 Apr 2026', time: '18:00', relative: '17 days ago',   actor: 'Priya Mehta', role: 'Auditor',    message: 'Closed case — resolution verified',                                exceptionId: 'EX-2024-006' },
+  { id: 'ev-31', date: '06 Apr 2026', time: '18:00', relative: '17 days ago',   actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 92% confidence',                exceptionId: 'EX-2024-011' },
+
+  { id: 'ev-32', date: '04 Apr 2026', time: '18:00', relative: '19 days ago',   actor: 'Priya Mehta', role: 'Auditor',    message: 'Closed case — no further action required',                         exceptionId: 'EX-2024-010' },
+  { id: 'ev-33', date: '04 Apr 2026', time: '18:00', relative: '19 days ago',   actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 77% confidence',                exceptionId: 'EX-2024-013' },
+
+  { id: 'ev-34', date: '02 Apr 2026', time: '18:00', relative: '21 days ago',   actor: 'Priya Mehta', role: 'Auditor',    message: 'Closed case — resolution verified',                                exceptionId: 'EX-2024-013' },
+  { id: 'ev-35', date: '02 Apr 2026', time: '18:00', relative: '21 days ago',   actor: 'System',      role: 'System',     message: 'Case auto-assigned to risk owner queue',                           exceptionId: 'EX-2024-002' },
+  { id: 'ev-36', date: '02 Apr 2026', time: '18:00', relative: '21 days ago',   actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 83% confidence',                exceptionId: 'EX-2024-007' },
+
+  { id: 'ev-37', date: '01 Apr 2026', time: '18:00', relative: '22 days ago',   actor: 'System',      role: 'System',     message: 'Audit cycle opened for FY 2024–25',                                exceptionId: '—' },
+];
+
 // ─── Email Template ───
 export const EMAIL_TEMPLATE = {
   subject: 'Action Required: Duplicate Invoice Exception Assigned',
