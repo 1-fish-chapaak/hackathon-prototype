@@ -677,20 +677,18 @@ function SaveWorkflowButton() {
   );
 }
 
-export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowType, setQueryAssumptions, initialQuery, onInitialQueryProcessed, selectedChatId, onChatLoaded, setView }: ChatViewProps) {
+export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowType, initialQuery, onInitialQueryProcessed, selectedChatId, onChatLoaded, setView }: ChatViewProps) {
   const { addToast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [thinkingSteps, setThinkingSteps] = useState<string[]>([]);
-  const [thinkingExpanded, setThinkingExpanded] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const processingRef = useRef(false);
 
   // New flow state
   const [showClarificationCard, setShowClarificationCard] = useState(false);
   const [clarificationQuestions, setClarificationQuestions] = useState<Array<{ question: string; options: string[] }>>([]);
-  const [clarificationAnswers, setClarificationAnswers] = useState<Record<number, string>>({});
   const [showProgressiveLoader, setShowProgressiveLoader] = useState(false);
 
   // Workflow build flow state
@@ -761,7 +759,6 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     }));
     setMessages(msgs);
     setShowClarificationCard(false);
-    setShowAssumptions(false);
     setShowProgressiveLoader(false);
     setIsTyping(false);
     setThinkingSteps([]);
@@ -905,7 +902,6 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
   // ─── Clarification Card Complete Router (workflow flow only — audit-query is inline now) ───
   const handleClarificationCardComplete = (answers: Record<number, string>) => {
     setShowClarificationCard(false);
-    setClarificationAnswers(answers);
     if (workflowBuildPhase > 0) {
       handleWorkflowClarificationComplete(answers);
     }

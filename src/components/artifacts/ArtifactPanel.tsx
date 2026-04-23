@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   X, ChevronDown, FileCode,
   Database, BarChart3, Sparkles, Copy, Download,
-  Maximize2, ArrowRight, AlertTriangle
+  Maximize2, AlertTriangle
 } from 'lucide-react';
 import type { ArtifactTab } from '../../hooks/useAppState';
 
@@ -197,7 +197,7 @@ function SourcesTab() {
   );
 }
 
-export default function ArtifactPanel({ activeTab, setActiveTab, onClose, onManageExceptions, onAddToReport, onShareResults }: ArtifactPanelProps) {
+export default function ArtifactPanel({ activeTab, setActiveTab, onClose }: ArtifactPanelProps) {
   return (
     <motion.div
       initial={{ width: 0, opacity: 0 }}
