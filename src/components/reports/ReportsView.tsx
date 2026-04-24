@@ -531,7 +531,7 @@ function ChooseReportModal({
         <div className="px-6 py-4 border-t border-border-light flex items-center gap-3 shrink-0">
           <button
             onClick={onCancel}
-            className="flex-1 px-5 py-2.5 rounded-lg bg-primary/10 hover:bg-primary/15 text-primary text-[13px] font-semibold transition-colors cursor-pointer"
+            className="flex-1 px-5 py-2.5 rounded-lg border border-border-light text-text-secondary text-[13px] font-semibold hover:bg-paper-50 hover:text-text transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -1504,15 +1504,16 @@ function SectionTocRow({
 }
 
 // ─── Report View (with multiple queries) ───
-function ReportView({ report, onBack, onShare, onManageExceptions }: {
+function ReportView({ report, onBack, onShare, onManageExceptions, initialTemplate }: {
   report: typeof GENERATED_REPORTS[0];
   onBack: () => void;
   onShare?: () => void;
   onManageExceptions?: () => void;
+  initialTemplate?: typeof REPORT_TEMPLATES[0] | null;
 }) {
   const { addToast } = useToast();
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
-  const [appliedTemplate, setAppliedTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
+  const [appliedTemplate, setAppliedTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(initialTemplate ?? null);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
 
@@ -2250,6 +2251,7 @@ export default function ReportsView({ onShare, onManageExceptions }: ReportsView
         onBack={() => setViewingReport(null)}
         onShare={onShare ? () => onShare(viewingReport.id) : undefined}
         onManageExceptions={onManageExceptions}
+        initialTemplate={reportAppliedTemplates[viewingReport.id] ?? null}
       />
     );
   }
