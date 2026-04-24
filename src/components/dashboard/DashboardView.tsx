@@ -861,10 +861,12 @@ const AGG_OPTIONS = [
   { value: 'max', label: 'Max', symbol: '↑' },
 ];
 
-function AddWidgetModal({ open, onClose, addToast }: {
+function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget }: {
   open: boolean;
   onClose: () => void;
   addToast: (t: { message: string; type: string }) => void;
+  customFields?: string[] | null;
+  onAddWidget?: (widget: { chartType: string; title: string; xField: string; yField: string }) => void;
 }) {
   const [selectedChart, setSelectedChart] = useState<ChartTypeDef | null>(null);
   const [chartTypeCollapsed, setChartTypeCollapsed] = useState(false);
@@ -984,9 +986,23 @@ function AddWidgetModal({ open, onClose, addToast }: {
   const showYIndex = selectedChart && (selectedChart.id === 'clustered-col' || selectedChart.id === 'line' || selectedChart.id === 'waterfall');
   const showLegend = selectedChart && selectedChart.id !== 'kpi';
 
-  const getFieldLabel = (id: string) => DRAG_FIELDS.find(f => f.id === id)?.label || id;
+  const getFieldLabel = (id: string) => {
+    if (id.startsWith('custom_') && customFields) {
+      const idx = parseInt(id.split('_')[1]);
+      return customFields[idx] || id;
+    }
+    return DRAG_FIELDS.find(f => f.id === id)?.label || id;
+  };
 
   const handleAdd = () => {
+    if (onAddWidget && selectedChart) {
+      onAddWidget({
+        chartType: selectedChart.id,
+        title: widgetName || selectedChart.title,
+        xField: xFields.length > 0 ? getFieldLabel(xFields[0]) : '',
+        yField: yFields.length > 0 ? getFieldLabel(yFields[0]) : '',
+      });
+    }
     addToast({ message: `${selectedChart?.title || 'Widget'} added to dashboard`, type: 'success' });
     onClose();
   };
@@ -1632,6 +1648,45 @@ function AddWidgetModal({ open, onClose, addToast }: {
                           </div>
                         </div>
 
+                        {/* Custom fields from uploaded file OR default files */}
+                        {customFields && customFields.length > 0 ? (
+                          <div className="mx-2.5 mb-2.5 bg-canvas-elevated rounded-md border border-brand-200 overflow-hidden">
+                            <button
+                              onClick={() => setFile1Open(!file1Open)}
+                              className="w-full flex items-center justify-between px-2.5 py-2 bg-brand-50 border-b border-brand-200 hover:bg-brand-100/50 transition-colors cursor-pointer"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <FileText size={12} className="text-brand-600" />
+                                <span className="text-[11px] font-semibold text-brand-700">Uploaded Dataset</span>
+                                <span className="text-[10px] text-brand-500 ml-1">({customFields.length} columns)</span>
+                              </div>
+                              <ChevronDown size={12} className={`text-brand-600 transition-transform ${file1Open ? 'rotate-180' : ''}`} />
+                            </button>
+                            {file1Open && (
+                              <div className="px-1.5 py-1 max-h-[300px] overflow-y-auto">
+                                {customFields.filter(f => f.toLowerCase().includes(fieldSearch.toLowerCase())).map((col, i) => {
+                                  const fieldId = `custom_${i}`;
+                                  return (
+                                    <div
+                                      key={fieldId}
+                                      draggable
+                                      onDragStart={e => { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('fieldId', fieldId); }}
+                                      className="flex items-center gap-2 px-2 py-1.5 rounded cursor-grab hover:bg-brand-50/50 transition-colors active:cursor-grabbing"
+                                    >
+                                      <svg className="shrink-0 size-3 text-ink-300" viewBox="0 0 12 12" fill="currentColor">
+                                        <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
+                                        <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
+                                        <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
+                                      </svg>
+                                      <span className="text-[12px] text-ink-700">{col}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <>
                         {/* File 1: Dimensions */}
                         <div className="mx-2.5 mb-2 bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
                           <button
@@ -1697,6 +1752,8 @@ function AddWidgetModal({ open, onClose, addToast }: {
                             </div>
                           )}
                         </div>
+                          </>
+                        )}
                       </div>
 
                       {/* Widget Info */}
@@ -3044,12 +3101,13 @@ function Sidebar({ dashboards, activeId, onSelect }: {
 
 interface DashboardProps {
   initialDashboardId?: string | null;
+  initialCustomFields?: string[] | null;
   onBack?: () => void;
   onImportPowerBI?: () => void;
   onShare?: () => void;
 }
 
-export default function DashboardView({ initialDashboardId, onBack, onImportPowerBI, onShare }: DashboardProps = {}) {
+export default function DashboardView({ initialDashboardId, initialCustomFields, onBack, onImportPowerBI, onShare }: DashboardProps = {}) {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<DashboardId>(
@@ -3072,7 +3130,10 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterRisk, setFilterRisk] = useState<string[]>([]);
   const [filterDepartment, setFilterDepartment] = useState<string[]>([]);
-  const [addWidgetOpen, setAddWidgetOpen] = useState(false);
+  const [addWidgetOpen, setAddWidgetOpen] = useState(!!initialCustomFields?.length);
+  const [customFields] = useState<string[] | null>(initialCustomFields || null);
+  const [userWidgets, setUserWidgets] = useState<Array<{ chartType: string; title: string; xField: string; yField: string }>>([]);
+  const isCustomDashboard = !DASHBOARDS.some(d => d.id === activeId);
   const [activeFiltersCount, setActiveFiltersCount] = useState(0);
 
   // Recalculate active filter count
@@ -3269,8 +3330,101 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
 
             {/* AI Summary — Generate / View / Edit */}
             {/* Alerts & Daily Digest */}
-            <AlertsPanel dashboardId={activeId} />
+            {!isCustomDashboard && <AlertsPanel dashboardId={activeId} />}
 
+            {/* User-created widgets (from Create Dashboard flow) */}
+            {isCustomDashboard && userWidgets.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.25 }}
+                className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6"
+                style={{ gridAutoRows: 'minmax(420px, auto)' }}
+              >
+                {userWidgets.map((w, i) => (
+                  <WidgetCard
+                    key={i}
+                    title={w.title}
+                    subtitle={w.yField && w.xField ? `${w.yField} by ${w.xField}` : 'Custom widget'}
+                    addToast={addToast}
+                    onExpand={() => setExpandedWidget({ title: w.title, subtitle: w.yField ? `${w.yField} by ${w.xField}` : '' })}
+                    onEdit={() => setAddWidgetOpen(true)}
+                    onDelete={() => { setUserWidgets(prev => prev.filter((_, j) => j !== i)); addToast({ message: 'Widget removed', type: 'info' }); }}
+                    onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                  >
+                    {/* Render chart based on type */}
+                    {(() => {
+                      const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+                      const vals = [45, 62, 38, 71, 55, 84];
+                      const max = Math.max(...vals);
+
+                      if (w.chartType === 'pie') {
+                        const segs = [{ l: 'Segment A', v: 40, c: 'var(--color-brand-500)' }, { l: 'Segment B', v: 30, c: 'var(--color-evidence)' }, { l: 'Segment C', v: 20, c: 'var(--color-mitigated)' }, { l: 'Segment D', v: 10, c: 'var(--color-compliant)' }];
+                        const total = segs.reduce((a, s) => a + s.v, 0);
+                        let off = 0;
+                        return (
+                          <div className="flex items-center gap-8 py-8">
+                            <svg width="160" height="160" viewBox="0 0 100 100" className="shrink-0">
+                              {segs.map(s => { const pct = (s.v / total) * 100; const da = `${pct * 2.51327} ${251.327 - pct * 2.51327}`; const doff = -off * 2.51327; off += pct; return <circle key={s.l} cx="50" cy="50" r="38" fill="none" stroke={s.c} strokeWidth="12" strokeDasharray={da} strokeDashoffset={doff} strokeLinecap="round" transform="rotate(-90 50 50)" />; })}
+                              <text x="50" y="48" textAnchor="middle" className="fill-ink-900 font-bold" fontSize="15">{total}</text>
+                              <text x="50" y="60" textAnchor="middle" className="fill-ink-500" fontSize="8">Total</text>
+                            </svg>
+                            <div className="space-y-2">
+                              {segs.map(s => (<div key={s.l} className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ background: s.c }} /><span className="text-[12px] text-ink-700">{s.l}</span><span className="text-[13px] font-bold text-ink-900 ml-2">{s.v}%</span></div>))}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      if (w.chartType === 'line' || w.chartType === 'area') {
+                        const ww = 400, hh = 240;
+                        const pts = vals.map((v, j) => `${40 + j * ((ww-80)/(vals.length-1))},${hh - 30 - (v / max) * (hh - 60)}`).join(' ');
+                        return (
+                          <div className="py-6 px-2">
+                            <svg width="100%" height={hh} viewBox={`0 0 ${ww} ${hh}`} className="overflow-visible">
+                              {w.chartType === 'area' && <><defs><linearGradient id={`ug${i}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--color-brand-500)" stopOpacity="0.15" /><stop offset="100%" stopColor="var(--color-brand-500)" stopOpacity="0.02" /></linearGradient></defs><polyline points={`40,${hh-30} ${pts} ${ww-10},${hh-30}`} fill={`url(#ug${i})`} /></>}
+                              <polyline points={pts} fill="none" stroke="var(--color-brand-500)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                              {vals.map((v, j) => <circle key={j} cx={40 + j * ((ww-80)/(vals.length-1))} cy={hh - 30 - (v / max) * (hh - 60)} r="4" fill="var(--color-brand-600)" stroke="white" strokeWidth="2" />)}
+                            </svg>
+                            <div className="flex justify-between text-[11px] text-ink-500 mt-2 px-1">{labels.map(l => <span key={l}>{l}</span>)}</div>
+                            {w.xField && <div className="text-center mt-2"><span className="text-[10px] text-brand-600 bg-brand-50 px-2 py-0.5 rounded">{w.xField}</span></div>}
+                          </div>
+                        );
+                      }
+
+                      if (w.chartType === 'kpi') {
+                        return (
+                          <div className="flex items-center justify-center gap-5 py-8">
+                            <div className="bg-canvas-elevated border border-canvas-border rounded-xl p-6 min-w-[180px]">
+                              <p className="text-[11px] text-ink-500 mb-1">{w.yField || 'Metric'}</p>
+                              <p className="text-[32px] font-bold text-ink-900">12,450</p>
+                              <p className="text-[12px] text-compliant font-semibold mt-1 flex items-center gap-1"><TrendingUp size={10} />+8.2%</p>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Default: bar chart
+                      return (
+                        <div className="flex items-end gap-3 pt-6" style={{ height: '280px' }}>
+                          {labels.map((l, j) => (
+                            <div key={l} className="flex-1 flex flex-col items-center gap-1.5">
+                              <span className="text-[12px] text-ink-500 font-medium">{vals[j]}</span>
+                              <motion.div className="w-full rounded-t-md min-h-[4px]" style={{ background: 'var(--color-brand-500)' }} initial={{ height: 0 }} animate={{ height: `${(vals[j] / max) * 100}%` }} transition={{ duration: 0.5, delay: j * 0.06 }} />
+                              <span className="text-[12px] text-ink-500">{l}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </WidgetCard>
+                ))}
+              </motion.div>
+            )}
+
+            {/* Default charts — only for predefined dashboards */}
+            {(!isCustomDashboard || userWidgets.length === 0) && (
+            <>
             {/* Charts — 2×2 grid of big widget cards */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -3526,6 +3680,8 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
                 </div>
               </WidgetCard>
             </motion.div>
+            </>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -3678,8 +3834,14 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
       {/* Add Widget Modal */}
       <AddWidgetModal
         open={addWidgetOpen}
-        onClose={() => setAddWidgetOpen(false)}
+        onClose={() => {
+          setAddWidgetOpen(false);
+          // If this was auto-opened from create flow and no widgets added, go back
+          if (initialCustomFields?.length && userWidgets.length === 0 && onBack) onBack();
+        }}
         addToast={addToast}
+        customFields={customFields}
+        onAddWidget={(widget) => setUserWidgets(prev => [...prev, widget])}
       />
     </div>
   );

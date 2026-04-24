@@ -210,7 +210,7 @@ export default function App() {
       case 'dashboards':
         return (
           <DashboardListPage
-            onDashboardClick={(id) => openDashboard(id)}
+            onDashboardClick={(id, customFields) => openDashboard(id, customFields)}
             onImportPowerBI={() => setShowPowerBIWizard(true)}
           />
         );
@@ -219,6 +219,7 @@ export default function App() {
         return (
           <DashboardView
             initialDashboardId={state.selectedDashboardId}
+            initialCustomFields={state.dashboardCustomFields}
             onBack={() => setView('dashboards')}
             onImportPowerBI={() => setShowPowerBIWizard(true)}
             onShare={() => setShowShareModal(true, { type: 'dashboard', id: state.selectedDashboardId || 'dash-1' })}

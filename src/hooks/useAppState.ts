@@ -85,6 +85,7 @@ export interface AppState {
   queryAssumptions: string[];
   // Dashboard detail
   selectedDashboardId: string | null;
+  dashboardCustomFields: string[] | null;
 }
 
 const INITIAL_STATE: AppState = {
@@ -113,6 +114,7 @@ const INITIAL_STATE: AppState = {
   selectedChatId: null,
   queryAssumptions: [],
   selectedDashboardId: null,
+  dashboardCustomFields: null,
 };
 
 export function useAppState() {
@@ -215,8 +217,8 @@ export function useAppState() {
     setState(prev => ({ ...prev, view: 'workflow-executor' as View, selectedWorkflowId: workflowId }));
   }, []);
 
-  const openDashboard = useCallback((dashboardId: string) => {
-    setState(prev => ({ ...prev, view: 'dashboard-detail' as View, selectedDashboardId: dashboardId }));
+  const openDashboard = useCallback((dashboardId: string, customFields?: string[]) => {
+    setState(prev => ({ ...prev, view: 'dashboard-detail' as View, selectedDashboardId: dashboardId, dashboardCustomFields: customFields || null }));
   }, []);
 
   return {
