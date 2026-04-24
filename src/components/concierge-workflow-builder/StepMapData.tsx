@@ -24,7 +24,6 @@ interface Props {
   files: JourneyFiles;
   setFiles: (f: JourneyFiles) => void;
   alignments: JourneyAlignments;
-  setAlignments: (a: JourneyAlignments) => void;
   expandedInputId?: string | null;
   onToggleExpand?: (inputId: string) => void;
 }
@@ -42,7 +41,6 @@ export default function StepMapData({
   files,
   setFiles,
   alignments,
-  setAlignments,
   expandedInputId,
   onToggleExpand,
 }: Props) {

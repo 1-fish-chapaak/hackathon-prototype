@@ -703,7 +703,6 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
                           files={files}
                           setFiles={setFiles}
                           alignments={alignments}
-                          setAlignments={setAlignments}
                           expandedInputId={mapExpandedId}
                           onToggleExpand={(id) =>
                             setMapExpandedId((prev) => (prev === id ? null : id))
