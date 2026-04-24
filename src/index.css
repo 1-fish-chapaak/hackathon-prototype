@@ -391,6 +391,13 @@ select:focus-visible {
   border-radius: var(--radius-md);
 }
 
+/* Opt-out: suppress the focus ring on inputs/textareas tagged .no-focus-ring */
+input.no-focus-ring:focus-visible,
+textarea.no-focus-ring:focus-visible,
+select.no-focus-ring:focus-visible {
+  box-shadow: none;
+}
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
