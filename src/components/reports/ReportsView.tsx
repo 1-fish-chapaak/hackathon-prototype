@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, Reorder, useDragControls } from 'motion/react';
 import {
   FileText, Shield, AlertTriangle, CheckCircle2, BarChart3,
   TrendingUp, Download, Share2, ArrowRight, ArrowLeft, ChevronDown,
+  ChevronLeft, ChevronRight,
   Sparkles, Settings, Palette, Type,
   Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2, Trash2,
-  List, LayoutGrid, ExternalLink
+  List, LayoutGrid, GripVertical, Plus, StickyNote, PanelLeftClose, PanelLeftOpen,
+  ShieldAlert, MoreVertical, Eye, Database, Search, PackageOpen
 } from 'lucide-react';
-import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS, EXCEPTION_DATA } from '../../data/mockData';
+import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/mockData';
 import { StatusBadge } from '../shared/StatusBadge';
 import SmartTable from '../shared/SmartTable';
 import { useToast } from '../shared/Toast';
@@ -35,6 +37,85 @@ const CATEGORY_COLORS: Record<string, string> = {
   Executive: 'text-indigo-600 bg-indigo-50',
 };
 
+// Dummy user-created templates. Replace with real data when the create-custom-template flow lands.
+const CUSTOM_TEMPLATES = [
+  {
+    id: 'ct-001',
+    name: 'Vendor Risk Scorecard',
+    desc: 'Custom scorecard for third-party vendors with risk tiers, control gaps, and remediation SLAs.',
+    category: 'Risk',
+    icon: 'alert-triangle',
+    sections: [
+      { name: 'Vendor Overview', icon: 'file-text' },
+      { name: 'Risk Tier Summary', icon: 'alert-triangle' },
+      { name: 'Control Gaps', icon: 'shield' },
+      { name: 'Remediation Plan', icon: 'check-circle' },
+    ],
+  },
+  {
+    id: 'ct-002',
+    name: 'Quarterly Audit Snapshot',
+    desc: 'One-page executive snapshot of quarterly audit findings and status.',
+    category: 'Audit',
+    icon: 'file-text',
+    sections: [
+      { name: 'Quarter Summary', icon: 'file-text' },
+      { name: 'Key Findings', icon: 'alert-triangle' },
+      { name: 'Status & Owners', icon: 'check-circle' },
+    ],
+  },
+  {
+    id: 'ct-003',
+    name: 'Internal Controls Health Report',
+    desc: 'Tracks control design effectiveness and operating effectiveness across business processes.',
+    category: 'Controls',
+    icon: 'check-circle',
+    sections: [
+      { name: 'Scope', icon: 'file-text' },
+      { name: 'Design Effectiveness', icon: 'shield' },
+      { name: 'Operating Effectiveness', icon: 'check-circle' },
+      { name: 'Recommendations', icon: 'trending-up' },
+    ],
+  },
+  {
+    id: 'ct-004',
+    name: 'Board Slide Deck',
+    desc: 'Executive board-ready deck with headline metrics, risk heatmap, and narrative commentary.',
+    category: 'Executive',
+    icon: 'trending-up',
+    sections: [
+      { name: 'Headline Metrics', icon: 'bar-chart' },
+      { name: 'Risk Heatmap', icon: 'alert-triangle' },
+      { name: 'Narrative', icon: 'file-text' },
+      { name: 'Outlook', icon: 'trending-up' },
+    ],
+  },
+  {
+    id: 'ct-005',
+    name: 'Ad-hoc Exception Summary',
+    desc: 'Quick exception digest grouped by owner with action taken and resolution status.',
+    category: 'Risk',
+    icon: 'alert-triangle',
+    sections: [
+      { name: 'Exception List', icon: 'alert-triangle' },
+      { name: 'Owner Responses', icon: 'file-text' },
+      { name: 'Resolution Status', icon: 'check-circle' },
+    ],
+  },
+  {
+    id: 'ct-006',
+    name: 'Finance Close Checklist',
+    desc: 'Period-close checklist with reconciliation status, journal review, and sign-offs.',
+    category: 'Audit',
+    icon: 'clipboard-check',
+    sections: [
+      { name: 'Reconciliations', icon: 'check-circle' },
+      { name: 'Journal Review', icon: 'file-text' },
+      { name: 'Sign-offs', icon: 'shield' },
+    ],
+  },
+];
+
 
 const SECTION_ICONS: Record<string, React.ElementType> = {
   'file-text': FileText,
@@ -51,6 +132,66 @@ const SECTION_ICONS: Record<string, React.ElementType> = {
 interface ReportsViewProps {
   onOpenBuilder?: () => void;
   onShare?: (id: string) => void;
+  onManageExceptions?: () => void;
+}
+
+function TemplateCarousel({ children }: { children: React.ReactNode }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollButtons = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  };
+
+  useEffect(() => {
+    updateScrollButtons();
+    const el = scrollRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(updateScrollButtons);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const scroll = (dir: 'left' | 'right') => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const delta = dir === 'left' ? -el.clientWidth * 0.8 : el.clientWidth * 0.8;
+    el.scrollBy({ left: delta, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="relative group/carousel">
+      <button
+        type="button"
+        onClick={() => scroll('left')}
+        disabled={!canScrollLeft}
+        aria-label="Scroll left"
+        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-9 h-9 rounded-full bg-white border border-border shadow-md flex items-center justify-center text-text hover:bg-surface-2 hover:border-primary/40 disabled:opacity-0 disabled:pointer-events-none transition-all cursor-pointer"
+      >
+        <ChevronLeft size={16} />
+      </button>
+      <div
+        ref={scrollRef}
+        onScroll={updateScrollButtons}
+        className="flex gap-4 overflow-x-auto scroll-smooth pb-3 items-stretch"
+      >
+        {children}
+      </div>
+      <button
+        type="button"
+        onClick={() => scroll('right')}
+        disabled={!canScrollRight}
+        aria-label="Scroll right"
+        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-9 h-9 rounded-full bg-white border border-border shadow-md flex items-center justify-center text-text hover:bg-surface-2 hover:border-primary/40 disabled:opacity-0 disabled:pointer-events-none transition-all cursor-pointer"
+      >
+        <ChevronRight size={16} />
+      </button>
+    </div>
+  );
 }
 
 // ─── Upload Template Modal ───
@@ -214,8 +355,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
 }
 
 // ─── Template Preview Modal ───
-function TemplatePreviewModal({ template, onClose, onEdit }: { template: typeof REPORT_TEMPLATES[0]; onClose: () => void; onEdit: () => void }) {
-  const { addToast } = useToast();
+function TemplatePreviewModal({ template, onClose, onEdit, onUse }: { template: typeof REPORT_TEMPLATES[0]; onClose: () => void; onEdit: () => void; onUse: () => void }) {
   const Icon = ICON_MAP[template.icon] || FileText;
   const color = CATEGORY_COLORS[template.category] || 'text-ink-500 bg-paper-50';
 
@@ -277,10 +417,131 @@ function TemplatePreviewModal({ template, onClose, onEdit }: { template: typeof 
             <Edit3 size={12} /> Edit Template
           </button>
           <button
-            onClick={() => { addToast({ type: 'success', message: 'Template applied to new report' }); onClose(); }}
+            onClick={onUse}
             className="flex items-center gap-1.5 px-5 py-2 bg-primary text-white rounded-xl text-[12px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer"
           >
             <Sparkles size={12} /> Use This Template
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── Choose Report Modal ───
+function ChooseReportModal({
+  template,
+  reports,
+  onCancel,
+  onClose,
+  onContinue,
+  onAddNew,
+}: {
+  template: typeof REPORT_TEMPLATES[0];
+  reports: typeof GENERATED_REPORTS;
+  onCancel: () => void;
+  onClose: () => void;
+  onContinue: (report: typeof GENERATED_REPORTS[0]) => void;
+  onAddNew: () => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const filtered = reports.filter(r => r.name.toLowerCase().includes(search.trim().toLowerCase()));
+  const selected = reports.find(r => r.id === selectedId) || null;
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        role="dialog" aria-modal="true" aria-label="Choose Report"
+        className="relative bg-white rounded-2xl shadow-2xl w-[520px] max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-border-light flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-primary/10 text-primary rounded-xl"><PackageOpen size={16} /></div>
+            <div>
+              <h3 className="text-[15px] font-semibold text-text">Choose Report</h3>
+              <p className="text-[12px] text-text-muted">Select an existing report or create a new report</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          {/* Search */}
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border-light focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+            <Search size={14} className="text-text-muted shrink-0" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search Report"
+              className="flex-1 bg-transparent text-[13px] text-text placeholder:text-text-muted focus:outline-none"
+            />
+          </div>
+
+          {/* Report list */}
+          <div className="space-y-2">
+            {filtered.length === 0 && (
+              <div className="px-3 py-6 text-center text-[12px] text-text-muted">No reports match your search</div>
+            )}
+            {filtered.map(r => {
+              const isSelected = selectedId === r.id;
+              return (
+                <button
+                  key={r.id}
+                  onClick={() => setSelectedId(r.id)}
+                  className={`w-full text-left flex items-start gap-3 px-4 py-3 rounded-xl border transition-colors cursor-pointer ${
+                    isSelected ? 'border-primary bg-primary/[0.04]' : 'border-border-light hover:border-primary/30 hover:bg-surface-2'
+                  }`}
+                >
+                  <span className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
+                    isSelected ? 'border-primary' : 'border-border'
+                  }`}>
+                    {isSelected && <span className="w-2 h-2 rounded-full bg-primary" />}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[13px] font-semibold text-text truncate">{r.name}</span>
+                      <span className="text-[11px] text-text-muted shrink-0">{r.generatedAt}</span>
+                    </div>
+                    <div className="text-[11px] text-text-muted truncate mt-0.5">{r.tag}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Add New Report */}
+          <button
+            onClick={onAddNew}
+            className="w-full px-4 py-3 rounded-xl bg-primary/10 hover:bg-primary/15 text-primary text-[13px] font-semibold transition-colors cursor-pointer"
+          >
+            + Add New Report
+          </button>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-border-light flex items-center gap-3 shrink-0">
+          <button
+            onClick={onCancel}
+            className="flex-1 px-5 py-2.5 rounded-lg border border-border-light text-text-secondary text-[13px] font-semibold hover:bg-paper-50 hover:text-text transition-colors cursor-pointer"
+          >
+            Back
+          </button>
+          <button
+            onClick={() => { if (selected) onContinue(selected); }}
+            disabled={!selected}
+            className="flex-1 px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold transition-colors cursor-pointer disabled:bg-primary/40 disabled:cursor-not-allowed"
+            title={`Apply "${template.name}"`}
+          >
+            Continue
           </button>
         </div>
       </motion.div>
@@ -870,117 +1131,312 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
 }
 
 // ─── Query Card Component ───
-function QueryCard({ query, index }: { query: { id: string; status: string; risk: string; severity: string; title: string; addedBy: string; kpis: { label: string; value: string; color: string }[]; summary: string; findings: string[]; observations: string[]; chartData: number[] }; index: number }) {
+// Count-up number that eases from 0 to the target value on mount
+function AnimatedNumber({ value, delay = 0, durationMs = 900, className = '' }: { value: string; delay?: number; durationMs?: number; className?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const numericMatch = value.match(/^(\d[\d,]*)(.*)$/);
+  const isNumeric = !!numericMatch;
+  const target = isNumeric ? parseInt(numericMatch![1].replace(/,/g, ''), 10) : 0;
+  const suffix = isNumeric ? numericMatch![2] : '';
+
+  useEffect(() => {
+    if (!isNumeric || !ref.current) {
+      if (ref.current) ref.current.textContent = value;
+      return;
+    }
+    const el = ref.current;
+    el.textContent = '0' + suffix;
+    let raf = 0;
+    let startTs = 0;
+    const delayTimer = window.setTimeout(() => {
+      const tick = (now: number) => {
+        if (!startTs) startTs = now;
+        const t = Math.min(1, (now - startTs) / durationMs);
+        const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+        el.textContent = Math.round(target * eased).toLocaleString() + suffix;
+        if (t < 1) raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    }, delay * 1000);
+    return () => {
+      window.clearTimeout(delayTimer);
+      cancelAnimationFrame(raf);
+    };
+  }, [target, durationMs, delay, value, isNumeric, suffix]);
+
+  return <span ref={ref} className={className} style={{ fontVariantNumeric: 'tabular-nums' }}>{isNumeric ? '0' + suffix : value}</span>;
+}
+
+function QueryCard({ query, index, onManageExceptions }: { query: { id: string; status: string; risk: string; severity: string; title: string; addedBy: string; kpis: { label: string; value: string; color: string }[]; summary: string; findings: string[]; observations: string[]; chartData: number[] }; index: number; onManageExceptions?: () => void }) {
   const [expanded, setExpanded] = useState(index === 0);
-  const accentColor = query.severity === 'Critical' ? '#dc2626' : '#ea580c';
+  const [hovered, setHovered] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const accentColor = query.severity === 'Critical' ? '#B42318' : '#C2410C';
+  const baseDelay = index * 0.08;
+  const sparkW = 100;
+
+  const statusStyle = query.status === 'Completed'
+    ? { pill: 'bg-compliant-50 text-compliant-700', dot: 'bg-compliant-500' }
+    : { pill: 'bg-mitigated-50 text-mitigated-700', dot: 'bg-mitigated-500' };
+
+  const severityStyle = query.severity === 'Critical'
+    ? { pill: 'bg-risk-50 text-risk-700', dot: 'bg-risk-500' }
+    : { pill: 'bg-high-50 text-high-700', dot: 'bg-high-500' };
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (ev: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(ev.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      className="rounded-2xl border border-border-light shadow-sm overflow-hidden mb-4 bg-white"
+      transition={{ delay: baseDelay, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      onHoverStart={() => setHovered(true)}
+      onHoverEnd={() => setHovered(false)}
+      whileHover={{ y: -2 }}
+      style={{
+        boxShadow: hovered
+          ? '0 6px 20px -4px rgba(15, 23, 42, 0.06), 0 2px 6px -2px rgba(15, 23, 42, 0.04)'
+          : '0 0 0 rgba(0,0,0,0)',
+        transition: 'box-shadow 220ms ease',
+      }}
+      className="rounded-2xl border border-border-light bg-white overflow-hidden mb-4"
     >
-      {/* Accent top bar */}
-      <div className="h-1" style={{ background: 'linear-gradient(90deg, #2F0D5F, #A05CFF)' }} />
+      {/* Animated accent bar — sweeps in from left */}
+      <motion.div
+        initial={{ scaleX: 0, transformOrigin: 'left' }}
+        animate={{ scaleX: 1 }}
+        transition={{ delay: baseDelay + 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="h-[2px]"
+        style={{ background: 'linear-gradient(90deg, #2F0D5F, #A05CFF)' }}
+      />
 
-      {/* Header — always visible */}
       <div className="px-6 py-5">
-        {/* Top row: flat meta bar + author + action */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center divide-x divide-border-light">
-            <span className="pr-2 text-[11px] font-bold text-primary uppercase tracking-wide">
-              Query · {query.id}
+        {/* Meta row */}
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: baseDelay + 0.15, duration: 0.35 }}
+          className="flex items-center justify-between mb-4 gap-4"
+        >
+          <div className="flex items-center gap-2.5 text-[11px] min-w-0">
+            <span className="font-bold text-primary uppercase tracking-wider shrink-0">Query · {query.id}</span>
+            <span className="w-px h-3 bg-border-light shrink-0" />
+            <span className="font-medium text-text-muted uppercase tracking-wider shrink-0">{query.risk}</span>
+            <span className="w-px h-3 bg-border-light shrink-0" />
+            <span className="flex items-center gap-1.5 shrink-0">
+              <span className="relative inline-flex">
+                <span className={`w-1.5 h-1.5 rounded-full ${severityStyle.dot}`} />
+                {query.severity === 'Critical' && (
+                  <motion.span
+                    className={`absolute inset-0 rounded-full ${severityStyle.dot}`}
+                    animate={{ scale: [1, 2.4], opacity: [0.5, 0] }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
+                  />
+                )}
+              </span>
+              <span className={`font-semibold uppercase tracking-wider ${query.severity === 'Critical' ? 'text-risk-700' : 'text-high-700'}`}>{query.severity}</span>
             </span>
-            <span className={`px-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide ${query.status === 'Completed' ? 'text-compliant-700' : 'text-mitigated-700'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${query.status === 'Completed' ? 'bg-compliant' : 'bg-mitigated'}`} />
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider ${statusStyle.pill}`} style={{ borderRadius: '6px' }}>
+              <span className={`w-1 h-1 rounded-full ${statusStyle.dot}`} />
               {query.status}
             </span>
-            <span className="px-2 text-[11px] font-semibold text-primary uppercase tracking-wide">
-              {query.risk}
-            </span>
-            <span className="pl-2 text-[11px] font-semibold uppercase tracking-wide">
-              <span className="text-text-secondary">Severity · </span>
-              <span className={query.severity === 'Critical' ? 'text-risk-700' : 'text-high-700'}>{query.severity}</span>
-            </span>
+            <button
+              onClick={onManageExceptions}
+              title="Triage and act on every exception flagged in this query"
+              className="group relative inline-flex items-center gap-1.5 h-8 pl-3 pr-2.5 text-[12px] font-semibold text-white rounded-[8px] cursor-pointer transition-all hover:-translate-y-[1px] active:translate-y-0 shadow-[0_2px_8px_rgba(106,18,205,0.25)] hover:shadow-[0_4px_14px_rgba(106,18,205,0.35)]"
+              style={{ background: 'linear-gradient(135deg, #6A12CD 0%, #A366F0 100%)' }}
+            >
+              <ShieldAlert size={13} className="shrink-0" />
+              Manage Exceptions
+              <ArrowRight size={13} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
+            </button>
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen(o => !o)}
+                title="More options"
+                aria-label="More options"
+                className="w-8 h-8 flex items-center justify-center rounded-[8px] text-text-muted hover:text-primary hover:bg-primary-xlight transition-colors cursor-pointer"
+              >
+                <MoreVertical size={15} />
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 top-10 z-10 w-[200px] bg-white border border-border-light rounded-[10px] shadow-xl py-1">
+                  <button
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-primary-xlight hover:text-primary cursor-pointer"
+                  >
+                    <Eye size={13} />
+                    Open Query
+                  </button>
+                  <button
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-primary-xlight hover:text-primary cursor-pointer"
+                  >
+                    <Database size={13} />
+                    Data Source Files
+                  </button>
+                  <button
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-primary-xlight hover:text-primary cursor-pointer"
+                  >
+                    <Download size={13} />
+                    Download Exceptions
+                  </button>
+                  <div className="my-1 border-t border-border-light" />
+                  <button
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-risk-700 hover:bg-risk-50 cursor-pointer"
+                  >
+                    <Trash2 size={13} />
+                    Delete Query Card
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-[12px] shrink-0">
-            <span className="font-bold text-primary text-[11px] uppercase tracking-wide">{query.addedBy.split(' ').map(n => n[0]).join('')}</span>
-            <span className="text-text-muted">{query.addedBy}</span>
-          </div>
-        </div>
+        </motion.div>
 
         {/* Title */}
-        <h3 className="text-[15px] font-bold text-text leading-snug mb-5">{query.title}</h3>
+        <motion.h3
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: baseDelay + 0.2, duration: 0.35 }}
+          className="text-[15px] font-semibold text-text leading-[1.5] mb-5"
+        >
+          {query.title}
+        </motion.h3>
 
-        {/* KPIs + Trend row */}
-        <div className="flex gap-3 mb-5">
-          {query.kpis.map(kpi => (
-            <div key={kpi.label} className="flex-1 border border-border-light bg-white p-4" style={{ borderRadius: '8px' }}>
-              <div className={`text-2xl font-bold mb-1 ${kpi.color}`}>{kpi.value}</div>
-              <div className="text-[11px] text-text-muted">{kpi.label}</div>
-            </div>
-          ))}
-          {/* Trend sparkline */}
-          <div className="flex-1 border border-border-light bg-white p-4 flex flex-col items-center justify-center" style={{ borderRadius: '8px' }}>
-            <svg width="80" height="36" viewBox="0 0 80 36">
-              <polyline
-                points={query.chartData.map((v, i) => `${i * (80 / (query.chartData.length - 1))},${36 - v * 0.34}`).join(' ')}
-                fill="none" stroke={accentColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              />
-              <polyline
-                points={`0,36 ${query.chartData.map((v, i) => `${i * (80 / (query.chartData.length - 1))},${36 - v * 0.34}`).join(' ')} 80,36`}
-                fill={`${accentColor}15`} stroke="none"
-              />
-            </svg>
-            <span className="text-[11px] text-text-muted mt-1.5">Trend</span>
+        {/* KPI strip — primary hero + compact secondaries, no containing boxes */}
+        <div className="border-t border-b border-border-light py-5 mb-5">
+          <div className="grid grid-cols-5">
+            {/* Primary — spans 2 cols, hero treatment with sparkline */}
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: baseDelay + 0.28, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="col-span-2 pr-6"
+            >
+              <div className="text-[14px] leading-[20px] text-text-muted font-semibold tracking-tight truncate mb-2">
+                {query.kpis[0].label}
+              </div>
+              <div className="flex items-end gap-4">
+                <div className={`text-[32px] leading-[36px] font-bold ${query.kpis[0].color} shrink-0`}>
+                  <AnimatedNumber value={query.kpis[0].value} delay={baseDelay + 0.4} />
+                </div>
+                <svg width="100%" height="32" viewBox={`0 0 ${sparkW} 32`} preserveAspectRatio="none" className="block flex-1 -mb-1">
+                  <motion.polygon
+                    points={`0,32 ${query.chartData.map((v, i) => `${i * (sparkW / (query.chartData.length - 1))},${32 - v * 0.26}`).join(' ')} ${sparkW},32`}
+                    fill={`${accentColor}14`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: baseDelay + 0.9, duration: 0.5 }}
+                  />
+                  <motion.polyline
+                    points={query.chartData.map((v, i) => `${i * (sparkW / (query.chartData.length - 1))},${32 - v * 0.26}`).join(' ')}
+                    fill="none"
+                    stroke={accentColor}
+                    strokeWidth="1.25"
+                    vectorEffect="non-scaling-stroke"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ delay: baseDelay + 0.5, duration: 1, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                </svg>
+              </div>
+            </motion.div>
+
+            {/* Secondaries — 1 col each, separated by thin vertical rules */}
+            {query.kpis.slice(1).map((kpi, i) => (
+              <motion.div
+                key={kpi.label}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: baseDelay + 0.34 + i * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="border-l border-border-light px-5 flex flex-col justify-between"
+              >
+                <div className="text-[14px] leading-[20px] text-text-muted font-semibold tracking-tight truncate mb-2">{kpi.label}</div>
+                <div className={`text-[24px] leading-[28px] font-bold ${kpi.color}`}>
+                  <AnimatedNumber value={kpi.value} delay={baseDelay + 0.46 + i * 0.06} />
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
 
         {/* Summary */}
-        <p className="text-[13px] text-text-secondary leading-relaxed mb-4">{query.summary}</p>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: baseDelay + 0.6, duration: 0.4 }}
+          className="text-[13px] text-text-secondary leading-relaxed mb-4"
+        >
+          {query.summary}
+        </motion.p>
 
-        {/* Bottom row: expand toggle + manage exceptions */}
-        <div className="flex items-center justify-between">
-          <button onClick={() => setExpanded(p => !p)} className="flex items-center gap-1.5 text-[13px] font-bold text-primary hover:text-primary-hover cursor-pointer transition-colors">
-            <ChevronDown size={14} className={`transition-transform ${expanded ? '' : '-rotate-90'}`} />
+        {/* Bottom row: expand toggle */}
+        <button
+          onClick={() => setExpanded(p => !p)}
+          className="flex items-center gap-1.5 text-[13px] font-semibold text-primary cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 group"
+        >
+          <motion.span
+            animate={{ rotate: expanded ? 0 : -90 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="inline-flex"
+          >
+            <ChevronDown size={14} />
+          </motion.span>
+          <span className="transition-colors group-hover:text-primary-hover">
             {expanded ? 'Hide findings & observations' : 'Show findings & observations'}
-          </button>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 border border-border-light bg-white text-[12px] font-medium text-ink-600 hover:border-primary/30 hover:text-primary transition-colors cursor-pointer" style={{ borderRadius: '8px' }}>
-            Manage Exceptions
-            <ExternalLink size={13} />
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
 
       {/* Expandable details */}
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {expanded && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
             <div className="px-6 pb-6 border-t border-border-light pt-5">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <h4 className="text-[12px] font-bold text-text-secondary uppercase tracking-wider mb-3">Findings</h4>
-                  <ul className="space-y-2.5">
-                    {query.findings.map((f, i) => (
-                      <li key={i} className="flex gap-2.5 text-[13px] text-text leading-relaxed">
-                        <span className="text-text-muted shrink-0 font-mono text-[11px] mt-0.5">{String(i + 1).padStart(2, '0')}</span>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="text-[12px] font-bold text-text-secondary uppercase tracking-wider mb-3">Observations</h4>
-                  <ul className="space-y-2.5">
-                    {query.observations.map((o, i) => (
-                      <li key={i} className="flex gap-2.5 text-[13px] text-text leading-relaxed">
-                        <div className="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-primary/40" />
-                        {o}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              <div className="grid grid-cols-2 gap-8">
+                {[
+                  { title: 'Findings', items: query.findings },
+                  { title: 'Observations', items: query.observations },
+                ].map(section => (
+                  <div key={section.title}>
+                    <h4 className="text-[11px] font-bold text-text-secondary uppercase tracking-wider mb-3">{section.title}</h4>
+                    <ul className="space-y-2.5">
+                      {section.items.map((item, i) => (
+                        <motion.li
+                          key={i}
+                          initial={{ opacity: 0, x: -4 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.08 + i * 0.05, duration: 0.3 }}
+                          className="flex gap-2.5 text-[13px] text-text leading-relaxed"
+                        >
+                          <div className="w-1 h-1 rounded-full mt-2 shrink-0 bg-primary/60" />
+                          {item}
+                        </motion.li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </div>
             </div>
           </motion.div>
@@ -990,15 +1446,74 @@ function QueryCard({ query, index }: { query: { id: string; status: string; risk
   );
 }
 
+// ─── TOC row (per-item useDragControls so only the grip handle triggers drag) ───
+type TocSection = { id: string; kind: 'cover' | 'summary' | 'stats' | 'query' | 'note'; title: string; [k: string]: unknown };
+
+function SectionTocRow({
+  section, index, isActive, canRemove, onScroll, onRemove,
+}: {
+  section: TocSection;
+  index: number;
+  isActive: boolean;
+  canRemove: boolean;
+  onScroll: () => void;
+  onRemove: () => void;
+}) {
+  const controls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={section}
+      dragListener={false}
+      dragControls={controls}
+      whileDrag={{ scale: 1.02, boxShadow: '0 6px 16px rgba(15, 23, 42, 0.08)', zIndex: 5 }}
+      className={`list-none rounded-md transition-colors ${isActive ? 'bg-primary/[0.07]' : 'hover:bg-primary/[0.04]'}`}
+    >
+      <div className="group flex items-center gap-1.5 pr-1.5 py-1">
+        <button
+          type="button"
+          onPointerDown={(e) => controls.start(e)}
+          className="cursor-grab active:cursor-grabbing text-text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0 p-1 rounded hover:text-primary"
+          title="Drag to reorder"
+        >
+          <GripVertical size={14} />
+        </button>
+        <span className="text-[12px] leading-[16px] font-bold text-text-muted shrink-0 tabular-nums w-5 text-right">
+          {String(index + 1).padStart(2, '0')}
+        </span>
+        <button
+          type="button"
+          onClick={onScroll}
+          className={`flex-1 text-left text-[12px] leading-[16px] truncate transition-colors ${isActive ? 'text-primary font-semibold' : 'text-text hover:text-primary'}`}
+        >
+          {section.title}
+        </button>
+        {canRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-risk-50 hover:text-risk-700 text-text-muted transition-all shrink-0"
+            title="Remove section"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+    </Reorder.Item>
+  );
+}
+
 // ─── Report View (with multiple queries) ───
-function ReportView({ report, onBack, onShare }: {
+function ReportView({ report, onBack, onShare, onManageExceptions, initialTemplate }: {
   report: typeof GENERATED_REPORTS[0];
   onBack: () => void;
   onShare?: () => void;
+  onManageExceptions?: () => void;
+  initialTemplate?: typeof REPORT_TEMPLATES[0] | null;
 }) {
   const { addToast } = useToast();
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
-  const [appliedTemplate, setAppliedTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
+  const [appliedTemplate, setAppliedTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(initialTemplate ?? null);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
 
@@ -1251,13 +1766,73 @@ function ReportView({ report, onBack, onShare }: {
     : [
         { label: 'Total Exceptions', value: '187', icon: AlertTriangle, color: 'text-high-700 bg-high-50' },
         { label: 'Resolved', value: '38', icon: CheckCircle2, color: 'text-compliant-700 bg-compliant-50' },
-        { label: 'Critical Items', value: '12', icon: Shield, color: 'text-risk-700 bg-risk-50' },
-        { label: 'Compliance Score', value: '78%', icon: TrendingUp, color: 'text-evidence-700 bg-evidence-50' },
+        { label: 'High Risk', value: '12', icon: Shield, color: 'text-risk-700 bg-risk-50' },
+        { label: 'Report Health', value: '78%', icon: TrendingUp, color: 'text-evidence-700 bg-evidence-50' },
       ];
+
+  // Sections — reorderable / add / remove
+  type SectionItem =
+    | { id: string; kind: 'cover'; title: string }
+    | { id: string; kind: 'summary'; title: string; content: string }
+    | { id: string; kind: 'stats'; title: string }
+    | { id: string; kind: 'query'; title: string; query: typeof DEFAULT_QUERIES[0] }
+    | { id: string; kind: 'note'; title: string; content: string };
+
+  const buildInitialSections = (queries: typeof DEFAULT_QUERIES): SectionItem[] => [
+    { id: 'sec-cover', kind: 'cover', title: 'Cover' },
+    {
+      id: 'sec-summary',
+      kind: 'summary',
+      title: 'Executive Summary',
+      content: 'FY26 Q1 SOX compliance audit covered 87 controls across 4 business processes (P2P, O2C, R2R, S2C). 54 controls tested to date with 89% effectiveness rate. 2 material weaknesses identified requiring remediation before March 31 deadline. Overall compliance score: 94.2% — improved from 91.8% prior quarter.',
+    },
+    ...queries.map(q => ({
+      id: `sec-query-${q.id}`,
+      kind: 'query' as const,
+      title: `Query · ${q.id}`,
+      query: q,
+    })),
+  ];
+
+  const [sections, setSections] = useState<SectionItem[]>(() => buildInitialSections(DEFAULT_QUERIES));
+  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+  const [indexCollapsed, setIndexCollapsed] = useState(false);
+  const appliedTemplateId = appliedTemplate?.id ?? null;
+
+  useEffect(() => {
+    const queries = appliedTemplateId && TEMPLATE_QUERIES[appliedTemplateId]
+      ? TEMPLATE_QUERIES[appliedTemplateId]
+      : DEFAULT_QUERIES;
+    setSections(buildInitialSections(queries));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appliedTemplateId]);
+
+  const scrollToSection = (id: string) => {
+    document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveSectionId(id);
+  };
+
+  const removeSection = (id: string) => {
+    setSections(prev => prev.filter(s => s.id !== id));
+  };
+
+  const addSection = (kind: 'note') => {
+    const newId = `sec-${kind}-${Date.now()}`;
+    const newSection: SectionItem = {
+      id: newId,
+      kind: 'note',
+      title: 'New note',
+      content: 'Click to edit — add commentary, methodology notes, or context here.',
+    };
+    setSections(prev => [...prev, newSection]);
+    setShowAddMenu(false);
+    setTimeout(() => scrollToSection(newId), 50);
+  };
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="h-full overflow-y-auto bg-surface-2">
-      <div className="max-w-4xl mx-auto px-8 py-6">
+      <div className={`mx-auto px-8 py-6 ${appliedTemplate ? 'max-w-4xl' : 'max-w-6xl'}`}>
         {/* Top bar */}
         <div className="flex items-center justify-between mb-6">
           <button onClick={onBack} className="flex items-center gap-1.5 text-[13px] text-text-secondary hover:text-primary transition-colors cursor-pointer">
@@ -1267,7 +1842,7 @@ function ReportView({ report, onBack, onShare }: {
             <div className="relative">
               <button
                 onClick={() => setShowApplyTemplate(p => !p)}
-                className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-white hover:border-primary/30 transition-colors cursor-pointer bg-white"
+                className="flex items-center gap-1.5 px-3 py-2 border border-border text-[12px] font-medium text-text-secondary hover:bg-white hover:border-primary/30 transition-colors cursor-pointer bg-white" style={{ borderRadius: '8px' }}
               >
                 <Layout size={13} /> Apply Template
               </button>
@@ -1284,14 +1859,14 @@ function ReportView({ report, onBack, onShare }: {
               </AnimatePresence>
             </div>
             {onShare && (
-              <button onClick={onShare} className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-white hover:border-primary/30 transition-colors cursor-pointer bg-white">
+              <button onClick={onShare} className="flex items-center gap-1.5 px-3 py-2 border border-border text-[12px] font-medium text-text-secondary hover:bg-white hover:border-primary/30 transition-colors cursor-pointer bg-white" style={{ borderRadius: '8px' }}>
                 <Share2 size={13} /> Share
               </button>
             )}
             <div className="relative">
               <button
                 onClick={() => setShowDownloadDropdown(p => !p)}
-                className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-white hover:border-primary/30 transition-colors cursor-pointer bg-white"
+                className="flex items-center gap-1.5 px-3 py-2 border border-border text-[12px] font-medium text-text-secondary hover:bg-white hover:border-primary/30 transition-colors cursor-pointer bg-white" style={{ borderRadius: '8px' }}
               >
                 <Download size={13} /> Download <ChevronDown size={11} className={`transition-transform ${showDownloadDropdown ? 'rotate-180' : ''}`} />
               </button>
@@ -1338,71 +1913,276 @@ function ReportView({ report, onBack, onShare }: {
           )}
         </AnimatePresence>
 
-        {/* Report Cover */}
-        <div className="relative rounded-2xl overflow-hidden mb-5 bg-gradient-to-br from-[#3b0b72] to-[#6a12cd]" style={{ boxShadow: '0 4px 24px rgba(106,18,205,0.35)' }}>
-          <div className="absolute inset-0 z-0" style={{ maskImage: 'linear-gradient(to right, transparent 35%, white 70%)', WebkitMaskImage: 'linear-gradient(to right, transparent 35%, white 70%)' }}>
-            <FloatingLines
-              enabledWaves={['top', 'middle']}
-              lineCount={6}
-              lineDistance={6}
-              bendRadius={4}
-              bendStrength={-0.3}
-              interactive={true}
-              parallax={false}
-              color="#e879f9"
-              opacity={0.3}
-            />
-          </div>
-          <div className="relative z-10 px-8 py-7">
-            <h1 className="text-2xl font-bold text-white tracking-tight mb-1">{report.name}</h1>
-            {reportTemplate && (
-              <p className="text-white/60 text-[13px] mb-3">{reportTemplate.desc}</p>
-            )}
-            <div className="flex items-center gap-2 text-[13px]">
-              <span className="font-semibold text-white">{report.generatedBy}</span>
-              <span className="text-white/30 mx-0.5">|</span>
-              <span className="text-white/70">{report.generatedAt}</span>
-              <span className="text-white/30 mx-0.5">|</span>
-              <span className="text-white/70">{activeQueries.length} {activeQueries.length === 1 ? 'query' : 'queries'}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Summary Stats Bar */}
-        <div className="grid grid-cols-4 gap-3 mb-5">
-          {activeStats.map(stat => (
-            <div key={stat.label} className="glass-card rounded-xl p-4 flex items-center gap-3 hover:shadow-primary/5 transition-all">
-              <div className={`p-2 rounded-lg ${stat.color}`}><stat.icon size={16} /></div>
-              <div>
-                <div className="text-xl font-bold text-text">{stat.value}</div>
-                <div className="text-[10px] text-text-muted tracking-wide">{stat.label}</div>
+        {appliedTemplate ? (
+          <>
+            {/* Report Cover */}
+            <div className="relative rounded-2xl overflow-hidden mb-5 bg-gradient-to-br from-[#3b0b72] to-[#6a12cd]" style={{ boxShadow: '0 4px 24px rgba(106,18,205,0.35)' }}>
+              <div className="absolute inset-0 z-0" style={{ maskImage: 'linear-gradient(to right, transparent 35%, white 70%)', WebkitMaskImage: 'linear-gradient(to right, transparent 35%, white 70%)' }}>
+                <FloatingLines
+                  enabledWaves={['top', 'middle']}
+                  lineCount={6}
+                  lineDistance={6}
+                  bendRadius={4}
+                  bendStrength={-0.3}
+                  interactive={true}
+                  parallax={false}
+                  color="#e879f9"
+                  opacity={0.3}
+                />
+              </div>
+              <div className="relative z-10 px-8 py-7">
+                <h1 className="text-2xl font-bold text-white tracking-tight mb-1">{report.name}</h1>
+                {reportTemplate && (
+                  <p className="text-white/60 text-[13px] mb-3">{reportTemplate.desc}</p>
+                )}
+                <div className="flex items-center gap-2 text-[13px]">
+                  <span className="font-semibold text-white">{report.generatedBy}</span>
+                  <span className="text-white/30 mx-0.5">|</span>
+                  <span className="text-white/70">{report.generatedAt}</span>
+                  <span className="text-white/30 mx-0.5">|</span>
+                  <span className="text-white/70">{activeQueries.length} {activeQueries.length === 1 ? 'query' : 'queries'}</span>
+                </div>
               </div>
             </div>
-          ))}
-        </div>
 
-        {/* Template-specific layout OR default query cards */}
-        <AnimatePresence mode="wait">
-          <motion.div key={appliedTemplate?.id || 'default'} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            {appliedTemplate ? (
-              <TemplateLayout templateId={appliedTemplate.id} template={appliedTemplate} report={report} />
-            ) : (
-              <>
-                {activeQueries.map((query, qi) => (
-                  <QueryCard key={query.id} query={query} index={qi} />
-                ))}
-              </>
-            )}
-          </motion.div>
-        </AnimatePresence>
+            {/* Summary Stats Bar */}
+            <div className="grid grid-cols-4 gap-3 mb-5">
+              {activeStats.map(stat => (
+                <div key={stat.label} className="glass-card rounded-xl p-4 flex items-center gap-3 hover:shadow-md hover:shadow-primary/5 transition-all">
+                  <div className={`p-2 rounded-lg ${stat.color}`}><stat.icon size={16} /></div>
+                  <div>
+                    <div className="text-xl font-bold text-text">{stat.value}</div>
+                    <div className="text-[10px] text-text-muted tracking-wide">{stat.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <AnimatePresence mode="wait">
+              <motion.div key={appliedTemplate.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                <TemplateLayout templateId={appliedTemplate.id} template={appliedTemplate} report={report} />
+              </motion.div>
+            </AnimatePresence>
+          </>
+        ) : (
+          <div
+            className="grid gap-6 items-start transition-[grid-template-columns] duration-300 ease-out"
+            style={{ gridTemplateColumns: indexCollapsed ? '44px 1fr' : '240px 1fr' }}
+          >
+            {/* Left: Report Index (TOC) */}
+            <aside className="sticky top-4 self-start">
+              {indexCollapsed ? (
+                <motion.button
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  onClick={() => setIndexCollapsed(false)}
+                  className="w-11 h-11 rounded-xl border border-border-light bg-white flex items-center justify-center text-text-muted hover:text-primary hover:border-primary/30 transition-colors cursor-pointer"
+                  title="Expand Report Index"
+                >
+                  <PanelLeftOpen size={16} />
+                </motion.button>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="bg-white rounded-xl border border-border-light p-3"
+                >
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[12px] leading-[16px] font-bold text-text-muted tracking-tight">Report Index</span>
+                      <span className="text-[12px] leading-[16px] text-text-muted tabular-nums">{sections.length}</span>
+                    </div>
+                    <button
+                      onClick={() => setIndexCollapsed(true)}
+                      className="p-0.5 rounded hover:bg-primary/5 text-text-muted hover:text-primary transition-colors cursor-pointer"
+                      title="Collapse Report Index"
+                    >
+                      <PanelLeftClose size={16} />
+                    </button>
+                  </div>
+                  <Reorder.Group
+                    axis="y"
+                    values={sections}
+                    onReorder={setSections}
+                    className="space-y-0.5 list-none m-0 p-0"
+                  >
+                    {sections.map((section, i) => (
+                      <SectionTocRow
+                        key={section.id}
+                        section={section as unknown as TocSection}
+                        index={i}
+                        isActive={activeSectionId === section.id}
+                        canRemove={section.kind !== 'cover'}
+                        onScroll={() => scrollToSection(section.id)}
+                        onRemove={() => removeSection(section.id)}
+                      />
+                    ))}
+                  </Reorder.Group>
+
+                  {/* Add section */}
+                  <div className="mt-2 border-t border-border-light pt-2 relative">
+                    <button
+                      onClick={() => setShowAddMenu(p => !p)}
+                      className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md border border-dashed border-border hover:border-primary hover:bg-primary/5 hover:text-primary text-[12px] leading-[16px] font-medium text-text-secondary transition-colors cursor-pointer"
+                    >
+                      <Plus size={12} /> Add section
+                    </button>
+                    <AnimatePresence>
+                      {showAddMenu && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowAddMenu(false)} />
+                          <motion.div
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute left-0 right-0 top-full mt-1 bg-white border border-border-light rounded-lg shadow-lg py-1 z-50"
+                          >
+                            <button onClick={() => addSection('note')} className="w-full text-left px-3 py-1.5 text-[12px] leading-[16px] text-text-secondary hover:bg-primary/5 hover:text-primary flex items-center gap-2 cursor-pointer">
+                              <StickyNote size={12} className="text-primary" /> Note / text block
+                            </button>
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              )}
+            </aside>
+
+            {/* Right: Sections rendered in current order */}
+            <main className="min-w-0">
+              <AnimatePresence initial={false}>
+                {sections.map((section, i) => {
+                  const sectionProps = {
+                    key: section.id,
+                    id: `section-${section.id}`,
+                    layout: true as const,
+                    initial: { opacity: 0, y: 8 },
+                    animate: { opacity: 1, y: 0 },
+                    exit: { opacity: 0, y: -4, scale: 0.98 },
+                    transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+                    className: 'scroll-mt-4',
+                  };
+
+                  if (section.kind === 'cover') {
+                    return (
+                      <motion.div {...sectionProps}>
+                        <div className="relative rounded-2xl overflow-hidden mb-5 bg-gradient-to-br from-[#3b0b72] to-[#6a12cd]" style={{ boxShadow: '0 4px 24px rgba(106,18,205,0.35)' }}>
+                          <div className="absolute inset-0 z-0" style={{ maskImage: 'linear-gradient(to right, transparent 35%, white 70%)', WebkitMaskImage: 'linear-gradient(to right, transparent 35%, white 70%)' }}>
+                            <FloatingLines
+                              enabledWaves={['top', 'middle']}
+                              lineCount={6}
+                              lineDistance={6}
+                              bendRadius={4}
+                              bendStrength={-0.3}
+                              interactive={true}
+                              parallax={false}
+                              color="#e879f9"
+                              opacity={0.3}
+                            />
+                          </div>
+                          <div className="relative z-10 px-8 py-7">
+                            <h1 className="text-2xl font-bold text-white tracking-tight mb-1">{report.name}</h1>
+                            {reportTemplate && (
+                              <p className="text-white/60 text-[13px] mb-3">{reportTemplate.desc}</p>
+                            )}
+                            <div className="flex items-center gap-2 text-[13px]">
+                              <span className="font-semibold text-white">{report.generatedBy}</span>
+                              <span className="text-white/30 mx-0.5">|</span>
+                              <span className="text-white/70">{report.generatedAt}</span>
+                              <span className="text-white/30 mx-0.5">|</span>
+                              <span className="text-white/70">{sections.filter(s => s.kind === 'query').length} {sections.filter(s => s.kind === 'query').length === 1 ? 'query' : 'queries'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  }
+
+                  if (section.kind === 'summary') {
+                    return (
+                      <motion.div {...sectionProps}>
+                        <div className="rounded-2xl border border-border-light bg-white p-6 mb-5">
+                          <div className="flex items-center gap-2 mb-8">
+                            <FileText size={16} className="text-primary" />
+                            <h3 className="text-[15px] leading-[20px] font-bold text-text">{section.title}</h3>
+                          </div>
+                          <div className="grid grid-cols-4 gap-3 pb-5 border-b border-border-light mb-5">
+                            {activeStats.map(stat => (
+                              <div key={stat.label} className="flex items-center gap-3">
+                                <div className={`p-2 rounded-lg ${stat.color}`}><stat.icon size={16} /></div>
+                                <div>
+                                  <div className="text-xl font-bold text-text leading-none mb-1">{stat.value}</div>
+                                  <div className="text-[11px] text-text-muted tracking-wide">{stat.label}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-[13px] text-text-secondary leading-relaxed">{section.content}</p>
+                        </div>
+                      </motion.div>
+                    );
+                  }
+
+                  if (section.kind === 'stats') {
+                    return (
+                      <motion.div {...sectionProps}>
+                        <div className="grid grid-cols-4 gap-3 mb-5">
+                          {activeStats.map(stat => (
+                            <div key={stat.label} className="glass-card rounded-xl p-4 flex items-center gap-3 hover:shadow-md hover:shadow-primary/5 transition-all">
+                              <div className={`p-2 rounded-lg ${stat.color}`}><stat.icon size={16} /></div>
+                              <div>
+                                <div className="text-xl font-bold text-text">{stat.value}</div>
+                                <div className="text-[10px] text-text-muted tracking-wide">{stat.label}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    );
+                  }
+
+                  if (section.kind === 'query') {
+                    return (
+                      <motion.div {...sectionProps}>
+                        <QueryCard query={section.query} index={i} onManageExceptions={onManageExceptions} />
+                      </motion.div>
+                    );
+                  }
+
+                  if (section.kind === 'note') {
+                    return (
+                      <motion.div {...sectionProps}>
+                        <div className="rounded-2xl border border-border-light bg-white p-5 mb-4">
+                          <div className="flex items-center gap-2 mb-2.5 text-[11px] text-text-muted font-semibold uppercase tracking-wider">
+                            <StickyNote size={12} className="text-primary" /> {section.title}
+                          </div>
+                          <p className="text-[13px] text-text leading-relaxed">{section.content}</p>
+                        </div>
+                      </motion.div>
+                    );
+                  }
+
+                  return null;
+                })}
+              </AnimatePresence>
+            </main>
+          </div>
+        )}
       </div>
     </motion.div>
   );
 }
 
 // ─── Main Reports View ───
-export default function ReportsView({ onShare }: ReportsViewProps = {}) {
-  const [activeTab, setActiveTab] = useState<'templates' | 'my-reports' | 'shared-reports' | 'manage-exceptions'>('my-reports');
+export default function ReportsView({ onShare, onManageExceptions }: ReportsViewProps = {}) {
+  const [activeTab, setActiveTab] = useState<'templates' | 'my-reports' | 'shared-reports'>(() => {
+    if (typeof window === 'undefined') return 'my-reports';
+    const t = new URLSearchParams(window.location.search).get('tab');
+    if (t === 'shared-reports' || t === 'templates' || t === 'my-reports') return t;
+    return 'my-reports';
+  });
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [tagFilter, setTagFilter] = useState<string>('All');
   const [showTagDropdown, setShowTagDropdown] = useState(false);
@@ -1410,18 +2190,21 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
   const [editingTemplate, setEditingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [previewingTemplate, setPreviewingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [reportAppliedTemplates] = useState<Record<string, typeof REPORT_TEMPLATES[0]>>({});
+  const [reportAppliedTemplates, setReportAppliedTemplates] = useState<Record<string, typeof REPORT_TEMPLATES[0]>>({});
+  const [chooseReportFor, setChooseReportFor] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [showNewReportTemplateSelector, setShowNewReportTemplateSelector] = useState(false);
   const [showBuilderModal, setShowBuilderModal] = useState(false);
   const [newReportName, setNewReportName] = useState('');
   const [newReportDesc, setNewReportDesc] = useState('');
   const [newReportTemplate, setNewReportTemplate] = useState('');
+  const [newReportTemplatePrefilled, setNewReportTemplatePrefilled] = useState(false);
   const { addToast } = useToast();
 
   const openNewReportModal = () => {
     setNewReportName('');
     setNewReportDesc('');
     setNewReportTemplate('');
+    setNewReportTemplatePrefilled(false);
     setShowNewReportTemplateSelector(true);
   };
   const closeNewReportModal = () => {
@@ -1469,6 +2252,8 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
         report={viewingReport}
         onBack={() => setViewingReport(null)}
         onShare={onShare ? () => onShare(viewingReport.id) : undefined}
+        onManageExceptions={onManageExceptions}
+        initialTemplate={reportAppliedTemplates[viewingReport.id] ?? null}
       />
     );
   }
@@ -1477,12 +2262,14 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <div className="max-w-5xl mx-auto px-8 py-8 relative">
         {/* Header */}
-        <div className="flex items-end justify-between mb-6">
+        <div className="flex items-start justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text tracking-tight">Reports</h1>
-            <p className="text-sm text-text-secondary mt-1">Generate, manage, and export compliance reports</p>
+            <div className="font-mono text-[11px] text-ink-500 mb-2 tracking-tight">
+              Reports · {activeTab === 'my-reports' ? 'My Reports' : activeTab === 'shared-reports' ? 'Shared Reports' : 'Templates'}
+            </div>
+            <h1 className="font-display text-[34px] font-[420] tracking-tight text-ink-900 leading-[1.15]">Reports</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pt-2">
             <button
               onClick={() => setShowUploadModal(true)}
               className="flex items-center gap-2 px-4 py-2 border border-border-light hover:border-primary/30 text-text-secondary hover:text-primary bg-white text-[13px] font-medium transition-colors cursor-pointer" style={{ borderRadius: '8px' }}
@@ -1515,16 +2302,6 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
               <Share2 size={14} />
               Shared Reports
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'shared-reports' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{SHARED_REPORTS.length}</span>
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('manage-exceptions')}
-            className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors cursor-pointer ${activeTab === 'manage-exceptions' ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
-          >
-            <span className="flex items-center gap-2">
-              <AlertTriangle size={14} />
-              Manage Exceptions
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === 'manage-exceptions' ? 'bg-primary/10 text-primary' : 'bg-paper-50 text-ink-500'}`}>{EXCEPTION_DATA.length}</span>
             </span>
           </button>
           <button
@@ -1722,82 +2499,71 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
           </div>
         )}
 
-        {/* Templates Grid */}
-        {/* Manage Exceptions */}
-        {activeTab === 'manage-exceptions' && (
-          <SmartTable
-            data={EXCEPTION_DATA as unknown as Record<string, unknown>[]}
-            keyField="id"
-            searchPlaceholder="Search exceptions..."
-            searchKeys={['id', 'vendor', 'invoiceNo', 'status', 'assignee']}
-            paginated={false}
-            columns={[
-              { key: 'id', label: 'Exception ID', width: '110px' },
-              { key: 'invoiceNo', label: 'Invoice No', width: '140px' },
-              { key: 'vendor', label: 'Vendor' },
-              { key: 'amount', label: 'Amount', align: 'right', width: '110px', render: (item) => `$${Number(item.amount).toLocaleString()}` },
-              { key: 'matchScore', label: 'Match %', align: 'center', width: '90px', render: (item) => (
-                <span className={`font-semibold ${Number(item.matchScore) >= 90 ? 'text-risk-700' : 'text-mitigated-700'}`}>{String(item.matchScore)}%</span>
-              )},
-              { key: 'status', label: 'Status', width: '120px', render: (item) => {
-                const map: Record<string, string> = {
-                  unassigned: 'bg-gray-100 text-gray-600',
-                  assigned: 'bg-evidence-50 text-evidence-700',
-                  'in-progress': 'bg-mitigated-50 text-mitigated-700',
-                  notified: 'bg-purple-50 text-purple-700',
-                  resolved: 'bg-compliant-50 text-compliant-700',
-                };
-                const label = String(item.status).replace('-', ' ');
-                return <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize ${map[String(item.status)] ?? 'bg-gray-100 text-gray-600'}`}>{label}</span>;
-              }},
-              { key: 'assignee', label: 'Assignee', render: (item) => item.assignee ? String(item.assignee) : <span className="text-text-muted">—</span> },
-            ]}
-          />
-        )}
+        {activeTab === 'templates' && (() => {
+          const renderCard = (rt: typeof REPORT_TEMPLATES[0], i: number, fixedWidth?: boolean) => {
+            const Icon = ICON_MAP[rt.icon] || FileText;
+            const color = CATEGORY_COLORS[rt.category] || 'text-ink-500 bg-paper-50';
+            return (
+              <motion.div
+                key={rt.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className={`glass-card rounded-2xl p-5 hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.98] transition-all duration-300 group cursor-pointer flex flex-col ${fixedWidth ? 'w-[200px] shrink-0' : ''}`}
+                onClick={() => setPreviewingTemplate(rt)}
+              >
+                <div className="mb-3 flex-1">
+                  <div className="flex items-start gap-2.5 mb-2">
+                    <div className={`p-2 shrink-0 ${color} transition-colors`} style={{ borderRadius: '8px' }}><Icon size={16} /></div>
+                    <h3 className="font-semibold text-text group-hover:text-primary transition-colors flex-1 min-w-0" style={{ fontSize: '13px', lineHeight: '18px' }}>{rt.name}</h3>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }}
+                      className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer shrink-0"
+                    >
+                      <Edit3 size={10} /> Edit
+                    </button>
+                  </div>
+                  <p className="text-[12px] text-text-secondary leading-relaxed">{rt.desc}</p>
+                </div>
+                <div className="flex items-center justify-start pt-3 border-t border-border-light">
+                  <div className="flex gap-1">
+                    <button onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }} className="text-text-muted hover:text-primary font-medium flex items-center gap-0.5 cursor-pointer" style={{ fontSize: '12px', lineHeight: '20px' }}>
+                      <Settings size={11} /> Customize
+                    </button>
+                    <span className="text-border-light mx-1">|</span>
+                    <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: 'Generating PDF download...' }); }} className="text-primary font-semibold flex items-center gap-0.5 cursor-pointer" style={{ fontSize: '12px', lineHeight: '20px' }}>
+                      Generate <ArrowRight size={11} />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          };
 
-        {activeTab === 'templates' && (
-          <div className="grid grid-cols-3 gap-4">
-            {REPORT_TEMPLATES.map((rt, i) => {
-              const Icon = ICON_MAP[rt.icon] || FileText;
-              const color = CATEGORY_COLORS[rt.category] || 'text-ink-500 bg-paper-50';
-              return (
-                <motion.div
-                  key={rt.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="glass-card rounded-2xl p-5 hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.98] transition-all duration-300 group cursor-pointer"
-                  onClick={() => setPreviewingTemplate(rt)}
-                >
-                  <div className="mb-3">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className={`p-2.5 shrink-0 ${color} transition-colors`} style={{ borderRadius: '8px' }}><Icon size={18} /></div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }}
-                        className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer shrink-0"
-                      >
-                        <Edit3 size={10} /> Edit
-                      </button>
-                    </div>
-                    <h3 className="font-semibold text-text mb-1 group-hover:text-primary transition-colors" style={{ fontSize: '14px', lineHeight: '20px' }}>{rt.name}</h3>
-                    <p className="text-[12px] text-text-secondary leading-relaxed">{rt.desc}</p>
+          return (
+            <div className="space-y-8">
+              <section>
+                <h2 className="font-display text-[20px] font-[420] tracking-tight text-ink-900 leading-[1.2] mb-3">Standard Templates</h2>
+                <TemplateCarousel>
+                  {REPORT_TEMPLATES.map((rt, i) => renderCard(rt, i, true))}
+                </TemplateCarousel>
+              </section>
+
+              <section>
+                <h2 className="font-display text-[20px] font-[420] tracking-tight text-ink-900 leading-[1.2] mb-3">Custom Templates</h2>
+                {CUSTOM_TEMPLATES.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border-light p-8 text-center text-[13px] text-text-muted">
+                    No custom templates yet. Create one from an existing report or upload a file.
                   </div>
-                  <div className="flex items-center justify-start pt-3 border-t border-border-light">
-                    <div className="flex gap-1">
-                      <button onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }} className="text-text-muted hover:text-primary font-medium flex items-center gap-0.5 cursor-pointer" style={{ fontSize: '12px', lineHeight: '20px' }}>
-                        <Settings size={11} /> Customize
-                      </button>
-                      <span className="text-border-light mx-1">|</span>
-                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: 'Generating PDF download...' }); }} className="text-primary font-semibold flex items-center gap-0.5 cursor-pointer" style={{ fontSize: '12px', lineHeight: '20px' }}>
-                        Generate <ArrowRight size={11} />
-                      </button>
-                    </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    {CUSTOM_TEMPLATES.map((rt, i) => renderCard(rt as any, i, false))}
                   </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
+                )}
+              </section>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Template Editor Modal */}
@@ -1814,6 +2580,33 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
             template={previewingTemplate}
             onClose={() => setPreviewingTemplate(null)}
             onEdit={() => { setEditingTemplate(previewingTemplate); setPreviewingTemplate(null); }}
+            onUse={() => { setChooseReportFor(previewingTemplate); setPreviewingTemplate(null); }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Choose Report Modal */}
+      <AnimatePresence>
+        {chooseReportFor && (
+          <ChooseReportModal
+            template={chooseReportFor}
+            reports={GENERATED_REPORTS}
+            onClose={() => setChooseReportFor(null)}
+            onCancel={() => { setPreviewingTemplate(chooseReportFor); setChooseReportFor(null); }}
+            onContinue={(report) => {
+              setReportAppliedTemplates(prev => ({ ...prev, [report.id]: chooseReportFor }));
+              addToast({ type: 'success', message: `"${chooseReportFor.name}" applied to "${report.name}"` });
+              setViewingReport(report);
+              setChooseReportFor(null);
+            }}
+            onAddNew={() => {
+              setNewReportName('');
+              setNewReportDesc('');
+              setNewReportTemplate(chooseReportFor.id);
+              setNewReportTemplatePrefilled(true);
+              setShowNewReportTemplateSelector(true);
+              setChooseReportFor(null);
+            }}
           />
         )}
       </AnimatePresence>
@@ -1872,11 +2665,20 @@ export default function ReportsView({ onShare }: ReportsViewProps = {}) {
                   />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-semibold text-text mb-1.5">Template</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[12px] font-semibold text-text">Template</label>
+                    {newReportTemplatePrefilled && newReportTemplate && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
+                        <Sparkles size={10} /> Pre-filled from selection
+                      </span>
+                    )}
+                  </div>
                   <select
                     value={newReportTemplate}
-                    onChange={e => setNewReportTemplate(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-border-light text-[13px] text-text appearance-none outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer bg-white"
+                    onChange={e => { setNewReportTemplate(e.target.value); setNewReportTemplatePrefilled(false); }}
+                    className={`w-full px-3 py-2.5 border text-[13px] text-text appearance-none outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer bg-white ${
+                      newReportTemplatePrefilled && newReportTemplate ? 'border-primary/50' : 'border-border-light'
+                    }`}
                     style={{ borderRadius: '8px', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236a12cd' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
                   >
                     <option value="">Select a template</option>
