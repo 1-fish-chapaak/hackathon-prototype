@@ -533,7 +533,7 @@ function ChooseReportModal({
             onClick={onCancel}
             className="flex-1 px-5 py-2.5 rounded-lg border border-border-light text-text-secondary text-[13px] font-semibold hover:bg-paper-50 hover:text-text transition-colors cursor-pointer"
           >
-            Cancel
+            Back
           </button>
           <button
             onClick={() => { if (selected) onContinue(selected); }}
@@ -2197,12 +2197,14 @@ export default function ReportsView({ onShare, onManageExceptions }: ReportsView
   const [newReportName, setNewReportName] = useState('');
   const [newReportDesc, setNewReportDesc] = useState('');
   const [newReportTemplate, setNewReportTemplate] = useState('');
+  const [newReportTemplatePrefilled, setNewReportTemplatePrefilled] = useState(false);
   const { addToast } = useToast();
 
   const openNewReportModal = () => {
     setNewReportName('');
     setNewReportDesc('');
     setNewReportTemplate('');
+    setNewReportTemplatePrefilled(false);
     setShowNewReportTemplateSelector(true);
   };
   const closeNewReportModal = () => {
@@ -2601,6 +2603,7 @@ export default function ReportsView({ onShare, onManageExceptions }: ReportsView
               setNewReportName('');
               setNewReportDesc('');
               setNewReportTemplate(chooseReportFor.id);
+              setNewReportTemplatePrefilled(true);
               setShowNewReportTemplateSelector(true);
               setChooseReportFor(null);
             }}
@@ -2662,11 +2665,20 @@ export default function ReportsView({ onShare, onManageExceptions }: ReportsView
                   />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-semibold text-text mb-1.5">Template</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[12px] font-semibold text-text">Template</label>
+                    {newReportTemplatePrefilled && newReportTemplate && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
+                        <Sparkles size={10} /> Pre-filled from selection
+                      </span>
+                    )}
+                  </div>
                   <select
                     value={newReportTemplate}
-                    onChange={e => setNewReportTemplate(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-border-light text-[13px] text-text appearance-none outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer bg-white"
+                    onChange={e => { setNewReportTemplate(e.target.value); setNewReportTemplatePrefilled(false); }}
+                    className={`w-full px-3 py-2.5 border text-[13px] text-text appearance-none outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer bg-white ${
+                      newReportTemplatePrefilled && newReportTemplate ? 'border-primary/50' : 'border-border-light'
+                    }`}
                     style={{ borderRadius: '8px', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236a12cd' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
                   >
                     <option value="">Select a template</option>
