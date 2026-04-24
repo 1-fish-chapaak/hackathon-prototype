@@ -184,7 +184,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
 
   // Column-mapping pause (runs right after clarification is resolved)
   const [columnMapPending, setColumnMapPending] = useState(false);
-  const [alignments, setAlignments] = useState<JourneyAlignments>(() => seedAlignments(workflow));
+  const [alignments] = useState<JourneyAlignments>(() => seedAlignments(workflow));
 
   const [files, setFiles] = useState<JourneyFiles>({});
   const [requiredOpen, setRequiredOpen] = useState(false);
@@ -1039,7 +1039,6 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
                     files={files}
                     setFiles={setFiles}
                     alignments={alignments}
-                    setAlignments={setAlignments}
                   />
 
                   <div className="flex items-center justify-between mt-5">
