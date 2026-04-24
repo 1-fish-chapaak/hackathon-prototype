@@ -86,6 +86,10 @@ export interface AppState {
   // Dashboard detail
   selectedDashboardId: string | null;
   dashboardCustomFields: string[] | null;
+  // Persisted widgets per custom dashboard
+  dashboardWidgets: Record<string, Array<{ chartType: string; title: string; xField: string; yField: string }>>;
+  // User-created dashboards (persisted across navigation)
+  createdDashboards: Array<{ id: string; name: string; description: string; timeAgo: string; creator: string; accent: string }>;
 }
 
 const INITIAL_STATE: AppState = {
@@ -115,6 +119,8 @@ const INITIAL_STATE: AppState = {
   queryAssumptions: [],
   selectedDashboardId: null,
   dashboardCustomFields: null,
+  dashboardWidgets: {},
+  createdDashboards: [],
 };
 
 export function useAppState() {
@@ -221,6 +227,18 @@ export function useAppState() {
     setState(prev => ({ ...prev, view: 'dashboard-detail' as View, selectedDashboardId: dashboardId, dashboardCustomFields: customFields || null }));
   }, []);
 
+  const saveDashboardWidgets = useCallback((dashboardId: string, widgets: Array<{ chartType: string; title: string; xField: string; yField: string }>) => {
+    setState(prev => ({ ...prev, dashboardWidgets: { ...prev.dashboardWidgets, [dashboardId]: widgets } }));
+  }, []);
+
+  const addCreatedDashboard = useCallback((dashboard: AppState['createdDashboards'][number]) => {
+    setState(prev => ({ ...prev, createdDashboards: [dashboard, ...prev.createdDashboards] }));
+  }, []);
+
+  const deleteCreatedDashboard = useCallback((id: string) => {
+    setState(prev => ({ ...prev, createdDashboards: prev.createdDashboards.filter(d => d.id !== id) }));
+  }, []);
+
   return {
     state,
     setView,
@@ -246,5 +264,8 @@ export function useAppState() {
     openChat,
     setSelectedChatId,
     openDashboard,
+    saveDashboardWidgets,
+    addCreatedDashboard,
+    deleteCreatedDashboard,
   };
 }

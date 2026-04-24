@@ -61,6 +61,9 @@ export default function App() {
     openChat,
     setSelectedChatId,
     openDashboard,
+    saveDashboardWidgets,
+    addCreatedDashboard,
+    deleteCreatedDashboard,
   } = useAppState();
 
   const mainScrollRef = useRef<HTMLDivElement>(null);
@@ -212,6 +215,9 @@ export default function App() {
           <DashboardListPage
             onDashboardClick={(id, customFields) => openDashboard(id, customFields)}
             onImportPowerBI={() => setShowPowerBIWizard(true)}
+            createdDashboards={state.createdDashboards}
+            onCreateDashboard={addCreatedDashboard}
+            onDeleteDashboard={deleteCreatedDashboard}
           />
         );
 
@@ -219,7 +225,10 @@ export default function App() {
         return (
           <DashboardView
             initialDashboardId={state.selectedDashboardId}
+            initialDashboardName={state.createdDashboards.find(d => d.id === state.selectedDashboardId)?.name}
             initialCustomFields={state.dashboardCustomFields}
+            savedWidgets={state.dashboardWidgets[state.selectedDashboardId || ''] || []}
+            onSaveWidgets={(widgets) => saveDashboardWidgets(state.selectedDashboardId || '', widgets)}
             onBack={() => setView('dashboards')}
             onImportPowerBI={() => setShowPowerBIWizard(true)}
             onShare={() => setShowShareModal(true, { type: 'dashboard', id: state.selectedDashboardId || 'dash-1' })}

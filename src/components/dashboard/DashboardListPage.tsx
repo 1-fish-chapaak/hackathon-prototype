@@ -23,6 +23,9 @@ type SortOption = 'recently' | 'oldest' | 'nameAZ' | 'nameZA';
 interface DashboardListPageProps {
   onDashboardClick: (dashboardId: string, customFields?: string[]) => void;
   onImportPowerBI?: () => void;
+  createdDashboards?: Dashboard[];
+  onCreateDashboard?: (dashboard: Dashboard) => void;
+  onDeleteDashboard?: (id: string) => void;
 }
 
 // ─── Data ───────────────────────────────────────────────────────────────────
@@ -618,7 +621,7 @@ function CreateDashboardModal({ open, onClose, onCreate }: {
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
-export default function DashboardListPage({ onDashboardClick, onImportPowerBI }: DashboardListPageProps) {
+export default function DashboardListPage({ onDashboardClick, onImportPowerBI, createdDashboards = [], onCreateDashboard, onDeleteDashboard }: DashboardListPageProps) {
   const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState<'my' | 'shared'>('my');
   const [searchQuery, setSearchQuery] = useState('');
@@ -626,7 +629,7 @@ export default function DashboardListPage({ onDashboardClick, onImportPowerBI }:
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [myDashboards, setMyDashboards] = useState(MY_DASHBOARDS);
+  const myDashboards = [...createdDashboards, ...MY_DASHBOARDS];
   const [sharedDashboards, setSharedDashboards] = useState(SHARED_DASHBOARDS);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
@@ -649,7 +652,7 @@ export default function DashboardListPage({ onDashboardClick, onImportPowerBI }:
 
   const handleDelete = (id: string) => {
     if (activeTab === 'my') {
-      setMyDashboards(prev => prev.filter(d => d.id !== id));
+      onDeleteDashboard?.(id);
     } else {
       setSharedDashboards(prev => prev.filter(d => d.id !== id));
     }
@@ -902,14 +905,15 @@ export default function DashboardListPage({ onDashboardClick, onImportPowerBI }:
         onClose={() => setCreateModalOpen(false)}
         onCreate={(name, desc, customFields) => {
           const newId = `custom-${Date.now()}`;
-          setMyDashboards(prev => [{
+          const newDashboard = {
             id: newId,
             name,
             description: desc || 'Custom dashboard',
             timeAgo: 'Just now',
             creator: 'You',
             accent: 'bg-brand-50 text-brand-700',
-          }, ...prev]);
+          };
+          onCreateDashboard?.(newDashboard);
           addToast({ message: `Dashboard "${name}" created`, type: 'success' });
           onDashboardClick(newId, customFields);
         }}

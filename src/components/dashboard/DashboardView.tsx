@@ -436,6 +436,41 @@ const AI_SUMMARIES: Record<DashboardId, string> = {
   grc: '2 critical risks in P2P have zero controls mapped. SOD violation detected in AP module — user JSmith has both invoice approval and payment release access. 3 audit findings from Q1 remain open past remediation deadline.',
 };
 
+function EmptyAlertsPanel() {
+  const [expanded, setExpanded] = useState(true);
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl mb-5 overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border-light/50">
+        <button onClick={() => setExpanded(p => !p)} className="flex items-center gap-2 cursor-pointer">
+          <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-primary-medium">
+            <Sparkles size={13} className="text-white" />
+          </div>
+          <span className="text-[13px] font-semibold text-text">Alerts & Daily Digest</span>
+          <span className="text-[12px] bg-canvas-elevated text-ink-400 px-2 py-0.5 rounded-full font-bold">0 alerts</span>
+          <span className="text-[12px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">AI Summary</span>
+          <ChevronDown size={14} className={`text-text-muted transition-transform ${expanded ? '' : '-rotate-90'}`} />
+        </button>
+        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-ink-400 bg-canvas-elevated cursor-default opacity-60">
+          <Send size={11} /> Share with Team
+        </button>
+      </div>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+            <div className="px-5 py-8 flex flex-col items-center text-center">
+              <div className="size-10 rounded-xl bg-canvas-elevated flex items-center justify-center mb-3">
+                <Sparkles size={18} className="text-ink-300" />
+              </div>
+              <p className="text-[13px] font-medium text-ink-500 mb-1">No alerts yet</p>
+              <p className="text-[12px] text-ink-400 max-w-xs">Alerts and AI-generated summaries will appear here once your dashboard has data.</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 function AlertsPanel({ dashboardId }: { dashboardId: DashboardId }) {
   const { addToast } = useToast();
   const [expanded, setExpanded] = useState(true);
@@ -3101,17 +3136,21 @@ function Sidebar({ dashboards, activeId, onSelect }: {
 
 interface DashboardProps {
   initialDashboardId?: string | null;
+  initialDashboardName?: string | null;
   initialCustomFields?: string[] | null;
+  savedWidgets?: Array<{ chartType: string; title: string; xField: string; yField: string }>;
+  onSaveWidgets?: (widgets: Array<{ chartType: string; title: string; xField: string; yField: string }>) => void;
   onBack?: () => void;
   onImportPowerBI?: () => void;
   onShare?: () => void;
 }
 
-export default function DashboardView({ initialDashboardId, initialCustomFields, onBack, onImportPowerBI, onShare }: DashboardProps = {}) {
+export default function DashboardView({ initialDashboardId, initialDashboardName, initialCustomFields, savedWidgets = [], onSaveWidgets, onBack, onImportPowerBI, onShare }: DashboardProps = {}) {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
+  const isCustomInitial = !!initialDashboardId && !DASHBOARDS.some(d => d.id === initialDashboardId);
   const [activeId, setActiveId] = useState<DashboardId>(
-    (initialDashboardId as DashboardId) && DASHBOARDS.some(d => d.id === initialDashboardId)
+    !isCustomInitial && (initialDashboardId as DashboardId) && DASHBOARDS.some(d => d.id === initialDashboardId)
       ? (initialDashboardId as DashboardId)
       : 'p2p'
   );
@@ -3132,8 +3171,8 @@ export default function DashboardView({ initialDashboardId, initialCustomFields,
   const [filterDepartment, setFilterDepartment] = useState<string[]>([]);
   const [addWidgetOpen, setAddWidgetOpen] = useState(!!initialCustomFields?.length);
   const [customFields] = useState<string[] | null>(initialCustomFields || null);
-  const [userWidgets, setUserWidgets] = useState<Array<{ chartType: string; title: string; xField: string; yField: string }>>([]);
-  const isCustomDashboard = !DASHBOARDS.some(d => d.id === activeId);
+  const [userWidgets, setUserWidgets] = useState<Array<{ chartType: string; title: string; xField: string; yField: string }>>(savedWidgets);
+  const isCustomDashboard = isCustomInitial;
   const [activeFiltersCount, setActiveFiltersCount] = useState(0);
 
   // Recalculate active filter count
@@ -3177,6 +3216,8 @@ export default function DashboardView({ initialDashboardId, initialCustomFields,
   if (loading) return <DashboardSkeleton />;
 
   const dashboard = DASHBOARDS.find(d => d.id === activeId) || DASHBOARDS[0];
+  const displayName = isCustomDashboard ? (initialDashboardName || 'Custom Dashboard') : dashboard.name;
+  const displaySubtitle = isCustomDashboard ? 'Custom dashboard' : dashboard.subtitle;
 
   return (
     <div className="h-full flex bg-canvas relative overflow-hidden">
@@ -3206,12 +3247,12 @@ export default function DashboardView({ initialDashboardId, initialCustomFields,
                 )}
                 {onBack && <span>·</span>}
                 {!onBack && <span>Dashboards · </span>}
-                {dashboard.name}
+                {displayName}
               </div>
               <div className="flex items-end justify-between">
                 <div>
-                  <h1 className="font-display text-[34px] font-[420] text-ink-900 leading-[1.15]">{dashboard.name}</h1>
-                  <p className="text-[13px] text-ink-500 mt-1">{dashboard.subtitle}</p>
+                  <h1 className="font-display text-[34px] font-[420] text-ink-900 leading-[1.15]">{displayName}</h1>
+                  <p className="text-[13px] text-ink-500 mt-1">{displaySubtitle}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {/* Refreshed indicator */}
@@ -3331,6 +3372,29 @@ export default function DashboardView({ initialDashboardId, initialCustomFields,
             {/* AI Summary — Generate / View / Edit */}
             {/* Alerts & Daily Digest */}
             {!isCustomDashboard && <AlertsPanel dashboardId={activeId} />}
+            {isCustomDashboard && <EmptyAlertsPanel />}
+
+            {/* Empty state for custom dashboards with no widgets */}
+            {isCustomDashboard && userWidgets.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center py-20 text-center"
+              >
+                <div className="size-14 rounded-2xl bg-brand-50 flex items-center justify-center mb-4">
+                  <BarChart3 size={24} className="text-brand-400" />
+                </div>
+                <h3 className="text-[15px] font-semibold text-ink-700 mb-1">No widgets yet</h3>
+                <p className="text-[13px] text-ink-400 mb-5 max-w-xs">Add your first widget to start building this dashboard.</p>
+                <button
+                  onClick={() => setAddWidgetOpen(true)}
+                  className="flex items-center gap-1.5 px-5 h-10 bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer"
+                >
+                  <Plus size={15} />
+                  Add Widget
+                </button>
+              </motion.div>
+            )}
 
             {/* User-created widgets (from Create Dashboard flow) */}
             {isCustomDashboard && userWidgets.length > 0 && (
@@ -3349,7 +3413,7 @@ export default function DashboardView({ initialDashboardId, initialCustomFields,
                     addToast={addToast}
                     onExpand={() => setExpandedWidget({ title: w.title, subtitle: w.yField ? `${w.yField} by ${w.xField}` : '' })}
                     onEdit={() => setAddWidgetOpen(true)}
-                    onDelete={() => { setUserWidgets(prev => prev.filter((_, j) => j !== i)); addToast({ message: 'Widget removed', type: 'info' }); }}
+                    onDelete={() => { const next = userWidgets.filter((_, j) => j !== i); setUserWidgets(next); onSaveWidgets?.(next); addToast({ message: 'Widget removed', type: 'info' }); }}
                     onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
                   >
                     {/* Render chart based on type */}
@@ -3423,7 +3487,7 @@ export default function DashboardView({ initialDashboardId, initialCustomFields,
             )}
 
             {/* Default charts — only for predefined dashboards */}
-            {(!isCustomDashboard || userWidgets.length === 0) && (
+            {!isCustomDashboard && (
             <>
             {/* Charts — 2×2 grid of big widget cards */}
             <motion.div
@@ -3841,7 +3905,11 @@ export default function DashboardView({ initialDashboardId, initialCustomFields,
         }}
         addToast={addToast}
         customFields={customFields}
-        onAddWidget={(widget) => setUserWidgets(prev => [...prev, widget])}
+        onAddWidget={(widget) => {
+          const next = [...userWidgets, widget];
+          setUserWidgets(next);
+          onSaveWidgets?.(next);
+        }}
       />
     </div>
   );
