@@ -664,6 +664,144 @@ function DashboardSkeleton() {
   );
 }
 
+// ─── Drop Zone Component ─────────────────────────────────────────────────────
+
+function DropZone({ label, placeholder, active, onDragOver, onDragLeave, onDrop, fields, getLabel, onRemove, showAgg, yAggs, aggDropdownOpen, setAggDropdownOpen, setYAggs, className }: {
+  label: string;
+  placeholder: string;
+  active: boolean;
+  onDragOver: () => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent) => void;
+  fields: string[];
+  getLabel: (id: string) => string;
+  onRemove: (id: string) => void;
+  showAgg?: boolean;
+  yAggs?: Record<string, string>;
+  aggDropdownOpen?: string | null;
+  setAggDropdownOpen?: (v: string | null) => void;
+  setYAggs?: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-xl border-2 border-dashed p-3 transition-colors ${
+        active ? 'border-brand-400 bg-brand-50' : 'border-canvas-border bg-canvas-elevated'
+      } ${className || ''}`}
+      onDragOver={e => { e.preventDefault(); onDragOver(); }}
+      onDragLeave={onDragLeave}
+      onDrop={e => { e.preventDefault(); onDrop(e); }}
+    >
+      {label && <div className="text-[11px] font-bold uppercase tracking-wider text-ink-500 mb-2">{label}</div>}
+      {fields.length === 0 ? (
+        <div className="flex items-center gap-2 min-h-[32px]">
+          <svg className="size-3.5 text-ink-300" viewBox="0 0 12 12" fill="currentColor">
+            <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
+            <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
+            <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
+          </svg>
+          <span className="text-[11px] text-ink-400">{placeholder}</span>
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {fields.map(id => (
+            <div key={id} className="flex items-center justify-between bg-brand-50 border border-brand-200 rounded-md px-2.5 py-1.5">
+              <span className="text-[12px] font-medium text-brand-700">{getLabel(id)}</span>
+              <div className="flex items-center gap-1.5">
+                {showAgg && yAggs && setAggDropdownOpen && setYAggs && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setAggDropdownOpen(aggDropdownOpen === id ? null : id)}
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-brand-200 text-[10px] font-bold text-brand-600 cursor-pointer hover:bg-brand-50"
+                    >
+                      {AGG_OPTIONS.find(a => a.value === (yAggs[id] || 'count_d'))?.symbol || '#'}
+                      <ChevronDown size={9} />
+                    </button>
+                    {aggDropdownOpen === id && (
+                      <>
+                        <div className="fixed inset-0 z-30" onClick={() => setAggDropdownOpen(null)} />
+                        <div className="absolute top-full right-0 mt-1 z-40 bg-canvas-elevated border border-canvas-border rounded-lg shadow-xl py-1 min-w-[120px]">
+                          {AGG_OPTIONS.map(a => (
+                            <button
+                              key={a.value}
+                              onClick={() => { setYAggs(prev => ({ ...prev, [id]: a.value })); setAggDropdownOpen(null); }}
+                              className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] transition-colors cursor-pointer ${
+                                yAggs[id] === a.value ? 'text-brand-700 bg-brand-50' : 'text-ink-600 hover:bg-surface-2'
+                              }`}
+                            >
+                              <span className="w-4 text-center font-bold">{a.symbol}</span>
+                              {a.label}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                <button onClick={() => onRemove(id)} className="text-ink-400 hover:text-red-500 cursor-pointer"><X size={12} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Format Section Helpers ──────────────────────────────────────────────────
+
+function FmtSection({ title, icon, open, onToggle, children }: {
+  title: string; icon: React.ReactNode; open: boolean; onToggle: () => void; children: React.ReactNode;
+}) {
+  return (
+    <div className="bg-canvas-elevated rounded-lg border border-canvas-border overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-3 py-2.5 bg-brand-50/30 border-b border-canvas-border/50 hover:bg-brand-50 transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-brand-600">{icon}</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-ink-700">{title}</span>
+        </div>
+        <ChevronDown size={14} className={`text-brand-600 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }} className="overflow-hidden">
+            <div className="p-3 bg-surface-2/30">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function BIUButtons({ bold, italic, underline, onBold, onItalic, onUnderline }: {
+  bold: boolean; italic: boolean; underline: boolean;
+  onBold: () => void; onItalic: () => void; onUnderline: () => void;
+}) {
+  return (
+    <div className="flex items-center bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
+      {[
+        { label: 'Bold', active: bold, onClick: onBold, cls: 'font-bold' },
+        { label: 'Italic', active: italic, onClick: onItalic, cls: 'italic' },
+        { label: 'Underline', active: underline, onClick: onUnderline, cls: 'underline' },
+      ].map((btn, i) => (
+        <button
+          key={btn.label}
+          onClick={btn.onClick}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 transition-colors cursor-pointer ${i < 2 ? 'border-r border-canvas-border' : ''} ${
+            btn.active ? 'bg-brand-600 text-white' : 'text-ink-600 hover:bg-brand-50'
+          }`}
+        >
+          <span className={`text-[12px] ${btn.cls}`}>{btn.label.charAt(0)}</span>
+          <span className="text-[10px] font-medium">{btn.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ─── Add Widget Modal ────────────────────────────────────────────────────────
 
 interface ChartTypeDef {
@@ -682,6 +820,7 @@ const CHART_TYPES: ChartTypeDef[] = [
   { id: 'clustered-col', title: 'Clustered Column Chart', icon: BarChart3 },
   { id: 'stacked-col', title: 'Stacked Column Chart', icon: BarChart3 },
   { id: 'line-clustered', title: 'Line & Clustered Column', icon: LineChart },
+  { id: 'line-stacked', title: 'Line & Stacked Column', icon: LineChart },
   { id: 'scatter', title: 'Scatter Chart', icon: TrendingUp },
   { id: 'waterfall', title: 'Waterfall Chart', icon: TrendingUp },
   { id: 'table', title: 'Table', icon: FileText },
@@ -738,8 +877,47 @@ function AddWidgetModal({ open, onClose, addToast }: {
   const [widgetDesc, setWidgetDesc] = useState('');
   const [file1Open, setFile1Open] = useState(true);
   const [file2Open, setFile2Open] = useState(false);
-  const [dragOver, setDragOver] = useState<'x' | 'y' | null>(null);
+  const [dragOver, setDragOver] = useState<'x' | 'y' | 'yindex' | 'legend' | null>(null);
+  const [yIndexFields, setYIndexFields] = useState<string[]>([]);
+  const [legendFields, setLegendFields] = useState<string[]>([]);
   const [aggDropdownOpen, setAggDropdownOpen] = useState<string | null>(null);
+  // Customize tab state
+  const [selectedBaseColor, setSelectedBaseColor] = useState('#6a12cd');
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
+  const [generalOpen, setGeneralOpen] = useState(true);
+  const [xAxisFmtOpen, setXAxisFmtOpen] = useState(false);
+  const [yAxisFmtOpen, setYAxisFmtOpen] = useState(false);
+  const [legendsFmtOpen, setLegendsFmtOpen] = useState(false);
+  const [dataLabelsFmtOpen, setDataLabelsFmtOpen] = useState(false);
+  const [rangeFmtOpen, setRangeFmtOpen] = useState(false);
+  const [condFmtOpen, setCondFmtOpen] = useState(false);
+  const [seriesFmtOpen, setSeriesFmtOpen] = useState(false);
+  const [xAxisTitle, setXAxisTitle] = useState('');
+  const [yAxisTitle, setYAxisTitle] = useState('');
+  const [xBold, setXBold] = useState(false);
+  const [xItalic, setXItalic] = useState(false);
+  const [xUnder, setXUnder] = useState(false);
+  const [yBold, setYBold] = useState(false);
+  const [yItalic, setYItalic] = useState(false);
+  const [yUnder, setYUnder] = useState(false);
+  const [legendPos, setLegendPos] = useState('bottom');
+  const [showLegendToggle, setShowLegendToggle] = useState(true);
+  const [rangeMin, setRangeMin] = useState('');
+  const [rangeMax, setRangeMax] = useState('');
+  const [autoScale, setAutoScale] = useState(true);
+  const [dataLabelShow, setDataLabelShow] = useState(true);
+  const [yIndexFmtOpen, setYIndexFmtOpen] = useState(false);
+  const [yIndexTitle, setYIndexTitle] = useState('');
+  const [yIdxBold, setYIdxBold] = useState(false);
+  const [yIdxItalic, setYIdxItalic] = useState(false);
+  const [yIdxUnder, setYIdxUnder] = useState(false);
+  const [yIndexRangeFmtOpen, setYIndexRangeFmtOpen] = useState(false);
+  const [yIndexRangeMin, setYIndexRangeMin] = useState('');
+  const [yIndexRangeMax, setYIndexRangeMax] = useState('');
+  const [yIndexInvert, setYIndexInvert] = useState(true);
+  const [condRules, setCondRules] = useState([{ id: '1', field: '', condition: 'greater', value: '', color: '#ef4444' }]);
 
   // Reset on open
   useEffect(() => {
@@ -748,6 +926,8 @@ function AddWidgetModal({ open, onClose, addToast }: {
       setActiveTab('data');
       setXFields([]);
       setYFields([]);
+      setYIndexFields([]);
+      setLegendFields([]);
       setYAggs({});
       setWidgetName('');
       setWidgetDesc('');
@@ -761,7 +941,7 @@ function AddWidgetModal({ open, onClose, addToast }: {
   const dimensionFields = filteredFields.filter(f => f.kind === 'dimension');
   const measureFields = filteredFields.filter(f => f.kind === 'measure');
 
-  const handleDrop = (zone: 'x' | 'y', e: React.DragEvent) => {
+  const handleDrop = (zone: 'x' | 'y' | 'yindex' | 'legend', e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(null);
     const fieldId = e.dataTransfer.getData('fieldId');
@@ -769,10 +949,16 @@ function AddWidgetModal({ open, onClose, addToast }: {
     if (zone === 'x') {
       if (xFields.length >= 3 || xFields.includes(fieldId)) return;
       setXFields(prev => [...prev, fieldId]);
-    } else {
+    } else if (zone === 'y') {
       if (yFields.length >= 3 || yFields.includes(fieldId)) return;
       setYFields(prev => [...prev, fieldId]);
       setYAggs(prev => ({ ...prev, [fieldId]: 'count_d' }));
+    } else if (zone === 'yindex') {
+      if (yIndexFields.length >= 3 || yIndexFields.includes(fieldId)) return;
+      setYIndexFields(prev => [...prev, fieldId]);
+    } else if (zone === 'legend') {
+      if (legendFields.length >= 3 || legendFields.includes(fieldId)) return;
+      setLegendFields(prev => [...prev, fieldId]);
     }
   };
 
@@ -781,6 +967,22 @@ function AddWidgetModal({ open, onClose, addToast }: {
     setYFields(prev => prev.filter(f => f !== id));
     setYAggs(prev => { const n = { ...prev }; delete n[id]; return n; });
   };
+  const removeYIndexField = (id: string) => setYIndexFields(prev => prev.filter(f => f !== id));
+  const removeLegendField = (id: string) => setLegendFields(prev => prev.filter(f => f !== id));
+
+  // Dynamic labels per chart type
+  const getAxisLabels = () => {
+    if (!selectedChart) return { x: 'X - Axis', y: 'Y - Axis' };
+    const id = selectedChart.id;
+    if (id === 'kpi') return { x: 'Trend', y: 'Value' };
+    if (id === 'pie') return { x: 'Legend', y: 'Values' };
+    if (id === 'stacked-bar' || id === 'clustered-bar') return { x: 'Y - Axis', y: 'X - Axis' };
+    if (id === 'table') return { x: 'Columns', y: 'Columns' };
+    return { x: 'X - Axis', y: 'Y - Axis' };
+  };
+  const axisLabels = getAxisLabels();
+  const showYIndex = selectedChart && (selectedChart.id === 'clustered-col' || selectedChart.id === 'line' || selectedChart.id === 'waterfall');
+  const showLegend = selectedChart && selectedChart.id !== 'kpi';
 
   const getFieldLabel = (id: string) => DRAG_FIELDS.find(f => f.id === id)?.label || id;
 
@@ -1220,98 +1422,123 @@ function AddWidgetModal({ open, onClose, addToast }: {
 
             {/* Body — two columns */}
             <div className="flex flex-1 overflow-hidden min-h-0">
-              {/* Left — Preview + Drop Zones */}
-              <div className="flex-1 flex flex-col bg-surface-2/30 p-6 min-w-0 order-1">
-                <div className="flex-1 bg-canvas-elevated rounded-xl border border-canvas-border overflow-hidden flex flex-col">
-                  {/* Preview header */}
+              {/* Left — Drop Zones + Preview */}
+              <div className="flex-1 flex flex-col bg-surface-2/30 p-5 min-w-0 order-1 overflow-y-auto">
+                {/* Drop Zones — row layout with left labels */}
+                <div className="space-y-3 mb-4">
+                  {/* Row 1: X-Axis */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-[70px] shrink-0">
+                      <span className="text-[12px] font-bold text-ink-700">{axisLabels.x}</span>
+                    </div>
+                    <DropZone
+                      label=""
+                      placeholder={selectedChart?.id === 'table' ? 'Drop columns here' : 'Drop a field here'}
+                      active={dragOver === 'x'}
+                      onDragOver={() => setDragOver('x')}
+                      onDragLeave={() => setDragOver(null)}
+                      onDrop={e => handleDrop('x', e)}
+                      fields={xFields}
+                      getLabel={getFieldLabel}
+                      onRemove={removeXField}
+                      className="flex-1"
+                    />
+                  </div>
+
+                  {/* Row 2: Y-Axis + Y-Index */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-[70px] shrink-0">
+                      <span className="text-[12px] font-bold text-ink-700">{axisLabels.y}</span>
+                    </div>
+                    <div className="flex-1 flex gap-3">
+                      <DropZone
+                        label=""
+                        placeholder="Drop a field here"
+                        active={dragOver === 'y'}
+                        onDragOver={() => setDragOver('y')}
+                        onDragLeave={() => setDragOver(null)}
+                        onDrop={e => handleDrop('y', e)}
+                        fields={yFields}
+                        getLabel={getFieldLabel}
+                        onRemove={removeYField}
+                        showAgg
+                        yAggs={yAggs}
+                        aggDropdownOpen={aggDropdownOpen}
+                        setAggDropdownOpen={setAggDropdownOpen}
+                        setYAggs={setYAggs}
+                        className="flex-1"
+                      />
+                      {showYIndex && (
+                        <DropZone
+                          label=""
+                          placeholder="Y-axis Index"
+                          active={dragOver === 'yindex'}
+                          onDragOver={() => setDragOver('yindex')}
+                          onDragLeave={() => setDragOver(null)}
+                          onDrop={e => handleDrop('yindex', e)}
+                          fields={yIndexFields}
+                          getLabel={getFieldLabel}
+                          onRemove={removeYIndexField}
+                          className="flex-1"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Suggestion banner */}
+                  {(yFields.length >= 2 || yIndexFields.length > 0) && (
+                    <div className="flex items-center gap-3 px-4 py-2.5 bg-surface-2 rounded-lg ml-[86px]">
+                      <Sparkles size={14} className="text-brand-600 shrink-0" />
+                      <div className="flex items-center gap-1.5">
+                        {[
+                          { id: 'clustered-col', label: 'Bar', icon: BarChart3 },
+                          { id: 'line', label: 'Line', icon: LineChart },
+                          { id: 'area', label: 'Area', icon: AreaChart },
+                        ].map(s => (
+                          <button
+                            key={s.id}
+                            onClick={() => { const ct = CHART_TYPES.find(c => c.id === s.id); if (ct) setSelectedChart(ct); }}
+                            className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium cursor-pointer transition-colors ${
+                              selectedChart?.id === s.id ? 'bg-brand-600 text-white' : 'text-ink-600 hover:bg-brand-50'
+                            }`}
+                          >
+                            <s.icon size={11} /> {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Row 3: Legends */}
+                  {showLegend && (
+                    <div className="flex items-center gap-4">
+                      <div className="w-[70px] shrink-0">
+                        <span className="text-[12px] font-bold text-ink-700">Legends</span>
+                      </div>
+                      <DropZone
+                        label=""
+                        placeholder="Drop a field here"
+                        active={dragOver === 'legend'}
+                        onDragOver={() => setDragOver('legend')}
+                        onDragLeave={() => setDragOver(null)}
+                        onDrop={e => handleDrop('legend', e)}
+                        fields={legendFields}
+                        getLabel={getFieldLabel}
+                        onRemove={removeLegendField}
+                        className="flex-1"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Preview */}
+                <div className="flex-1 bg-canvas-elevated rounded-xl border border-canvas-border overflow-hidden flex flex-col min-h-[300px]">
                   <div className="px-5 py-3 border-b border-canvas-border/50 flex items-center justify-between">
                     <span className="text-[12px] font-semibold text-ink-500 uppercase tracking-wider">Preview</span>
                     {selectedChart && <span className="text-[12px] text-brand-600 font-medium">{selectedChart.title}</span>}
                   </div>
-                  {/* Chart preview */}
                   <div className="flex-1 p-4">
                     {renderPreview()}
-                  </div>
-                </div>
-
-                {/* X-Axis & Y-Axis Drop Zones — below preview */}
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  {/* X-Axis */}
-                  <div
-                    className={`rounded-xl border-2 border-dashed p-4 transition-colors ${
-                      dragOver === 'x' ? 'border-brand-400 bg-brand-50' : 'border-canvas-border bg-canvas-elevated'
-                    }`}
-                    onDragOver={e => { e.preventDefault(); setDragOver('x'); }}
-                    onDragLeave={() => setDragOver(null)}
-                    onDrop={e => handleDrop('x', e)}
-                  >
-                    <div className="text-[12px] font-bold uppercase tracking-wider text-ink-500 mb-2">X - Axis</div>
-                    {xFields.length === 0 ? (
-                      <p className="text-[12px] text-ink-400 italic">Drag dimension fields here</p>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {xFields.map(id => (
-                          <div key={id} className="flex items-center justify-between bg-brand-50 border border-brand-200 rounded-lg px-3 py-2">
-                            <span className="text-[12px] font-medium text-brand-700">{getFieldLabel(id)}</span>
-                            <button onClick={() => removeXField(id)} className="text-ink-400 hover:text-red-500 cursor-pointer"><X size={13} /></button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Y-Axis */}
-                  <div
-                    className={`rounded-xl border-2 border-dashed p-4 transition-colors ${
-                      dragOver === 'y' ? 'border-brand-400 bg-brand-50' : 'border-canvas-border bg-canvas-elevated'
-                    }`}
-                    onDragOver={e => { e.preventDefault(); setDragOver('y'); }}
-                    onDragLeave={() => setDragOver(null)}
-                    onDrop={e => handleDrop('y', e)}
-                  >
-                    <div className="text-[12px] font-bold uppercase tracking-wider text-ink-500 mb-2">Y - Axis</div>
-                    {yFields.length === 0 ? (
-                      <p className="text-[12px] text-ink-400 italic">Drag measure fields here</p>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {yFields.map(id => (
-                          <div key={id} className="flex items-center justify-between bg-brand-50 border border-brand-200 rounded-lg px-3 py-2">
-                            <span className="text-[12px] font-medium text-brand-700">{getFieldLabel(id)}</span>
-                            <div className="flex items-center gap-1.5">
-                              <div className="relative">
-                                <button
-                                  onClick={() => setAggDropdownOpen(aggDropdownOpen === id ? null : id)}
-                                  className="flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-brand-200 text-[10px] font-bold text-brand-600 cursor-pointer hover:bg-brand-50"
-                                >
-                                  {AGG_OPTIONS.find(a => a.value === (yAggs[id] || 'count_d'))?.symbol || '#'}
-                                  <ChevronDown size={9} />
-                                </button>
-                                {aggDropdownOpen === id && (
-                                  <>
-                                    <div className="fixed inset-0 z-30" onClick={() => setAggDropdownOpen(null)} />
-                                    <div className="absolute top-full right-0 mt-1 z-40 bg-canvas-elevated border border-canvas-border rounded-lg shadow-xl py-1 min-w-[120px]">
-                                      {AGG_OPTIONS.map(a => (
-                                        <button
-                                          key={a.value}
-                                          onClick={() => { setYAggs(prev => ({ ...prev, [id]: a.value })); setAggDropdownOpen(null); }}
-                                          className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] transition-colors cursor-pointer ${
-                                            yAggs[id] === a.value ? 'text-brand-700 bg-brand-50' : 'text-ink-600 hover:bg-surface-2'
-                                          }`}
-                                        >
-                                          <span className="w-4 text-center font-bold">{a.symbol}</span>
-                                          {a.label}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                              <button onClick={() => removeYField(id)} className="text-ink-400 hover:text-red-500 cursor-pointer"><X size={13} /></button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -1494,31 +1721,308 @@ function AddWidgetModal({ open, onClose, addToast }: {
 
                   {activeTab === 'format' && (
                     <div className="space-y-3">
-                      {/* Color picker */}
-                      <div className="bg-canvas-elevated rounded-lg border border-canvas-border p-3">
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-ink-500 mb-3">Theme Color</div>
-                        <div className="flex gap-2 flex-wrap">
-                          {['#6a12cd', '#3b82f6', '#0ea5e9', '#06b6d4', '#10b981', '#84cc16', '#f59e0b', '#f97316', '#ef4444'].map(c => (
-                            <button key={c} className="size-7 rounded-full border-2 border-white shadow-sm cursor-pointer hover:scale-110 transition-transform" style={{ background: c }} />
-                          ))}
+                      {/* 1. General — Color + B/I/U */}
+                      <FmtSection title="General" icon={<Settings size={12} />} open={generalOpen} onToggle={() => setGeneralOpen(!generalOpen)}>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {['#6a12cd', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981', '#84cc16', '#f59e0b', '#f97316'].map(c => (
+                              <button
+                                key={c}
+                                onClick={() => setSelectedBaseColor(c)}
+                                className={`size-7 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                                  selectedBaseColor === c ? 'ring-2 ring-brand-600 ring-offset-2' : 'hover:ring-2 hover:ring-brand-400/40 hover:ring-offset-2'
+                                }`}
+                                style={{ background: c }}
+                              >
+                                {selectedBaseColor === c && (
+                                  <svg viewBox="0 0 12 12" fill="none" className="size-3.5"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                )}
+                              </button>
+                            ))}
+                            {/* Hex display */}
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-canvas-elevated border border-canvas-border rounded-md">
+                              <div className="size-3 rounded-sm" style={{ background: selectedBaseColor }} />
+                              <span className="text-[11px] font-medium text-ink-700 uppercase">{selectedBaseColor}</span>
+                            </div>
+                          </div>
+                          <BIUButtons bold={isBold} italic={isItalic} underline={isUnderline} onBold={() => setIsBold(!isBold)} onItalic={() => setIsItalic(!isItalic)} onUnderline={() => setIsUnderline(!isUnderline)} />
+                        </div>
+                      </FmtSection>
+
+                      {/* 2. X Axis */}
+                      <FmtSection title="X Axis" icon={<TrendingUp size={12} />} open={xAxisFmtOpen} onToggle={() => setXAxisFmtOpen(!xAxisFmtOpen)}>
+                        <div className="space-y-3">
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[11px] font-medium text-ink-600">Title</label>
+                            <input type="text" value={xAxisTitle} onChange={e => setXAxisTitle(e.target.value)} placeholder="Enter X Axis Title" className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors" />
+                          </div>
+                          <BIUButtons bold={xBold} italic={xItalic} underline={xUnder} onBold={() => setXBold(!xBold)} onItalic={() => setXItalic(!xItalic)} onUnderline={() => setXUnder(!xUnder)} />
+                        </div>
+                      </FmtSection>
+
+                      {/* 3. Y Axis */}
+                      <FmtSection title="Y Axis" icon={<TrendingDown size={12} />} open={yAxisFmtOpen} onToggle={() => setYAxisFmtOpen(!yAxisFmtOpen)}>
+                        <div className="space-y-3">
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[11px] font-medium text-ink-600">Title</label>
+                            <input type="text" value={yAxisTitle} onChange={e => setYAxisTitle(e.target.value)} placeholder="Enter Y Axis Title" className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors" />
+                          </div>
+                          <BIUButtons bold={yBold} italic={yItalic} underline={yUnder} onBold={() => setYBold(!yBold)} onItalic={() => setYItalic(!yItalic)} onUnderline={() => setYUnder(!yUnder)} />
+                        </div>
+                      </FmtSection>
+
+                      {/* 3b. Y-axis Index — only for clustered-col, line, waterfall */}
+                      {showYIndex && (
+                        <FmtSection title="Y-axis Index" icon={<TrendingDown size={12} />} open={yIndexFmtOpen} onToggle={() => setYIndexFmtOpen(!yIndexFmtOpen)}>
+                          <div className="space-y-3">
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[11px] font-medium text-ink-600">Title</label>
+                              <input type="text" value={yIndexTitle} onChange={e => setYIndexTitle(e.target.value)} placeholder="Enter Y-axis Index Title" className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors" />
+                            </div>
+                            <BIUButtons bold={yIdxBold} italic={yIdxItalic} underline={yIdxUnder} onBold={() => setYIdxBold(!yIdxBold)} onItalic={() => setYIdxItalic(!yIdxItalic)} onUnderline={() => setYIdxUnder(!yIdxUnder)} />
+                          </div>
+                        </FmtSection>
+                      )}
+
+                      {/* 4. Legend */}
+                      <FmtSection title="Legend" icon={<FileText size={12} />} open={legendsFmtOpen} onToggle={() => setLegendsFmtOpen(!legendsFmtOpen)}>
+                        <div className="space-y-3">
+                          {/* Position dropdown */}
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[11px] font-semibold text-ink-700">Position</label>
+                            <select value={legendPos} onChange={e => setLegendPos(e.target.value)} className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 outline-none focus:border-brand-400 cursor-pointer appearance-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
+                              <option value="top">Top</option>
+                              <option value="right">Right</option>
+                              <option value="bottom">Bottom</option>
+                              <option value="left">Left</option>
+                            </select>
+                          </div>
+                          {/* Legend Format + Text Color */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[11px] font-semibold text-ink-700">Legend Format</label>
+                              <div className="flex items-center bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
+                                <button onClick={() => setIsBold(!isBold)} className={`flex-1 flex items-center justify-center px-3 py-2 border-r border-canvas-border transition-colors cursor-pointer ${isBold ? 'bg-brand-600 text-white' : 'text-ink-600 hover:bg-brand-50'}`}>
+                                  <span className="text-[12px] font-bold">B</span>
+                                </button>
+                                <button onClick={() => setIsItalic(!isItalic)} className={`flex-1 flex items-center justify-center px-3 py-2 transition-colors cursor-pointer ${isItalic ? 'bg-brand-600 text-white' : 'text-ink-600 hover:bg-brand-50'}`}>
+                                  <span className="text-[12px] italic">I</span>
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[11px] font-semibold text-ink-700">Text Color</label>
+                              <div className="flex items-center gap-2 px-3 py-1.5 bg-canvas-elevated border border-canvas-border rounded-lg cursor-pointer">
+                                <div className="size-4 rounded-sm border border-canvas-border" style={{ background: selectedBaseColor }} />
+                                <span className="text-[11px] font-medium text-ink-700 flex-1 uppercase">{selectedBaseColor}</span>
+                                <ChevronDown size={12} className="text-ink-400" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </FmtSection>
+
+                      {/* 5. Data Labels — toggle in header, no content */}
+                      <div className="bg-canvas-elevated rounded-lg border border-canvas-border overflow-hidden">
+                        <div className="flex items-center justify-between px-3 py-2.5 bg-brand-50/30">
+                          <div className="flex items-center gap-2">
+                            <span className="text-brand-600"><FileText size={12} /></span>
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-700">Data Labels</span>
+                          </div>
+                          <button onClick={() => setDataLabelShow(!dataLabelShow)} className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${dataLabelShow ? 'bg-brand-600' : 'bg-ink-200'}`}>
+                            <div className={`absolute top-0.5 size-4 bg-white rounded-full shadow transition-all ${dataLabelShow ? 'left-[18px]' : 'left-0.5'}`} />
+                          </button>
                         </div>
                       </div>
-                      {/* Typography */}
-                      <div className="bg-canvas-elevated rounded-lg border border-canvas-border p-3">
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-ink-500 mb-3">Typography</div>
-                        <div className="flex gap-2">
-                          {[{ label: 'B', style: 'font-bold' }, { label: 'I', style: 'italic' }, { label: 'U', style: 'underline' }].map(t => (
-                            <button key={t.label} className={`size-8 flex items-center justify-center rounded border border-canvas-border text-[13px] ${t.style} text-ink-600 hover:bg-brand-50 hover:text-brand-600 transition-colors cursor-pointer`}>
-                              {t.label}
+
+                      {/* 6. Range (Y Axis) */}
+                      <FmtSection title="Range (Y Axis)" icon={<TrendingDown size={12} />} open={rangeFmtOpen} onToggle={() => setRangeFmtOpen(!rangeFmtOpen)}>
+                        <div className="space-y-3">
+                          {/* Min / Max always visible */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[12px] font-medium text-ink-700">Minimum</label>
+                              <input type="text" value={rangeMin} onChange={e => setRangeMin(e.target.value)} placeholder="Auto" className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors" />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[12px] font-medium text-ink-700">Maximum</label>
+                              <input type="text" value={rangeMax} onChange={e => setRangeMax(e.target.value)} placeholder="Auto" className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors" />
+                            </div>
+                          </div>
+                          {/* Invert Range toggle */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-[12px] font-medium text-ink-700">Invert Range</span>
+                            <button onClick={() => setAutoScale(!autoScale)} className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${autoScale ? 'bg-brand-600' : 'bg-ink-200'}`}>
+                              <div className={`absolute top-0.5 size-4 bg-white rounded-full shadow transition-all ${autoScale ? 'left-[18px]' : 'left-0.5'}`} />
                             </button>
-                          ))}
+                          </div>
                         </div>
-                      </div>
-                      {/* Axis formatting placeholder */}
-                      <div className="bg-canvas-elevated rounded-lg border border-canvas-border p-3">
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-ink-500 mb-2">Axis Formatting</div>
-                        <p className="text-[11px] text-ink-400">Configure axis labels, gridlines, and scale options.</p>
-                      </div>
+                      </FmtSection>
+
+                      {/* 6b. Y-axis Index Range — only for clustered-col, line, waterfall */}
+                      {showYIndex && (
+                        <FmtSection title="Range (Y-axis Index)" icon={<TrendingDown size={12} />} open={yIndexRangeFmtOpen} onToggle={() => setYIndexRangeFmtOpen(!yIndexRangeFmtOpen)}>
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-[12px] font-medium text-ink-700">Minimum</label>
+                                <input type="text" value={yIndexRangeMin} onChange={e => setYIndexRangeMin(e.target.value)} placeholder="Auto" className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors" />
+                              </div>
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-[12px] font-medium text-ink-700">Maximum</label>
+                                <input type="text" value={yIndexRangeMax} onChange={e => setYIndexRangeMax(e.target.value)} placeholder="Auto" className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors" />
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[12px] font-medium text-ink-700">Invert Range</span>
+                              <button onClick={() => setYIndexInvert(!yIndexInvert)} className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${yIndexInvert ? 'bg-brand-600' : 'bg-ink-200'}`}>
+                                <div className={`absolute top-0.5 size-4 bg-white rounded-full shadow transition-all ${yIndexInvert ? 'left-[18px]' : 'left-0.5'}`} />
+                              </button>
+                            </div>
+                          </div>
+                        </FmtSection>
+                      )}
+
+                      {/* 7. Conditional Formatting — full rule builder */}
+                      <FmtSection title="Conditional Formatting" icon={<AlertTriangle size={12} />} open={condFmtOpen} onToggle={() => setCondFmtOpen(!condFmtOpen)}>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[12px] font-bold text-brand-700">Rules</span>
+                            <span className="text-[11px] text-ink-500">{condRules.length} active</span>
+                          </div>
+
+                          {condRules.map((rule, idx) => (
+                            <div key={rule.id} className="bg-canvas-elevated border border-canvas-border rounded-xl p-3.5 space-y-3 relative">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[12px] font-bold text-ink-800">Rule {idx + 1}</span>
+                                {condRules.length > 1 && (
+                                  <button onClick={() => setCondRules(prev => prev.filter(r => r.id !== rule.id))} className="p-1 rounded hover:bg-red-50 cursor-pointer"><X size={12} className="text-ink-400 hover:text-red-500" /></button>
+                                )}
+                              </div>
+
+                              {/* Evaluate Field */}
+                              <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-ink-700">Evaluate Field</label>
+                                <select value={rule.field} onChange={e => setCondRules(prev => prev.map(r => r.id === rule.id ? { ...r, field: e.target.value } : r))} className="w-full px-3 py-2 text-[12px] bg-surface-2/50 border border-canvas-border rounded-lg text-ink-800 outline-none focus:border-brand-400 cursor-pointer appearance-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
+                                  <option value="">Select field to evaluate...</option>
+                                  {xFields.length > 0 && <optgroup label="X-Axis">{xFields.map(f => <option key={f} value={f}>{getFieldLabel(f)}</option>)}</optgroup>}
+                                  {yFields.length > 0 && <optgroup label="Y-Axis">{yFields.map(f => <option key={f} value={f}>{getFieldLabel(f)}</option>)}</optgroup>}
+                                  {xFields.length === 0 && yFields.length === 0 && <>
+                                    <option value="inv_amount">Invoice Amount (₹)</option>
+                                    <option value="dup_count">Duplicate Count</option>
+                                    <option value="dup_score">Duplicate Score (%)</option>
+                                    <option value="risk_amt">Amount at Risk (₹)</option>
+                                  </>}
+                                </select>
+                              </div>
+
+                              {/* Condition */}
+                              <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-ink-700">Condition</label>
+                                <select value={rule.condition} onChange={e => setCondRules(prev => prev.map(r => r.id === rule.id ? { ...r, condition: e.target.value } : r))} className="w-full px-3 py-2 text-[12px] bg-surface-2/50 border border-canvas-border rounded-lg text-ink-800 outline-none focus:border-brand-400 cursor-pointer appearance-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
+                                  <option value="isNull">Is null</option>
+                                  <option value="isNotNull">Is not null</option>
+                                  <option value="greater">Greater than</option>
+                                  <option value="greaterEqual">Greater than or equal</option>
+                                  <option value="less">Less than</option>
+                                  <option value="lessEqual">Less than or equal</option>
+                                  <option value="equal">Is equal to</option>
+                                  <option value="notEqual">Is not equal</option>
+                                  <option value="between">Is between</option>
+                                  <option value="contains">Contains</option>
+                                  <option value="notContain">Does not contain</option>
+                                </select>
+                              </div>
+
+                              {/* Value + Color */}
+                              <div className="grid grid-cols-2 gap-2.5">
+                                <div className="space-y-1.5">
+                                  <label className="text-[11px] font-bold text-ink-700">Value</label>
+                                  <input type="text" value={rule.value} onChange={e => setCondRules(prev => prev.map(r => r.id === rule.id ? { ...r, value: e.target.value } : r))} placeholder="Enter value" className="w-full px-3 py-2 text-[12px] bg-surface-2/50 border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400" />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-[11px] font-bold text-ink-700">Color</label>
+                                  <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-2/50 border border-canvas-border rounded-lg">
+                                    <div className="size-5 rounded shrink-0 border border-canvas-border" style={{ background: rule.color }} />
+                                    <span className="text-[11px] font-medium text-ink-700 uppercase flex-1">{rule.color}</span>
+                                    <ChevronDown size={12} className="text-ink-400" />
+                                  </div>
+                                  {/* Color swatches row */}
+                                  <div className="flex gap-1.5 mt-1.5">
+                                    {['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6a12cd', '#ec4899'].map(c => (
+                                      <button
+                                        key={c}
+                                        onClick={() => setCondRules(prev => prev.map(r => r.id === rule.id ? { ...r, color: c } : r))}
+                                        className={`size-5 rounded-full flex items-center justify-center cursor-pointer transition-all shrink-0 ${rule.color === c ? 'ring-2 ring-brand-600 ring-offset-1' : 'hover:ring-2 hover:ring-ink-300 hover:ring-offset-1'}`}
+                                        style={{ background: c }}
+                                      >
+                                        {rule.color === c && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          <button
+                            onClick={() => setCondRules(prev => [...prev, { id: String(Date.now()), field: '', condition: 'greater', value: '', color: '#ef4444' }])}
+                            className="w-full flex items-center justify-center gap-2 px-3 py-3 border-2 border-dashed border-brand-300 rounded-xl text-[12px] font-semibold text-brand-600 hover:bg-brand-50 transition-colors cursor-pointer"
+                          >
+                            <Plus size={14} /> Add Condition
+                          </button>
+                        </div>
+                      </FmtSection>
+
+                      {/* 8. Customize Data Colors */}
+                      <FmtSection title="Customize Data Colors" icon={<BarChart3 size={12} />} open={seriesFmtOpen} onToggle={() => setSeriesFmtOpen(!seriesFmtOpen)}>
+                        <div className="space-y-3">
+                          {/* Categories dropdown */}
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[12px] font-semibold text-ink-700">Categories</label>
+                            <select className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 outline-none focus:border-brand-400 cursor-pointer appearance-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
+                              <option value="">{yFields.length > 0 ? 'Select a series...' : 'No series available'}</option>
+                              {yFields.map(f => <option key={f} value={f}>{getFieldLabel(f)}</option>)}
+                            </select>
+                          </div>
+                          {/* Color + Spacing */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[11px] font-semibold text-ink-700">Color</label>
+                              <div className="flex items-center gap-2 px-3 py-1.5 bg-canvas-elevated border border-canvas-border rounded-lg cursor-pointer">
+                                <div className="size-5 rounded shrink-0 border border-canvas-border" style={{ background: selectedBaseColor }} />
+                                <span className="text-[11px] font-medium text-ink-700 flex-1">
+                                  {{'#6a12cd':'Purple','#0ea5e9':'Blue','#10b981':'Green','#f59e0b':'Orange','#ef4444':'Red','#ec4899':'Pink','#8b5cf6':'Violet','#14b8a6':'Teal','#f97316':'Orange Red'}[selectedBaseColor] || 'Purple'}
+                                </span>
+                                <ChevronDown size={12} className="text-ink-400" />
+                              </div>
+                              <div className="flex gap-1.5 mt-1">
+                                {[{c:'#6a12cd',n:'Purple'},{c:'#0ea5e9',n:'Blue'},{c:'#10b981',n:'Green'},{c:'#f59e0b',n:'Orange'},{c:'#ef4444',n:'Red'},{c:'#ec4899',n:'Pink'},{c:'#8b5cf6',n:'Violet'},{c:'#14b8a6',n:'Teal'},{c:'#f97316',n:'OrangeRed'}].map(({c}) => (
+                                  <button
+                                    key={c}
+                                    onClick={() => setSelectedBaseColor(c)}
+                                    className={`size-5 rounded-full flex items-center justify-center cursor-pointer transition-all shrink-0 ${selectedBaseColor === c ? 'ring-2 ring-brand-600 ring-offset-1' : 'hover:ring-2 hover:ring-ink-300 hover:ring-offset-1'}`}
+                                    style={{ background: c }}
+                                  >
+                                    {selectedBaseColor === c && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-[11px] font-semibold text-ink-700">Spacing</label>
+                              <select className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 outline-none focus:border-brand-400 cursor-pointer appearance-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
+                                <option value="0">0%</option>
+                                <option value="10">10%</option>
+                                <option value="20">20%</option>
+                                <option value="30">30%</option>
+                                <option value="40">40%</option>
+                                <option value="50">50%</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </FmtSection>
                     </div>
                   )}
                 </div>
