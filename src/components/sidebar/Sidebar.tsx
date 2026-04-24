@@ -252,13 +252,6 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
           <NavItem icon={AlertTriangle} label="Risk Register" active={view === 'audit-risk-register'} expanded={isExpanded} onClick={() => setView('audit-risk-register')} badge="14" />
           <NavItem icon={Shield} label="Control Library" active={view === 'governance-controls' || view === 'governance-control-detail'} expanded={isExpanded} onClick={() => setView('governance-controls')} />
 
-          {/* ── EXECUTION ── */}
-          <Divider label="Execution" expanded={isExpanded} />
-
-          <NavItem icon={ClipboardCheck} label="Control Testing" active={view === 'execution-testing'} expanded={isExpanded} onClick={() => setView('execution-testing')} />
-          <NavItem icon={FileText} label="Evidence & Workpapers" active={view === 'execution-evidence'} expanded={isExpanded} onClick={() => setView('execution-evidence')} />
-          <NavItem icon={Target} label="Findings" active={view === 'findings'} expanded={isExpanded} onClick={() => setView('findings')} badge="5" />
-
           {/* ── GLOBAL ── */}
           <Divider label="Global" expanded={isExpanded} />
 
