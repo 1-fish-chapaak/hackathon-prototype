@@ -538,7 +538,7 @@ function CreateDashboardModal({ open, onClose, onCreate }: {
                     Back
                   </button>
                   <button
-                    onClick={handleCreate}
+                    onClick={() => handleCreate()}
                     disabled={!selectedQuery}
                     className={`px-6 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
                       selectedQuery ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
