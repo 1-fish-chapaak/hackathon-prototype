@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, createContext, useContext } from 'rea
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle, Info, AlertTriangle, AlertOctagon, X } from 'lucide-react';
 
-type ToastType = 'success' | 'info' | 'warning' | 'error';
+export type ToastType = 'success' | 'info' | 'warning' | 'error';
 
 interface Toast {
   id: string;

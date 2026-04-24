@@ -12,7 +12,7 @@ import {
   Search, LineChart, AreaChart, ListChecks
 } from 'lucide-react';
 import Orb from '../shared/Orb';
-import { useToast } from '../shared/Toast';
+import { useToast, type ToastType } from '../shared/Toast';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -899,7 +899,7 @@ const AGG_OPTIONS = [
 function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, editData }: {
   open: boolean;
   onClose: (widgetAdded?: boolean) => void;
-  addToast: (t: { message: string; type: string }) => void;
+  addToast: (t: { message: string; type: ToastType }) => void;
   customFields?: string[] | null;
   onAddWidget?: (widget: { chartType: string; title: string; xField: string; yField: string }) => void;
   editData?: { chartType: string; title: string; xField: string; yField: string } | null;
@@ -1488,7 +1488,7 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[9999] flex items-center justify-center"
-          onClick={onClose}
+          onClick={() => onClose()}
         >
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
           <motion.div
@@ -1508,7 +1508,7 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
                 </div>
                 <span className="text-[15px] font-semibold text-ink-900">{editData ? 'Edit Widget' : 'Add New Widget'}</span>
               </div>
-              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
+              <button onClick={() => onClose()} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
                 <X size={18} className="text-ink-500" />
               </button>
             </div>
@@ -3470,7 +3470,7 @@ function ThresholdAlertModal({ open, onClose, widgetTitle, addToast }: {
   open: boolean;
   onClose: () => void;
   widgetTitle: string;
-  addToast: (t: { message: string; type: string }) => void;
+  addToast: (t: { message: string; type: ToastType }) => void;
 }) {
   const [thresholdValue, setThresholdValue] = useState('2503');
   const [condition, setCondition] = useState('');
@@ -3608,7 +3608,7 @@ function WidgetCard({
   onEdit?: () => void;
   onDelete?: () => void;
   onFilter?: () => void;
-  addToast: (t: { message: string; type: string }) => void;
+  addToast: (t: { message: string; type: ToastType }) => void;
   pageFilterFields?: string[];
   onRemovePageFilter?: (id: string) => void;
   onClearPageFilters?: () => void;
