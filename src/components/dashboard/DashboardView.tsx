@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   AlertTriangle, Shield, Activity, TrendingUp, TrendingDown,
@@ -896,12 +896,13 @@ const AGG_OPTIONS = [
   { value: 'max', label: 'Max', symbol: '↑' },
 ];
 
-function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget }: {
+function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, editData }: {
   open: boolean;
-  onClose: () => void;
+  onClose: (widgetAdded?: boolean) => void;
   addToast: (t: { message: string; type: string }) => void;
   customFields?: string[] | null;
   onAddWidget?: (widget: { chartType: string; title: string; xField: string; yField: string }) => void;
+  editData?: { chartType: string; title: string; xField: string; yField: string } | null;
 }) {
   const [selectedChart, setSelectedChart] = useState<ChartTypeDef | null>(null);
   const [chartTypeCollapsed, setChartTypeCollapsed] = useState(false);
@@ -918,6 +919,14 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget }: 
   const [yIndexFields, setYIndexFields] = useState<string[]>([]);
   const [legendFields, setLegendFields] = useState<string[]>([]);
   const [aggDropdownOpen, setAggDropdownOpen] = useState<string | null>(null);
+  const [addDataDropdown, setAddDataDropdown] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadStep, setUploadStep] = useState<'upload' | 'review'>('upload');
+  const [uploadedFileName, setUploadedFileName] = useState('');
+  const [uploadedHeaders, setUploadedHeaders] = useState<string[]>([]);
+  const [showQueryModal, setShowQueryModal] = useState(false);
+  const [querySearch, setQuerySearch] = useState('');
+  const [selectedQuery, setSelectedQuery] = useState<string | null>(null);
   // Customize tab state
   const [selectedBaseColor, setSelectedBaseColor] = useState('#6a12cd');
   const [isBold, setIsBold] = useState(false);
@@ -955,22 +964,54 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget }: 
   const [yIndexRangeMax, setYIndexRangeMax] = useState('');
   const [yIndexInvert, setYIndexInvert] = useState(true);
   const [condRules, setCondRules] = useState([{ id: '1', field: '', condition: 'greater', value: '', color: '#ef4444' }]);
+  // Filter state
+  const [filterDateRange, setFilterDateRange] = useState('last-30-days');
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterRisk, setFilterRisk] = useState<string[]>([]);
+  const [filterDept, setFilterDept] = useState<string[]>([]);
+  const [filterWidgetFields, setFilterWidgetFields] = useState<string[]>([]);
+  const [filterPageFields, setFilterPageFields] = useState<string[]>([]);
+  const [filterWidgetDragOver, setFilterWidgetDragOver] = useState(false);
+  const [filterPageDragOver, setFilterPageDragOver] = useState(false);
+  const toggleFilterItem = (arr: string[], item: string) =>
+    arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item];
 
-  // Reset on open
+  // Reset on open or pre-populate with edit data
   useEffect(() => {
     if (open) {
-      setSelectedChart(null);
+      if (editData) {
+        // Pre-populate with existing widget data
+        const chart = CHART_TYPES.find(c => c.id === editData.chartType) || null;
+        setSelectedChart(chart);
+        setChartTypeCollapsed(true);
+        setWidgetName(editData.title);
+        // Find field IDs from labels or ids, fallback to dummy fields
+        const xField = DRAG_FIELDS.find(f => f.label === editData.xField || f.id === editData.xField);
+        const yField = DRAG_FIELDS.find(f => f.label === editData.yField || f.id === editData.yField);
+        // Use matched fields or assign dummy dimension/measure fields
+        const xId = xField ? xField.id : DRAG_FIELDS.find(f => f.kind === 'dimension')?.id || '';
+        const yId = yField ? yField.id : DRAG_FIELDS.find(f => f.kind === 'measure')?.id || '';
+        setXFields(xId ? [xId] : []);
+        setYFields(yId ? [yId] : []);
+        setYAggs(yId ? { [yId]: 'count_d' } : {});
+        // Pre-fill legends with a dummy dimension field
+        const legendField = DRAG_FIELDS.find(f => f.kind === 'dimension' && f.id !== xId);
+        setLegendFields(legendField ? [legendField.id] : []);
+      } else {
+        setSelectedChart(null);
+        setChartTypeCollapsed(false);
+        setXFields([]);
+        setYFields([]);
+        setYAggs({});
+        setWidgetName('');
+        setLegendFields([]);
+      }
       setActiveTab('data');
-      setXFields([]);
-      setYFields([]);
       setYIndexFields([]);
-      setLegendFields([]);
-      setYAggs({});
-      setWidgetName('');
       setWidgetDesc('');
       setFieldSearch('');
     }
-  }, [open]);
+  }, [open, editData]);
 
   const filteredFields = DRAG_FIELDS.filter(f =>
     f.label.toLowerCase().includes(fieldSearch.toLowerCase())
@@ -1038,8 +1079,8 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget }: 
         yField: yFields.length > 0 ? getFieldLabel(yFields[0]) : '',
       });
     }
-    addToast({ message: `${selectedChart?.title || 'Widget'} added to dashboard`, type: 'success' });
-    onClose();
+    addToast({ message: editData ? 'Widget updated' : `${selectedChart?.title || 'Widget'} added to dashboard`, type: 'success' });
+    onClose(true);
   };
 
   // Simple preview chart based on selected type
@@ -1439,6 +1480,7 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget }: 
   if (!open) return null;
 
   return (
+    <>
     <AnimatePresence>
       {open && (
         <motion.div
@@ -1464,7 +1506,7 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget }: 
                 <div className="bg-brand-50 rounded-lg size-7 flex items-center justify-center">
                   <BarChart3 size={14} className="text-brand-600" />
                 </div>
-                <span className="text-[15px] font-semibold text-ink-900">Add New Widget</span>
+                <span className="text-[15px] font-semibold text-ink-900">{editData ? 'Edit Widget' : 'Add New Widget'}</span>
               </div>
               <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
                 <X size={18} className="text-ink-500" />
@@ -1664,10 +1706,46 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget }: 
                             <FileText size={12} className="text-brand-600" />
                             <span className="text-[11px] font-bold uppercase tracking-wider text-ink-700">Data Source</span>
                           </div>
-                          <button className="bg-brand-600 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded cursor-pointer hover:bg-brand-500 transition-colors">
-                            Add Data
-                          </button>
+                          <div className="relative">
+                            <button
+                              onClick={() => setAddDataDropdown(!addDataDropdown)}
+                              className="bg-brand-600 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded cursor-pointer hover:bg-brand-500 transition-colors"
+                            >
+                              Add Data
+                            </button>
+                            {addDataDropdown && (
+                              <>
+                                <div className="fixed inset-0 z-30" onClick={() => setAddDataDropdown(false)} />
+                                <div className="absolute top-full right-0 z-40 mt-1 w-[160px] bg-white border border-canvas-border rounded-lg shadow-xl py-1">
+                                  <button
+                                    onClick={() => {
+                                      setAddDataDropdown(false);
+                                      setShowQueryModal(true);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-ink-700 hover:bg-brand-50 hover:text-brand-600 transition-colors text-left cursor-pointer"
+                                  >
+                                    <Search size={13} className="text-ink-400" />
+                                    From Query
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setAddDataDropdown(false);
+                                      setUploadStep('upload');
+                                      setUploadedFileName('');
+                                      setUploadedHeaders([]);
+                                      setShowUploadModal(true);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-ink-700 hover:bg-brand-50 hover:text-brand-600 transition-colors text-left cursor-pointer"
+                                  >
+                                    <FileText size={13} className="text-ink-400" />
+                                    From Excel
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
+
 
                         {/* Search */}
                         <div className="px-2.5 pt-2.5 pb-2">
@@ -2126,7 +2204,7 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget }: 
                     disabled={!selectedChart}
                     className="w-full py-2.5 bg-brand-600 hover:bg-brand-500 disabled:bg-ink-200 text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
                   >
-                    Add to Dashboard
+                    {editData ? 'Save Changes' : 'Add to Dashboard'}
                   </button>
                 </div>
               </div>
@@ -2135,6 +2213,227 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget }: 
         </motion.div>
       )}
     </AnimatePresence>
+
+    {/* Upload Dataset Modal */}
+    {showUploadModal && (
+      <>
+        <div className="fixed inset-0 z-[10000] bg-black/30 backdrop-blur-sm" onClick={() => setShowUploadModal(false)} />
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto bg-white rounded-2xl shadow-2xl w-[560px] flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-canvas-border/40 shrink-0">
+              <div>
+                <h2 className="text-[16px] font-bold text-ink-900">{uploadStep === 'upload' ? 'Upload Dataset' : 'Review Data'}</h2>
+                <p className="text-[12px] text-ink-400 mt-0.5">{uploadStep === 'upload' ? 'Step 1 of 2' : 'Step 2 of 2'}</p>
+              </div>
+              <button onClick={() => setShowUploadModal(false)} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
+                <X size={18} className="text-ink-500" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 py-6">
+              {uploadStep === 'upload' ? (
+                <label className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-brand-300 rounded-2xl bg-brand-50/20 cursor-pointer hover:bg-brand-50/40 transition-colors">
+                  <div className="size-14 rounded-full bg-canvas-elevated border border-canvas-border flex items-center justify-center mb-4">
+                    <Download size={22} className="text-brand-600 rotate-180" />
+                  </div>
+                  <p className="text-[15px] font-semibold text-ink-900">Upload Dataset</p>
+                  <p className="text-[13px] text-ink-400 mt-1 text-center max-w-xs">Drag and drop your .xlsx or .csv file here, or click to browse.</p>
+                  <div className="flex items-center gap-3 mt-5">
+                    <span className="px-5 py-2 border border-brand-300 text-brand-600 rounded-full text-[12px] font-semibold">Choose Existing</span>
+                    <span className="px-5 py-2 bg-brand-600 text-white rounded-full text-[12px] font-semibold">Browse Files</span>
+                  </div>
+                  <input
+                    type="file"
+                    accept=".xlsx,.csv,.xls"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setUploadedFileName(file.name);
+                        setUploadedHeaders(['Invoice ID', 'Vendor', 'Amount', 'Date', 'Status', 'Department', 'Risk', 'Category']);
+                        setUploadStep('review');
+                      }
+                    }}
+                  />
+                </label>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="size-9 rounded-lg bg-brand-50 flex items-center justify-center shrink-0">
+                      <FileText size={18} className="text-brand-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[14px] font-semibold text-ink-900 truncate">{uploadedFileName}</p>
+                    </div>
+                    <span className="text-[12px] text-brand-600 font-medium shrink-0">{uploadedHeaders.length} columns detected</span>
+                  </div>
+                  <div className="border border-canvas-border rounded-xl overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="bg-surface-2/50">
+                          {uploadedHeaders.slice(0, 7).map(h => (
+                            <th key={h} className="text-[11px] font-semibold text-ink-500 uppercase tracking-wider px-4 py-3 border-b border-canvas-border whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          ['INV-001', 'Acme Corp', '₹11,853', '20-Mar-25', 'Pending', 'Operations', 'High'],
+                          ['INV-002', 'Global Tech', '₹4,564', '15-Dec-24', 'Review', 'Procurement', 'Medium'],
+                          ['INV-003', '3tones Ltd', '₹3,835', '31-Dec-24', 'Resolved', 'Finance', 'Low'],
+                        ].map((row, i) => (
+                          <tr key={i} className="border-b border-canvas-border/50 last:border-0">
+                            {row.map((cell, j) => (
+                              <td key={j} className={`text-[12px] px-4 py-3 whitespace-nowrap ${j === 0 ? 'font-medium text-brand-600' : 'text-ink-600'}`}>{cell}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-canvas-border/40 shrink-0">
+              <button
+                onClick={() => {
+                  if (uploadStep === 'review') setUploadStep('upload');
+                  else setShowUploadModal(false);
+                }}
+                className="px-4 py-2 text-[13px] font-semibold text-ink-700 hover:bg-surface-2 rounded-lg transition-colors cursor-pointer"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => {
+                  if (uploadStep === 'upload') return;
+                  addToast({ message: `"${uploadedFileName}" added as data source`, type: 'success' });
+                  setShowUploadModal(false);
+                }}
+                disabled={uploadStep === 'upload'}
+                className="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 disabled:bg-ink-200 text-white rounded-full text-[13px] font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
+              >
+                {uploadStep === 'upload' ? 'Review Data' : 'Add to Data Source'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    )}
+
+    {/* Query Session Modal */}
+    {showQueryModal && (
+      <>
+        <div className="fixed inset-0 z-[10000] bg-black/30 backdrop-blur-sm" onClick={() => setShowQueryModal(false)} />
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto bg-white rounded-2xl shadow-2xl w-[580px] max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-canvas-border/40 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="size-9 rounded-xl bg-brand-50 flex items-center justify-center">
+                  <ListChecks size={18} className="text-brand-600" />
+                </div>
+                <div>
+                  <h2 className="text-[16px] font-bold text-ink-900">Choose a Query Session</h2>
+                  <p className="text-[12px] text-ink-400 mt-0.5">Select one session to proceed.</p>
+                </div>
+              </div>
+              <button onClick={() => setShowQueryModal(false)} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
+                <X size={18} className="text-ink-500" />
+              </button>
+            </div>
+
+            {/* Search + New Query */}
+            <div className="flex items-center gap-3 px-6 py-4 shrink-0">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
+                <input
+                  type="text"
+                  placeholder="Search query sessions"
+                  value={querySearch}
+                  onChange={e => setQuerySearch(e.target.value)}
+                  className="w-full h-10 pl-10 pr-3 border border-canvas-border rounded-xl text-[13px] text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
+                />
+              </div>
+              <button className="px-4 h-10 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-[12px] font-semibold transition-colors cursor-pointer shrink-0">
+                New Query
+              </button>
+            </div>
+
+            {/* Query list */}
+            <div className="flex-1 overflow-y-auto px-6 pb-4">
+              {[
+                { group: 'Used in Dashboard', queries: [
+                  'How can transaction anomalies signal a risk of financial misstatement?',
+                  'How do industry standards help in assessing fraud risk in business processes?',
+                  'What internal controls can mitigate the risk of fraud in financial reporting?',
+                  'How can regular audits help in identifying high-risk business processes?',
+                ]},
+                { group: 'Other Sessions', queries: [
+                  'What are the top 5 performing categories?',
+                  'Compare year-over-year growth across all states',
+                  'Show customer acquisition cost by channel',
+                  'What is the average order value by product category?',
+                  'Analyze revenue trends for the last 12 months',
+                ]},
+              ].map(section => {
+                const filtered = section.queries.filter(q => q.toLowerCase().includes(querySearch.toLowerCase()));
+                if (filtered.length === 0) return null;
+                return (
+                  <div key={section.group} className="mb-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-brand-600 mb-2">{section.group}</p>
+                    <div className="space-y-2">
+                      {filtered.map(q => (
+                        <button
+                          key={q}
+                          onClick={() => setSelectedQuery(selectedQuery === q ? null : q)}
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all cursor-pointer ${
+                            selectedQuery === q
+                              ? 'border-brand-400 bg-brand-50/50 shadow-sm'
+                              : 'border-canvas-border hover:border-brand-200 hover:bg-surface-2/50'
+                          }`}
+                        >
+                          <ListChecks size={16} className={selectedQuery === q ? 'text-brand-600' : 'text-ink-400'} />
+                          <span className={`text-[13px] ${selectedQuery === q ? 'text-brand-700 font-medium' : 'text-ink-700'}`}>{q}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-canvas-border/40 shrink-0">
+              <button
+                onClick={() => setShowQueryModal(false)}
+                className="px-4 py-2 text-[13px] font-semibold text-ink-700 hover:bg-surface-2 rounded-lg transition-colors cursor-pointer"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedQuery) {
+                    addToast({ message: `Query "${selectedQuery.slice(0, 30)}..." selected`, type: 'success' });
+                    setShowQueryModal(false);
+                    setSelectedQuery(null);
+                  }
+                }}
+                disabled={!selectedQuery}
+                className="px-5 py-2 bg-brand-600 hover:bg-brand-500 disabled:bg-ink-200 text-white rounded-xl text-[13px] font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    )}
+    </>
   );
 }
 
@@ -2225,6 +2524,7 @@ function FilterPanel({
   risk, onRiskChange,
   department, onDepartmentChange,
   onResetAll,
+  pageFilterFields, onPageFilterFieldsChange,
 }: {
   open: boolean;
   onClose: () => void;
@@ -2237,9 +2537,19 @@ function FilterPanel({
   department: string[];
   onDepartmentChange: (v: string[]) => void;
   onResetAll: () => void;
+  pageFilterFields: string[];
+  onPageFilterFieldsChange: (v: string[]) => void;
 }) {
   const toggleItem = (arr: string[], item: string) =>
     arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item];
+  const [fpPageDragOver, setFpPageDragOver] = useState(false);
+  const [fpFieldSearch, setFpFieldSearch] = useState('');
+  const [fpFile1Open, setFpFile1Open] = useState(true);
+  const [fpFile2Open, setFpFile2Open] = useState(false);
+
+  const fpFilteredDimensions = DRAG_FIELDS.filter(f => f.kind === 'dimension' && f.label.toLowerCase().includes(fpFieldSearch.toLowerCase()));
+  const fpFilteredMeasures = DRAG_FIELDS.filter(f => f.kind === 'measure' && f.label.toLowerCase().includes(fpFieldSearch.toLowerCase()));
+  const getFieldLabel = (id: string) => DRAG_FIELDS.find(f => f.id === id)?.label || id;
 
   const hasAny = dateRange !== 'last-30-days' || status.length > 0 || risk.length > 0 || department.length > 0;
 
@@ -2261,7 +2571,7 @@ function FilterPanel({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-0 right-0 h-full w-[340px] z-50 bg-canvas border-l border-canvas-border shadow-2xl flex flex-col"
+            className="fixed top-0 right-0 h-full w-[680px] z-50 bg-canvas border-l border-canvas-border shadow-2xl flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-canvas-border shrink-0">
@@ -2283,89 +2593,130 @@ function FilterPanel({
               </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-              {/* Date Range */}
-              <FilterSection
-                title="Date Range"
-                icon={<Clock size={14} />}
-                isActive={dateRange !== 'last-30-days'}
-                onClear={() => onDateRangeChange('last-30-days')}
-              >
-                <div className="space-y-0.5">
-                  {DATE_OPTIONS.map(opt => (
-                    <button
-                      key={opt.value}
-                      onClick={() => onDateRangeChange(opt.value)}
-                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[12px] transition-colors cursor-pointer ${
-                        dateRange === opt.value
-                          ? 'bg-brand-600 text-white font-medium'
-                          : 'text-ink-600 hover:bg-surface-2'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
+            {/* Side-by-side content */}
+            <div className="flex flex-1 overflow-hidden min-h-0">
+              {/* Left column — Drop zones */}
+              <div className="w-1/2 border-r border-canvas-border overflow-y-auto px-4 py-4 space-y-4">
+                {/* Filters on Page */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="size-2 rounded-full bg-brand-600" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-ink-500">Filters on Page</span>
+                  </div>
+                  <div
+                    className={`rounded-xl border-2 border-dashed p-4 flex flex-col items-center justify-center min-h-[100px] transition-colors ${
+                      fpPageDragOver ? 'border-brand-400 bg-brand-50/50' : 'border-ink-200 bg-canvas-elevated'
+                    }`}
+                    onDragOver={e => { e.preventDefault(); setFpPageDragOver(true); }}
+                    onDragLeave={() => setFpPageDragOver(false)}
+                    onDrop={e => {
+                      e.preventDefault();
+                      setFpPageDragOver(false);
+                      const fieldId = e.dataTransfer.getData('fieldId');
+                      if (fieldId && !pageFilterFields.includes(fieldId)) onPageFilterFieldsChange([...pageFilterFields, fieldId]);
+                    }}
+                  >
+                    {pageFilterFields.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 w-full">
+                        {pageFilterFields.map(fId => (
+                          <span key={fId} className="flex items-center gap-1 bg-brand-50 border border-brand-200 text-brand-700 text-[11px] font-medium px-2 py-1 rounded-md">
+                            {getFieldLabel(fId)}
+                            <button onClick={() => onPageFilterFieldsChange(pageFilterFields.filter(f => f !== fId))} className="hover:text-brand-900 cursor-pointer"><X size={10} /></button>
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-[12px] font-semibold text-ink-400">DROP FIELDS HERE</span>
+                        <span className="text-[11px] text-ink-300 mt-0.5">Drag from Data Fields</span>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </FilterSection>
+              </div>
 
-              {/* Status */}
-              <FilterSection
-                title="Status"
-                icon={<Shield size={14} />}
-                isActive={status.length > 0}
-                onClear={() => onStatusChange([])}
-              >
-                <div className="space-y-0.5">
-                  {STATUS_FILTER_OPTIONS.map(opt => (
-                    <CheckboxItem
-                      key={opt}
-                      label={opt}
-                      checked={status.includes(opt)}
-                      onChange={() => onStatusChange(toggleItem(status, opt))}
-                    />
-                  ))}
-                </div>
-              </FilterSection>
+              {/* Right column — Data fields */}
+              <div className="w-1/2 overflow-y-auto px-4 py-4 space-y-3">
+                <div className="text-[15px] font-semibold text-ink-900 px-1">Data</div>
 
-              {/* Risk Level */}
-              <FilterSection
-                title="Risk Level"
-                icon={<AlertTriangle size={14} />}
-                isActive={risk.length > 0}
-                onClear={() => onRiskChange([])}
-              >
-                <div className="space-y-0.5">
-                  {RISK_FILTER_OPTIONS.map(opt => (
-                    <CheckboxItem
-                      key={opt}
-                      label={opt}
-                      checked={risk.includes(opt)}
-                      onChange={() => onRiskChange(toggleItem(risk, opt))}
-                    />
-                  ))}
+                {/* Search */}
+                <div className="relative">
+                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" />
+                  <input
+                    type="text"
+                    placeholder="Search"
+                    value={fpFieldSearch}
+                    onChange={e => setFpFieldSearch(e.target.value)}
+                    className="w-full h-9 pl-8 pr-3 bg-canvas-elevated border border-canvas-border rounded-lg text-[12px] text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
+                  />
                 </div>
-              </FilterSection>
 
-              {/* Department */}
-              <FilterSection
-                title="Department"
-                icon={<Package size={14} />}
-                isActive={department.length > 0}
-                onClear={() => onDepartmentChange([])}
-                defaultOpen={false}
-              >
-                <div className="space-y-0.5">
-                  {DEPT_FILTER_OPTIONS.map(opt => (
-                    <CheckboxItem
-                      key={opt}
-                      label={opt}
-                      checked={department.includes(opt)}
-                      onChange={() => onDepartmentChange(toggleItem(department, opt))}
-                    />
-                  ))}
+                {/* File 1: Dimensions */}
+                <div className="bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
+                  <button
+                    onClick={() => setFpFile1Open(!fpFile1Open)}
+                    className="w-full flex items-center justify-between px-2.5 py-2 bg-brand-50/30 border-b border-canvas-border/50 hover:bg-brand-50 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <FileText size={12} className="text-brand-600" />
+                      <span className="text-[11px] font-semibold text-ink-800">Invoice_Master.xlsx</span>
+                    </div>
+                    <ChevronDown size={12} className={`text-brand-600 transition-transform ${fpFile1Open ? 'rotate-180' : ''}`} />
+                  </button>
+                  {fpFile1Open && (
+                    <div className="px-1.5 py-1">
+                      {fpFilteredDimensions.map(f => (
+                        <div
+                          key={f.id}
+                          draggable
+                          onDragStart={e => { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('fieldId', f.id); }}
+                          className="flex items-center gap-2 px-2 py-1.5 rounded cursor-grab hover:bg-brand-50/50 transition-colors active:cursor-grabbing"
+                        >
+                          <svg className="shrink-0 size-3 text-ink-300" viewBox="0 0 12 12" fill="currentColor">
+                            <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
+                            <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
+                            <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
+                          </svg>
+                          <span className="text-[12px] text-ink-700">{f.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </FilterSection>
+
+                {/* File 2: Measures */}
+                <div className="bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
+                  <button
+                    onClick={() => setFpFile2Open(!fpFile2Open)}
+                    className="w-full flex items-center justify-between px-2.5 py-2 bg-brand-50/30 border-b border-canvas-border/50 hover:bg-brand-50 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <FileText size={12} className="text-brand-600" />
+                      <span className="text-[11px] font-semibold text-ink-800">Vendor_Finance.xlsx</span>
+                    </div>
+                    <ChevronDown size={12} className={`text-brand-600 transition-transform ${fpFile2Open ? 'rotate-180' : ''}`} />
+                  </button>
+                  {fpFile2Open && (
+                    <div className="px-1.5 py-1">
+                      {fpFilteredMeasures.map(f => (
+                        <div
+                          key={f.id}
+                          draggable
+                          onDragStart={e => { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('fieldId', f.id); }}
+                          className="flex items-center gap-2 px-2 py-1.5 rounded cursor-grab hover:bg-brand-50/50 transition-colors active:cursor-grabbing"
+                        >
+                          <svg className="shrink-0 size-3 text-ink-300" viewBox="0 0 12 12" fill="currentColor">
+                            <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
+                            <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
+                            <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
+                          </svg>
+                          <span className="text-[12px] text-ink-700">{f.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </motion.div>
         </>
@@ -2447,18 +2798,48 @@ const RISK_COLORS: Record<string, string> = {
 
 const TIME_PERIODS = ['Today', '7D', '30D', '3M', '6M', '12M'];
 
-function ExpandedWidgetModal({ open, onClose, title, subtitle, children }: {
+function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit, onDelete, onPrev, onNext, hasPrev, hasNext }: {
   open: boolean;
   onClose: () => void;
   title: string;
   subtitle?: string;
   children: React.ReactNode;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<'visualization' | 'records' | 'summary'>('visualization');
   const [timePeriod, setTimePeriod] = useState('30D');
   const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('bar');
   const [chartTypeOpen, setChartTypeOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showThresholdModal, setShowThresholdModal] = useState(false);
+  const [showExpandMenu, setShowExpandMenu] = useState(false);
+  const [showAlertNotifications, setShowAlertNotifications] = useState(false);
+  const [editingExpandTitle, setEditingExpandTitle] = useState(false);
+  const [expandTitle, setExpandTitle] = useState(title);
+  const [showExpandDeleteConfirm, setShowExpandDeleteConfirm] = useState(false);
+  useEffect(() => { setExpandTitle(title); setEditingExpandTitle(false); }, [title]);
+  const [showVizFilter, setShowVizFilter] = useState(false);
+  const [vizFilterSelections, setVizFilterSelections] = useState<Record<string, string[]>>({});
+  const [vizFilterOpen, setVizFilterOpen] = useState<Record<string, boolean>>({});
+  const [vizFilterSearch, setVizFilterSearch] = useState<Record<string, string>>({});
+  const VIZ_FILTER_SECTIONS = [
+    { id: 'state', label: 'State / City', values: ['Maharashtra', 'Delhi NCR', 'Karnataka', 'Tamil Nadu', 'Gujarat', 'Rajasthan'] },
+    { id: 'product', label: 'Product', values: ['Laptop Pro X1', 'Thermal Paper Rolls', 'A4 Print Paper', 'Toner Cartridge HP', 'Office Chair Ergo', 'USB-C Hub'] },
+    { id: 'vendor', label: 'Vendor', values: ['Acme Corp', 'Global Tech', 'InfoSys Ltd', 'TCS', 'Wipro', 'HCL'] },
+    { id: 'department', label: 'Department', values: ['Finance', 'Procurement', 'IT', 'Legal', 'Operations', 'HR'] },
+  ];
+  const vizFilterCount = Object.values(vizFilterSelections).reduce((s, a) => s + a.length, 0);
+  const vizFilterBtnRef = useRef<HTMLButtonElement>(null);
+  const [alerts, setAlerts] = useState([
+    { id: '1', title: 'Duplicates Alert', message: 'Duplicate count exceeded threshold: 59 > 50', time: '4/24/2026, 5:37:43 PM' },
+    { id: '2', title: 'Compliance Alert', message: 'Compliance rate dropped below threshold: 92% < 95%', time: '4/24/2026, 4:15:22 PM' },
+    { id: '3', title: 'Amount Alert', message: 'Invoice amount exceeded threshold: ₹52,000 > ₹50,000', time: '4/24/2026, 3:02:11 PM' },
+  ]);
   const { addToast } = useToast();
 
   // Reset state when modal opens
@@ -2483,6 +2864,7 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children }: {
   const tabLabels = { visualization: 'Visualization', records: 'Detailed Records', summary: 'Summary' };
 
   return (
+    <>
     <AnimatePresence>
       {open && (
         <motion.div
@@ -2529,7 +2911,60 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children }: {
                 </div>
 
                 {/* Actions right */}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
+                  {/* Bell with badge */}
+                  <button
+                    onClick={() => setShowAlertNotifications(true)}
+                    className="relative p-2 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
+                    title="Alert Notifications"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    {alerts.length > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center" style={{ width: 18, height: 18 }}>{alerts.length}</span>
+                    )}
+                  </button>
+
+                  {/* 3-dot menu */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowExpandMenu(!showExpandMenu)}
+                      className="p-2 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
+                      title="More options"
+                    >
+                      <MoreVertical size={18} className="text-ink-700" />
+                    </button>
+
+                    {showExpandMenu && (
+                      <>
+                        <div className="fixed inset-0 z-30" onClick={() => setShowExpandMenu(false)} />
+                        <div className="absolute top-full right-0 z-40 mt-1 w-[180px] bg-white border border-canvas-border rounded-xl shadow-xl py-1.5">
+                          {onEdit && (
+                            <button
+                              onClick={() => { setShowExpandMenu(false); onEdit(); }}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-ink-700 hover:bg-surface-2 transition-colors text-left cursor-pointer"
+                            >
+                              <Edit size={15} className="text-ink-500" />
+                              Edit Widget
+                            </button>
+                          )}
+                          {onDelete && (
+                            <button
+                              onClick={() => { setShowExpandMenu(false); setShowExpandDeleteConfirm(true); }}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-ink-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left cursor-pointer"
+                            >
+                              <Trash2 size={15} className="text-ink-500" />
+                              Delete Widget
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Close */}
                   <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
                     <X size={18} className="text-ink-500" />
                   </button>
@@ -2538,20 +2973,49 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children }: {
 
               {/* Visualization sub-bar */}
               {activeTab === 'visualization' && (
-                <div className="flex items-center px-4 py-0 border-t border-canvas-border/50">
+                <div className="flex items-center px-4 py-0 border-t border-canvas-border/50 overflow-visible relative z-10">
                   {/* Left — prev/next arrows */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button className="size-8 flex items-center justify-center rounded border border-canvas-border bg-canvas-elevated hover:bg-surface-2 transition-colors cursor-pointer" title="Previous widget">
-                      <ChevronDown size={16} className="text-ink-700 rotate-90" />
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => onPrev?.()}
+                      disabled={!hasPrev}
+                      className={`size-8 flex items-center justify-center rounded-lg border transition-colors ${
+                        hasPrev ? 'border-canvas-border bg-white hover:bg-brand-50 hover:border-brand-200 cursor-pointer text-ink-700' : 'border-canvas-border/50 bg-surface-2/50 text-ink-300 cursor-not-allowed'
+                      }`}
+                      title="Previous widget"
+                    >
+                      <ChevronDown size={16} className="rotate-90" />
                     </button>
-                    <button className="size-8 flex items-center justify-center rounded border border-canvas-border bg-canvas-elevated hover:bg-surface-2 transition-colors cursor-pointer" title="Next widget">
-                      <ChevronDown size={16} className="text-ink-700 -rotate-90" />
+                    <button
+                      onClick={() => onNext?.()}
+                      disabled={!hasNext}
+                      className={`size-8 flex items-center justify-center rounded-lg border transition-colors ${
+                        hasNext ? 'border-canvas-border bg-white hover:bg-brand-50 hover:border-brand-200 cursor-pointer text-ink-700' : 'border-canvas-border/50 bg-surface-2/50 text-ink-300 cursor-not-allowed'
+                      }`}
+                      title="Next widget"
+                    >
+                      <ChevronDown size={16} className="-rotate-90" />
                     </button>
                   </div>
 
                   {/* Center — title */}
                   <div className="flex-1 flex items-center justify-center">
-                    <span className="text-[13px] font-semibold text-ink-900">{title}</span>
+                    {editingExpandTitle ? (
+                      <input
+                        autoFocus
+                        value={expandTitle}
+                        onChange={e => setExpandTitle(e.target.value)}
+                        onBlur={() => setEditingExpandTitle(false)}
+                        onKeyDown={e => { if (e.key === 'Enter') setEditingExpandTitle(false); }}
+                        className="text-[13px] font-semibold text-ink-900 bg-transparent border-none outline-none ring-0 shadow-none text-center"
+                        style={{ outline: 'none', boxShadow: 'none' }}
+                      />
+                    ) : (
+                      <span
+                        className="text-[13px] font-semibold text-ink-900 cursor-text hover:text-brand-600 transition-colors"
+                        onClick={() => setEditingExpandTitle(true)}
+                      >{expandTitle}</span>
+                    )}
                   </div>
 
                   {/* Right — drill + chart type + filter + settings */}
@@ -2610,16 +3074,131 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children }: {
                     <div className="w-px h-8 bg-canvas-border mx-2" />
 
                     {/* Filter */}
-                    <button onClick={() => addToast({ message: 'Filters', type: 'info' })} className="flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-medium text-ink-500 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer">
-                      <Filter size={15} />
-                      <span>Filter</span>
-                    </button>
+                    <div className="relative">
+                      <button
+                        ref={vizFilterBtnRef}
+                        onClick={() => setShowVizFilter(!showVizFilter)}
+                        className={`flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-medium transition-colors cursor-pointer rounded-lg ${
+                          showVizFilter || vizFilterCount > 0
+                            ? 'text-brand-700 bg-brand-50'
+                            : 'text-ink-500 hover:text-ink-700 hover:bg-surface-2'
+                        }`}
+                      >
+                        <Filter size={15} />
+                        <span>Filter</span>
+                        {vizFilterCount > 0 && (
+                          <span className="ml-0.5 size-4 bg-brand-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">{vizFilterCount}</span>
+                        )}
+                      </button>
+
+                      {showVizFilter && vizFilterBtnRef.current && (
+                        <>
+                          <div className="fixed inset-0 z-[9998]" onClick={() => setShowVizFilter(false)} />
+                          <div
+                            className="fixed z-[9999] w-[220px] bg-white rounded-2xl shadow-xl border border-canvas-border/50"
+                            style={{
+                              top: vizFilterBtnRef.current.getBoundingClientRect().bottom + 6,
+                              right: window.innerWidth - vizFilterBtnRef.current.getBoundingClientRect().right,
+                            }}
+                          >
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-canvas-border/40">
+                              <span className="text-[12px] font-bold text-ink-900 uppercase tracking-wide">Filters</span>
+                              {vizFilterCount > 0 && (
+                                <button onClick={() => setVizFilterSelections({})} className="text-[11px] font-semibold text-brand-600 hover:text-brand-700 cursor-pointer">
+                                  Clear
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Sections */}
+                            <div className="max-h-[260px] overflow-y-auto">
+                              {VIZ_FILTER_SECTIONS.map((section, si) => {
+                                const isOpen = vizFilterOpen[section.id] ?? (si === 0);
+                                const selected = vizFilterSelections[section.id] || [];
+                                const search = vizFilterSearch[section.id] || '';
+                                const filtered = section.values.filter(v => v.toLowerCase().includes(search.toLowerCase()));
+                                const allSelected = filtered.length > 0 && filtered.every(v => selected.includes(v));
+                                return (
+                                  <div key={section.id} className="border-b border-canvas-border/30 last:border-0">
+                                    {/* Section header */}
+                                    <button
+                                      onClick={() => setVizFilterOpen(prev => ({ ...prev, [section.id]: !isOpen }))}
+                                      className="w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-surface-2/40 transition-colors cursor-pointer"
+                                    >
+                                      <span className={`text-[11px] font-bold uppercase tracking-wide ${selected.length > 0 ? 'text-brand-700' : 'text-ink-500'}`}>
+                                        {section.label}
+                                      </span>
+                                      <ChevronDown size={14} className={`text-ink-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {/* Expanded content */}
+                                    {isOpen && (
+                                      <div className="px-3.5 pb-3">
+                                        {/* Search */}
+                                        <div className="relative mb-2">
+                                          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" />
+                                          <input
+                                            type="text"
+                                            placeholder={`Search ${section.label.toLowerCase()}...`}
+                                            value={search}
+                                            onChange={e => setVizFilterSearch(prev => ({ ...prev, [section.id]: e.target.value }))}
+                                            className="w-full h-8 pl-8 pr-2 bg-ink-50 rounded-lg text-[11px] text-ink-800 placeholder:text-ink-400 outline-none focus:bg-white focus:ring-1 focus:ring-brand-200 transition-all"
+                                          />
+                                        </div>
+
+                                        {/* Select All */}
+                                        <button
+                                          onClick={() => {
+                                            if (allSelected) setVizFilterSelections(prev => ({ ...prev, [section.id]: selected.filter(s => !filtered.includes(s)) }));
+                                            else setVizFilterSelections(prev => ({ ...prev, [section.id]: [...new Set([...selected, ...filtered])] }));
+                                          }}
+                                          className="w-full flex items-center gap-2 py-1.5 cursor-pointer text-left"
+                                        >
+                                          <div className={`size-4 rounded border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${
+                                            allSelected ? 'border-brand-600 bg-brand-600' : 'border-ink-300'
+                                          }`}>
+                                            {allSelected && <svg viewBox="0 0 12 12" fill="none" className="size-2"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                          </div>
+                                          <span className="text-[11px] font-semibold text-ink-800">Select All</span>
+                                        </button>
+
+                                        {/* Options */}
+                                        {filtered.map(val => (
+                                          <button
+                                            key={val}
+                                            onClick={() => {
+                                              setVizFilterSelections(prev => {
+                                                const cur = prev[section.id] || [];
+                                                return { ...prev, [section.id]: cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val] };
+                                              });
+                                            }}
+                                            className="w-full flex items-center gap-2 py-1.5 cursor-pointer text-left"
+                                          >
+                                            <div className={`size-4 rounded border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${
+                                              selected.includes(val) ? 'border-brand-600 bg-brand-600' : 'border-ink-300'
+                                            }`}>
+                                              {selected.includes(val) && <svg viewBox="0 0 12 12" fill="none" className="size-2"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                            </div>
+                                            <span className={`text-[11px] ${selected.includes(val) ? 'text-ink-900 font-medium' : 'text-ink-600'}`}>{val}</span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
 
                     {/* Divider */}
                     <div className="w-px h-8 bg-canvas-border mx-2" />
 
-                    {/* Settings */}
-                    <button onClick={() => addToast({ message: 'Settings', type: 'info' })} className="p-2.5 text-ink-400 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer" title="Settings">
+                    {/* Settings — opens threshold alert modal */}
+                    <button onClick={() => setShowThresholdModal(true)} className="p-2.5 text-ink-400 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer" title="Set Threshold Alert">
                       <Settings size={16} />
                     </button>
                   </div>
@@ -2642,16 +3221,25 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children }: {
                 {/* RECORDS */}
                 {activeTab === 'records' && (
                   <motion.div key="records" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-5">
-                    {/* Search */}
-                    <div className="relative mb-4">
-                      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
-                      <input
-                        type="text"
-                        placeholder="Search by invoice, vendor, department..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2.5 text-[13px] border border-canvas-border rounded-lg bg-canvas-elevated focus:outline-none focus:border-brand-400 transition-colors"
-                      />
+                    {/* Search + Download */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="relative flex-1">
+                        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
+                        <input
+                          type="text"
+                          placeholder="Search by invoice, vendor, department..."
+                          value={searchQuery}
+                          onChange={e => setSearchQuery(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2.5 text-[13px] border border-canvas-border rounded-lg bg-canvas-elevated focus:outline-none focus:border-brand-400 transition-colors"
+                        />
+                      </div>
+                      <button
+                        onClick={() => addToast({ message: 'Downloading records as CSV...', type: 'success' })}
+                        className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer shrink-0"
+                      >
+                        <Download size={14} />
+                        Download
+                      </button>
                     </div>
 
                     {/* Table */}
@@ -2770,6 +3358,227 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children }: {
         </motion.div>
       )}
     </AnimatePresence>
+
+    {/* Delete confirmation */}
+    {showExpandDeleteConfirm && (
+      <>
+        <div className="fixed inset-0 z-[10000] bg-black/30 backdrop-blur-sm" onClick={() => setShowExpandDeleteConfirm(false)} />
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto bg-white rounded-2xl shadow-2xl w-[360px] p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="size-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+                <Trash2 size={18} className="text-red-500" />
+              </div>
+              <h3 className="text-[15px] font-bold text-ink-900">Delete Widget</h3>
+            </div>
+            <p className="text-[13px] text-ink-500 mb-5">Are you sure you want to delete <strong>"{expandTitle}"</strong>? This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowExpandDeleteConfirm(false)}
+                className="flex-1 py-2.5 border border-canvas-border rounded-xl text-[13px] font-semibold text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowExpandDeleteConfirm(false); onDelete?.(); }}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[13px] font-semibold transition-colors cursor-pointer"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    )}
+
+    <ThresholdAlertModal
+      open={showThresholdModal}
+      onClose={() => setShowThresholdModal(false)}
+      widgetTitle={title}
+      addToast={addToast}
+    />
+
+    {/* Alert Notifications Modal */}
+    {showAlertNotifications && (
+      <>
+        <div className="fixed inset-0 z-[9999] bg-black/30 backdrop-blur-sm" onClick={() => setShowAlertNotifications(false)} />
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
+          <div
+            className="pointer-events-auto bg-white rounded-3xl shadow-2xl w-[520px] overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-8 pt-8 pb-4">
+              <h2 className="text-[20px] font-bold text-ink-900">Alert Notifications</h2>
+            </div>
+
+            {/* Alert list */}
+            <div className="px-8 pb-4 space-y-3 max-h-[400px] overflow-y-auto">
+              {alerts.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-[14px] text-ink-400">No alerts</p>
+                  <p className="text-[12px] text-ink-300 mt-1">All clear! No threshold alerts triggered.</p>
+                </div>
+              ) : (
+                alerts.map(alert => (
+                  <div key={alert.id} className="flex items-start gap-3 bg-brand-50/50 border-l-3 border-brand-500 rounded-xl px-5 py-4" style={{ borderLeftWidth: 3 }}>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <AlertTriangle size={16} className="text-brand-600" />
+                        <span className="text-[14px] font-semibold text-ink-900">{alert.title}</span>
+                      </div>
+                      <p className="text-[13px] text-ink-600">{alert.message}</p>
+                      <p className="text-[12px] text-ink-400 mt-1">{alert.time}</p>
+                    </div>
+                    <button
+                      onClick={() => setAlerts(prev => prev.filter(a => a.id !== alert.id))}
+                      className="shrink-0 p-1.5 border border-canvas-border rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
+                    >
+                      <X size={14} className="text-ink-400" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between px-8 pb-8 pt-2">
+              <button
+                onClick={() => { setAlerts([]); }}
+                className="px-5 py-2.5 border border-canvas-border rounded-2xl text-[14px] font-semibold text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                Clear All Alerts
+              </button>
+              <button
+                onClick={() => setShowAlertNotifications(false)}
+                className="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl text-[14px] font-semibold transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    )}
+    </>
+  );
+}
+
+// ─── Threshold Alert Modal ───────────────────────────────────────────────────
+
+function ThresholdAlertModal({ open, onClose, widgetTitle, addToast }: {
+  open: boolean;
+  onClose: () => void;
+  widgetTitle: string;
+  addToast: (t: { message: string; type: string }) => void;
+}) {
+  const [thresholdValue, setThresholdValue] = useState('2503');
+  const [condition, setCondition] = useState('');
+  const [emailNotification, setEmailNotification] = useState(false);
+  const [notifyEmail, setNotifyEmail] = useState('');
+
+  if (!open) return null;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[9999] bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
+        <div
+          className="pointer-events-auto bg-white rounded-3xl shadow-2xl w-[460px] overflow-hidden"
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Content */}
+          <div className="px-8 pt-8 pb-6 space-y-6">
+            {/* Title */}
+            <div>
+              <h2 className="text-[20px] font-bold text-ink-900">Set Threshold Alert</h2>
+              <p className="text-[14px] text-ink-400 mt-1">Configure alerts for {widgetTitle}</p>
+            </div>
+
+            {/* Threshold Value */}
+            <div>
+              <label className="text-[15px] font-bold text-ink-900 block mb-2.5">Threshold Value</label>
+              <input
+                type="number"
+                value={thresholdValue}
+                onChange={e => setThresholdValue(e.target.value)}
+                className="w-full px-5 py-3.5 text-[15px] border border-canvas-border rounded-2xl bg-white text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all"
+              />
+              <p className="text-[13px] text-ink-400 mt-2">The metric value that will trigger the alert</p>
+            </div>
+
+            {/* Condition */}
+            <div>
+              <label className="text-[15px] font-bold text-ink-900 block mb-2.5">Condition</label>
+              <div className="relative">
+                <select
+                  value={condition}
+                  onChange={e => setCondition(e.target.value)}
+                  className="w-full px-5 py-3.5 text-[15px] border border-canvas-border rounded-2xl bg-white text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all appearance-none cursor-pointer"
+                >
+                  <option value="">Select condition</option>
+                  <option value="greater">Greater than</option>
+                  <option value="less">Less than</option>
+                  <option value="equal">Equal to</option>
+                  <option value="greater_equal">Greater than or equal</option>
+                  <option value="less_equal">Less than or equal</option>
+                </select>
+                <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-canvas-border" />
+
+            {/* Email Notification */}
+            <div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Mail size={20} className="text-brand-600" />
+                  <span className="text-[15px] font-bold text-ink-900">Email Notification</span>
+                </div>
+                <button
+                  onClick={() => setEmailNotification(!emailNotification)}
+                  className={`relative rounded-full transition-colors cursor-pointer ${emailNotification ? 'bg-brand-600' : 'bg-ink-200'}`}
+                  style={{ width: 44, height: 24 }}
+                >
+                  <div className={`absolute top-[3px] size-[18px] bg-white rounded-full shadow transition-all ${emailNotification ? 'left-[23px]' : 'left-[3px]'}`} />
+                </button>
+              </div>
+              <p className="text-[13px] text-ink-400 mt-1.5 ml-[32px]">Receive email alerts when threshold conditions are met</p>
+              {emailNotification && (
+                <input
+                  type="email"
+                  value={notifyEmail}
+                  onChange={e => setNotifyEmail(e.target.value)}
+                  placeholder="Enter email address"
+                  className="w-full mt-3 px-5 py-3.5 text-[15px] border border-canvas-border rounded-2xl bg-white text-ink-900 placeholder:text-ink-400 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all"
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex gap-3 px-8 pb-8">
+            <button
+              onClick={onClose}
+              className="flex-1 py-3.5 border border-canvas-border rounded-2xl text-[15px] font-semibold text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                addToast({ message: 'Threshold alert saved', type: 'success' });
+                onClose();
+              }}
+              className="flex-1 py-3.5 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl text-[15px] font-semibold transition-colors cursor-pointer"
+            >
+              Save Alert
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -2784,6 +3593,13 @@ function WidgetCard({
   onDelete,
   onFilter,
   addToast,
+  pageFilterFields,
+  onRemovePageFilter,
+  onClearPageFilters,
+  colSpan = 1,
+  onChangeSize,
+  onMoveUp,
+  onMoveDown,
 }: {
   title: string;
   subtitle?: string;
@@ -2793,11 +3609,45 @@ function WidgetCard({
   onDelete?: () => void;
   onFilter?: () => void;
   addToast: (t: { message: string; type: string }) => void;
+  pageFilterFields?: string[];
+  onRemovePageFilter?: (id: string) => void;
+  onClearPageFilters?: () => void;
+  colSpan?: 1 | 2;
+  onChangeSize?: (span: 1 | 2) => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingSubtitle, setEditingSubtitle] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [localTitle, setLocalTitle] = useState(title);
+  const [localSubtitle, setLocalSubtitle] = useState(subtitle || '');
+  const [widgetFilterSelections, setWidgetFilterSelections] = useState<Record<string, string[]>>({});
+  const [widgetFilterSearch, setWidgetFilterSearch] = useState<Record<string, string>>({});
+  const [widgetFilterOpen, setWidgetFilterOpen] = useState<Record<string, boolean>>({});
   const [drillLevel, setDrillLevel] = useState(0);
   const [drillModeActive, setDrillModeActive] = useState(false);
   const [hovered, setHovered] = useState(false);
+
+  const SAMPLE_VALUES: Record<string, string[]> = {
+    date: ['2024-01', '2024-02', '2024-03', '2024-04', '2024-05', '2024-06'],
+    month: ['January', 'February', 'March', 'April', 'May', 'June'],
+    week: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+    region: ['North', 'South', 'East', 'West', 'Central'],
+    state: ['Maharashtra', 'Delhi NCR', 'Karnataka', 'Tamil Nadu', 'Gujarat', 'Rajasthan'],
+    vendor_name: ['Acme Corp', 'Global Tech', 'InfoSys Ltd', 'TCS', 'Wipro', 'HCL'],
+    status: ['Compliant', 'Non-Compliant', 'Under Review', 'Pending', 'Flagged'],
+    category: ['Travel', 'Office Supplies', 'IT Equipment', 'Consulting', 'Marketing'],
+    department: ['Finance', 'Procurement', 'IT', 'Legal', 'Operations', 'HR'],
+    invoice_no: ['INV-001', 'INV-002', 'INV-003', 'INV-004', 'INV-005'],
+    amount: ['< 1,000', '1,000 - 5,000', '5,000 - 10,000', '10,000 - 50,000', '> 50,000'],
+    risk_score: ['Critical', 'High', 'Medium', 'Low'],
+    compliance_rate: ['> 95%', '90-95%', '85-90%', '< 85%'],
+  };
+  const getFilterValues = (fieldId: string) => SAMPLE_VALUES[fieldId] || ['Value 1', 'Value 2', 'Value 3', 'Value 4', 'Value 5'];
+  const activeFilterCount = Object.values(widgetFilterSelections).reduce((sum, arr) => sum + arr.length, 0);
 
   const handleDrillUp = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -2827,15 +3677,68 @@ function WidgetCard({
 
   return (
     <div
-      className="glass-card rounded-xl transition-all duration-150 group relative"
+      className={`glass-card rounded-xl transition-all duration-150 group relative ${colSpan === 2 ? 'lg:col-span-2' : ''}`}
+      style={{ minHeight: 280, maxHeight: 600 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setShowMenu(false); }}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-6 pt-6 pb-2">
+        {/* Drag handle */}
+        {(onMoveUp || onMoveDown) && (
+          <div className={`flex flex-col gap-0.5 mr-3 shrink-0 transition-opacity ${hovered ? 'opacity-100' : 'opacity-0'}`}>
+            <button
+              onClick={() => onMoveUp?.()}
+              disabled={!onMoveUp}
+              className={`p-0.5 rounded transition-colors ${onMoveUp ? 'text-ink-400 hover:text-brand-600 hover:bg-brand-50 cursor-pointer' : 'text-ink-200 cursor-not-allowed'}`}
+              title="Move up"
+            >
+              <ChevronUp size={14} />
+            </button>
+            <button
+              onClick={() => onMoveDown?.()}
+              disabled={!onMoveDown}
+              className={`p-0.5 rounded transition-colors ${onMoveDown ? 'text-ink-400 hover:text-brand-600 hover:bg-brand-50 cursor-pointer' : 'text-ink-200 cursor-not-allowed'}`}
+              title="Move down"
+            >
+              <ChevronDown size={14} />
+            </button>
+          </div>
+        )}
         <div className="min-w-0 flex-1">
-          <h3 className="text-[15px] font-semibold text-ink-900 truncate">{title}</h3>
-          {subtitle && <p className="text-[12px] text-ink-500 mt-1 truncate">{subtitle}</p>}
+          {editingTitle ? (
+            <input
+              autoFocus
+              value={localTitle}
+              onChange={e => setLocalTitle(e.target.value)}
+              onBlur={e => { if (!e.relatedTarget?.closest('[data-rename-group]')) { setEditingTitle(false); setEditingSubtitle(false); } }}
+              onKeyDown={e => { if (e.key === 'Enter') { setEditingTitle(false); setEditingSubtitle(false); } }}
+              onClick={e => e.stopPropagation()}
+              data-rename-group=""
+              className="text-[15px] font-semibold text-ink-900 w-full bg-transparent border-none outline-none ring-0 shadow-none" style={{ outline: 'none', boxShadow: 'none' }}
+            />
+          ) : (
+            <h3
+              className="text-[15px] font-semibold text-ink-900 truncate hover:text-brand-600 transition-colors cursor-pointer"
+              onClick={() => onExpand?.()}
+            >{localTitle}</h3>
+          )}
+          {editingSubtitle ? (
+            <input
+              value={localSubtitle}
+              onChange={e => setLocalSubtitle(e.target.value)}
+              onBlur={e => { if (!e.relatedTarget?.closest('[data-rename-group]')) { setEditingTitle(false); setEditingSubtitle(false); } }}
+              onKeyDown={e => { if (e.key === 'Enter') { setEditingTitle(false); setEditingSubtitle(false); } }}
+              onClick={e => e.stopPropagation()}
+              placeholder="Add description..."
+              data-rename-group=""
+              className="text-[12px] text-ink-500 mt-1 w-full bg-transparent border-none outline-none ring-0 shadow-none" style={{ outline: 'none', boxShadow: 'none' }}
+            />
+          ) : (
+            localSubtitle && (
+              <p className="text-[12px] text-ink-500 mt-1 truncate">{localSubtitle}</p>
+            )
+          )}
         </div>
 
         {/* Toolbar — visible on hover */}
@@ -2855,9 +3758,105 @@ function WidgetCard({
           </ToolbarBtn>
 
           {/* Filter */}
-          <ToolbarBtn onClick={(e) => { e.stopPropagation(); onFilter?.(); }} tip="Widget filters">
-            <Filter size={13} />
-          </ToolbarBtn>
+          <div className="relative">
+            <ToolbarBtn
+              onClick={(e) => { e.stopPropagation(); setShowFilterDropdown(!showFilterDropdown); }}
+              active={showFilterDropdown || activeFilterCount > 0}
+              tip="Widget filters"
+            >
+              <Filter size={13} />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 size-3.5 bg-brand-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center">{activeFilterCount}</span>
+              )}
+            </ToolbarBtn>
+
+            {showFilterDropdown && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={(e) => { e.stopPropagation(); setShowFilterDropdown(false); }} />
+                <div className="absolute top-full right-0 z-40 mt-1 w-[220px] bg-white border border-canvas-border/50 rounded-2xl shadow-xl overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-canvas-border/40">
+                    <span className="text-[12px] font-bold text-ink-900 uppercase tracking-wide">Filters</span>
+                    {activeFilterCount > 0 && (
+                      <button onClick={(e) => { e.stopPropagation(); setWidgetFilterSelections({}); }} className="text-[11px] font-semibold text-brand-600 hover:text-brand-700 cursor-pointer">
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  {/* Sections */}
+                  <div className="max-h-[260px] overflow-y-auto">
+                    {DRAG_FIELDS.filter(f => f.kind === 'dimension').slice(0, 4).map((field, si) => {
+                      const values = getFilterValues(field.id);
+                      const selected = widgetFilterSelections[field.id] || [];
+                      const search = widgetFilterSearch[field.id] || '';
+                      const filtered = values.filter(v => v.toLowerCase().includes(search.toLowerCase()));
+                      const isOpen = widgetFilterOpen[field.id] ?? (si === 0);
+                      const allSelected = filtered.length > 0 && filtered.every(v => selected.includes(v));
+                      return (
+                        <div key={field.id} className="border-b border-canvas-border/30 last:border-0">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setWidgetFilterOpen(prev => ({ ...prev, [field.id]: !isOpen })); }}
+                            className="w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-surface-2/40 transition-colors cursor-pointer"
+                          >
+                            <span className={`text-[11px] font-bold uppercase tracking-wide ${selected.length > 0 ? 'text-brand-700' : 'text-ink-500'}`}>
+                              {field.label}
+                            </span>
+                            <ChevronDown size={14} className={`text-ink-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                          {isOpen && (
+                            <div className="px-3.5 pb-3">
+                              <div className="relative mb-2">
+                                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" />
+                                <input
+                                  type="text"
+                                  placeholder={`Search ${field.label.toLowerCase()}...`}
+                                  value={search}
+                                  onChange={e => setWidgetFilterSearch(prev => ({ ...prev, [field.id]: e.target.value }))}
+                                  onClick={e => e.stopPropagation()}
+                                  className="w-full h-8 pl-8 pr-2 bg-ink-50 rounded-lg text-[11px] text-ink-800 placeholder:text-ink-400 outline-none focus:bg-white focus:ring-1 focus:ring-brand-200 transition-all"
+                                />
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (allSelected) setWidgetFilterSelections(prev => ({ ...prev, [field.id]: selected.filter(s => !filtered.includes(s)) }));
+                                  else setWidgetFilterSelections(prev => ({ ...prev, [field.id]: [...new Set([...selected, ...filtered])] }));
+                                }}
+                                className="w-full flex items-center gap-2 py-1.5 cursor-pointer text-left"
+                              >
+                                <div className={`size-4 rounded border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${allSelected ? 'border-brand-600 bg-brand-600' : 'border-ink-300'}`}>
+                                  {allSelected && <svg viewBox="0 0 12 12" fill="none" className="size-2"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                </div>
+                                <span className="text-[11px] font-semibold text-ink-800">Select All</span>
+                              </button>
+                              {filtered.map(val => (
+                                <button
+                                  key={val}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setWidgetFilterSelections(prev => {
+                                      const cur = prev[field.id] || [];
+                                      return { ...prev, [field.id]: cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val] };
+                                    });
+                                  }}
+                                  className="w-full flex items-center gap-2 py-1.5 cursor-pointer text-left"
+                                >
+                                  <div className={`size-4 rounded border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${selected.includes(val) ? 'border-brand-600 bg-brand-600' : 'border-ink-300'}`}>
+                                    {selected.includes(val) && <svg viewBox="0 0 12 12" fill="none" className="size-2"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                  </div>
+                                  <span className={`text-[11px] ${selected.includes(val) ? 'text-ink-900 font-medium' : 'text-ink-600'}`}>{val}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
           {/* 3-dot menu */}
           <div className="relative">
@@ -2872,7 +3871,7 @@ function WidgetCard({
             {showMenu && (
               <>
                 <div className="fixed inset-0 z-30" onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} />
-                <div className="absolute top-full right-0 z-40 mt-1 w-[140px] bg-canvas-elevated border border-canvas-border rounded-lg shadow-xl py-1">
+                <div className="absolute top-full right-0 z-40 mt-1 w-[160px] bg-canvas-elevated border border-canvas-border rounded-lg shadow-xl py-1">
                   {onExpand && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setShowMenu(false); onExpand(); }}
@@ -2882,18 +3881,25 @@ function WidgetCard({
                       Expand
                     </button>
                   )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowMenu(false); setEditingTitle(true); setEditingSubtitle(true); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] text-ink-700 hover:bg-brand-50 hover:text-brand-600 transition-colors text-left cursor-pointer"
+                  >
+                    <Edit size={13} />
+                    Rename
+                  </button>
                   {onEdit && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEdit(); }}
                       className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] text-ink-700 hover:bg-brand-50 hover:text-brand-600 transition-colors text-left cursor-pointer"
                     >
-                      <Edit size={13} />
+                      <Settings size={13} />
                       Edit Widget
                     </button>
                   )}
                   {onDelete && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete(); }}
+                      onClick={(e) => { e.stopPropagation(); setShowMenu(false); setShowDeleteConfirm(true); }}
                       className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] text-ink-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left cursor-pointer"
                     >
                       <Trash2 size={13} />
@@ -2907,10 +3913,76 @@ function WidgetCard({
         </div>
       </div>
 
+      {/* Page filter pills on widget + active widget filter selections */}
+      {((pageFilterFields && pageFilterFields.length > 0) || activeFilterCount > 0) && (
+        <div className="flex items-center gap-1.5 flex-wrap px-6 pb-2">
+          {/* Page filter field pills */}
+          {pageFilterFields?.map(fId => {
+            const label = DRAG_FIELDS.find(f => f.id === fId)?.label || fId;
+            const selected = widgetFilterSelections[fId] || [];
+            return (
+              <span key={fId} className={`flex items-center gap-1 border text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                selected.length > 0 ? 'bg-brand-100 border-brand-300 text-brand-800' : 'bg-brand-50 border-brand-200 text-brand-700'
+              }`}>
+                <Filter size={9} />
+                {label}{selected.length > 0 && ` (${selected.length})`}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {/* Chart content */}
       <div className="px-6 pb-6 flex-1">
         {children}
       </div>
+
+      {/* Delete confirmation */}
+      {showDeleteConfirm && (
+        <>
+          <div className="fixed inset-0 z-[9999] bg-black/30 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
+            <div className="pointer-events-auto bg-white rounded-2xl shadow-2xl w-[360px] p-6" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="size-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+                  <Trash2 size={18} className="text-red-500" />
+                </div>
+                <h3 className="text-[15px] font-bold text-ink-900">Delete Widget</h3>
+              </div>
+              <p className="text-[13px] text-ink-500 mb-5">Are you sure you want to delete <strong>"{localTitle}"</strong>? This action cannot be undone.</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 py-2.5 border border-canvas-border rounded-xl text-[13px] font-semibold text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { setShowDeleteConfirm(false); onDelete?.(); }}
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[13px] font-semibold transition-colors cursor-pointer"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Resize handle — bottom right corner */}
+      {onChangeSize && (
+        <button
+          onClick={() => onChangeSize(colSpan === 1 ? 2 : 1)}
+          className={`absolute bottom-2 right-2 p-1 rounded transition-all cursor-pointer ${
+            hovered ? 'opacity-60 hover:opacity-100 hover:bg-brand-50 text-ink-400 hover:text-brand-600' : 'opacity-0'
+          }`}
+          title={colSpan === 1 ? 'Expand to full width' : 'Shrink to half width'}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <path d="M10 1h3v3" /><path d="M4 13H1v-3" /><path d="M13 1L8 6" /><path d="M1 13l5-5" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -3169,11 +4241,24 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterRisk, setFilterRisk] = useState<string[]>([]);
   const [filterDepartment, setFilterDepartment] = useState<string[]>([]);
+  const [pageFilterFields, setPageFilterFields] = useState<string[]>([]);
   const [addWidgetOpen, setAddWidgetOpen] = useState(!!initialCustomFields?.length);
+  const [editingWidget, setEditingWidget] = useState<{ index: number; data: { chartType: string; title: string; xField: string; yField: string } } | null>(null);
   const [customFields] = useState<string[] | null>(initialCustomFields || null);
   const [userWidgets, setUserWidgets] = useState<Array<{ chartType: string; title: string; xField: string; yField: string }>>(savedWidgets);
   const isCustomDashboard = isCustomInitial;
+  const [editingDashName, setEditingDashName] = useState(false);
+  const [dashName, setDashName] = useState(isCustomDashboard ? (initialDashboardName || 'Custom Dashboard') : (initialDashboardName || ''));
+  const [widgetSizes, setWidgetSizes] = useState<Record<number, 1 | 2>>({});
   const [activeFiltersCount, setActiveFiltersCount] = useState(0);
+
+  const handleEditDefaultWidget = (widgetTitle: string, chartType: string, subtitle?: string) => {
+    const parts = (subtitle || '').split(' by ');
+    const yField = parts[0]?.trim() || '';
+    const xField = parts[1]?.trim() || '';
+    setEditingWidget({ index: -1, data: { chartType, title: widgetTitle, xField, yField } });
+    setAddWidgetOpen(true);
+  };
 
   // Recalculate active filter count
   useEffect(() => {
@@ -3192,7 +4277,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
       setLastRefreshTime('Just now');
       addToast({ message: 'Dashboard refreshed', type: 'success' });
       setTimeout(() => setLastRefreshTime('1 min ago'), 60000);
-    }, 800);
+    }, 2000);
   };
 
   const handleExport = () => {
@@ -3216,12 +4301,39 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
   if (loading) return <DashboardSkeleton />;
 
   const dashboard = DASHBOARDS.find(d => d.id === activeId) || DASHBOARDS[0];
-  const displayName = isCustomDashboard ? (initialDashboardName || 'Custom Dashboard') : dashboard.name;
+  const displayName = dashName || dashboard.name;
   const displaySubtitle = isCustomDashboard ? 'Custom dashboard' : dashboard.subtitle;
 
   return (
     <div className="h-full flex bg-canvas relative overflow-hidden">
       <Orb hoverIntensity={0.09} rotateOnHover hue={dashboard.accentHue} opacity={0.08} />
+
+      {/* Refresh overlay */}
+      <AnimatePresence>
+        {isRefreshing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 z-[100] flex flex-col items-center justify-center"
+            style={{ backdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.75)' }}
+          >
+            {/* Spinner */}
+            <div className="relative size-16 mb-5">
+              <svg className="size-16 animate-spin" viewBox="0 0 64 64" fill="none">
+                <circle cx="32" cy="32" r="28" stroke="#e5e7eb" strokeWidth="4" />
+                <path d="M60 32a28 28 0 0 0-28-28" stroke="#7C3AED" strokeWidth="4" strokeLinecap="round" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="size-2.5 rounded-full bg-brand-500" />
+              </div>
+            </div>
+            <p className="text-[16px] font-semibold text-ink-700">Refreshing Dashboard</p>
+            <p className="text-[13px] text-ink-400 mt-1">Updating all data and charts...</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Sidebar removed — dashboard switching handled via list page */}
 
@@ -3237,28 +4349,44 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
             className="p-8"
           >
             {/* Page header — Editorial: breadcrumb · serif title · context · actions */}
-            <div className="mb-6">
-              <div className="font-mono text-[12px] text-ink-500 mb-2 flex items-center gap-1">
-                {onBack && (
-                  <button onClick={onBack} className="inline-flex items-center gap-1 hover:text-brand-600 transition-colors cursor-pointer">
-                    <ArrowLeft size={12} />
-                    Dashboards
-                  </button>
-                )}
-                {onBack && <span>·</span>}
-                {!onBack && <span>Dashboards · </span>}
-                {displayName}
-              </div>
-              <div className="flex items-end justify-between">
+            <div className={isFullScreen ? 'mb-4' : 'mb-6'}>
+              {!isFullScreen && (
+                <div className="font-mono text-[12px] text-ink-500 mb-2 flex items-center gap-1">
+                  {onBack && (
+                    <button onClick={onBack} className="inline-flex items-center gap-1 hover:text-brand-600 transition-colors cursor-pointer">
+                      <ArrowLeft size={12} />
+                      Dashboards
+                    </button>
+                  )}
+                  {onBack && <span>·</span>}
+                  {!onBack && <span>Dashboards · </span>}
+                  {displayName}
+                </div>
+              )}
+              <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="font-display text-[34px] font-[420] text-ink-900 leading-[1.15]">{displayName}</h1>
-                  <p className="text-[13px] text-ink-500 mt-1">{displaySubtitle}</p>
+                  {editingDashName ? (
+                    <input
+                      autoFocus
+                      value={dashName}
+                      onChange={e => setDashName(e.target.value)}
+                      onBlur={() => setEditingDashName(false)}
+                      onKeyDown={e => { if (e.key === 'Enter') setEditingDashName(false); }}
+                      className={`font-display font-[420] text-ink-900 leading-[1.15] bg-transparent border-none ring-0 shadow-none w-full ${isFullScreen ? 'text-[22px]' : 'text-[34px]'}`}
+                      style={{ outline: 'none', boxShadow: 'none' }}
+                    />
+                  ) : (
+                    <h1
+                      className={`font-display font-[420] text-ink-900 leading-[1.15] cursor-text hover:text-brand-800 transition-colors ${isFullScreen ? 'text-[22px]' : 'text-[34px]'}`}
+                      onClick={() => setEditingDashName(true)}
+                    >{displayName}</h1>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {/* Refreshed indicator */}
                   <button
                     onClick={handleRefresh}
-                    className="flex items-center gap-1.5 px-3 h-9 border border-canvas-border bg-canvas-elevated rounded-lg text-[12px] text-ink-500 hover:border-brand-200 transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 px-4 h-9 border border-canvas-border bg-white rounded-full text-[12px] text-ink-500 hover:border-brand-200 shadow-sm transition-colors cursor-pointer"
                     title="Click to refresh"
                   >
                     <RefreshCw size={13} className={isRefreshing ? 'animate-spin text-brand-600' : ''} />
@@ -3269,10 +4397,10 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                   <div className="relative">
                     <button
                       onClick={() => setShowFrequencyDropdown(!showFrequencyDropdown)}
-                      className={`flex items-center gap-1.5 px-3 h-9 rounded-full text-[12px] font-medium transition-colors cursor-pointer border shadow-sm ${
+                      className={`flex items-center gap-1.5 px-4 h-9 rounded-full text-[12px] font-medium transition-colors cursor-pointer border shadow-sm ${
                         autoRefreshFrequency !== 'Off'
                           ? 'border-brand-300 bg-brand-50 text-brand-700'
-                          : 'border-canvas-border bg-canvas-elevated text-ink-500 hover:border-brand-200'
+                          : 'border-canvas-border bg-white text-ink-500 hover:border-brand-200'
                       }`}
                     >
                       <Clock size={13} />
@@ -3314,7 +4442,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                   {/* + Add Widget — primary CTA */}
                   <button
                     onClick={() => setAddWidgetOpen(true)}
-                    className="flex items-center gap-1.5 px-4 h-9 bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 px-5 h-9 bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white rounded-full text-[12px] font-semibold shadow-sm transition-colors cursor-pointer"
                   >
                     <Plus size={14} />
                     Add Widget
@@ -3357,8 +4485,17 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                   {/* Fullscreen */}
                   <button
                     onClick={() => {
-                      setIsFullScreen(!isFullScreen);
-                      addToast({ message: isFullScreen ? 'Exited fullscreen' : 'Entered fullscreen', type: 'info' });
+                      if (!document.fullscreenElement) {
+                        document.documentElement.requestFullscreen().then(() => {
+                          setIsFullScreen(true);
+                          addToast({ message: 'Entered fullscreen', type: 'info' });
+                        }).catch(() => {});
+                      } else {
+                        document.exitFullscreen().then(() => {
+                          setIsFullScreen(false);
+                          addToast({ message: 'Exited fullscreen', type: 'info' });
+                        }).catch(() => {});
+                      }
                     }}
                     className="flex items-center justify-center size-9 border border-canvas-border bg-canvas-elevated rounded-lg text-ink-500 hover:text-brand-600 hover:border-brand-200 transition-colors cursor-pointer"
                     title={isFullScreen ? 'Exit fullscreen' : 'Fullscreen'}
@@ -3411,10 +4548,30 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                     title={w.title}
                     subtitle={w.yField && w.xField ? `${w.yField} by ${w.xField}` : 'Custom widget'}
                     addToast={addToast}
+                    colSpan={widgetSizes[i] || 1}
+                    onChangeSize={(span) => setWidgetSizes(prev => ({ ...prev, [i]: span }))}
+                    onMoveUp={i > 0 ? () => {
+                      const next = [...userWidgets];
+                      [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                      setUserWidgets(next);
+                      onSaveWidgets?.(next);
+                      // Swap sizes too
+                      setWidgetSizes(prev => { const n = { ...prev }; const tmp = n[i]; n[i] = n[i-1]; n[i-1] = tmp; return n; });
+                    } : undefined}
+                    onMoveDown={i < userWidgets.length - 1 ? () => {
+                      const next = [...userWidgets];
+                      [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                      setUserWidgets(next);
+                      onSaveWidgets?.(next);
+                      setWidgetSizes(prev => { const n = { ...prev }; const tmp = n[i]; n[i] = n[i+1]; n[i+1] = tmp; return n; });
+                    } : undefined}
                     onExpand={() => setExpandedWidget({ title: w.title, subtitle: w.yField ? `${w.yField} by ${w.xField}` : '' })}
-                    onEdit={() => setAddWidgetOpen(true)}
+                    onEdit={() => { setEditingWidget({ index: i, data: w }); setAddWidgetOpen(true); }}
                     onDelete={() => { const next = userWidgets.filter((_, j) => j !== i); setUserWidgets(next); onSaveWidgets?.(next); addToast({ message: 'Widget removed', type: 'info' }); }}
                     onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                    pageFilterFields={pageFilterFields}
+                    onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
+                    onClearPageFilters={() => setPageFilterFields([])}
                   >
                     {/* Render chart based on type */}
                     {(() => {
@@ -3504,9 +4661,12 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                   subtitle="Distribution breakdown"
                   addToast={addToast}
                   onExpand={() => setExpandedWidget({ title: dashboard.donut!.title, subtitle: 'Distribution breakdown' })}
-                  onEdit={() => addToast({ message: 'Edit widget opening.', type: 'info' })}
+                  onEdit={() => handleEditDefaultWidget(dashboard.donut!.title, 'pie', 'Distribution breakdown')}
                   onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                   onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                  pageFilterFields={pageFilterFields}
+                  onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
+                  onClearPageFilters={() => setPageFilterFields([])}
                 >
                   <div className="flex items-center gap-10 py-10 px-4">
                     <div className="relative shrink-0">
@@ -3563,9 +4723,12 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                   subtitle="Trend analysis"
                   addToast={addToast}
                   onExpand={() => setExpandedWidget({ title: dashboard.bars!.title, subtitle: 'Trend analysis' })}
-                  onEdit={() => addToast({ message: 'Edit widget opening.', type: 'info' })}
+                  onEdit={() => handleEditDefaultWidget(dashboard.bars!.title, 'clustered-col', 'Trend analysis')}
                   onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                   onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                  pageFilterFields={pageFilterFields}
+                  onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
+                  onClearPageFilters={() => setPageFilterFields([])}
                 >
                   <div className="flex items-end gap-3 pt-6" style={{ height: '280px' }}>
                     {dashboard.bars!.data.map((d, i) => {
@@ -3598,9 +4761,12 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                   subtitle="Completion rates"
                   addToast={addToast}
                   onExpand={() => setExpandedWidget({ title: dashboard.progress!.title, subtitle: 'Completion rates' })}
-                  onEdit={() => addToast({ message: 'Edit widget opening.', type: 'info' })}
+                  onEdit={() => handleEditDefaultWidget(dashboard.progress!.title, 'stacked-bar', 'Completion rates')}
                   onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                   onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                  pageFilterFields={pageFilterFields}
+                  onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
+                  onClearPageFilters={() => setPageFilterFields([])}
                 >
                   <div className="space-y-5 py-8 px-2">
                     {dashboard.progress!.data.map((d, i) => (
@@ -3628,9 +4794,12 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                   subtitle="ML model performance vs targets"
                   addToast={addToast}
                   onExpand={() => setExpandedWidget({ title: 'Detection Accuracy', subtitle: 'ML model performance vs targets' })}
-                  onEdit={() => addToast({ message: 'Edit widget opening.', type: 'info' })}
+                  onEdit={() => handleEditDefaultWidget('Detection Accuracy', 'line', 'ML model performance vs targets')}
                   onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                   onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                  pageFilterFields={pageFilterFields}
+                  onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
+                  onClearPageFilters={() => setPageFilterFields([])}
                 >
                   <div className="py-8 px-2">
                     <svg width="100%" height="260" viewBox="0 0 400 260" preserveAspectRatio="none">
@@ -3659,9 +4828,12 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                 subtitle={dashboard.lineTrend ? 'Performance over time' : 'Invoice processing & detection'}
                 addToast={addToast}
                 onExpand={() => setExpandedWidget({ title: dashboard.lineTrend?.title || 'Processing Analytics', subtitle: 'Performance over time' })}
-                onEdit={() => addToast({ message: 'Edit widget opening.', type: 'info' })}
+                onEdit={() => handleEditDefaultWidget(dashboard.lineTrend?.title || 'Processing Analytics', 'line', 'Performance over time')}
                 onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                 onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                pageFilterFields={pageFilterFields}
+                onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
+                onClearPageFilters={() => setPageFilterFields([])}
               >
                 <div className="py-8 px-2">
                   {(() => {
@@ -3710,9 +4882,12 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                 subtitle="Detailed records"
                 addToast={addToast}
                 onExpand={() => setExpandedWidget({ title: dashboard.table.title, subtitle: 'Detailed records' })}
-                onEdit={() => addToast({ message: 'Edit widget opening.', type: 'info' })}
+                onEdit={() => handleEditDefaultWidget(dashboard.table.title, 'table', 'Detailed records')}
                 onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                 onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                pageFilterFields={pageFilterFields}
+                onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
+                onClearPageFilters={() => setPageFilterFields([])}
               >
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
@@ -3751,11 +4926,67 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
       </div>
 
       {/* Expanded Widget Modal */}
+      {(() => {
+        // Build navigation list of all widgets
+        const allWidgetTitles: { title: string; subtitle: string }[] = [];
+        if (isCustomDashboard) {
+          userWidgets.forEach(w => allWidgetTitles.push({ title: w.title, subtitle: w.yField && w.xField ? `${w.yField} by ${w.xField}` : 'Custom widget' }));
+        } else {
+          if (dashboard.donut) allWidgetTitles.push({ title: dashboard.donut.title, subtitle: 'Distribution breakdown' });
+          if (dashboard.bars) allWidgetTitles.push({ title: dashboard.bars.title, subtitle: 'Trend analysis' });
+          if (dashboard.progress) allWidgetTitles.push({ title: dashboard.progress.title, subtitle: 'Completion rates' });
+          else allWidgetTitles.push({ title: 'Detection Accuracy', subtitle: 'ML model performance vs targets' });
+          allWidgetTitles.push({ title: dashboard.lineTrend?.title || 'Processing Analytics', subtitle: 'Performance over time' });
+          allWidgetTitles.push({ title: dashboard.table.title, subtitle: 'Detailed records' });
+        }
+        const currentIdx = expandedWidget ? allWidgetTitles.findIndex(w => w.title === expandedWidget.title) : -1;
+        return (
       <ExpandedWidgetModal
         open={!!expandedWidget}
         onClose={() => setExpandedWidget(null)}
         title={expandedWidget?.title ?? ''}
         subtitle={expandedWidget?.subtitle}
+        hasPrev={currentIdx > 0}
+        hasNext={currentIdx < allWidgetTitles.length - 1 && currentIdx >= 0}
+        onPrev={() => { if (currentIdx > 0) setExpandedWidget(allWidgetTitles[currentIdx - 1]); }}
+        onNext={() => { if (currentIdx < allWidgetTitles.length - 1) setExpandedWidget(allWidgetTitles[currentIdx + 1]); }}
+        onEdit={() => {
+          const widgetTitle = expandedWidget?.title;
+          const widgetSubtitle = expandedWidget?.subtitle || '';
+          setExpandedWidget(null);
+          if (widgetTitle) {
+            const idx = userWidgets.findIndex(w => w.title === widgetTitle);
+            if (idx !== -1) {
+              setEditingWidget({ index: idx, data: userWidgets[idx] });
+            } else {
+              // Default dashboard widget — infer chart type and fields from title/subtitle
+              const parts = widgetSubtitle.split(' by ');
+              const yField = parts[0]?.trim() || '';
+              const xField = parts[1]?.trim() || '';
+              // Try to guess chart type from dashboard data
+              let chartType = 'clustered-col';
+              if (widgetTitle.toLowerCase().includes('trend') || widgetTitle.toLowerCase().includes('line')) chartType = 'line';
+              else if (widgetTitle.toLowerCase().includes('donut') || widgetTitle.toLowerCase().includes('pie') || widgetTitle.toLowerCase().includes('distribution')) chartType = 'pie';
+              else if (widgetTitle.toLowerCase().includes('kpi') || widgetTitle.toLowerCase().includes('score')) chartType = 'kpi';
+              else if (widgetTitle.toLowerCase().includes('table')) chartType = 'table';
+              setEditingWidget({ index: -1, data: { chartType, title: widgetTitle, xField, yField } });
+            }
+          }
+          setTimeout(() => setAddWidgetOpen(true), 150);
+        }}
+        onDelete={() => {
+          const title = expandedWidget?.title;
+          setExpandedWidget(null);
+          if (title) {
+            const idx = userWidgets.findIndex(w => w.title === title);
+            if (idx !== -1) {
+              const next = userWidgets.filter((_, j) => j !== idx);
+              setUserWidgets(next);
+              onSaveWidgets?.(next);
+            }
+          }
+          addToast({ message: 'Widget deleted', type: 'info' });
+        }}
       >
         {/* Visualization tab content — show the same chart type enlarged */}
         {expandedWidget && dashboard.bars && expandedWidget.title === dashboard.bars.title && (
@@ -3874,6 +5105,8 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
           </div>
         )}
       </ExpandedWidgetModal>
+        );
+      })()}
 
       {/* Filter Panel */}
       <FilterPanel
@@ -3893,22 +5126,35 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
           setFilterRisk([]);
           setFilterDepartment([]);
         }}
+        pageFilterFields={pageFilterFields}
+        onPageFilterFieldsChange={setPageFilterFields}
       />
 
       {/* Add Widget Modal */}
       <AddWidgetModal
         open={addWidgetOpen}
-        onClose={() => {
+        onClose={(widgetAdded) => {
           setAddWidgetOpen(false);
+          setEditingWidget(null);
           // If this was auto-opened from create flow and no widgets added, go back
-          if (initialCustomFields?.length && userWidgets.length === 0 && onBack) onBack();
+          if (!widgetAdded && initialCustomFields?.length && userWidgets.length === 0 && onBack) onBack();
         }}
         addToast={addToast}
         customFields={customFields}
+        editData={editingWidget?.data}
         onAddWidget={(widget) => {
-          const next = [...userWidgets, widget];
-          setUserWidgets(next);
-          onSaveWidgets?.(next);
+          if (editingWidget !== null && editingWidget.index >= 0) {
+            // Update existing custom widget
+            const next = userWidgets.map((w, i) => i === editingWidget.index ? widget : w);
+            setUserWidgets(next);
+            onSaveWidgets?.(next);
+            setEditingWidget(null);
+          } else {
+            // Add new widget
+            const next = [...userWidgets, widget];
+            setUserWidgets(next);
+            onSaveWidgets?.(next);
+          }
         }}
       />
     </div>
