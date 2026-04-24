@@ -127,6 +127,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
   const isExpanded = expanded || hoverExpanded;
 
   const handleMouseEnter = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     if (!expanded) {
       hoverTimerRef.current = setTimeout(() => setHoverExpanded(true), 200);
     }
@@ -148,7 +149,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
     <motion.div
       animate={{ width: isExpanded ? 256 : 64 }}
       transition={{
-        duration: 0.35,
+        duration: 0.28,
         // ease: [0.22, 1, 0.36, 1],
       }}
       className="h-full bg-sidebar-bg noise-texture flex flex-col shrink-0 overflow-hidden z-50"
