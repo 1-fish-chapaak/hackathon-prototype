@@ -6,7 +6,7 @@ import {
   XCircle, Clock, Sparkles, RefreshCw, ChevronDown,
   ShoppingCart, CreditCard, BarChart3,
   Package, Receipt, Handshake, ShieldCheck,
-  Send, X, Mail, Copy, CheckCircle2
+  Send, X, Mail, Copy, CheckCircle2, ArrowLeft
 } from 'lucide-react';
 import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
@@ -775,14 +775,20 @@ function Sidebar({ dashboards, activeId, onSelect }: {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 interface DashboardProps {
+  initialDashboardId?: string | null;
+  onBack?: () => void;
   onImportPowerBI?: () => void;
   onShare?: () => void;
 }
 
-export default function DashboardView({ onImportPowerBI, onShare }: DashboardProps = {}) {
+export default function DashboardView({ initialDashboardId, onBack, onImportPowerBI, onShare }: DashboardProps = {}) {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [activeId, setActiveId] = useState<DashboardId>('p2p');
+  const [activeId, setActiveId] = useState<DashboardId>(
+    (initialDashboardId as DashboardId) && DASHBOARDS.some(d => d.id === initialDashboardId)
+      ? (initialDashboardId as DashboardId)
+      : 'p2p'
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 600);
@@ -817,7 +823,17 @@ export default function DashboardView({ onImportPowerBI, onShare }: DashboardPro
           >
             {/* Page header — Editorial: breadcrumb · serif title · context · actions */}
             <div className="mb-6">
-              <div className="font-mono text-[12px] text-ink-500 mb-2">Dashboards · {dashboard.name}</div>
+              <div className="font-mono text-[12px] text-ink-500 mb-2 flex items-center gap-1">
+                {onBack && (
+                  <button onClick={onBack} className="inline-flex items-center gap-1 hover:text-brand-600 transition-colors cursor-pointer">
+                    <ArrowLeft size={12} />
+                    Dashboards
+                  </button>
+                )}
+                {onBack && <span>·</span>}
+                {!onBack && <span>Dashboards · </span>}
+                {dashboard.name}
+              </div>
               <div className="flex items-end justify-between">
                 <div>
                   <h1 className="font-display text-[34px] font-[420] text-ink-900 leading-[1.15]">{dashboard.name}</h1>
