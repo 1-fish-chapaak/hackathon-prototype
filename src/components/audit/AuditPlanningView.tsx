@@ -3,12 +3,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Lock, CheckCircle2, Flag, Target, Calendar,
   Users, ShieldCheck, ClipboardList, LayoutGrid,
-  X, ChevronDown, Plus, AlertTriangle,
-  DollarSign, Zap, ArrowRight,
-  Play, Copy
+  X, ChevronDown, Plus, Edit3, AlertTriangle,
+  DollarSign, BarChart3, Clock, Zap, ArrowRight,
+  Play, FileCheck, Eye, Copy, Upload, Search,
+  XCircle, Activity, ChevronRight
 } from 'lucide-react';
 import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
+import EngagementSetupPanel from '../engagement/EngagementSetupPanel';
 
 // ─── Types (Finalized Engagement Model) ──────────────────────────────────────
 
@@ -17,7 +19,8 @@ type AuditType = 'SOX' | 'IFC' | 'ITGC' | 'Internal' | 'Risk';
 type FrameworkType = 'COSO' | 'COBIT' | 'ISO 27001' | 'NIST' | 'Custom';
 type ProcessType = 'P2P' | 'O2C' | 'R2R' | 'S2C' | 'Cross';
 type PriorityLevel = 'Critical' | 'High' | 'Medium' | 'Low';
-type TabId = 'timeline' | 'resources' | 'risk-matrix' | 'budget';
+type TabId = 'execution' | 'timeline' | 'resources' | 'risk-matrix' | 'budget';
+type RiskStatus = 'at-risk' | 'stable' | 'unvalidated';
 
 interface AuditEngagement {
   id: string;
@@ -41,6 +44,14 @@ interface AuditEngagement {
   plannedHours: number;
   priority: PriorityLevel;
   riskScore: number;
+  // Execution metrics
+  controlsTested: number;
+  controlsEffective: number;
+  controlsFailed: number;
+  pendingReview: number;
+  riskStatus: RiskStatus;
+  isOverdue: boolean;
+  lastActivity: string;
   // Gantt positioning (relative to FY months)
   start: number;
   duration: number;
@@ -97,6 +108,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     description: 'Comprehensive SOX audit covering AP, PO, and vendor master controls with focus on segregation of duties and transaction authorization.',
     sourceRacmVersionId: 'racm-v2.1', engagementSnapshotId: 'snap-001',
     status: 'active', controls: 24, plannedHours: 480, priority: 'Critical', riskScore: 85,
+    controlsTested: 18, controlsEffective: 14, controlsFailed: 2, pendingReview: 3, riskStatus: 'at-risk', isOverdue: false, lastActivity: '2 hours ago',
     start: 0, duration: 3, color: '#6a12cd',
   },
   {
@@ -108,6 +120,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     description: 'SOX compliance audit for Order-to-Cash process including revenue recognition and AR controls.',
     sourceRacmVersionId: 'racm-v2.1', engagementSnapshotId: 'snap-002',
     status: 'active', controls: 18, plannedHours: 360, priority: 'High', riskScore: 72,
+    controlsTested: 8, controlsEffective: 7, controlsFailed: 0, pendingReview: 1, riskStatus: 'stable', isOverdue: false, lastActivity: '1 day ago',
     start: 1, duration: 3, color: '#0284c7',
   },
   {
@@ -119,6 +132,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     description: 'Record-to-Report SOX audit covering journal entries, reconciliations, and financial close processes.',
     sourceRacmVersionId: 'racm-v2.1', engagementSnapshotId: 'snap-003',
     status: 'in-progress', controls: 31, plannedHours: 520, priority: 'Critical', riskScore: 90,
+    controlsTested: 26, controlsEffective: 20, controlsFailed: 3, pendingReview: 5, riskStatus: 'at-risk', isOverdue: true, lastActivity: '5 hours ago',
     start: 0, duration: 5, color: '#d97706',
   },
   {
@@ -130,6 +144,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     description: 'Internal audit of Source-to-Contract process focusing on new contract lifecycle and vendor management.',
     sourceRacmVersionId: 'racm-v1.8', engagementSnapshotId: null,
     status: 'planned', controls: 14, plannedHours: 240, priority: 'Medium', riskScore: 45,
+    controlsTested: 0, controlsEffective: 0, controlsFailed: 0, pendingReview: 0, riskStatus: 'unvalidated', isOverdue: false, lastActivity: '—',
     start: 3, duration: 3, color: '#059669',
   },
   {
@@ -141,6 +156,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     description: 'Internal Financial Controls assessment for Procure-to-Pay process using COBIT framework.',
     sourceRacmVersionId: 'racm-v2.0', engagementSnapshotId: null,
     status: 'planned', controls: 18, plannedHours: 300, priority: 'High', riskScore: 68,
+    controlsTested: 0, controlsEffective: 0, controlsFailed: 0, pendingReview: 0, riskStatus: 'unvalidated', isOverdue: false, lastActivity: '—',
     start: 4, duration: 3, color: '#6a12cd',
   },
   {
@@ -152,6 +168,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     description: 'IT General Controls audit covering access management, change management, operations, and SDLC controls.',
     sourceRacmVersionId: 'racm-v2.1', engagementSnapshotId: 'snap-006',
     status: 'active', controls: 15, plannedHours: 640, priority: 'Critical', riskScore: 82,
+    controlsTested: 9, controlsEffective: 8, controlsFailed: 0, pendingReview: 2, riskStatus: 'stable', isOverdue: false, lastActivity: '3 hours ago',
     start: 2, duration: 8, color: '#7c3aed',
   },
   {
@@ -163,6 +180,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     description: 'Third-party vendor risk assessment focusing on vendor master data and procurement controls.',
     sourceRacmVersionId: 'racm-v1.9', engagementSnapshotId: null,
     status: 'draft', controls: 8, plannedHours: 160, priority: 'Medium', riskScore: 55,
+    controlsTested: 0, controlsEffective: 0, controlsFailed: 0, pendingReview: 0, riskStatus: 'unvalidated', isOverdue: false, lastActivity: '—',
     start: 6, duration: 2, color: '#dc2626',
   },
   {
@@ -174,6 +192,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     description: 'Year-end closing procedures and adjustments review for SOX compliance.',
     sourceRacmVersionId: 'racm-v2.1', engagementSnapshotId: null,
     status: 'planned', controls: 12, plannedHours: 200, priority: 'High', riskScore: 60,
+    controlsTested: 0, controlsEffective: 0, controlsFailed: 0, pendingReview: 0, riskStatus: 'unvalidated', isOverdue: false, lastActivity: '—',
     start: 9, duration: 2, color: '#d97706',
   },
 ];
@@ -239,6 +258,7 @@ function Dropdown<T extends string>({
   label: string; value: T; options: T[]; onChange: (val: T) => void;
   disabled?: boolean; renderOption?: (opt: T) => React.ReactNode;
 }) {
+
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -588,22 +608,37 @@ function EngagementDrawer({
             </div>
           )}
 
-          {/* Execution banner */}
+          {/* Execution banner + RACM lock */}
           {isInExecution && (
-            <div className="flex items-center justify-between p-3 bg-compliant-50 rounded-xl mb-4 border border-compliant">
-              <div className="flex items-center gap-2.5">
-                <Play size={14} className="text-compliant-700 shrink-0" />
-                <div>
-                  <span className="text-[12px] text-compliant-700 font-semibold block">In Execution</span>
-                  <span className="text-[11px] text-compliant-700/80">Snapshot: {form.engagementSnapshotId || '—'}</span>
+            <div className="space-y-3 mb-4">
+              <div className="flex items-center justify-between p-3 bg-compliant-50 rounded-xl border border-compliant">
+                <div className="flex items-center gap-2.5">
+                  <Play size={14} className="text-compliant-700 shrink-0" />
+                  <div>
+                    <span className="text-[12px] text-compliant-700 font-semibold block">In Execution</span>
+                    <span className="text-[11px] text-compliant-700/80">Snapshot: {form.engagementSnapshotId || '—'}</span>
+                  </div>
                 </div>
-              </div>
               {onViewExecution && (
                 <button onClick={() => onViewExecution(form.id)} className="px-3 py-1.5 bg-compliant hover:brightness-110 text-white rounded-lg text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1.5">
                   <ArrowRight size={11} />
                   Open Hub
                 </button>
               )}
+              </div>
+              {/* RACM Lock Badge */}
+              <div className="flex items-center gap-2.5 p-3 bg-brand-50/50 rounded-xl border border-brand-100">
+                <Lock size={13} className="text-brand-700 shrink-0" />
+                <div className="flex-1">
+                  <span className="text-[11px] font-semibold text-brand-700">Snapshot locked from {form.sourceRacmVersionId}</span>
+                  <p className="text-[10px] text-brand-600 mt-0.5">RACM, audit period, and control scope are immutable during execution.</p>
+                </div>
+              </div>
+              {/* Scope change warning */}
+              <div className="flex items-start gap-2 p-2.5 bg-surface-2/50 rounded-lg">
+                <AlertTriangle size={11} className="text-text-muted mt-0.5 shrink-0" />
+                <p className="text-[10px] text-text-muted">Scope changes require creating a new RACM version and new engagement snapshot.</p>
+              </div>
             </div>
           )}
 
@@ -873,6 +908,139 @@ function ModalBackdrop({ children, onClose }: { children: React.ReactNode; onClo
   );
 }
 
+// ─── Activation Modal (proper component — no IIFE) ──────────────────────────
+
+function ActivationModal({ engagement, activating, activationError, activationLog, activationSteps, onConfirm, onClose, getBlockers }: {
+  engagement: AuditEngagement | undefined;
+  activating: boolean;
+  activationError: string | null;
+  activationLog: string[];
+  activationSteps: string[];
+  onConfirm: () => void;
+  onClose: () => void;
+  getBlockers: (eng: AuditEngagement) => { blocking: string[]; warnings: string[] };
+}) {
+  if (!engagement) return null;
+
+  const blockers = getBlockers(engagement);
+  const hasBlockers = blockers.blocking.length > 0;
+
+  return (
+    <ModalBackdrop onClose={onClose}>
+      <div className="p-6">
+        {!activating ? (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-primary to-primary-medium"><Lock size={16} className="text-white" /></div>
+                <h3 className="text-[15px] font-bold text-text">Activate Engagement?</h3>
+              </div>
+              <button onClick={onClose} className="p-1 rounded-md hover:bg-surface-2 transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
+            </div>
+
+            {activationError && (
+              <div className="flex items-start gap-2.5 p-3 bg-risk-50 rounded-xl mb-4 border border-risk/30">
+                <XCircle size={14} className="text-risk-700 mt-0.5 shrink-0" />
+                <p className="text-[12px] text-risk-700 font-medium">{activationError}</p>
+              </div>
+            )}
+
+            {hasBlockers ? (
+              <div className="p-3 bg-risk-50/50 rounded-xl mb-4 border border-risk/20">
+                <p className="text-[11px] font-bold text-risk-700 uppercase mb-2">Activation Blocked</p>
+                <div className="space-y-1">
+                  {blockers.blocking.map(b => (
+                    <div key={b} className="flex items-center gap-2 text-[11px] text-risk-700"><XCircle size={11} className="shrink-0" /><span>{b}</span></div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 bg-compliant-50/30 rounded-xl mb-4 border border-compliant/20">
+                <p className="text-[10px] font-bold text-compliant-700 uppercase mb-1.5">All pre-flight checks passed</p>
+                <div className="grid grid-cols-2 gap-1">
+                  {['RACM linked', 'Owner assigned', 'Reviewer assigned', 'Period defined', 'Dates set', 'Controls mapped', 'Workflows available'].map(item => (
+                    <div key={item} className="flex items-center gap-1.5 text-[10px] text-compliant-700"><CheckCircle2 size={10} />{item}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mb-4">
+              <p className="text-[11px] font-bold text-text-muted uppercase mb-2">Activating this engagement will:</p>
+              <div className="space-y-1.5">
+                {[
+                  `Create an immutable Engagement Snapshot from ${engagement.sourceRacmVersionId}`,
+                  'Lock the engagement scope — RACM changes will not affect this engagement',
+                  `Create execution records for ${engagement.controls} in-scope controls`,
+                  'Initialize test instances (Ready if workflow linked, Not Configured otherwise)',
+                  'Enable population upload, sampling, evidence, testing, working paper, and review',
+                ].map((text, i) => (
+                  <div key={i} className="flex items-start gap-2 text-[11px]">
+                    <ChevronRight size={10} className="text-primary mt-0.5 shrink-0" />
+                    <span className="text-text-secondary">{text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-3 bg-surface-2 rounded-xl mb-4 text-[12px] space-y-1">
+              <div className="flex justify-between"><span className="text-text-muted">Engagement</span><span className="font-medium text-text">{engagement.name}</span></div>
+              <div className="flex justify-between"><span className="text-text-muted">RACM Version</span><span className="font-medium text-text">{engagement.sourceRacmVersionId}</span></div>
+              <div className="flex justify-between"><span className="text-text-muted">Controls</span><span className="font-medium text-text">{engagement.controls}</span></div>
+              <div className="flex justify-between"><span className="text-text-muted">Owner</span><span className="font-medium text-text">{engagement.owner}</span></div>
+            </div>
+
+            <div className="flex items-start gap-2.5 p-3 bg-high-50/50 rounded-xl mb-5 border border-high/20">
+              <AlertTriangle size={14} className="text-high-700 mt-0.5 shrink-0" />
+              <p className="text-[11px] text-high-700">This action cannot be undone. The snapshot is immutable and scope changes require a new engagement.</p>
+            </div>
+
+            <div className="flex items-center gap-3 justify-end">
+              <button onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer">Cancel</button>
+              <button onClick={onConfirm} disabled={hasBlockers}
+                className="px-5 py-2.5 bg-gradient-to-r from-primary to-primary-medium hover:brightness-110 text-white rounded-xl text-[13px] font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
+                <Zap size={14} />Confirm Activation
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="py-6">
+            <div className="text-center mb-5">
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="mx-auto mb-3 w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center">
+                <Zap size={20} className="text-white" />
+              </motion.div>
+              <h3 className="text-[15px] font-bold text-text">Activating Engagement</h3>
+              <p className="text-[11px] text-text-muted mt-1">{engagement.name}</p>
+            </div>
+            <div className="space-y-2 max-w-sm mx-auto mb-4">
+              {activationSteps.map((step, i) => (
+                <motion.div key={step} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.4 }}
+                  className="flex items-center gap-3 text-[12px]">
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: i * 0.4 + 0.3 }}>
+                    <CheckCircle2 size={14} className="text-compliant-700" />
+                  </motion.div>
+                  <span className={i === activationSteps.length - 1 ? 'font-bold text-compliant-700' : 'text-text-secondary'}>{step}</span>
+                </motion.div>
+              ))}
+            </div>
+            {activationLog.length > 0 && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+                className="max-w-sm mx-auto p-3 bg-surface-2/50 rounded-lg max-h-32 overflow-y-auto">
+                <p className="text-[9px] font-bold text-text-muted uppercase mb-1">Audit Log</p>
+                {activationLog.map((entry, i) => (
+                  <p key={i} className="text-[9px] font-mono text-text-muted leading-relaxed">{entry}</p>
+                ))}
+              </motion.div>
+            )}
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: activationSteps.length * 0.4 + 0.5 }}
+              className="text-[10px] text-text-muted text-center mt-3">Redirecting to execution workspace...</motion.p>
+          </div>
+        )}
+      </div>
+    </ModalBackdrop>
+  );
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 interface Props {
@@ -891,12 +1059,41 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
   const [signOffComment, setSignOffComment] = useState('');
   const [signerDropdownOpen, setSignerDropdownOpen] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<TabId>('timeline');
+  const [activeTab, setActiveTab] = useState<TabId>('execution');
   const [processFilter, setProcessFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
 
   const [drawerEngagement, setDrawerEngagement] = useState<AuditEngagement | null>(null);
   const [drawerIsCreate, setDrawerIsCreate] = useState(false);
+  const [setupPanelEngagement, setSetupPanelEngagement] = useState<AuditEngagement | null>(null);
+  const [engFilter, setEngFilter] = useState('all');
+  const [activating, setActivating] = useState(false);
+  const [activationError, setActivationError] = useState<string | null>(null);
+  const [activationLog, setActivationLog] = useState<string[]>([]);
+  const activationSteps = [
+    'Creating Engagement Snapshot...',
+    'Freezing risk & control mapping...',
+    'Binding workflows to controls...',
+    'Initializing test instances...',
+    'Setting control execution states...',
+    'Writing audit log...',
+    'Activation complete!',
+  ];
+
+  // Full activation validation
+  function getActivationBlockers(eng: AuditEngagement): { blocking: string[]; warnings: string[] } {
+    const blocking: string[] = [];
+    const warnings: string[] = [];
+    if (!eng.sourceRacmVersionId) blocking.push('No RACM version linked');
+    if (eng.controls === 0) blocking.push('No controls mapped');
+    if (!eng.auditPeriodStart || !eng.auditPeriodEnd) blocking.push('Audit period not defined');
+    if (!eng.owner) blocking.push('Owner not assigned');
+    if (!eng.reviewer) blocking.push('Reviewer not assigned');
+    if (!eng.plannedStartDate || !eng.plannedEndDate) blocking.push('Planned dates not set');
+    // Workflow warning (non-blocking) — in demo all controls have workflows, but simulate the check
+    // If any controls lacked workflows, they'd enter as "Not Configured"
+    return { blocking, warnings };
+  }
 
   const handleFreeze = () => setShowFreezeModal(true);
 
@@ -930,28 +1127,112 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
     setShowActivateModal(id);
   };
 
-  const confirmActivate = () => {
-    if (!showActivateModal) return;
-    const engId = showActivateModal;
-    const snapshotId = `snap-${Date.now().toString(36)}`;
-    setPlan(prev => prev.map(p =>
-      p.id === engId ? {
-        ...p,
-        status: 'active' as EngagementLifecycle,
-        engagementSnapshotId: snapshotId,
-        actualStartDate: new Date().toISOString().split('T')[0],
-      } : p
-    ));
-    setShowActivateModal(null);
-    setDrawerEngagement(null);
-    addToast({ type: 'success', message: `Engagement activated — immutable snapshot ${snapshotId} created` });
-    // Navigate to engagement execution hub
-    if (onNavigateToExecution) {
-      setTimeout(() => onNavigateToExecution(engId), 600);
+  const confirmActivate = (directId?: string) => {
+    const engId = directId || showActivateModal;
+    if (!engId) { console.warn('confirmActivate: no engId'); return; }
+    const eng = plan.find(p => p.id === engId);
+    if (!eng) { console.warn('confirmActivate: engagement not found:', engId); return; }
+
+    console.log('Activation started —', eng.name, engId);
+
+    // Full pre-flight validation
+    const { blocking } = getActivationBlockers(eng);
+    if (blocking.length > 0) {
+      console.warn('Activation blocked:', blocking);
+      setActivationError(`Activation blocked: ${blocking.join(', ')}. Please resolve and try again.`);
+      return;
     }
+
+    setActivationError(null);
+    setActivationLog([]);
+    setActivating(true);
+
+    const now = new Date();
+    const snapshotId = `SNAP-${engId.toUpperCase()}-${now.getTime().toString(36).toUpperCase()}`;
+    console.log('Snapshot ID:', snapshotId);
+
+    // Build audit log entries as activation progresses
+    const logEntries = [
+      `[${now.toISOString()}] engagement_activation_started — ${eng.name} (${engId})`,
+      `[${now.toISOString()}] engagement_snapshot_created — ${snapshotId} from ${eng.sourceRacmVersionId}`,
+      `[${now.toISOString()}] racm_scope_frozen — ${eng.controls} controls locked`,
+      `[${now.toISOString()}] test_instances_initialized — ${eng.controls} instances created`,
+      `[${now.toISOString()}] control_states_set — Ready: ${eng.controls}, Not Configured: 0`,
+      `[${now.toISOString()}] audit_log_written — 6 events recorded`,
+      `[${now.toISOString()}] engagement_activated — ${eng.name} is now Active`,
+    ];
+
+    // Simulate progressive log writing
+    logEntries.forEach((entry, i) => {
+      setTimeout(() => setActivationLog(prev => [...prev, entry]), i * 400 + 200);
+    });
+
+    // After animation completes, apply all mutations
+    const totalDelay = activationSteps.length * 400 + 500;
+    console.log(`Activation pipeline running — will complete in ${totalDelay}ms`);
+
+    setTimeout(() => {
+      try {
+        console.log('Snapshot created:', snapshotId);
+
+        setPlan(prev => prev.map(p => {
+          if (p.id !== engId) return p;
+          return {
+            ...p,
+            status: 'active' as EngagementLifecycle,
+            engagementSnapshotId: snapshotId,
+            actualStartDate: now.toISOString().split('T')[0],
+            controlsTested: 0,
+            controlsEffective: 0,
+            controlsFailed: 0,
+            pendingReview: 0,
+            riskStatus: 'unvalidated' as RiskStatus,
+            isOverdue: false,
+            lastActivity: 'Just now',
+          };
+        }));
+
+        console.log('Controls initialized — all set to Ready');
+        console.log('Activation completed —', eng.name);
+
+        setActivating(false);
+        setShowActivateModal(null);
+        setDrawerEngagement(null);
+        setSetupPanelEngagement(null);
+
+        addToast({
+          type: 'success',
+          message: 'Engagement activated successfully. Execution workspace is ready.',
+        });
+
+        // Redirect to execution dashboard
+        if (onNavigateToExecution) {
+          console.log('Redirecting to execution hub...');
+          setTimeout(() => onNavigateToExecution(engId), 300);
+        }
+      } catch (err) {
+        // Rollback: engagement stays in its previous state (no mutation applied)
+        console.error('Activation failed:', err);
+        setActivating(false);
+        setActivationError('Activation failed. Engagement remains in Planned state. Please try again.');
+        setActivationLog(prev => [...prev, `[${new Date().toISOString()}] engagement_activation_failed — rollback, status unchanged`]);
+        addToast({ type: 'error', message: 'Activation failed. Please try again.' });
+      }
+    }, totalDelay);
   };
 
   const openEditDrawer = (item: AuditEngagement) => {
+    // Route based on lifecycle state
+    if (item.status === 'draft' || item.status === 'planned' || item.status === 'frozen' || item.status === 'signed-off') {
+      setSetupPanelEngagement(item);
+      return;
+    }
+    // Active/execution engagements go to hub
+    if (isExecutionPhase(item.status) && onNavigateToExecution) {
+      onNavigateToExecution(item.id);
+      return;
+    }
+    // Fallback to drawer
     setDrawerEngagement(item);
     setDrawerIsCreate(false);
   };
@@ -981,6 +1262,13 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
       plannedHours: 0,
       priority: 'Medium',
       riskScore: 50,
+      controlsTested: 0,
+      controlsEffective: 0,
+      controlsFailed: 0,
+      pendingReview: 0,
+      riskStatus: 'unvalidated',
+      isOverdue: false,
+      lastActivity: '—',
       start: 0,
       duration: 3,
       color: COLOR_PALETTE[colorIdx],
@@ -999,6 +1287,22 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
     setDrawerEngagement(null);
   };
 
+  const handleMoveToPlanned = (id: string) => {
+    setPlan(prev => prev.map(p => p.id === id ? { ...p, status: 'planned' as EngagementLifecycle } : p));
+    setSetupPanelEngagement(null);
+    addToast({ type: 'success', message: 'Engagement moved to Planned — ready for review and activation' });
+  };
+
+  const handleSetupActivate = (id: string) => {
+    console.log('Setup panel activation requested, id:', id);
+    setSetupPanelEngagement(null);
+    // Open the activation modal for the user to see progress
+    // Use a small delay so the panel closes cleanly before modal opens
+    setTimeout(() => {
+      setShowActivateModal(id);
+    }, 150);
+  };
+
   const handleDeleteEngagement = (id: string) => {
     const item = plan.find(p => p.id === id);
     setPlan(prev => prev.filter(p => p.id !== id));
@@ -1010,11 +1314,23 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
   const uniqueProcesses = new Set(plan.map(a => a.businessProcess)).size;
   const activeCount = plan.filter(p => isExecutionPhase(p.status)).length;
 
+  // Execution KPIs
+  const atRiskEngagements = plan.filter(p => p.riskStatus === 'at-risk').length;
+  const totalPendingReview = plan.reduce((sum, a) => sum + a.pendingReview, 0);
+  const overdueEngagements = plan.filter(p => p.isOverdue).length;
+  const onTrackEngagements = plan.filter(p => isExecutionPhase(p.status) && p.riskStatus === 'stable').length;
+  const totalFailed = plan.reduce((sum, a) => sum + a.controlsFailed, 0);
+  const activeEngagements = plan.filter(p => isExecutionPhase(p.status));
+
+  // Attention items
+  const attentionItems: { type: 'overdue' | 'review' | 'failed'; label: string; count: number }[] = [];
+  if (overdueEngagements > 0) attentionItems.push({ type: 'overdue', label: 'Overdue engagements', count: overdueEngagements });
+  if (totalPendingReview > 0) attentionItems.push({ type: 'review', label: 'Controls pending review', count: totalPendingReview });
+  if (totalFailed > 0) attentionItems.push({ type: 'failed', label: 'Failed controls', count: totalFailed });
+
   const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
+    { id: 'execution', label: 'Execution', icon: Zap },
     { id: 'timeline', label: 'Timeline', icon: Calendar },
-    { id: 'resources', label: 'Resources', icon: Users },
-    { id: 'risk-matrix', label: 'Risk Matrix', icon: AlertTriangle },
-    { id: 'budget', label: 'Budget', icon: DollarSign },
   ];
 
   const processFilterOptions = ['All', ...PROCESSES];
@@ -1039,98 +1355,60 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
           <div className="flex items-center gap-3">
             <button
               onClick={openCreateDrawer}
-              disabled={planFrozen && !signedOff}
-              className="flex items-center gap-1.5 px-3 py-2 border border-primary/30 bg-primary/5 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-3 py-2 border border-primary/30 bg-primary/5 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"
             >
               <Plus size={13} />
               Add Engagement
             </button>
-            {planFrozen ? (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-evidence-50 border border-evidence rounded-lg">
-                <Lock size={13} className="text-evidence-700" />
-                <span className="text-[12px] font-semibold text-evidence-700">Plan Frozen</span>
-              </div>
-            ) : (
-              <button
-                onClick={handleFreeze}
-                className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-white hover:border-primary/30 transition-colors cursor-pointer"
-              >
-                <Lock size={13} />
-                Freeze Plan
-              </button>
-            )}
-            <button
-              onClick={handleSignOff}
-              disabled={!planFrozen}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                signedOff
-                  ? 'bg-compliant text-white'
-                  : 'bg-primary hover:bg-primary-hover text-white'
-              }`}
-            >
-              <CheckCircle2 size={13} />
-              {signedOff ? 'Signed Off' : 'Sign Off'}
-            </button>
           </div>
         </div>
 
-        {/* Lifecycle Banner */}
-        <div className="flex items-center gap-4 mb-6 p-3 rounded-xl bg-surface-2/50 border border-border-light">
-          <div className="text-[11px] font-bold text-text-muted uppercase shrink-0">Plan Status:</div>
-          {['Draft', 'Planned', 'Frozen', 'Signed Off', 'Activated'].map((step, i) => {
-            const isDone = (i === 0) || (i === 1) || (i === 2 && planFrozen) || (i === 3 && signedOff) || (i === 4 && plan.some(p => isExecutionPhase(p.status)));
-            const isCurrent = (i === 0 && !planFrozen && !signedOff) ||
-                             (i === 2 && planFrozen && !signedOff) ||
-                             (i === 3 && signedOff && !plan.some(p => p.status === 'active')) ||
-                             (i === 4 && plan.some(p => isExecutionPhase(p.status)));
-            return (
-              <div key={step} className="flex items-center gap-2">
-                {i > 0 && <ArrowRight size={10} className="text-text-muted/40" />}
-                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold ${
-                  isCurrent ? 'bg-primary text-white' :
-                  isDone ? 'bg-compliant-50 text-compliant-700' :
-                  'bg-paper-50 text-ink-400'
-                }`}>
-                  {isDone && !isCurrent && <CheckCircle2 size={10} />}
-                  {step}
-                </div>
-              </div>
-            );
-          })}
+        {/* Execution KPI Strip */}
+        <div className="grid grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+          <KpiCard label="Engagements" value={plan.length} icon={ClipboardList} color="text-primary bg-primary-xlight" index={0} />
+          <KpiCard label="In Execution" value={activeCount} icon={Zap} color="text-evidence-700 bg-evidence-50" index={1} />
+          <KpiCard label="Total Controls" value={totalControls} icon={ShieldCheck} color="text-compliant-700 bg-compliant-50" index={2} />
+          <KpiCard label="On Track" value={onTrackEngagements} icon={CheckCircle2} color="text-compliant-700 bg-compliant-50" index={3} />
+          <KpiCard label="Pending Review" value={totalPendingReview} icon={Clock} color="text-mitigated-700 bg-mitigated-50" index={4} />
+          <KpiCard label="Overdue" value={overdueEngagements} icon={XCircle} color="text-risk-700 bg-risk-50" index={5} />
+          <KpiCard label="Failed Controls" value={totalFailed} icon={XCircle} color="text-high-700 bg-high-50" index={6} />
         </div>
 
-        {/* KPI Strip */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <KpiCard label="Total Engagements" value={plan.length} icon={ClipboardList} color="text-primary bg-primary-xlight" index={0} />
-          <KpiCard label="Processes Covered" value={uniqueProcesses} icon={LayoutGrid} color="text-evidence-700 bg-evidence-50" index={1} />
-          <KpiCard label="Total Controls" value={totalControls} icon={ShieldCheck} color="text-compliant-700 bg-compliant-50" index={2} />
-          <KpiCard label="In Execution" value={activeCount} icon={Zap} color="text-high-700 bg-high-50" index={3} />
-        </div>
+        {/* Attention Required Strip */}
+        {attentionItems.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-risk-50/50 border border-risk/20">
+              <AlertTriangle size={16} className="text-risk-700 shrink-0" />
+              <span className="text-[12px] font-bold text-risk-700">Attention Required:</span>
+              <div className="flex items-center gap-4">
+                {attentionItems.map(item => (
+                  <span key={item.type} className={`text-[12px] font-medium ${
+                    item.type === 'overdue' ? 'text-risk-700' : item.type === 'failed' ? 'text-high-700' : 'text-mitigated-700'
+                  }`}>
+                    {item.count} {item.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Tabs */}
         <div className="flex items-center border-b border-border-light mb-4">
-          {tabs.map(tab => {
-            const isDisabled = tab.id !== 'timeline';
-            return (
-              <button
-                key={tab.id}
-                onClick={() => !isDisabled && setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-primary text-primary cursor-pointer'
-                    : isDisabled
-                      ? 'border-transparent text-text-muted/40 cursor-not-allowed'
-                      : 'border-transparent text-text-muted hover:text-text-secondary cursor-pointer'
-                }`}
-              >
-                <tab.icon size={14} className={isDisabled ? 'opacity-40' : ''} />
-                <span className={isDisabled ? 'opacity-40' : ''}>{tab.label}</span>
-                {isDisabled && (
-                  <span className="ml-1 text-[12px] font-bold px-1.5 py-0.5 rounded-full bg-paper-50 text-ink-500">v2</span>
-                )}
-              </button>
-            );
-          })}
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors cursor-pointer ${
+                activeTab === tab.id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-text-muted hover:text-text-secondary'
+              }`}
+            >
+              <tab.icon size={14} />
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* Filters */}
@@ -1164,6 +1442,134 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
 
         {/* Tab Content */}
         <AnimatePresence mode="wait">
+          {/* ── EXECUTION TAB ── */}
+          {activeTab === 'execution' && (() => {
+            const filterOptions = [
+              { key: 'all', label: 'All', count: plan.length },
+              { key: 'active', label: 'Active', count: plan.filter(p => isExecutionPhase(p.status)).length },
+              { key: 'planned', label: 'Planned', count: plan.filter(p => ['planned', 'frozen', 'signed-off'].includes(p.status)).length },
+              { key: 'draft', label: 'Draft', count: plan.filter(p => p.status === 'draft').length },
+              { key: 'at-risk', label: 'At Risk', count: plan.filter(p => p.riskStatus === 'at-risk').length },
+              { key: 'review', label: 'Pending Review', count: plan.filter(p => p.pendingReview > 0).length },
+              { key: 'overdue', label: 'Overdue', count: plan.filter(p => p.isOverdue).length },
+            ];
+
+            const filteredPlan = plan.filter(eng => {
+              if (engFilter === 'all') return true;
+              if (engFilter === 'active') return isExecutionPhase(eng.status);
+              if (engFilter === 'planned') return ['planned', 'frozen', 'signed-off'].includes(eng.status);
+              if (engFilter === 'draft') return eng.status === 'draft';
+              if (engFilter === 'at-risk') return eng.riskStatus === 'at-risk';
+              if (engFilter === 'review') return eng.pendingReview > 0;
+              if (engFilter === 'overdue') return eng.isOverdue;
+              return true;
+            });
+
+            const getNextAction = (eng: AuditEngagement): { label: string; cls: string } => {
+              if (eng.status === 'draft') return { label: 'Configure', cls: 'bg-draft-50 text-draft-700 hover:bg-draft-50/80' };
+              if (['planned', 'frozen', 'signed-off'].includes(eng.status)) return { label: 'Activate', cls: 'bg-brand-50 text-brand-700 hover:bg-brand-50/80' };
+              if (eng.pendingReview > 0) return { label: 'Review Pending', cls: 'bg-mitigated-50 text-mitigated-700 hover:bg-mitigated-50/80' };
+              if (eng.controlsFailed > 0) return { label: 'View Failed', cls: 'bg-risk-50 text-risk-700 hover:bg-risk-50/80' };
+              if (eng.controlsTested < eng.controls) return { label: 'Continue Testing', cls: 'bg-evidence-50 text-evidence-700 hover:bg-evidence-50/80' };
+              return { label: 'View Execution', cls: 'bg-primary/10 text-primary hover:bg-primary/20' };
+            };
+
+            return (
+              <motion.div key="execution" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+                {/* Engagement Filters */}
+                <div className="flex items-center gap-1.5 mb-4 flex-wrap">
+                  {filterOptions.map(f => (
+                    <button key={f.key} onClick={() => setEngFilter(f.key)}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
+                        engFilter === f.key ? 'bg-primary text-white' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
+                      }`}>
+                      {f.label}
+                      {f.count > 0 && <span className={`ml-1 text-[10px] tabular-nums ${engFilter === f.key ? 'text-white/80' : 'text-text-muted/60'}`}>{f.count}</span>}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Engagement Execution Table */}
+                <div className="glass-card rounded-xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[12px]">
+                      <thead>
+                        <tr className="border-b border-border bg-surface-2/50">
+                          {['Engagement', 'Type', 'Process', 'Owner', 'Progress', 'Effective', 'Failed', 'Pending', 'Remaining', 'Status', 'Action'].map(h => (
+                            <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredPlan.map((eng, i) => {
+                          const isActive = isExecutionPhase(eng.status);
+                          const progress = eng.controls > 0 ? Math.round((eng.controlsTested / eng.controls) * 100) : 0;
+                          const action = getNextAction(eng);
+
+                          return (
+                            <motion.tr key={eng.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
+                              onClick={() => {
+                                if (isActive && onNavigateToExecution) onNavigateToExecution(eng.id);
+                                else openEditDrawer(eng);
+                              }}
+                              className={`border-b border-border/50 hover:bg-brand-50/30 transition-colors cursor-pointer group ${eng.isOverdue ? 'border-l-[3px] border-l-risk' : ''}`}>
+                              <td className="px-3 py-2.5">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: eng.color, opacity: isActive ? 1 : 0.4 }} />
+                                  <span className="text-[12px] font-medium text-text max-w-[160px] truncate">{eng.name}</span>
+                                  {eng.isOverdue && <span className="px-1 h-4 rounded text-[8px] font-bold bg-risk-50 text-risk-700 inline-flex items-center animate-pulse">OD</span>}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <span className="px-2 h-5 rounded-full text-[9px] font-semibold bg-brand-50 text-brand-700 inline-flex items-center">{eng.auditType}</span>
+                              </td>
+                              <td className="px-3 py-2.5"><span className="text-[11px] text-text-secondary">{eng.businessProcess}</span></td>
+                              <td className="px-3 py-2.5"><span className="text-[11px] text-text-secondary">{eng.owner.split(' ')[0]}</span></td>
+                              <td className="px-3 py-2.5">
+                                {isActive ? (
+                                  <div className="flex items-center gap-2 min-w-[80px]">
+                                    <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
+                                      <div className="h-full rounded-full" style={{ width: `${progress}%`, background: eng.color }} />
+                                    </div>
+                                    <span className="text-[10px] font-bold tabular-nums text-text-muted w-7 text-right">{progress}%</span>
+                                  </div>
+                                ) : <span className="text-ink-300 text-[10px]">—</span>}
+                              </td>
+                              <td className="px-3 py-2.5">
+                                {isActive ? <span className={`text-[11px] font-bold tabular-nums ${eng.controlsEffective > 0 ? 'text-compliant-700' : 'text-text-muted'}`}>{eng.controlsEffective}</span> : <span className="text-ink-300 text-[10px]">—</span>}
+                              </td>
+                              <td className="px-3 py-2.5">
+                                {isActive ? <span className={`text-[11px] font-bold tabular-nums ${eng.controlsFailed > 0 ? 'text-risk-700' : 'text-text-muted'}`}>{eng.controlsFailed}</span> : <span className="text-ink-300 text-[10px]">—</span>}
+                              </td>
+                              <td className="px-3 py-2.5">
+                                {isActive ? <span className={`text-[11px] font-bold tabular-nums ${eng.pendingReview > 0 ? 'text-mitigated-700' : 'text-text-muted'}`}>{eng.pendingReview}</span> : <span className="text-ink-300 text-[10px]">—</span>}
+                              </td>
+                              <td className="px-3 py-2.5">
+                                {isActive ? <span className="text-[11px] tabular-nums text-text-muted">{eng.controls - eng.controlsTested}</span> : <span className="text-[11px] tabular-nums text-text-muted">{eng.controls}</span>}
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${lifecycleTone(eng.status)}`}>{lifecycleLabel(eng.status)}</span>
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <span className={`px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors inline-flex items-center gap-1 ${action.cls}`}>
+                                  {action.label}<ChevronRight size={9} />
+                                </span>
+                              </td>
+                            </motion.tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-surface-2/30">
+                    <span className="text-[11px] text-text-muted">{filteredPlan.length} of {plan.length} engagements</span>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })()}
+
+          {/* ── TIMELINE TAB ── */}
           {activeTab === 'timeline' && (
             <motion.div key="timeline" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
               <GanttChart items={plan} frozen={planFrozen} onClickEngagement={openEditDrawer} processFilter={processFilter} statusFilter={statusFilter} />
@@ -1277,122 +1683,36 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
         )}
       </AnimatePresence>
 
-      {/* Freeze Confirmation Modal */}
+      {/* Engagement Setup Panel (Draft / Planned) */}
       <AnimatePresence>
-        {showFreezeModal && (
-          <ModalBackdrop onClose={() => setShowFreezeModal(false)}>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[15px] font-bold text-text">Freeze Audit Plan</h3>
-                <button onClick={() => setShowFreezeModal(false)} className="p-1 rounded-md hover:bg-surface-2 transition-colors cursor-pointer">
-                  <X size={16} className="text-text-muted" />
-                </button>
-              </div>
-              <div className="flex items-start gap-3 p-3 bg-evidence-50 rounded-xl mb-5">
-                <Lock size={16} className="text-evidence-700 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-[13px] text-evidence-700 font-semibold">This will lock all scheduling changes.</p>
-                  <p className="text-[12px] text-evidence-700/80 mt-1">All Draft and Planned engagements will move to Frozen state. You'll need to sign off before activating any engagement.</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 justify-end">
-                <button onClick={() => setShowFreezeModal(false)} className="px-4 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer">Cancel</button>
-                <button onClick={confirmFreeze} className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">Freeze Plan</button>
-              </div>
-            </div>
-          </ModalBackdrop>
-        )}
-      </AnimatePresence>
-
-      {/* Sign-Off Modal */}
-      <AnimatePresence>
-        {showSignOffModal && (
-          <ModalBackdrop onClose={() => setShowSignOffModal(false)}>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-[15px] font-bold text-text">Sign Off on FY26 Audit Plan</h3>
-                <button onClick={() => setShowSignOffModal(false)} className="p-1 rounded-md hover:bg-surface-2 transition-colors cursor-pointer">
-                  <X size={16} className="text-text-muted" />
-                </button>
-              </div>
-              <div className="flex items-start gap-3 p-3 bg-compliant-50 rounded-xl mb-4">
-                <CheckCircle2 size={16} className="text-compliant-700 mt-0.5 shrink-0" />
-                <p className="text-[12px] text-compliant-700">This is planning approval only. It does not approve test results or findings. After sign-off, individual engagements can be activated for execution.</p>
-              </div>
-              <div className="mb-4">
-                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Signer</label>
-                <div className="relative">
-                  <button onClick={() => setSignerDropdownOpen(p => !p)}
-                    className="w-full flex items-center justify-between px-3 py-2.5 border border-border rounded-lg text-[13px] text-text hover:border-primary/30 transition-colors cursor-pointer bg-white">
-                    {selectedSigner}
-                    <ChevronDown size={14} className={`text-text-muted transition-transform ${signerDropdownOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  <AnimatePresence>
-                    {signerDropdownOpen && (
-                      <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }}
-                        className="absolute left-0 right-0 top-full mt-1 bg-white border border-border-light rounded-xl shadow-lg overflow-hidden z-10">
-                        {SIGNERS.map(s => (
-                          <button key={s} onClick={() => { setSelectedSigner(s); setSignerDropdownOpen(false); }}
-                            className={`w-full text-left px-3 py-2 text-[12px] transition-colors cursor-pointer ${selectedSigner === s ? 'bg-primary/10 text-primary font-semibold' : 'text-text-secondary hover:bg-surface-2'}`}>{s}</button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-              <div className="mb-5">
-                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Comments</label>
-                <textarea value={signOffComment} onChange={(e) => setSignOffComment(e.target.value)}
-                  placeholder="Optional comments..."
-                  className="w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text placeholder:text-text-muted/50 focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all resize-none h-20"
-                />
-              </div>
-              <div className="flex items-center gap-3 justify-end">
-                <button onClick={() => setShowSignOffModal(false)} className="px-4 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer">Cancel</button>
-                <button onClick={confirmSignOff} className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">Submit Sign-Off</button>
-              </div>
-            </div>
-          </ModalBackdrop>
+        {setupPanelEngagement && (
+          <EngagementSetupPanel
+            engagement={setupPanelEngagement}
+            onClose={() => setSetupPanelEngagement(null)}
+            onMoveToPlanned={handleMoveToPlanned}
+            onActivate={handleSetupActivate}
+            onUpdateEngagement={(id, updates) => {
+              // Update the engagement in the plan
+              setPlan(prev => prev.map(p => p.id === id ? { ...p, ...updates } as AuditEngagement : p));
+              // Also update the setup panel's view of the engagement
+              setSetupPanelEngagement(prev => prev && prev.id === id ? { ...prev, ...updates } as AuditEngagement : prev);
+            }}
+          />
         )}
       </AnimatePresence>
 
       {/* Activation Modal */}
       <AnimatePresence>
-        {showActivateModal && (
-          <ModalBackdrop onClose={() => setShowActivateModal(null)}>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[15px] font-bold text-text">Activate Engagement</h3>
-                <button onClick={() => setShowActivateModal(null)} className="p-1 rounded-md hover:bg-surface-2 transition-colors cursor-pointer">
-                  <X size={16} className="text-text-muted" />
-                </button>
-              </div>
-              <div className="flex items-start gap-3 p-3 bg-brand-50 rounded-xl mb-4">
-                <Zap size={16} className="text-brand-700 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-[13px] text-brand-700 font-semibold">This will create an immutable Engagement Snapshot.</p>
-                  <p className="text-[12px] text-brand-700/80 mt-1">
-                    A point-in-time copy of the linked RACM version will be created. All execution (testing, evidence, findings) will run against this snapshot, not the live RACM. The engagement object itself is not duplicated.
-                  </p>
-                </div>
-              </div>
-              <div className="p-3 bg-surface-2 rounded-xl mb-5">
-                <div className="text-[12px] space-y-1">
-                  <div className="flex justify-between"><span className="text-text-muted">Engagement</span><span className="font-medium text-text">{plan.find(p => p.id === showActivateModal)?.name}</span></div>
-                  <div className="flex justify-between"><span className="text-text-muted">RACM Version</span><span className="font-medium text-text">{plan.find(p => p.id === showActivateModal)?.sourceRacmVersionId}</span></div>
-                  <div className="flex justify-between"><span className="text-text-muted">Controls</span><span className="font-medium text-text">{plan.find(p => p.id === showActivateModal)?.controls}</span></div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 justify-end">
-                <button onClick={() => setShowActivateModal(null)} className="px-4 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer">Cancel</button>
-                <button onClick={confirmActivate} className="px-4 py-2 bg-gradient-to-r from-primary to-primary-medium hover:brightness-110 text-white rounded-lg text-[12px] font-semibold transition-all cursor-pointer flex items-center gap-1.5">
-                  <Zap size={13} />
-                  Activate & Create Snapshot
-                </button>
-              </div>
-            </div>
-          </ModalBackdrop>
-        )}
+        {showActivateModal && <ActivationModal
+          engagement={plan.find(p => p.id === showActivateModal)}
+          activating={activating}
+          activationError={activationError}
+          activationLog={activationLog}
+          activationSteps={activationSteps}
+          onConfirm={() => confirmActivate()}
+          onClose={() => { if (!activating) { setShowActivateModal(null); setActivationError(null); } }}
+          getBlockers={getActivationBlockers}
+        />}
       </AnimatePresence>
     </div>
   );

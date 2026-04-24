@@ -3,7 +3,7 @@ import {
   Search, Upload, FileSpreadsheet, FileText, File,
   Download, Eye, Sparkles, Shield,
   ChevronRight, CloudUpload, X, CheckCircle2,
-  Clock, XCircle, Workflow, Database
+  Clock, XCircle, Workflow, Database, ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Orb from '../shared/Orb';
