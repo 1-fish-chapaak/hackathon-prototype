@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, Reorder, useDragControls } from 'motion/react';
 import {
   FileText, Shield, AlertTriangle, CheckCircle2, BarChart3,
@@ -7,7 +8,8 @@ import {
   Sparkles, Settings, Palette, Type,
   Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2, Trash2,
   List, LayoutGrid, GripVertical, Plus, StickyNote, PanelLeftClose, PanelLeftOpen,
-  ShieldAlert, MoreVertical, Eye, Database, Search, PackageOpen
+  ShieldAlert, MoreVertical, Eye, Database, Search, PackageOpen,
+  MessageSquare, Paperclip, Send, Clock as ClockIcon
 } from 'lucide-react';
 import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/mockData';
 import { StatusBadge } from '../shared/StatusBadge';
@@ -1131,50 +1133,36 @@ function TemplateLayout({ templateId, template, report }: { templateId: string; 
 }
 
 // ─── Query Card Component ───
-// Count-up number that eases from 0 to the target value on mount
-function AnimatedNumber({ value, delay = 0, durationMs = 900, className = '' }: { value: string; delay?: number; durationMs?: number; className?: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const numericMatch = value.match(/^(\d[\d,]*)(.*)$/);
-  const isNumeric = !!numericMatch;
-  const target = isNumeric ? parseInt(numericMatch![1].replace(/,/g, ''), 10) : 0;
-  const suffix = isNumeric ? numericMatch![2] : '';
+type QueryShape = { id: string; status: string; risk: string; severity: string; title: string; addedBy: string; kpis: { label: string; value: string; color: string }[]; summary: string; findings: string[]; observations: string[]; chartData: number[] };
 
-  useEffect(() => {
-    if (!isNumeric || !ref.current) {
-      if (ref.current) ref.current.textContent = value;
-      return;
-    }
-    const el = ref.current;
-    el.textContent = '0' + suffix;
-    let raf = 0;
-    let startTs = 0;
-    const delayTimer = window.setTimeout(() => {
-      const tick = (now: number) => {
-        if (!startTs) startTs = now;
-        const t = Math.min(1, (now - startTs) / durationMs);
-        const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
-        el.textContent = Math.round(target * eased).toLocaleString() + suffix;
-        if (t < 1) raf = requestAnimationFrame(tick);
-      };
-      raf = requestAnimationFrame(tick);
-    }, delay * 1000);
-    return () => {
-      window.clearTimeout(delayTimer);
-      cancelAnimationFrame(raf);
-    };
-  }, [target, durationMs, delay, value, isNumeric, suffix]);
-
-  return <span ref={ref} className={className} style={{ fontVariantNumeric: 'tabular-nums' }}>{isNumeric ? '0' + suffix : value}</span>;
+function parseNumeric(v: string): number {
+  const match = String(v).match(/-?\d[\d,.]*/);
+  if (!match) return 0;
+  return Number(match[0].replace(/[,\s]/g, '')) || 0;
 }
 
-function QueryCard({ query, index, onManageExceptions }: { query: { id: string; status: string; risk: string; severity: string; title: string; addedBy: string; kpis: { label: string; value: string; color: string }[]; summary: string; findings: string[]; observations: string[]; chartData: number[] }; index: number; onManageExceptions?: () => void }) {
+function computeQueryKpis(query: QueryShape) {
+  const firstVal = parseNumeric(query.kpis[0]?.value ?? '0');
+  const total = firstVal > 0 ? firstVal : 40 + (query.id.charCodeAt(query.id.length - 1) % 120);
+  const closed = Math.max(0, Math.round(total * (0.45 + ((query.id.charCodeAt(0) % 10) / 40))));
+  const open = Math.max(0, total - closed);
+  const healthPct = total > 0 ? Math.round((closed / total) * 100) : 0;
+  return [
+    { label: 'Total Exceptions', value: total.toLocaleString(),  icon: AlertTriangle, color: 'text-high-700 bg-high-50' },
+    { label: 'Open',             value: open.toLocaleString(),   icon: Loader2,       color: 'text-mitigated-700 bg-mitigated-50' },
+    { label: 'Closed',           value: closed.toLocaleString(), icon: CheckCircle2,  color: 'text-compliant-700 bg-compliant-50' },
+    { label: 'Query Health',     value: `${healthPct}%`,         icon: TrendingUp,    color: 'text-evidence-700 bg-evidence-50' },
+  ];
+}
+
+function QueryCard({ query, index, onManageExceptions, onDelete, comments = [], onAddComment }: { query: QueryShape; index: number; onManageExceptions?: () => void; onDelete?: () => void; comments?: QueryComment[]; onAddComment?: (queryId: string, queryTitle: string, text: string, attachment?: string) => void }) {
   const [expanded, setExpanded] = useState(index === 0);
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dataSourceModalOpen, setDataSourceModalOpen] = useState(false);
+  const [commentDrawerOpen, setCommentDrawerOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const accentColor = query.severity === 'Critical' ? '#B42318' : '#C2410C';
   const baseDelay = index * 0.08;
-  const sparkW = 100;
 
   const statusStyle = query.status === 'Completed'
     ? { pill: 'bg-compliant-50 text-compliant-700', dot: 'bg-compliant-500' }
@@ -1207,7 +1195,7 @@ function QueryCard({ query, index, onManageExceptions }: { query: { id: string; 
           : '0 0 0 rgba(0,0,0,0)',
         transition: 'box-shadow 220ms ease',
       }}
-      className="rounded-2xl border border-border-light bg-white overflow-hidden mb-4"
+      className="border-x border-b border-border-light bg-white overflow-hidden"
     >
       {/* Animated accent bar — sweeps in from left */}
       <motion.div
@@ -1250,6 +1238,24 @@ function QueryCard({ query, index, onManageExceptions }: { query: { id: string; 
               <span className={`w-1 h-1 rounded-full ${statusStyle.dot}`} />
               {query.status}
             </span>
+            {(() => {
+              const myComments = comments.filter(c => c.queryId === query.id).length;
+              return (
+                <button
+                  onClick={() => setCommentDrawerOpen(true)}
+                  title="Comments on this query"
+                  className="relative inline-flex items-center gap-1.5 h-8 px-3 text-[12px] font-semibold text-primary bg-white border border-primary/25 rounded-[8px] cursor-pointer hover:bg-primary-xlight hover:border-primary/40 transition-colors"
+                >
+                  <MessageSquare size={13} className="shrink-0" />
+                  Comment
+                  {myComments > 0 && (
+                    <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold bg-primary text-white rounded-full tabular-nums">
+                      {myComments}
+                    </span>
+                  )}
+                </button>
+              );
+            })()}
             <button
               onClick={onManageExceptions}
               title="Triage and act on every exception flagged in this query"
@@ -1279,7 +1285,7 @@ function QueryCard({ query, index, onManageExceptions }: { query: { id: string; 
                     Open Query
                   </button>
                   <button
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => { setMenuOpen(false); setDataSourceModalOpen(true); }}
                     className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-primary-xlight hover:text-primary cursor-pointer"
                   >
                     <Database size={13} />
@@ -1294,7 +1300,7 @@ function QueryCard({ query, index, onManageExceptions }: { query: { id: string; 
                   </button>
                   <div className="my-1 border-t border-border-light" />
                   <button
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => { setMenuOpen(false); onDelete?.(); }}
                     className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-risk-700 hover:bg-risk-50 cursor-pointer"
                   >
                     <Trash2 size={13} />
@@ -1316,63 +1322,20 @@ function QueryCard({ query, index, onManageExceptions }: { query: { id: string; 
           {query.title}
         </motion.h3>
 
-        {/* KPI strip — primary hero + compact secondaries, no containing boxes */}
-        <div className="border-t border-b border-border-light py-5 mb-5">
-          <div className="grid grid-cols-5">
-            {/* Primary — spans 2 cols, hero treatment with sparkline */}
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: baseDelay + 0.28, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="col-span-2 pr-6"
+        {/* KPI strip — matches the Executive Summary stats card style */}
+        <div className="grid grid-cols-4 gap-3 mb-5">
+          {computeQueryKpis(query).map((k) => (
+            <div
+              key={k.label}
+              className="glass-card rounded-xl p-4 flex items-center gap-3 hover:shadow-md hover:shadow-primary/5 transition-all"
             >
-              <div className="text-[14px] leading-[20px] text-text-muted font-semibold tracking-tight truncate mb-2">
-                {query.kpis[0].label}
+              <div className={`p-2 rounded-lg ${k.color}`}><k.icon size={16} /></div>
+              <div>
+                <div className="text-xl font-bold text-text tabular-nums">{k.value}</div>
+                <div className="text-[10px] text-text-muted tracking-wide">{k.label}</div>
               </div>
-              <div className="flex items-end gap-4">
-                <div className={`text-[32px] leading-[36px] font-bold ${query.kpis[0].color} shrink-0`}>
-                  <AnimatedNumber value={query.kpis[0].value} delay={baseDelay + 0.4} />
-                </div>
-                <svg width="100%" height="32" viewBox={`0 0 ${sparkW} 32`} preserveAspectRatio="none" className="block flex-1 -mb-1">
-                  <motion.polygon
-                    points={`0,32 ${query.chartData.map((v, i) => `${i * (sparkW / (query.chartData.length - 1))},${32 - v * 0.26}`).join(' ')} ${sparkW},32`}
-                    fill={`${accentColor}14`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: baseDelay + 0.9, duration: 0.5 }}
-                  />
-                  <motion.polyline
-                    points={query.chartData.map((v, i) => `${i * (sparkW / (query.chartData.length - 1))},${32 - v * 0.26}`).join(' ')}
-                    fill="none"
-                    stroke={accentColor}
-                    strokeWidth="1.25"
-                    vectorEffect="non-scaling-stroke"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ delay: baseDelay + 0.5, duration: 1, ease: [0.22, 1, 0.36, 1] }}
-                  />
-                </svg>
-              </div>
-            </motion.div>
-
-            {/* Secondaries — 1 col each, separated by thin vertical rules */}
-            {query.kpis.slice(1).map((kpi, i) => (
-              <motion.div
-                key={kpi.label}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: baseDelay + 0.34 + i * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                className="border-l border-border-light px-5 flex flex-col justify-between"
-              >
-                <div className="text-[14px] leading-[20px] text-text-muted font-semibold tracking-tight truncate mb-2">{kpi.label}</div>
-                <div className={`text-[24px] leading-[28px] font-bold ${kpi.color}`}>
-                  <AnimatedNumber value={kpi.value} delay={baseDelay + 0.46 + i * 0.06} />
-                </div>
-              </motion.div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
 
         {/* Summary */}
@@ -1442,63 +1405,345 @@ function QueryCard({ query, index, onManageExceptions }: { query: { id: string; 
           </motion.div>
         )}
       </AnimatePresence>
+
+      {dataSourceModalOpen && createPortal(
+        <DataSourceFilesModal query={query} onClose={() => setDataSourceModalOpen(false)} />,
+        document.body,
+      )}
+      {commentDrawerOpen && createPortal(
+        <CommentDrawer
+          query={query}
+          comments={comments}
+          onAddComment={onAddComment}
+          onClose={() => setCommentDrawerOpen(false)}
+        />,
+        document.body,
+      )}
     </motion.div>
   );
 }
 
-// ─── TOC row (per-item useDragControls so only the grip handle triggers drag) ───
-type TocSection = { id: string; kind: 'cover' | 'summary' | 'stats' | 'query' | 'note'; title: string; [k: string]: unknown };
+// ─── Data Source Files modal ───
+function DataSourceFilesModal({ query, onClose }: { query: QueryShape; onClose: () => void }) {
+  const seed = query.id.charCodeAt(query.id.length - 1);
+  const files = [
+    { name: `${query.id}_invoices_raw.xlsx`,    type: 'excel' as const, size: '2.4 MB',  rows: 12480, modified: 'Mar 18, 2026', source: 'SAP · AP Ledger' },
+    { name: `${query.id}_vendor_master.xlsx`,   type: 'excel' as const, size: '780 KB',  rows: 1843,  modified: 'Mar 12, 2026', source: 'Vendor Master · Oracle' },
+    { name: `${query.id}_controls_catalog.csv`, type: 'csv'   as const, size: '144 KB',  rows: 312,   modified: 'Feb 28, 2026', source: 'GRC · Control Library' },
+    { name: `${query.id}_po_grn_trail.xlsx`,    type: 'excel' as const, size: `${(1.2 + (seed % 5) * 0.3).toFixed(1)} MB`, rows: 5612, modified: 'Mar 20, 2026', source: 'Procurement · P2P' },
+  ];
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="fixed inset-0 bg-ink-900/40 backdrop-blur-[2px] z-50" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.98, y: 8 }}
+        transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] max-w-[94vw] max-h-[88vh] bg-white rounded-[16px] shadow-xl border border-border-light z-[60] flex flex-col"
+        role="dialog"
+        aria-label="Data Source Files"
+      >
+        <header className="shrink-0 px-6 py-5 flex items-start justify-between gap-4 border-b border-border-light">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-[10px] bg-brand-50 text-brand-700 flex items-center justify-center shrink-0">
+              <Database size={18} />
+            </div>
+            <div>
+              <h2 className="text-[16px] font-semibold text-text leading-tight">Data Source Files</h2>
+              <p className="text-[12.5px] text-text-muted mt-0.5">Files used to build <span className="font-mono font-semibold text-primary">{query.id}</span> — {query.title}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full text-text-muted hover:text-text hover:bg-primary-xlight flex items-center justify-center cursor-pointer shrink-0" aria-label="Close">
+            <X size={16} />
+          </button>
+        </header>
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          <ul className="divide-y divide-border-light border border-border-light rounded-[10px] overflow-hidden">
+            {files.map(f => {
+              const pillClass = f.type === 'excel'
+                ? 'bg-compliant-50 text-compliant-700'
+                : 'bg-brand-50 text-brand-700';
+              return (
+                <li key={f.name} className="flex items-center gap-3 px-4 py-3 hover:bg-paper-50 transition-colors">
+                  <div className="w-9 h-9 rounded-[8px] bg-paper-50 border border-border-light flex items-center justify-center shrink-0">
+                    <FileText size={16} className={f.type === 'excel' ? 'text-compliant-700' : 'text-brand-700'} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-mono text-[12.5px] font-semibold text-text truncate">{f.name}</span>
+                      <span className={`inline-flex items-center h-5 px-1.5 text-[10px] font-semibold uppercase tracking-wider rounded ${pillClass}`}>{f.type}</span>
+                    </div>
+                    <div className="text-[11.5px] text-text-muted tabular-nums">
+                      {f.size} · {f.rows.toLocaleString()} rows · {f.source} · {f.modified}
+                    </div>
+                  </div>
+                  <button
+                    className="inline-flex items-center gap-1.5 h-8 px-2.5 text-[12px] font-medium text-text-secondary bg-white border border-border-light rounded-[8px] hover:border-primary/30 hover:text-primary cursor-pointer"
+                    title={`Preview ${f.name}`}
+                  >
+                    <Eye size={13} />
+                    Preview
+                  </button>
+                  <button
+                    className="inline-flex items-center gap-1.5 h-8 px-2.5 text-[12px] font-semibold text-white bg-brand-600 rounded-[8px] hover:bg-brand-500 cursor-pointer"
+                    title={`Download ${f.name}`}
+                  >
+                    <Download size={13} />
+                    Download
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        <footer className="shrink-0 px-6 py-3 border-t border-border-light text-right text-[11.5px] text-text-muted tabular-nums">
+          {files.length} files
+        </footer>
+      </motion.div>
+    </>
+  );
+}
 
-function SectionTocRow({
-  section, index, isActive, canRemove, onScroll, onRemove,
+// ─── Comment slide-over drawer (per-query comment input + shared activity log) ───
+function CommentDrawer({
+  query,
+  comments,
+  onAddComment,
+  onClose,
 }: {
-  section: TocSection;
-  index: number;
-  isActive: boolean;
-  canRemove: boolean;
-  onScroll: () => void;
-  onRemove: () => void;
+  query: QueryShape;
+  comments: QueryComment[];
+  onAddComment?: (queryId: string, queryTitle: string, text: string, attachment?: string) => void;
+  onClose: () => void;
 }) {
-  const controls = useDragControls();
+  const [text, setText] = useState('');
+  const [attachment, setAttachment] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const grouped = comments.reduce<Record<string, { queryId: string; queryTitle: string; items: QueryComment[] }>>((acc, c) => {
+    if (!acc[c.queryId]) acc[c.queryId] = { queryId: c.queryId, queryTitle: c.queryTitle, items: [] };
+    acc[c.queryId].items.push(c);
+    return acc;
+  }, {});
+  const queryGroups = Object.values(grouped);
+  const totalComments = comments.length;
+
+  const handlePost = () => {
+    const body = text.trim();
+    if (!body) return;
+    onAddComment?.(query.id, query.title, body, attachment ?? undefined);
+    setText('');
+    setAttachment(null);
+  };
 
   return (
-    <Reorder.Item
-      value={section}
-      dragListener={false}
-      dragControls={controls}
-      whileDrag={{ scale: 1.02, boxShadow: '0 6px 16px rgba(15, 23, 42, 0.08)', zIndex: 5 }}
-      className={`list-none rounded-md transition-colors ${isActive ? 'bg-primary/[0.07]' : 'hover:bg-primary/[0.04]'}`}
-    >
-      <div className="group flex items-center gap-1.5 pr-1.5 py-1">
-        <button
-          type="button"
-          onPointerDown={(e) => controls.start(e)}
-          className="cursor-grab active:cursor-grabbing text-text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0 p-1 rounded hover:text-primary"
-          title="Drag to reorder"
-        >
-          <GripVertical size={14} />
-        </button>
-        <span className="text-[12px] leading-[16px] font-bold text-text-muted shrink-0 tabular-nums w-5 text-right">
-          {String(index + 1).padStart(2, '0')}
-        </span>
-        <button
-          type="button"
-          onClick={onScroll}
-          className={`flex-1 text-left text-[12px] leading-[16px] truncate transition-colors ${isActive ? 'text-primary font-semibold' : 'text-text hover:text-primary'}`}
-        >
-          {section.title}
-        </button>
-        {canRemove && (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        className="fixed inset-0 bg-ink-900/40 backdrop-blur-[2px] z-50"
+        onClick={onClose}
+      />
+      <motion.aside
+        initial={{ x: 24, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: 24, opacity: 0 }}
+        transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+        className="fixed top-0 right-0 bottom-0 w-full max-w-[560px] bg-white shadow-xl border-l border-border-light flex flex-col z-[60]"
+        role="dialog"
+        aria-label="Comments"
+      >
+        <header className="shrink-0 px-6 py-5 flex items-start justify-between gap-4 border-b border-border-light">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-[10px] bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <MessageSquare size={18} />
+            </div>
+            <div>
+              <h2 className="text-[16px] font-semibold text-text leading-tight">Comments</h2>
+              <p className="text-[12.5px] text-text-muted mt-0.5 leading-snug">
+                Commenting on <span className="font-mono font-semibold text-primary">{query.id}</span> — {query.title}
+              </p>
+            </div>
+          </div>
           <button
-            type="button"
-            onClick={onRemove}
-            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-risk-50 hover:text-risk-700 text-text-muted transition-all shrink-0"
-            title="Remove section"
+            onClick={onClose}
+            className="w-8 h-8 rounded-full text-text-muted hover:text-text hover:bg-primary-xlight flex items-center justify-center cursor-pointer shrink-0"
+            aria-label="Close"
           >
-            <X size={14} />
+            <X size={16} />
           </button>
-        )}
-      </div>
+        </header>
+
+        {/* Comment input */}
+        <section className="shrink-0 px-6 py-4 border-b border-border-light bg-paper-50">
+          <div className="relative">
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={`Leave a comment on ${query.id}…`}
+              rows={3}
+              className="w-full resize-none p-3 pr-10 bg-white border border-border-light rounded-[8px] text-[13px] text-text placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) setAttachment(f.name);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute bottom-2 right-2 w-7 h-7 flex items-center justify-center text-text-muted hover:text-primary cursor-pointer"
+              aria-label="Attach file"
+              title="Attach file"
+            >
+              <Paperclip size={14} />
+            </button>
+          </div>
+          {attachment && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 h-6 px-2 bg-primary/10 text-primary text-[11.5px] font-medium rounded-full">
+                <Paperclip size={11} />
+                {attachment}
+              </span>
+              <button onClick={() => setAttachment(null)} className="text-[11px] text-text-muted hover:text-risk-700 cursor-pointer">remove</button>
+            </div>
+          )}
+          <div className="mt-2.5 flex items-center justify-end">
+            <button
+              onClick={handlePost}
+              disabled={!text.trim()}
+              className={`inline-flex items-center gap-1.5 h-9 px-4 text-[12.5px] font-semibold rounded-[8px] transition-colors ${
+                text.trim()
+                  ? 'bg-primary text-white hover:bg-primary-hover cursor-pointer'
+                  : 'bg-primary/40 text-white/80 cursor-not-allowed'
+              }`}
+            >
+              <Send size={13} />
+              Post comment
+            </button>
+          </div>
+        </section>
+
+        {/* Shared activity log */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">Activity log</h3>
+            <span className="text-[11px] text-text-muted tabular-nums">
+              {totalComments} {totalComments === 1 ? 'comment' : 'comments'} across {queryGroups.length} {queryGroups.length === 1 ? 'query' : 'queries'}
+            </span>
+          </div>
+          {queryGroups.length === 0 ? (
+            <p className="text-[13px] text-text-muted italic">No comments yet. Be the first to share a note.</p>
+          ) : (
+            <div className="space-y-4">
+              {queryGroups.map(group => (
+                <section key={group.queryId} className="border border-border-light rounded-[10px] overflow-hidden">
+                  <header className={`px-3 py-2 bg-paper-50 border-b border-border-light flex items-center justify-between ${group.queryId === query.id ? 'bg-primary/5' : ''}`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-mono text-[11.5px] font-bold text-primary shrink-0">{group.queryId}</span>
+                      <span className="text-[11.5px] text-text-muted truncate">{group.queryTitle}</span>
+                    </div>
+                    <span className="text-[10.5px] text-text-muted tabular-nums shrink-0">
+                      {group.items.length} {group.items.length === 1 ? 'comment' : 'comments'}
+                    </span>
+                  </header>
+                  <ol className="divide-y divide-border-light">
+                    {group.items.slice().reverse().map(c => (
+                      <li key={c.id} className="px-3 py-3">
+                        <div className="flex items-start gap-2.5">
+                          <span className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold tracking-wider">
+                            {c.initials}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-0.5">
+                              <span className="text-[12.5px] font-semibold text-text">{c.author}</span>
+                              <span className="inline-flex items-center gap-1 text-[11px] text-text-muted tabular-nums whitespace-nowrap">
+                                <ClockIcon size={10} />
+                                {c.timestamp}
+                              </span>
+                            </div>
+                            <p className="text-[12.5px] text-text leading-relaxed">{c.text}</p>
+                            {c.attachment && (
+                              <span className="mt-1.5 inline-flex items-center gap-1.5 h-6 px-2 bg-primary/10 text-primary text-[11px] font-medium rounded-full">
+                                <Paperclip size={10} />
+                                {c.attachment}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              ))}
+            </div>
+          )}
+        </div>
+      </motion.aside>
+    </>
+  );
+}
+
+// ─── Draggable query section (main content area reorder) ───
+type SectionProps = {
+  key: string;
+  value: unknown;
+  id: string;
+  layout: true;
+  initial: { opacity: number; y: number };
+  animate: { opacity: number; y: number };
+  exit: { opacity: number; y: number; scale: number };
+  transition: { duration: number; ease: [number, number, number, number] };
+  className: string;
+  dragListener: false;
+};
+
+type QueryComment = { id: string; queryId: string; queryTitle: string; author: string; initials: string; timestamp: string; text: string; attachment?: string };
+
+function DraggableQuerySection({
+  section,
+  index,
+  sectionProps,
+  onManageExceptions,
+  onDelete,
+  comments,
+  onAddComment,
+}: {
+  section: { id: string; kind: 'query'; title: string; query: QueryShape };
+  index: number;
+  sectionProps: SectionProps;
+  onManageExceptions?: () => void;
+  onDelete: () => void;
+  comments: QueryComment[];
+  onAddComment: (queryId: string, queryTitle: string, text: string, attachment?: string) => void;
+}) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item {...sectionProps} dragControls={controls} className={`${sectionProps.className} relative group/dragrow`}>
+      {/* Reorder handle — floats on the left edge, visible on hover */}
+      <button
+        onPointerDown={(e) => controls.start(e)}
+        aria-label={`Drag ${section.title} to reorder`}
+        title="Drag to reorder query"
+        className="absolute left-[-18px] top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center w-6 h-10 rounded-[6px] text-text-muted hover:text-primary hover:bg-primary-xlight bg-white border border-border-light cursor-grab active:cursor-grabbing opacity-0 group-hover/dragrow:opacity-100 transition-opacity shadow-sm touch-none"
+      >
+        <GripVertical size={14} />
+      </button>
+      <QueryCard
+        query={section.query}
+        index={index}
+        onManageExceptions={onManageExceptions}
+        onDelete={onDelete}
+        comments={comments}
+        onAddComment={onAddComment}
+      />
     </Reorder.Item>
   );
 }
@@ -1765,7 +2010,7 @@ function ReportView({ report, onBack, onShare, onManageExceptions, initialTempla
     ? TEMPLATE_STATS[appliedTemplate.id]
     : [
         { label: 'Total Exceptions', value: '187', icon: AlertTriangle, color: 'text-high-700 bg-high-50' },
-        { label: 'Resolved', value: '38', icon: CheckCircle2, color: 'text-compliant-700 bg-compliant-50' },
+        { label: 'Closed', value: '38', icon: CheckCircle2, color: 'text-compliant-700 bg-compliant-50' },
         { label: 'High Risk', value: '12', icon: Shield, color: 'text-risk-700 bg-risk-50' },
         { label: 'Report Health', value: '78%', icon: TrendingUp, color: 'text-evidence-700 bg-evidence-50' },
       ];
@@ -1795,9 +2040,6 @@ function ReportView({ report, onBack, onShare, onManageExceptions, initialTempla
   ];
 
   const [sections, setSections] = useState<SectionItem[]>(() => buildInitialSections(DEFAULT_QUERIES));
-  const [showAddMenu, setShowAddMenu] = useState(false);
-  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
-  const [indexCollapsed, setIndexCollapsed] = useState(false);
   const appliedTemplateId = appliedTemplate?.id ?? null;
 
   useEffect(() => {
@@ -1808,26 +2050,30 @@ function ReportView({ report, onBack, onShare, onManageExceptions, initialTempla
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appliedTemplateId]);
 
-  const scrollToSection = (id: string) => {
-    document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setActiveSectionId(id);
-  };
-
   const removeSection = (id: string) => {
     setSections(prev => prev.filter(s => s.id !== id));
   };
 
-  const addSection = (kind: 'note') => {
-    const newId = `sec-${kind}-${Date.now()}`;
-    const newSection: SectionItem = {
-      id: newId,
-      kind: 'note',
-      title: 'New note',
-      content: 'Click to edit — add commentary, methodology notes, or context here.',
-    };
-    setSections(prev => [...prev, newSection]);
-    setShowAddMenu(false);
-    setTimeout(() => scrollToSection(newId), 50);
+  // ─── Shared comments state (common activity log across all query cards) ───
+  const [comments, setComments] = useState<QueryComment[]>([
+    { id: 'c-1', queryId: 'Q01', queryTitle: 'Detects duplicate invoice entries by vendor, date, and amount', author: 'Priya Mehta',  initials: 'PM', timestamp: '2 days ago', text: 'Grouped cases by vendor and exported for AP review. Priority — largest 12 duplicates are all the same vendor.' },
+    { id: 'c-2', queryId: 'Q01', queryTitle: 'Detects duplicate invoice entries by vendor, date, and amount', author: 'Karan Mehta',  initials: 'KM', timestamp: '1 day ago',  text: 'Flagged EX-2024-003 as a bulk case for remediation — MFA enforcement applied.', attachment: 'mfa_remediation_plan.pdf' },
+    { id: 'c-3', queryId: 'Q02', queryTitle: 'Identifies unauthorized vendor master changes without proper approval workflow in the last 90 days', author: 'Ravi Kumar', initials: 'RK', timestamp: '5 hours ago', text: 'Control owner confirmed — vendor master workflow is being tightened; expect residual risk to drop next quarter.' },
+  ]);
+  const addComment = (queryId: string, queryTitle: string, text: string, attachment?: string) => {
+    setComments(prev => [
+      ...prev,
+      {
+        id: `c-${Date.now()}`,
+        queryId,
+        queryTitle,
+        author: report.generatedBy ?? 'You',
+        initials: (report.generatedBy ?? 'You').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
+        timestamp: 'just now',
+        text,
+        attachment,
+      },
+    ]);
   };
 
   return (
@@ -1965,110 +2211,28 @@ function ReportView({ report, onBack, onShare, onManageExceptions, initialTempla
             </AnimatePresence>
           </>
         ) : (
-          <div
-            className="grid gap-6 items-start transition-[grid-template-columns] duration-300 ease-out"
-            style={{ gridTemplateColumns: indexCollapsed ? '44px 1fr' : '240px 1fr' }}
-          >
-            {/* Left: Report Index (TOC) */}
-            <aside className="sticky top-4 self-start">
-              {indexCollapsed ? (
-                <motion.button
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  onClick={() => setIndexCollapsed(false)}
-                  className="w-11 h-11 rounded-xl border border-border-light bg-white flex items-center justify-center text-text-muted hover:text-primary hover:border-primary/30 transition-colors cursor-pointer"
-                  title="Expand Report Index"
-                >
-                  <PanelLeftOpen size={16} />
-                </motion.button>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="bg-white rounded-xl border border-border-light p-3"
-                >
-                  <div className="flex items-center justify-between mb-2 px-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[12px] leading-[16px] font-bold text-text-muted tracking-tight">Report Index</span>
-                      <span className="text-[12px] leading-[16px] text-text-muted tabular-nums">{sections.length}</span>
-                    </div>
-                    <button
-                      onClick={() => setIndexCollapsed(true)}
-                      className="p-0.5 rounded hover:bg-primary/5 text-text-muted hover:text-primary transition-colors cursor-pointer"
-                      title="Collapse Report Index"
-                    >
-                      <PanelLeftClose size={16} />
-                    </button>
-                  </div>
-                  <Reorder.Group
-                    axis="y"
-                    values={sections}
-                    onReorder={setSections}
-                    className="space-y-0.5 list-none m-0 p-0"
-                  >
-                    {sections.map((section, i) => (
-                      <SectionTocRow
-                        key={section.id}
-                        section={section as unknown as TocSection}
-                        index={i}
-                        isActive={activeSectionId === section.id}
-                        canRemove={section.kind !== 'cover'}
-                        onScroll={() => scrollToSection(section.id)}
-                        onRemove={() => removeSection(section.id)}
-                      />
-                    ))}
-                  </Reorder.Group>
-
-                  {/* Add section */}
-                  <div className="mt-2 border-t border-border-light pt-2 relative">
-                    <button
-                      onClick={() => setShowAddMenu(p => !p)}
-                      className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md border border-dashed border-border hover:border-primary hover:bg-primary/5 hover:text-primary text-[12px] leading-[16px] font-medium text-text-secondary transition-colors cursor-pointer"
-                    >
-                      <Plus size={12} /> Add section
-                    </button>
-                    <AnimatePresence>
-                      {showAddMenu && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setShowAddMenu(false)} />
-                          <motion.div
-                            initial={{ opacity: 0, y: -4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -4 }}
-                            transition={{ duration: 0.15 }}
-                            className="absolute left-0 right-0 top-full mt-1 bg-white border border-border-light rounded-lg shadow-lg py-1 z-50"
-                          >
-                            <button onClick={() => addSection('note')} className="w-full text-left px-3 py-1.5 text-[12px] leading-[16px] text-text-secondary hover:bg-primary/5 hover:text-primary flex items-center gap-2 cursor-pointer">
-                              <StickyNote size={12} className="text-primary" /> Note / text block
-                            </button>
-                          </motion.div>
-                        </>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </motion.div>
-              )}
-            </aside>
-
-            {/* Right: Sections rendered in current order */}
+          <div className="w-full">
+            {/* Sections rendered as a continuous report (drag-to-reorder enabled for query cards) */}
             <main className="min-w-0">
-              <AnimatePresence initial={false}>
+              <Reorder.Group axis="y" values={sections} onReorder={setSections} as="div" className="list-none p-0 m-0">
                 {sections.map((section, i) => {
                   const sectionProps = {
                     key: section.id,
+                    value: section,
                     id: `section-${section.id}`,
                     layout: true as const,
                     initial: { opacity: 0, y: 8 },
                     animate: { opacity: 1, y: 0 },
                     exit: { opacity: 0, y: -4, scale: 0.98 },
                     transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
-                    className: 'scroll-mt-4',
+                    className: 'scroll-mt-4 list-none',
+                    dragListener: false as const,
                   };
 
                   if (section.kind === 'cover') {
                     return (
-                      <motion.div {...sectionProps}>
-                        <div className="relative rounded-2xl overflow-hidden mb-5 bg-gradient-to-br from-[#3b0b72] to-[#6a12cd]" style={{ boxShadow: '0 4px 24px rgba(106,18,205,0.35)' }}>
+                      <Reorder.Item {...sectionProps}>
+                        <div className="relative rounded-t-2xl overflow-hidden bg-gradient-to-br from-[#3b0b72] to-[#6a12cd]" style={{ boxShadow: '0 4px 24px rgba(106,18,205,0.35)' }}>
                           <div className="absolute inset-0 z-0" style={{ maskImage: 'linear-gradient(to right, transparent 35%, white 70%)', WebkitMaskImage: 'linear-gradient(to right, transparent 35%, white 70%)' }}>
                             <FloatingLines
                               enabledWaves={['top', 'middle']}
@@ -2096,14 +2260,14 @@ function ReportView({ report, onBack, onShare, onManageExceptions, initialTempla
                             </div>
                           </div>
                         </div>
-                      </motion.div>
+                      </Reorder.Item>
                     );
                   }
 
                   if (section.kind === 'summary') {
                     return (
-                      <motion.div {...sectionProps}>
-                        <div className="rounded-2xl border border-border-light bg-white p-6 mb-5">
+                      <Reorder.Item {...sectionProps}>
+                        <div className="border-x border-b border-border-light bg-white p-6">
                           <div className="flex items-center gap-2 mb-8">
                             <FileText size={16} className="text-primary" />
                             <h3 className="text-[15px] leading-[20px] font-bold text-text">{section.title}</h3>
@@ -2121,14 +2285,14 @@ function ReportView({ report, onBack, onShare, onManageExceptions, initialTempla
                           </div>
                           <p className="text-[13px] text-text-secondary leading-relaxed">{section.content}</p>
                         </div>
-                      </motion.div>
+                      </Reorder.Item>
                     );
                   }
 
                   if (section.kind === 'stats') {
                     return (
-                      <motion.div {...sectionProps}>
-                        <div className="grid grid-cols-4 gap-3 mb-5">
+                      <Reorder.Item {...sectionProps}>
+                        <div className="grid grid-cols-4 gap-3">
                           {activeStats.map(stat => (
                             <div key={stat.label} className="glass-card rounded-xl p-4 flex items-center gap-3 hover:shadow-md hover:shadow-primary/5 transition-all">
                               <div className={`p-2 rounded-lg ${stat.color}`}><stat.icon size={16} /></div>
@@ -2139,34 +2303,41 @@ function ReportView({ report, onBack, onShare, onManageExceptions, initialTempla
                             </div>
                           ))}
                         </div>
-                      </motion.div>
+                      </Reorder.Item>
                     );
                   }
 
                   if (section.kind === 'query') {
                     return (
-                      <motion.div {...sectionProps}>
-                        <QueryCard query={section.query} index={i} onManageExceptions={onManageExceptions} />
-                      </motion.div>
+                      <DraggableQuerySection
+                        key={section.id}
+                        section={section}
+                        index={i}
+                        sectionProps={sectionProps}
+                        onManageExceptions={onManageExceptions}
+                        onDelete={() => removeSection(section.id)}
+                        comments={comments}
+                        onAddComment={addComment}
+                      />
                     );
                   }
 
                   if (section.kind === 'note') {
                     return (
-                      <motion.div {...sectionProps}>
-                        <div className="rounded-2xl border border-border-light bg-white p-5 mb-4">
+                      <Reorder.Item {...sectionProps}>
+                        <div className="border-x border-b border-border-light bg-white p-5">
                           <div className="flex items-center gap-2 mb-2.5 text-[11px] text-text-muted font-semibold uppercase tracking-wider">
                             <StickyNote size={12} className="text-primary" /> {section.title}
                           </div>
                           <p className="text-[13px] text-text leading-relaxed">{section.content}</p>
                         </div>
-                      </motion.div>
+                      </Reorder.Item>
                     );
                   }
 
                   return null;
                 })}
-              </AnimatePresence>
+              </Reorder.Group>
             </main>
           </div>
         )}
