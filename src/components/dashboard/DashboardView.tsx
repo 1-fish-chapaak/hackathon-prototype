@@ -8,7 +8,8 @@ import {
   Package, Receipt, Handshake, ShieldCheck,
   Send, X, Mail, Copy, CheckCircle2, ArrowLeft,
   Download, Filter, Share2, Loader2,
-  MoreVertical, Edit, Trash2, ChevronUp, Eye, EyeOff
+  MoreVertical, Edit, Trash2, ChevronUp, Eye, EyeOff,
+  Search, LineChart, AreaChart, ListChecks
 } from 'lucide-react';
 import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
@@ -663,6 +664,884 @@ function DashboardSkeleton() {
   );
 }
 
+// ─── Add Widget Modal ────────────────────────────────────────────────────────
+
+interface ChartTypeDef {
+  id: string;
+  title: string;
+  icon: React.ElementType;
+}
+
+const CHART_TYPES: ChartTypeDef[] = [
+  { id: 'kpi', title: 'KPI Cards', icon: BarChart3 },
+  { id: 'pie', title: 'Pie Chart', icon: BarChart3 },
+  { id: 'line', title: 'Line Chart', icon: LineChart },
+  { id: 'area', title: 'Area Chart', icon: AreaChart },
+  { id: 'stacked-bar', title: 'Stacked Bar Chart', icon: BarChart3 },
+  { id: 'clustered-bar', title: 'Clustered Bar Chart', icon: BarChart3 },
+  { id: 'clustered-col', title: 'Clustered Column Chart', icon: BarChart3 },
+  { id: 'stacked-col', title: 'Stacked Column Chart', icon: BarChart3 },
+  { id: 'line-clustered', title: 'Line & Clustered Column', icon: LineChart },
+  { id: 'scatter', title: 'Scatter Chart', icon: TrendingUp },
+  { id: 'waterfall', title: 'Waterfall Chart', icon: TrendingUp },
+  { id: 'table', title: 'Table', icon: FileText },
+];
+
+interface DragField {
+  id: string;
+  label: string;
+  kind: 'dimension' | 'measure';
+  group: string;
+}
+
+const DRAG_FIELDS: DragField[] = [
+  { id: 'date', label: 'Date', kind: 'dimension', group: 'Time' },
+  { id: 'month', label: 'Month', kind: 'dimension', group: 'Time' },
+  { id: 'week', label: 'Week', kind: 'dimension', group: 'Time' },
+  { id: 'region', label: 'Region', kind: 'dimension', group: 'Geography' },
+  { id: 'state', label: 'State', kind: 'dimension', group: 'Geography' },
+  { id: 'vendor', label: 'Vendor Name', kind: 'dimension', group: 'Entity' },
+  { id: 'status', label: 'Status', kind: 'dimension', group: 'Entity' },
+  { id: 'category', label: 'Categories', kind: 'dimension', group: 'Entity' },
+  { id: 'department', label: 'Department', kind: 'dimension', group: 'Entity' },
+  { id: 'inv_amount', label: 'Invoice Amount (₹)', kind: 'measure', group: 'Financial' },
+  { id: 'risk_amt', label: 'Amount at Risk (₹)', kind: 'measure', group: 'Financial' },
+  { id: 'dup_count', label: 'Duplicate Count', kind: 'measure', group: 'Performance' },
+  { id: 'dup_score', label: 'Duplicate Score (%)', kind: 'measure', group: 'Performance' },
+  { id: 'inv_scanned', label: 'Invoices Scanned', kind: 'measure', group: 'Performance' },
+  { id: 'accuracy', label: 'Detection Accuracy (%)', kind: 'measure', group: 'Performance' },
+  { id: 'proc_time', label: 'Processing Time (d)', kind: 'measure', group: 'Performance' },
+];
+
+const AGG_OPTIONS = [
+  { value: 'sum', label: 'Sum', symbol: 'Σ' },
+  { value: 'average', label: 'Average', symbol: 'x̄' },
+  { value: 'count', label: 'Count', symbol: 'n' },
+  { value: 'count_d', label: 'Count Distinct', symbol: '#' },
+  { value: 'min', label: 'Min', symbol: '↓' },
+  { value: 'max', label: 'Max', symbol: '↑' },
+];
+
+function AddWidgetModal({ open, onClose, addToast }: {
+  open: boolean;
+  onClose: () => void;
+  addToast: (t: { message: string; type: string }) => void;
+}) {
+  const [selectedChart, setSelectedChart] = useState<ChartTypeDef | null>(null);
+  const [chartTypeCollapsed, setChartTypeCollapsed] = useState(false);
+  const [activeTab, setActiveTab] = useState<'data' | 'format'>('data');
+  const [fieldSearch, setFieldSearch] = useState('');
+  const [xFields, setXFields] = useState<string[]>([]);
+  const [yFields, setYFields] = useState<string[]>([]);
+  const [yAggs, setYAggs] = useState<Record<string, string>>({});
+  const [widgetName, setWidgetName] = useState('');
+  const [widgetDesc, setWidgetDesc] = useState('');
+  const [file1Open, setFile1Open] = useState(true);
+  const [file2Open, setFile2Open] = useState(false);
+  const [dragOver, setDragOver] = useState<'x' | 'y' | null>(null);
+  const [aggDropdownOpen, setAggDropdownOpen] = useState<string | null>(null);
+
+  // Reset on open
+  useEffect(() => {
+    if (open) {
+      setSelectedChart(null);
+      setActiveTab('data');
+      setXFields([]);
+      setYFields([]);
+      setYAggs({});
+      setWidgetName('');
+      setWidgetDesc('');
+      setFieldSearch('');
+    }
+  }, [open]);
+
+  const filteredFields = DRAG_FIELDS.filter(f =>
+    f.label.toLowerCase().includes(fieldSearch.toLowerCase())
+  );
+  const dimensionFields = filteredFields.filter(f => f.kind === 'dimension');
+  const measureFields = filteredFields.filter(f => f.kind === 'measure');
+
+  const handleDrop = (zone: 'x' | 'y', e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(null);
+    const fieldId = e.dataTransfer.getData('fieldId');
+    if (!fieldId) return;
+    if (zone === 'x') {
+      if (xFields.length >= 3 || xFields.includes(fieldId)) return;
+      setXFields(prev => [...prev, fieldId]);
+    } else {
+      if (yFields.length >= 3 || yFields.includes(fieldId)) return;
+      setYFields(prev => [...prev, fieldId]);
+      setYAggs(prev => ({ ...prev, [fieldId]: 'count_d' }));
+    }
+  };
+
+  const removeXField = (id: string) => setXFields(prev => prev.filter(f => f !== id));
+  const removeYField = (id: string) => {
+    setYFields(prev => prev.filter(f => f !== id));
+    setYAggs(prev => { const n = { ...prev }; delete n[id]; return n; });
+  };
+
+  const getFieldLabel = (id: string) => DRAG_FIELDS.find(f => f.id === id)?.label || id;
+
+  const handleAdd = () => {
+    addToast({ message: `${selectedChart?.title || 'Widget'} added to dashboard`, type: 'success' });
+    onClose();
+  };
+
+  // Simple preview chart based on selected type
+  // Preview data
+  const PV_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  const PV_ACTUAL = [93, 95, 96, 95.5, 97, 97.5];
+  const PV_TARGET = [95.5, 96, 96.5, 97, 97.5, 98];
+  const PV_BARS = [
+    { l: 'Jan', d: 45, r: 42, p: 3 }, { l: 'Feb', d: 52, r: 48, p: 4 }, { l: 'Mar', d: 38, r: 35, p: 3 },
+    { l: 'Apr', d: 61, r: 55, p: 6 }, { l: 'May', d: 48, r: 46, p: 2 }, { l: 'Jun', d: 55, r: 50, p: 5 },
+  ];
+  const PV_PIE = [
+    { label: 'Exact Match', value: 40, color: '#7C3AED' },
+    { label: 'Vendor Match', value: 25, color: '#0369A1' },
+    { label: 'PO Match', value: 18, color: '#B45309' },
+    { label: 'ML Detection', value: 12, color: '#15803D' },
+    { label: 'Manual Flag', value: 5, color: '#B42318' },
+  ];
+  const PV_SCATTER = [
+    [40,160],[80,120],[130,90],[170,140],[220,60],[260,110],[310,80],[350,130],[100,50],[200,100],[280,70],[150,150],
+  ];
+  const PV_WATERFALL = [
+    { l: 'Revenue', v: 90, type: 'up' }, { l: 'COGS', v: -30, type: 'down' }, { l: 'Gross', v: 60, type: 'total' },
+    { l: 'OpEx', v: -20, type: 'down' }, { l: 'Tax', v: -8, type: 'down' }, { l: 'Net', v: 32, type: 'total' },
+  ];
+  const PV_TABLE_ROWS = [
+    ['INV-005790', 'Acme Global', '₹11,853', 'Pending', 'High'],
+    ['INV-025832', 'Korean Tech', '₹4,564', 'Review', 'Medium'],
+    ['INV-007194', '3tones Letter', '₹3,835', 'Resolved', 'Low'],
+    ['INV-040083', 'Chintamani', '₹3,410', 'Pending', 'High'],
+    ['INV-027203', 'M Cargo', '₹1,457', 'Resolved', 'Low'],
+  ];
+
+  const hasFields = xFields.length > 0 || yFields.length > 0;
+  const xLabel = xFields.length > 0 ? getFieldLabel(xFields[0]) : '';
+  const yLabel = yFields.length > 0 ? getFieldLabel(yFields[0]) : '';
+  const axisCaption = hasFields ? `${yLabel || 'Y-Axis'} by ${xLabel || 'X-Axis'}` : '';
+
+  // Shared axis + legend footer
+  const AxisFooter = ({ labels, legend }: { labels: string[]; legend?: { label: string; color: string; dashed?: boolean }[] }) => (
+    <div className="mt-2">
+      {/* X-axis data labels */}
+      {labels.length > 0 && (
+        <div className="flex justify-between text-[10px] text-ink-400 px-1">
+          {labels.map(l => <span key={l}>{l}</span>)}
+        </div>
+      )}
+      {/* X-axis title */}
+      {xLabel && (
+        <div className="text-center mt-1.5">
+          <span className="text-[10px] font-semibold text-brand-600 bg-brand-50 px-2 py-0.5 rounded">{xLabel}</span>
+        </div>
+      )}
+      {/* Legend */}
+      {legend && (
+        <div className="flex items-center justify-center gap-4 mt-2.5">
+          {legend.map(lg => (
+            <div key={lg.label} className="flex items-center gap-1.5">
+              {lg.dashed ? (
+                <svg width="16" height="2"><line x1="0" y1="1" x2="16" y2="1" stroke={lg.color} strokeWidth="2" strokeDasharray="3 2" /></svg>
+              ) : (
+                <div className="w-3 h-2 rounded-sm" style={{ background: lg.color }} />
+              )}
+              <span className="text-[10px] text-ink-500">{lg.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {/* Caption: "Y by X" */}
+      {axisCaption && <div className="text-[10px] text-ink-400 text-center mt-2">{axisCaption}</div>}
+    </div>
+  );
+
+  const renderPreview = () => {
+    if (!selectedChart) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-ink-400">
+          <BarChart3 size={48} className="mb-3 opacity-30" />
+          <p className="text-[14px] font-medium">Select a chart type to preview</p>
+          <p className="text-[12px] mt-1">Drag fields to X and Y axes to configure</p>
+        </div>
+      );
+    }
+
+    const W = 480, H = 240;
+    const id = selectedChart.id;
+
+    // ── KPI Cards ──
+    if (id === 'kpi') {
+      return (
+        <div className="flex items-center justify-center h-full gap-5">
+          {[
+            { label: yLabel || 'Invoices Scanned', value: '12,450', change: '+8.2%', spark: [30,45,38,52,48,60,55,68] },
+            { label: 'Compliance Rate', value: '94.2%', change: '+1.4%', spark: [80,82,81,85,88,87,90,94] },
+          ].map((kpi, i) => (
+            <div key={i} className="bg-canvas-elevated border border-canvas-border rounded-xl p-5 min-w-[200px]">
+              <p className="text-[11px] text-ink-500 font-medium uppercase tracking-wider mb-1">{kpi.label}</p>
+              <p className="text-[32px] font-bold text-ink-900 leading-none">{kpi.value}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-[11px] text-compliant font-semibold flex items-center gap-0.5"><TrendingUp size={10} />{kpi.change}</span>
+                <svg width="60" height="20" viewBox="0 0 60 20">
+                  <polyline points={kpi.spark.map((v,j) => `${j*(60/(kpi.spark.length-1))},${20-((v-Math.min(...kpi.spark))/(Math.max(...kpi.spark)-Math.min(...kpi.spark)))*18}`).join(' ')} fill="none" stroke="var(--color-brand-400)" strokeWidth="1.5" />
+                </svg>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ── Pie / Donut ──
+    if (id === 'pie') {
+      const total = PV_PIE.reduce((a, s) => a + s.value, 0);
+      let off = 0;
+      return (
+        <div className="flex items-center justify-center gap-10 h-full">
+          <svg width="180" height="180" viewBox="0 0 100 100">
+            {PV_PIE.map(s => {
+              const pct = (s.value / total) * 100;
+              const da = `${pct * 2.51327} ${251.327 - pct * 2.51327}`;
+              const doff = -off * 2.51327;
+              off += pct;
+              return <circle key={s.label} cx="50" cy="50" r="38" fill="none" stroke={s.color} strokeWidth="12" strokeDasharray={da} strokeDashoffset={doff} strokeLinecap="round" transform="rotate(-90 50 50)" />;
+            })}
+            <text x="50" y="47" textAnchor="middle" className="fill-ink-900 font-bold" fontSize="16">{total}</text>
+            <text x="50" y="59" textAnchor="middle" className="fill-ink-500" fontSize="8">Total</text>
+          </svg>
+          <div className="space-y-2.5">
+            {PV_PIE.map(s => (
+              <div key={s.label} className="flex items-center gap-2.5">
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ background: s.color }} />
+                <span className="text-[12px] text-ink-700 w-24">{s.label}</span>
+                <span className="text-[13px] font-bold text-ink-900">{s.value}%</span>
+              </div>
+            ))}
+          </div>
+          {axisCaption && <div className="absolute bottom-3 left-0 right-0 text-center text-[10px] text-ink-400">{axisCaption}</div>}
+        </div>
+      );
+    }
+
+    // ── Line Chart ──
+    if (id === 'line') {
+      const aMax = Math.max(...PV_ACTUAL, ...PV_TARGET);
+      const pts = (data: number[]) => data.map((v, i) => `${40 + i * ((W-80)/(data.length-1))},${H - 30 - ((v - 85) / (aMax - 85)) * (H - 60)}`).join(' ');
+      return (
+        <div className="flex flex-col justify-center h-full px-4 relative">
+          {/* Y axis label */}
+          {yLabel && (
+            <div className="absolute -left-1 top-1/2 -translate-y-1/2 -rotate-90 origin-center">
+              <span className="text-[9px] font-semibold text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded whitespace-nowrap">{yLabel}</span>
+            </div>
+          )}
+          {/* Y axis values */}
+          <div className="absolute left-4 top-4 bottom-10 flex flex-col justify-between text-[9px] text-ink-400">
+            {[98, 96, 94, 92].map(v => <span key={v}>{v}%</span>)}
+          </div>
+          <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
+            {/* Grid lines */}
+            {[0.2, 0.4, 0.6, 0.8].map(p => <line key={p} x1="40" y1={H - 30 - p * (H-60)} x2={W-10} y2={H - 30 - p * (H-60)} stroke="var(--color-canvas-border)" strokeWidth="0.5" />)}
+            {/* Target dashed */}
+            <polyline points={pts(PV_TARGET)} fill="none" stroke="var(--color-evidence)" strokeWidth="2" strokeDasharray="6 3" strokeLinecap="round" />
+            {/* Actual solid */}
+            <polyline points={pts(PV_ACTUAL)} fill="none" stroke="var(--color-brand-500)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            {PV_ACTUAL.map((v, i) => <circle key={i} cx={40 + i * ((W-80)/(PV_ACTUAL.length-1))} cy={H - 30 - ((v - 85) / (aMax - 85)) * (H - 60)} r="4" fill="var(--color-brand-600)" stroke="white" strokeWidth="2" />)}
+          </svg>
+          <AxisFooter labels={PV_LABELS} legend={[{ label: 'Actual', color: '#7C3AED' }, { label: 'Target', color: '#0369A1', dashed: true }]} />
+        </div>
+      );
+    }
+
+    // ── Area Chart ──
+    if (id === 'area') {
+      const aMax = Math.max(...PV_ACTUAL, ...PV_TARGET);
+      const toY = (v: number) => H - 30 - ((v - 85) / (aMax - 85)) * (H - 60);
+      const pts = PV_ACTUAL.map((v, i) => `${40 + i * ((W-80)/(PV_ACTUAL.length-1))},${toY(v)}`).join(' ');
+      return (
+        <div className="flex flex-col justify-center h-full px-4 relative">
+          <div className="absolute left-4 top-4 bottom-10 flex flex-col justify-between text-[9px] text-ink-400">
+            {[98, 96, 94, 92].map(v => <span key={v}>{v}%</span>)}
+          </div>
+          <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
+            <defs><linearGradient id="aGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#7C3AED" stopOpacity="0.18" /><stop offset="100%" stopColor="#7C3AED" stopOpacity="0.02" /></linearGradient></defs>
+            {[0.2, 0.4, 0.6, 0.8].map(p => <line key={p} x1="40" y1={H - 30 - p * (H-60)} x2={W-10} y2={H - 30 - p * (H-60)} stroke="var(--color-canvas-border)" strokeWidth="0.5" />)}
+            <polyline points={`40,${H-30} ${pts} ${W-10},${H-30}`} fill="url(#aGrad)" />
+            <polyline points={PV_TARGET.map((v, i) => `${40 + i * ((W-80)/(PV_TARGET.length-1))},${toY(v)}`).join(' ')} fill="none" stroke="var(--color-evidence)" strokeWidth="2" strokeDasharray="6 3" />
+            <polyline points={pts} fill="none" stroke="var(--color-brand-500)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            {PV_ACTUAL.map((v, i) => <circle key={i} cx={40 + i * ((W-80)/(PV_ACTUAL.length-1))} cy={toY(v)} r="4" fill="var(--color-brand-600)" stroke="white" strokeWidth="2" />)}
+          </svg>
+          <AxisFooter labels={PV_LABELS} legend={[{ label: 'Actual', color: '#7C3AED' }, { label: 'Target', color: '#0369A1', dashed: true }]} />
+        </div>
+      );
+    }
+
+    // ── Stacked Bar (horizontal) ──
+    if (id === 'stacked-bar') {
+      const bMax = Math.max(...PV_BARS.map(b => b.d));
+      return (
+        <div className="flex flex-col justify-center h-full px-6">
+          <div className="space-y-3">
+            {PV_BARS.map(b => (
+              <div key={b.l} className="flex items-center gap-3">
+                <span className="text-[11px] text-ink-500 w-8 text-right">{b.l}</span>
+                <div className="flex-1 flex h-5 rounded overflow-hidden">
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${(b.r / bMax) * 100}%` }} transition={{ duration: 0.5 }} className="h-full" style={{ background: '#7C3AED' }} />
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${(b.p / bMax) * 100}%` }} transition={{ duration: 0.5, delay: 0.1 }} className="h-full" style={{ background: '#0369A1' }} />
+                </div>
+                <span className="text-[10px] text-ink-500 w-6">{b.d}</span>
+              </div>
+            ))}
+          </div>
+          <AxisFooter labels={[]} legend={[{ label: 'Resolved', color: '#7C3AED' }, { label: 'Pending', color: '#0369A1' }]} />
+        </div>
+      );
+    }
+
+    // ── Clustered Bar (horizontal) ──
+    if (id === 'clustered-bar') {
+      const bMax = Math.max(...PV_BARS.map(b => b.d));
+      return (
+        <div className="flex flex-col justify-center h-full px-6">
+          <div className="space-y-2">
+            {PV_BARS.map(b => (
+              <div key={b.l} className="flex items-center gap-3">
+                <span className="text-[11px] text-ink-500 w-8 text-right">{b.l}</span>
+                <div className="flex-1 space-y-1">
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${(b.d / bMax) * 100}%` }} transition={{ duration: 0.5 }} className="h-3 rounded" style={{ background: '#7C3AED' }} />
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${(b.r / bMax) * 100}%` }} transition={{ duration: 0.5, delay: 0.05 }} className="h-3 rounded" style={{ background: '#0369A1' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <AxisFooter labels={[]} legend={[{ label: 'Duplicates', color: '#7C3AED' }, { label: 'Resolved', color: '#0369A1' }]} />
+        </div>
+      );
+    }
+
+    // ── Clustered Column (vertical grouped) ──
+    if (id === 'clustered-col') {
+      const bMax = Math.max(...PV_BARS.map(b => b.d));
+      return (
+        <div className="flex flex-col justify-end h-full px-4 pb-2">
+          <div className="flex items-end gap-3 flex-1">
+            {PV_BARS.map((b, i) => (
+              <div key={b.l} className="flex-1 flex items-end gap-0.5 justify-center" style={{ height: '100%' }}>
+                <motion.div initial={{ height: 0 }} animate={{ height: `${(b.d / bMax) * 85}%` }} transition={{ duration: 0.4, delay: i * 0.04 }} className="w-3 rounded-t" style={{ background: '#7C3AED' }} />
+                <motion.div initial={{ height: 0 }} animate={{ height: `${(b.r / bMax) * 85}%` }} transition={{ duration: 0.4, delay: i * 0.04 + 0.05 }} className="w-3 rounded-t" style={{ background: '#0369A1' }} />
+                <motion.div initial={{ height: 0 }} animate={{ height: `${(b.p / bMax) * 85}%` }} transition={{ duration: 0.4, delay: i * 0.04 + 0.1 }} className="w-3 rounded-t min-h-[2px]" style={{ background: '#B45309' }} />
+              </div>
+            ))}
+          </div>
+          <AxisFooter labels={PV_LABELS} legend={[{ label: 'Duplicates', color: '#7C3AED' }, { label: 'Resolved', color: '#0369A1' }, { label: 'Pending', color: '#B45309' }]} />
+        </div>
+      );
+    }
+
+    // ── Stacked Column (vertical stacked) ──
+    if (id === 'stacked-col') {
+      const bMax = Math.max(...PV_BARS.map(b => b.d));
+      return (
+        <div className="flex flex-col justify-end h-full px-4 pb-2">
+          <div className="flex items-end gap-4 flex-1">
+            {PV_BARS.map((b, i) => (
+              <div key={b.l} className="flex-1 flex flex-col-reverse items-center" style={{ height: '100%' }}>
+                <motion.div initial={{ height: 0 }} animate={{ height: `${(b.r / bMax) * 80}%` }} transition={{ duration: 0.4, delay: i * 0.04 }} className="w-8 rounded-b" style={{ background: '#7C3AED' }} />
+                <motion.div initial={{ height: 0 }} animate={{ height: `${(b.p / bMax) * 80}%` }} transition={{ duration: 0.4, delay: i * 0.04 + 0.1 }} className="w-8 rounded-t min-h-[2px]" style={{ background: '#B45309' }} />
+              </div>
+            ))}
+          </div>
+          <AxisFooter labels={PV_LABELS} legend={[{ label: 'Resolved', color: '#7C3AED' }, { label: 'Pending', color: '#B45309' }]} />
+        </div>
+      );
+    }
+
+    // ── Line & Clustered Column ──
+    if (id === 'line-clustered') {
+      const bMax = Math.max(...PV_BARS.map(b => b.d));
+      const lnPts = PV_BARS.map((b, i) => `${40 + i * ((W-80)/(PV_BARS.length-1))},${H - 30 - (b.r / bMax) * (H-60)}`).join(' ');
+      return (
+        <div className="flex flex-col justify-end h-full px-4 pb-2 relative">
+          <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} className="absolute inset-0" style={{ top: 0 }}>
+            <polyline points={lnPts} fill="none" stroke="var(--color-compliant)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            {PV_BARS.map((b, i) => <circle key={i} cx={40 + i * ((W-80)/(PV_BARS.length-1))} cy={H - 30 - (b.r / bMax) * (H-60)} r="3.5" fill="var(--color-compliant)" stroke="white" strokeWidth="2" />)}
+          </svg>
+          <div className="flex items-end gap-4 flex-1 relative z-10">
+            {PV_BARS.map((b, i) => (
+              <div key={b.l} className="flex-1 flex flex-col items-center gap-1">
+                <motion.div initial={{ height: 0 }} animate={{ height: `${(b.d / bMax) * 70}%` }} transition={{ duration: 0.4, delay: i * 0.04 }} className="w-7 rounded-t min-h-[3px]" style={{ background: '#7C3AED' }} />
+              </div>
+            ))}
+          </div>
+          <AxisFooter labels={PV_LABELS} legend={[{ label: 'Volume', color: '#7C3AED' }, { label: 'Trend', color: '#15803D' }]} />
+        </div>
+      );
+    }
+
+    // ── Scatter ──
+    if (id === 'scatter') {
+      return (
+        <div className="flex flex-col justify-center h-full px-4 relative">
+          <div className="absolute left-4 top-4 bottom-10 flex flex-col justify-between text-[9px] text-ink-400">
+            {['High', '', 'Med', '', 'Low'].map((v,i) => <span key={i}>{v}</span>)}
+          </div>
+          <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
+            {/* Grid */}
+            {[0.25, 0.5, 0.75].map(p => <line key={p} x1="40" y1={p * H} x2={W-10} y2={p * H} stroke="var(--color-canvas-border)" strokeWidth="0.5" />)}
+            {[0.25, 0.5, 0.75].map(p => <line key={p} x1={40 + p * (W-50)} y1="10" x2={40 + p * (W-50)} y2={H-10} stroke="var(--color-canvas-border)" strokeWidth="0.5" />)}
+            {PV_SCATTER.map(([x, y], i) => (
+              <motion.circle key={i} cx={x} cy={y} r="6" fill="var(--color-brand-500)" fillOpacity="0.6" stroke="var(--color-brand-600)" strokeWidth="1.5"
+                initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: i * 0.04, type: 'spring' }} />
+            ))}
+          </svg>
+          <AxisFooter labels={[]} legend={[{ label: 'Data Points', color: '#7C3AED' }]} />
+        </div>
+      );
+    }
+
+    // ── Waterfall ──
+    if (id === 'waterfall') {
+      let cumulative = 0;
+      const wfData = PV_WATERFALL.map(w => {
+        const start = w.type === 'total' ? 0 : cumulative;
+        cumulative = w.type === 'total' ? w.v : cumulative + w.v;
+        return { ...w, start, end: cumulative };
+      });
+      const wfMax = Math.max(...wfData.map(d => Math.max(d.start, d.end)));
+      return (
+        <div className="flex flex-col justify-end h-full px-6 pb-2">
+          <div className="flex items-end gap-4 flex-1">
+            {wfData.map((d, i) => {
+              const bottom = (Math.min(d.start, d.end) / wfMax) * 70;
+              const height = (Math.abs(d.end - d.start) / wfMax) * 70;
+              const color = d.type === 'total' ? '#7C3AED' : d.type === 'up' ? '#15803D' : '#B42318';
+              return (
+                <div key={d.l} className="flex-1 flex flex-col items-center relative" style={{ height: '100%' }}>
+                  <div className="flex-1" />
+                  <motion.div
+                    initial={{ height: 0 }} animate={{ height: `${height}%` }} transition={{ duration: 0.4, delay: i * 0.06 }}
+                    className="w-10 rounded-t"
+                    style={{ background: color, marginBottom: `${bottom}%` }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <AxisFooter labels={PV_WATERFALL.map(w => w.l)} legend={[{ label: 'Increase', color: '#15803D' }, { label: 'Decrease', color: '#B42318' }, { label: 'Total', color: '#7C3AED' }]} />
+        </div>
+      );
+    }
+
+    // ── Table ──
+    if (id === 'table') {
+      return (
+        <div className="flex flex-col h-full p-2">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-canvas-border">
+                {['Invoice ID', 'Vendor', 'Amount', 'Status', 'Risk'].map(h => (
+                  <th key={h} className="text-[11px] font-bold text-ink-500 uppercase tracking-wider px-3 py-2.5">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {PV_TABLE_ROWS.map((row, i) => (
+                <motion.tr key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }} className="border-b border-canvas-border/50 hover:bg-brand-50/30">
+                  <td className="px-3 py-2.5 text-[12px] font-semibold text-brand-700">{row[0]}</td>
+                  <td className="px-3 py-2.5 text-[12px] text-ink-700">{row[1]}</td>
+                  <td className="px-3 py-2.5 text-[12px] font-medium text-ink-900">{row[2]}</td>
+                  <td className="px-3 py-2.5"><span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${row[3] === 'Resolved' ? 'bg-green-50 text-green-700' : row[3] === 'Pending' ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-blue-700'}`}>{row[3]}</span></td>
+                  <td className="px-3 py-2.5"><span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${row[4] === 'High' ? 'bg-red-50 text-red-700' : row[4] === 'Medium' ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700'}`}>{row[4]}</span></td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+          {axisCaption && <div className="text-[10px] text-ink-400 text-center mt-3">{axisCaption}</div>}
+        </div>
+      );
+    }
+
+    // ── Default fallback (any remaining bar variants) ──
+    const bMax = Math.max(...PV_BARS.map(b => b.d));
+    return (
+      <div className="flex flex-col justify-end h-full px-4 pb-2">
+        <div className="flex items-end gap-4 flex-1">
+          {PV_BARS.map((b, i) => (
+            <div key={b.l} className="flex-1 flex flex-col items-center gap-1">
+              <span className="text-[10px] text-ink-500">{b.d}</span>
+              <motion.div initial={{ height: 0 }} animate={{ height: `${(b.d / bMax) * 80}%` }} transition={{ duration: 0.4, delay: i * 0.04 }} className="w-full rounded-t min-h-[3px]" style={{ background: '#7C3AED' }} />
+            </div>
+          ))}
+        </div>
+        <AxisFooter labels={PV_LABELS} legend={[{ label: 'Duplicates', color: '#7C3AED' }, { label: 'Resolved', color: '#0369A1' }, { label: 'Pending', color: '#B45309' }]} />
+      </div>
+    );
+  };
+
+  if (!open) return null;
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          onClick={onClose}
+        >
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
+            transition={{ duration: 0.2 }}
+            className="relative bg-canvas-elevated rounded-xl border border-canvas-border shadow-2xl flex flex-col overflow-hidden"
+            style={{ width: 'min(1200px, 96vw)', height: 'min(775px, 92vh)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b border-canvas-border">
+              <div className="flex items-center gap-2.5">
+                <div className="bg-brand-50 rounded-lg size-7 flex items-center justify-center">
+                  <BarChart3 size={14} className="text-brand-600" />
+                </div>
+                <span className="text-[15px] font-semibold text-ink-900">Add New Widget</span>
+              </div>
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
+                <X size={18} className="text-ink-500" />
+              </button>
+            </div>
+
+            {/* Body — two columns */}
+            <div className="flex flex-1 overflow-hidden min-h-0">
+              {/* Left — Preview + Drop Zones */}
+              <div className="flex-1 flex flex-col bg-surface-2/30 p-6 min-w-0 order-1">
+                <div className="flex-1 bg-canvas-elevated rounded-xl border border-canvas-border overflow-hidden flex flex-col">
+                  {/* Preview header */}
+                  <div className="px-5 py-3 border-b border-canvas-border/50 flex items-center justify-between">
+                    <span className="text-[12px] font-semibold text-ink-500 uppercase tracking-wider">Preview</span>
+                    {selectedChart && <span className="text-[12px] text-brand-600 font-medium">{selectedChart.title}</span>}
+                  </div>
+                  {/* Chart preview */}
+                  <div className="flex-1 p-4">
+                    {renderPreview()}
+                  </div>
+                </div>
+
+                {/* X-Axis & Y-Axis Drop Zones — below preview */}
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  {/* X-Axis */}
+                  <div
+                    className={`rounded-xl border-2 border-dashed p-4 transition-colors ${
+                      dragOver === 'x' ? 'border-brand-400 bg-brand-50' : 'border-canvas-border bg-canvas-elevated'
+                    }`}
+                    onDragOver={e => { e.preventDefault(); setDragOver('x'); }}
+                    onDragLeave={() => setDragOver(null)}
+                    onDrop={e => handleDrop('x', e)}
+                  >
+                    <div className="text-[12px] font-bold uppercase tracking-wider text-ink-500 mb-2">X - Axis</div>
+                    {xFields.length === 0 ? (
+                      <p className="text-[12px] text-ink-400 italic">Drag dimension fields here</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {xFields.map(id => (
+                          <div key={id} className="flex items-center justify-between bg-brand-50 border border-brand-200 rounded-lg px-3 py-2">
+                            <span className="text-[12px] font-medium text-brand-700">{getFieldLabel(id)}</span>
+                            <button onClick={() => removeXField(id)} className="text-ink-400 hover:text-red-500 cursor-pointer"><X size={13} /></button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Y-Axis */}
+                  <div
+                    className={`rounded-xl border-2 border-dashed p-4 transition-colors ${
+                      dragOver === 'y' ? 'border-brand-400 bg-brand-50' : 'border-canvas-border bg-canvas-elevated'
+                    }`}
+                    onDragOver={e => { e.preventDefault(); setDragOver('y'); }}
+                    onDragLeave={() => setDragOver(null)}
+                    onDrop={e => handleDrop('y', e)}
+                  >
+                    <div className="text-[12px] font-bold uppercase tracking-wider text-ink-500 mb-2">Y - Axis</div>
+                    {yFields.length === 0 ? (
+                      <p className="text-[12px] text-ink-400 italic">Drag measure fields here</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {yFields.map(id => (
+                          <div key={id} className="flex items-center justify-between bg-brand-50 border border-brand-200 rounded-lg px-3 py-2">
+                            <span className="text-[12px] font-medium text-brand-700">{getFieldLabel(id)}</span>
+                            <div className="flex items-center gap-1.5">
+                              <div className="relative">
+                                <button
+                                  onClick={() => setAggDropdownOpen(aggDropdownOpen === id ? null : id)}
+                                  className="flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-brand-200 text-[10px] font-bold text-brand-600 cursor-pointer hover:bg-brand-50"
+                                >
+                                  {AGG_OPTIONS.find(a => a.value === (yAggs[id] || 'count_d'))?.symbol || '#'}
+                                  <ChevronDown size={9} />
+                                </button>
+                                {aggDropdownOpen === id && (
+                                  <>
+                                    <div className="fixed inset-0 z-30" onClick={() => setAggDropdownOpen(null)} />
+                                    <div className="absolute top-full right-0 mt-1 z-40 bg-canvas-elevated border border-canvas-border rounded-lg shadow-xl py-1 min-w-[120px]">
+                                      {AGG_OPTIONS.map(a => (
+                                        <button
+                                          key={a.value}
+                                          onClick={() => { setYAggs(prev => ({ ...prev, [id]: a.value })); setAggDropdownOpen(null); }}
+                                          className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] transition-colors cursor-pointer ${
+                                            yAggs[id] === a.value ? 'text-brand-700 bg-brand-50' : 'text-ink-600 hover:bg-surface-2'
+                                          }`}
+                                        >
+                                          <span className="w-4 text-center font-bold">{a.symbol}</span>
+                                          {a.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                              <button onClick={() => removeYField(id)} className="text-ink-400 hover:text-red-500 cursor-pointer"><X size={13} /></button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right — Sidebar config */}
+              <div className="w-[340px] shrink-0 border-l border-canvas-border flex flex-col overflow-hidden order-2 bg-surface-2/20">
+                {/* Tab switcher */}
+                <div className="shrink-0 border-b border-canvas-border px-3 py-1.5">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setActiveTab('data')}
+                      className={`flex-1 flex items-center justify-center gap-2 font-medium rounded-md px-4 py-1.5 text-[13px] transition-colors cursor-pointer ${
+                        activeTab === 'data' ? 'text-brand-700 bg-brand-50' : 'text-ink-600 hover:bg-surface-2'
+                      }`}
+                    >
+                      <Settings size={14} />
+                      Data Source
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('format')}
+                      className={`flex-1 flex items-center justify-center gap-2 font-medium rounded-md px-4 py-1.5 text-[13px] transition-colors cursor-pointer ${
+                        activeTab === 'format' ? 'text-brand-700 bg-brand-50' : 'text-ink-600 hover:bg-surface-2'
+                      }`}
+                    >
+                      <Settings size={14} />
+                      Customize
+                    </button>
+                  </div>
+                </div>
+
+                {/* Scrollable config content */}
+                <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
+                  {activeTab === 'data' && (
+                    <>
+                      {/* Chart Type Section */}
+                      <div className="bg-canvas-elevated rounded-lg border border-canvas-border overflow-hidden">
+                        <button
+                          onClick={() => setChartTypeCollapsed(!chartTypeCollapsed)}
+                          className="w-full flex items-center justify-between px-3 py-2.5 bg-brand-50/50 border-b border-canvas-border/50 hover:bg-brand-50 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <BarChart3 size={12} className="text-brand-600" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-700">
+                              {selectedChart ? selectedChart.title : 'Chart Type'}
+                            </span>
+                          </div>
+                          <ChevronDown size={14} className={`text-brand-600 transition-transform ${chartTypeCollapsed ? '' : 'rotate-180'}`} />
+                        </button>
+                        {!chartTypeCollapsed && (
+                          <div className="max-h-[280px] overflow-y-auto py-1">
+                            {CHART_TYPES.map(ct => (
+                              <button
+                                key={ct.id}
+                                onClick={() => setSelectedChart(ct)}
+                                className={`w-full flex items-center gap-2.5 px-3 py-2 text-[12px] transition-colors cursor-pointer ${
+                                  selectedChart?.id === ct.id ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-ink-700 hover:bg-surface-2'
+                                }`}
+                              >
+                                <ct.icon size={14} className={selectedChart?.id === ct.id ? 'text-brand-600' : 'text-ink-400'} />
+                                {ct.title}
+                                {selectedChart?.id === ct.id && <CheckCircle2 size={13} className="ml-auto text-brand-600" />}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Data Source Section */}
+                      <div className="bg-canvas-elevated rounded-lg border border-canvas-border overflow-hidden">
+                        <div className="flex items-center justify-between px-3 py-2.5 bg-brand-50/50 border-b border-canvas-border/50">
+                          <div className="flex items-center gap-2">
+                            <FileText size={12} className="text-brand-600" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-700">Data Source</span>
+                          </div>
+                          <button className="bg-brand-600 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded cursor-pointer hover:bg-brand-500 transition-colors">
+                            Add Data
+                          </button>
+                        </div>
+
+                        {/* Search */}
+                        <div className="px-2.5 pt-2.5 pb-2">
+                          <div className="relative">
+                            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" />
+                            <input
+                              type="text"
+                              placeholder="Search fields..."
+                              value={fieldSearch}
+                              onChange={e => setFieldSearch(e.target.value)}
+                              className="w-full h-8 pl-8 pr-3 bg-canvas-elevated border border-canvas-border rounded-md text-[12px] text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
+                            />
+                          </div>
+                        </div>
+
+                        {/* File 1: Dimensions */}
+                        <div className="mx-2.5 mb-2 bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
+                          <button
+                            onClick={() => setFile1Open(!file1Open)}
+                            className="w-full flex items-center justify-between px-2.5 py-2 bg-brand-50/30 border-b border-canvas-border/50 hover:bg-brand-50 transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <FileText size={12} className="text-brand-600" />
+                              <span className="text-[11px] font-semibold text-ink-800">Invoice_Master.xlsx</span>
+                            </div>
+                            <ChevronDown size={12} className={`text-brand-600 transition-transform ${file1Open ? 'rotate-180' : ''}`} />
+                          </button>
+                          {file1Open && (
+                            <div className="px-1.5 py-1">
+                              {dimensionFields.map(f => (
+                                <div
+                                  key={f.id}
+                                  draggable
+                                  onDragStart={e => { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('fieldId', f.id); }}
+                                  className="flex items-center gap-2 px-2 py-1.5 rounded cursor-grab hover:bg-brand-50/50 transition-colors active:cursor-grabbing"
+                                >
+                                  <svg className="shrink-0 size-3 text-ink-300" viewBox="0 0 12 12" fill="currentColor">
+                                    <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
+                                    <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
+                                    <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
+                                  </svg>
+                                  <span className="text-[12px] text-ink-700">{f.label}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* File 2: Measures */}
+                        <div className="mx-2.5 mb-2.5 bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
+                          <button
+                            onClick={() => setFile2Open(!file2Open)}
+                            className="w-full flex items-center justify-between px-2.5 py-2 bg-brand-50/30 border-b border-canvas-border/50 hover:bg-brand-50 transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <FileText size={12} className="text-brand-600" />
+                              <span className="text-[11px] font-semibold text-ink-800">Vendor_Finance.xlsx</span>
+                            </div>
+                            <ChevronDown size={12} className={`text-brand-600 transition-transform ${file2Open ? 'rotate-180' : ''}`} />
+                          </button>
+                          {file2Open && (
+                            <div className="px-1.5 py-1">
+                              {measureFields.map(f => (
+                                <div
+                                  key={f.id}
+                                  draggable
+                                  onDragStart={e => { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('fieldId', f.id); }}
+                                  className="flex items-center gap-2 px-2 py-1.5 rounded cursor-grab hover:bg-brand-50/50 transition-colors active:cursor-grabbing"
+                                >
+                                  <svg className="shrink-0 size-3 text-ink-300" viewBox="0 0 12 12" fill="currentColor">
+                                    <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
+                                    <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
+                                    <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
+                                  </svg>
+                                  <span className="text-[12px] text-ink-700">{f.label}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Widget Info */}
+                      <div className="space-y-2.5">
+                        <input
+                          type="text"
+                          value={widgetName}
+                          onChange={e => setWidgetName(e.target.value)}
+                          placeholder="Widget name"
+                          className="w-full px-3 py-2 text-[12px] border border-canvas-border rounded-lg bg-canvas-elevated text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
+                        />
+                        <input
+                          type="text"
+                          value={widgetDesc}
+                          onChange={e => setWidgetDesc(e.target.value)}
+                          placeholder="Description (optional)"
+                          className="w-full px-3 py-2 text-[12px] border border-canvas-border rounded-lg bg-canvas-elevated text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {activeTab === 'format' && (
+                    <div className="space-y-3">
+                      {/* Color picker */}
+                      <div className="bg-canvas-elevated rounded-lg border border-canvas-border p-3">
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-ink-500 mb-3">Theme Color</div>
+                        <div className="flex gap-2 flex-wrap">
+                          {['#6a12cd', '#3b82f6', '#0ea5e9', '#06b6d4', '#10b981', '#84cc16', '#f59e0b', '#f97316', '#ef4444'].map(c => (
+                            <button key={c} className="size-7 rounded-full border-2 border-white shadow-sm cursor-pointer hover:scale-110 transition-transform" style={{ background: c }} />
+                          ))}
+                        </div>
+                      </div>
+                      {/* Typography */}
+                      <div className="bg-canvas-elevated rounded-lg border border-canvas-border p-3">
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-ink-500 mb-3">Typography</div>
+                        <div className="flex gap-2">
+                          {[{ label: 'B', style: 'font-bold' }, { label: 'I', style: 'italic' }, { label: 'U', style: 'underline' }].map(t => (
+                            <button key={t.label} className={`size-8 flex items-center justify-center rounded border border-canvas-border text-[13px] ${t.style} text-ink-600 hover:bg-brand-50 hover:text-brand-600 transition-colors cursor-pointer`}>
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Axis formatting placeholder */}
+                      <div className="bg-canvas-elevated rounded-lg border border-canvas-border p-3">
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-ink-500 mb-2">Axis Formatting</div>
+                        <p className="text-[11px] text-ink-400">Configure axis labels, gridlines, and scale options.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer — Add button */}
+                <div className="shrink-0 border-t border-canvas-border px-4 py-3">
+                  <button
+                    onClick={handleAdd}
+                    disabled={!selectedChart}
+                    className="w-full py-2.5 bg-brand-600 hover:bg-brand-500 disabled:bg-ink-200 text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    Add to Dashboard
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 // ─── Filter Panel ───────────────────────────────────────────────────────────
 
 const DATE_OPTIONS = [
@@ -942,6 +1821,36 @@ function ToolbarBtn({ children, onClick, disabled = false, active = false, tip }
 
 // ─── Expanded Widget Modal ──────────────────────────────────────────────────
 
+// ─── Expanded Modal Data ─────────────────────────────────────────────────────
+
+const EXPANDED_RECORDS = [
+  { id: 'INV-005790', vendor: 'Acme Global Imaging', amount: '₹11,853', date: '20-Mar-25', status: 'Pending Review', department: 'Operations', risk: 'High', match: 'INV-005791' },
+  { id: 'INV-025832', vendor: 'Korean Technologies', amount: '₹4,564', date: '15-Dec-24', status: 'Under Review', department: 'Procurement', risk: 'Medium', match: 'INV-025831' },
+  { id: 'INV-007194', vendor: '3tones Letter Co.', amount: '₹3,835', date: '31-Dec-24', status: 'Resolved', department: 'Finance', risk: 'Low', match: 'None' },
+  { id: 'INV-040083', vendor: 'Chintamani Paper Products', amount: '₹3,410', date: '13-Dec-24', status: 'Pending Review', department: 'Operations', risk: 'High', match: 'INV-040082' },
+  { id: 'INV-027203', vendor: 'M Cargo Logistics', amount: '₹1,457', date: '12-Jan-25', status: 'Auto-Resolved', department: 'Logistics', risk: 'Low', match: 'None' },
+  { id: 'INV-031456', vendor: 'TechParts Ltd', amount: '₹8,920', date: '05-Feb-25', status: 'Flagged', department: 'IT', risk: 'Critical', match: 'INV-031455' },
+  { id: 'INV-018927', vendor: 'Global Supplies Inc', amount: '₹6,340', date: '22-Jan-25', status: 'Resolved', department: 'Procurement', risk: 'Low', match: 'INV-018926' },
+  { id: 'INV-044521', vendor: 'Atlas Manufacturing', amount: '₹15,200', date: '18-Mar-25', status: 'Under Review', department: 'Finance', risk: 'High', match: 'INV-044520' },
+];
+
+const STATUS_COLORS: Record<string, string> = {
+  'Pending Review': 'bg-amber-50 text-amber-700 border-amber-200',
+  'Under Review': 'bg-blue-50 text-blue-700 border-blue-200',
+  'Resolved': 'bg-green-50 text-green-700 border-green-200',
+  'Auto-Resolved': 'bg-green-50 text-green-700 border-green-200',
+  'Flagged': 'bg-red-50 text-red-700 border-red-200',
+};
+
+const RISK_COLORS: Record<string, string> = {
+  'Critical': 'bg-red-50 text-red-700',
+  'High': 'bg-orange-50 text-orange-700',
+  'Medium': 'bg-amber-50 text-amber-700',
+  'Low': 'bg-green-50 text-green-700',
+};
+
+const TIME_PERIODS = ['Today', '7D', '30D', '3M', '6M', '12M'];
+
 function ExpandedWidgetModal({ open, onClose, title, subtitle, children }: {
   open: boolean;
   onClose: () => void;
@@ -949,7 +1858,33 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children }: {
   subtitle?: string;
   children: React.ReactNode;
 }) {
+  const [activeTab, setActiveTab] = useState<'visualization' | 'records' | 'summary'>('visualization');
+  const [timePeriod, setTimePeriod] = useState('30D');
+  const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('bar');
+  const [chartTypeOpen, setChartTypeOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const { addToast } = useToast();
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (open) {
+      setActiveTab('visualization');
+      setSearchQuery('');
+      setTimePeriod('30D');
+    }
+  }, [open]);
+
+  const filteredRecords = EXPANDED_RECORDS.filter(r => {
+    if (!searchQuery) return true;
+    return r.vendor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.department.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
   if (!open) return null;
+
+  const tabIcons = { visualization: BarChart3, records: FileText, summary: ListChecks };
+  const tabLabels = { visualization: 'Visualization', records: 'Detailed Records', summary: 'Summary' };
 
   return (
     <AnimatePresence>
@@ -958,50 +1893,282 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children }: {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
           onClick={onClose}
         >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+
+          {/* Dialog */}
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.2 }}
-            className="bg-canvas-elevated rounded-xl border border-canvas-border shadow-xl w-[90vw] max-w-[900px] max-h-[85vh] overflow-hidden flex flex-col"
+            className="relative bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl flex flex-col overflow-hidden"
+            style={{ width: 'calc(100vw - 64px)', height: 'calc(100vh - 64px)' }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-canvas-border">
-              <div>
-                <h2 className="text-[15px] font-semibold text-ink-900">{title}</h2>
-                {subtitle && <p className="text-[12px] text-ink-500 mt-0.5">{subtitle}</p>}
+            {/* ── Header with tabs ── */}
+            <div className="border-b border-canvas-border bg-canvas-elevated shrink-0">
+              <div className="flex items-center justify-between px-5 pt-2 pb-0">
+                {/* Tabs left */}
+                <div className="flex items-center gap-0">
+                  {(['visualization', 'records', 'summary'] as const).map(tab => {
+                    const Icon = tabIcons[tab];
+                    const isActive = activeTab === tab;
+                    return (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`flex items-center gap-1.5 px-3 py-2.5 text-[12px] font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
+                          isActive ? 'border-brand-600 text-brand-700' : 'border-transparent text-ink-500 hover:text-ink-700'
+                        }`}
+                      >
+                        <Icon size={14} />
+                        {tabLabels[tab]}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Actions right */}
+                <div className="flex items-center gap-1.5">
+                  <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
+                    <X size={18} className="text-ink-500" />
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={onClose}
-                className="flex items-center justify-center size-8 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
-              >
-                <X size={16} className="text-ink-500" />
-              </button>
+
+              {/* Visualization sub-bar */}
+              {activeTab === 'visualization' && (
+                <div className="flex items-center px-4 py-0 border-t border-canvas-border/50">
+                  {/* Left — prev/next arrows */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button className="size-8 flex items-center justify-center rounded border border-canvas-border bg-canvas-elevated hover:bg-surface-2 transition-colors cursor-pointer" title="Previous widget">
+                      <ChevronDown size={16} className="text-ink-700 rotate-90" />
+                    </button>
+                    <button className="size-8 flex items-center justify-center rounded border border-canvas-border bg-canvas-elevated hover:bg-surface-2 transition-colors cursor-pointer" title="Next widget">
+                      <ChevronDown size={16} className="text-ink-700 -rotate-90" />
+                    </button>
+                  </div>
+
+                  {/* Center — title */}
+                  <div className="flex-1 flex items-center justify-center">
+                    <span className="text-[13px] font-semibold text-ink-900">{title}</span>
+                  </div>
+
+                  {/* Right — drill + chart type + filter + settings */}
+                  <div className="flex items-center shrink-0">
+                    {/* Drill up */}
+                    <button onClick={() => addToast({ message: 'Drilled up', type: 'info' })} className="p-2.5 text-ink-400 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer" title="Drill up">
+                      <IconDrillUp />
+                    </button>
+                    {/* Drill down */}
+                    <button onClick={() => addToast({ message: 'Drill down', type: 'info' })} className="p-2.5 text-ink-400 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer" title="Drill down">
+                      <IconDrillDown />
+                    </button>
+                    {/* Double drill */}
+                    <button onClick={() => addToast({ message: 'Double drill', type: 'info' })} className="p-2.5 text-ink-400 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer" title="Double drill">
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="size-4">
+                        <path d="M5 3V8" /><path d="M3 6L5 8L7 6" />
+                        <path d="M11 3V8" /><path d="M9 6L11 8L13 6" />
+                        <path d="M4 11h8" />
+                      </svg>
+                    </button>
+
+                    {/* Divider */}
+                    <div className="w-px h-8 bg-canvas-border mx-2" />
+
+                    {/* Chart type dropdown */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setChartTypeOpen(!chartTypeOpen)}
+                        className="flex items-center gap-2 px-3 py-2.5 text-[13px] font-medium text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer"
+                      >
+                        {chartType === 'line' ? <LineChart size={15} /> : chartType === 'area' ? <AreaChart size={15} /> : <BarChart3 size={15} />}
+                        <span>{chartType === 'line' ? 'Line Chart' : chartType === 'area' ? 'Area Chart' : 'Bar Chart'}</span>
+                        <ChevronDown size={13} className="text-ink-400" />
+                      </button>
+                      {chartTypeOpen && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setChartTypeOpen(false)} />
+                          <div className="absolute top-full right-0 mt-1 z-40 bg-canvas-elevated border border-canvas-border rounded-xl shadow-xl py-1 min-w-[150px]">
+                            {([['line', 'Line Chart', LineChart], ['bar', 'Bar Chart', BarChart3], ['area', 'Area Chart', AreaChart]] as const).map(([type, label, Icon]) => (
+                              <button
+                                key={type}
+                                onClick={() => { setChartType(type as any); setChartTypeOpen(false); addToast({ message: `Chart type: ${label}`, type: 'info' }); }}
+                                className={`w-full flex items-center gap-2.5 px-4 py-2 text-[13px] transition-colors cursor-pointer ${
+                                  chartType === type ? 'text-brand-700 bg-brand-50' : 'text-ink-600 hover:bg-surface-2'
+                                }`}
+                              >
+                                <Icon size={14} /> {label}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Divider */}
+                    <div className="w-px h-8 bg-canvas-border mx-2" />
+
+                    {/* Filter */}
+                    <button onClick={() => addToast({ message: 'Filters', type: 'info' })} className="flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-medium text-ink-500 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer">
+                      <Filter size={15} />
+                      <span>Filter</span>
+                    </button>
+
+                    {/* Divider */}
+                    <div className="w-px h-8 bg-canvas-border mx-2" />
+
+                    {/* Settings */}
+                    <button onClick={() => addToast({ message: 'Settings', type: 'info' })} className="p-2.5 text-ink-400 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer" title="Settings">
+                      <Settings size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Tabs */}
-            <div className="flex items-center gap-1 px-6 pt-3 border-b border-canvas-border">
-              {['Visualization', 'Records', 'Summary'].map((tab, i) => (
-                <button
-                  key={tab}
-                  className={`px-3 py-2 text-[12px] font-medium border-b-2 transition-colors cursor-pointer ${
-                    i === 0
-                      ? 'border-brand-600 text-brand-700'
-                      : 'border-transparent text-ink-500 hover:text-ink-700'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
+            {/* ── Content ── */}
+            <div className="flex-1 overflow-auto">
+              <AnimatePresence mode="wait">
+                {/* VISUALIZATION */}
+                {activeTab === 'visualization' && (
+                  <motion.div key="viz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-5 h-full">
+                    <div className="bg-canvas-elevated rounded-xl border border-canvas-border p-6 h-full min-h-[500px] flex flex-col">
+                      {children}
+                    </div>
+                  </motion.div>
+                )}
 
-            {/* Content */}
-            <div className="flex-1 overflow-auto p-6">
-              {children}
+                {/* RECORDS */}
+                {activeTab === 'records' && (
+                  <motion.div key="records" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-5">
+                    {/* Search */}
+                    <div className="relative mb-4">
+                      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
+                      <input
+                        type="text"
+                        placeholder="Search by invoice, vendor, department..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2.5 text-[13px] border border-canvas-border rounded-lg bg-canvas-elevated focus:outline-none focus:border-brand-400 transition-colors"
+                      />
+                    </div>
+
+                    {/* Table */}
+                    <div className="bg-canvas-elevated rounded-xl border border-canvas-border overflow-hidden">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="border-b border-canvas-border bg-surface-2/50">
+                            {['Invoice ID', 'Vendor', 'Amount', 'Date', 'Status', 'Department', 'Risk', 'Duplicate Match'].map(h => (
+                              <th key={h} className="text-[11px] font-bold text-ink-500 uppercase tracking-wider px-4 py-3">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredRecords.map((r, i) => (
+                            <motion.tr
+                              key={r.id}
+                              initial={{ opacity: 0, y: 4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: i * 0.03 }}
+                              className="border-b border-canvas-border/50 last:border-0 hover:bg-brand-50/30 transition-colors cursor-pointer"
+                            >
+                              <td className="px-4 py-3 text-[12px] font-semibold text-brand-700">{r.id}</td>
+                              <td className="px-4 py-3 text-[12px] text-ink-800">{r.vendor}</td>
+                              <td className="px-4 py-3 text-[12px] font-medium text-ink-900">{r.amount}</td>
+                              <td className="px-4 py-3 text-[12px] text-ink-600">{r.date}</td>
+                              <td className="px-4 py-3">
+                                <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${STATUS_COLORS[r.status] || 'bg-gray-50 text-gray-600'}`}>
+                                  {r.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-[12px] text-ink-600">{r.department}</td>
+                              <td className="px-4 py-3">
+                                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${RISK_COLORS[r.risk] || ''}`}>
+                                  {r.risk}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-[12px] text-ink-500 font-mono">{r.match}</td>
+                            </motion.tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* SUMMARY — structured report */}
+                {activeTab === 'summary' && (
+                  <motion.div key="summary" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0 p-6">
+                    <div className="flex-1 overflow-y-auto pr-2">
+                      <div className="bg-brand-50/60 rounded-xl p-8 space-y-8">
+                        {/* Query */}
+                        <div>
+                          <div className="flex items-center justify-between gap-3 mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-1 h-6 bg-brand-600 rounded-full" />
+                              <h3 className="text-[14px] font-semibold text-ink-900">Query</h3>
+                            </div>
+                            <button className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-[12px] rounded-lg transition-colors cursor-pointer font-medium">
+                              Ask IRA
+                              <Send size={13} className="-rotate-45" />
+                            </button>
+                          </div>
+                          <p className="text-[13px] text-ink-700 leading-[1.7]">
+                            Analyze the current compliance posture across all business processes. Identify key risk areas, control gaps, and provide actionable recommendations for the audit committee.
+                          </p>
+                        </div>
+
+                        {/* Answer */}
+                        <div>
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-1 h-6 bg-brand-600 rounded-full" />
+                            <h3 className="text-[14px] font-semibold text-ink-900">Answer</h3>
+                          </div>
+                          <div className="space-y-3">
+                            {[
+                              'The analysis reveals that P2P compliance has improved to 94.2% following the vendor master cleanup, but 3 new duplicate flags from Acme Corp & Global Supplies require immediate attention.',
+                              'Processing time is trending favorably at 1.8 days, down from 2.3 days last quarter, indicating operational efficiency gains from the automated detection workflows.',
+                              'One new vendor (Atlas Manufacturing) is pending KYC verification — expediting this before the next payment batch would prevent processing delays estimated at ₹2.1L.',
+                              'SOD violations detected in the AP module represent the highest-priority remediation item, as user JSmith currently has both invoice approval and payment release access.',
+                            ].map((text, i) => (
+                              <div key={i} className="flex gap-3">
+                                <span className="flex-shrink-0 w-1.5 h-1.5 bg-brand-600 rounded-full mt-2" />
+                                <p className="text-[13px] text-ink-700 leading-[1.7] flex-1">{text}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Observations */}
+                        <div>
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-1 h-6 bg-brand-600 rounded-full" />
+                            <h3 className="text-[14px] font-semibold text-ink-900">Observations</h3>
+                          </div>
+                          <div className="space-y-3">
+                            {[
+                              '2 critical risks in P2P have zero controls mapped, creating a compliance gap that should be addressed before the next SOX review cycle in 6 days.',
+                              'The correlation between vendor onboarding speed and duplicate invoice flags suggests that expedited KYC processes may inadvertently reduce detection accuracy.',
+                              'Regional performance varies significantly — APAC dispute rates are trending upward while EMEA shows consistent improvement, suggesting localized strategies would yield better results.',
+                              '3 audit findings from Q1 remain open past their remediation deadline, which could impact the overall compliance score if not resolved within the current reporting period.',
+                            ].map((text, i) => (
+                              <div key={i} className="flex gap-3">
+                                <span className="flex-shrink-0 w-1.5 h-1.5 bg-brand-600 rounded-full mt-2" />
+                                <p className="text-[13px] text-ink-700 leading-[1.7] flex-1">{text}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
         </motion.div>
@@ -1069,10 +2236,10 @@ function WidgetCard({
       onMouseLeave={() => { setHovered(false); setShowMenu(false); }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-5 pb-2">
+      <div className="flex items-center justify-between px-6 pt-6 pb-2">
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-ink-900 truncate">{title}</h3>
-          {subtitle && <p className="text-[11px] text-ink-500 mt-0.5 truncate">{subtitle}</p>}
+          <h3 className="text-[15px] font-semibold text-ink-900 truncate">{title}</h3>
+          {subtitle && <p className="text-[12px] text-ink-500 mt-1 truncate">{subtitle}</p>}
         </div>
 
         {/* Toolbar — visible on hover */}
@@ -1145,7 +2312,7 @@ function WidgetCard({
       </div>
 
       {/* Chart content */}
-      <div className="px-5 pb-5">
+      <div className="px-6 pb-6 flex-1">
         {children}
       </div>
     </div>
@@ -1390,8 +2557,18 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
   // Action bar state
   const [lastRefreshTime, setLastRefreshTime] = useState('2 mins ago');
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [autoRefreshFrequency, setAutoRefreshFrequency] = useState('Off');
+  const [showFrequencyDropdown, setShowFrequencyDropdown] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [expandedWidget, setExpandedWidget] = useState<{ title: string; subtitle?: string } | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterDateRange, setFilterDateRange] = useState('last-30-days');
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterRisk, setFilterRisk] = useState<string[]>([]);
+  const [filterDepartment, setFilterDepartment] = useState<string[]>([]);
+  const [addWidgetOpen, setAddWidgetOpen] = useState(false);
   const [activeFiltersCount, setActiveFiltersCount] = useState(0);
 
   // Recalculate active filter count
@@ -1403,13 +2580,6 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
     if (filterDepartment.length > 0) n++;
     setActiveFiltersCount(n);
   }, [filterDateRange, filterStatus, filterRisk, filterDepartment]);
-  const [isExporting, setIsExporting] = useState(false);
-  const [expandedWidget, setExpandedWidget] = useState<{ title: string; subtitle?: string } | null>(null);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filterDateRange, setFilterDateRange] = useState('last-30-days');
-  const [filterStatus, setFilterStatus] = useState<string[]>([]);
-  const [filterRisk, setFilterRisk] = useState<string[]>([]);
-  const [filterDepartment, setFilterDepartment] = useState<string[]>([]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -1441,7 +2611,7 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
 
   if (loading) return <DashboardSkeleton />;
 
-  const dashboard = DASHBOARDS.find(d => d.id === activeId)!;
+  const dashboard = DASHBOARDS.find(d => d.id === activeId) || DASHBOARDS[0];
 
   return (
     <div className="h-full flex bg-canvas relative overflow-hidden">
@@ -1489,28 +2659,55 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
                     <span className="tabular-nums">Refreshed {lastRefreshTime}</span>
                   </button>
 
-                  {/* Auto refresh toggle */}
-                  <button
-                    onClick={() => {
-                      setAutoRefresh(!autoRefresh);
-                      addToast({ message: `Auto refresh ${!autoRefresh ? 'enabled' : 'disabled'}`, type: 'info' });
-                    }}
-                    className={`flex items-center gap-1.5 px-3 h-9 rounded-lg text-[12px] font-medium transition-colors cursor-pointer border ${
-                      autoRefresh
-                        ? 'border-brand-200 bg-brand-50 text-brand-700'
-                        : 'border-canvas-border bg-canvas-elevated text-ink-500 hover:border-brand-200'
-                    }`}
-                  >
-                    <Clock size={13} />
-                    Auto refresh: {autoRefresh ? 'On' : 'Off'}
-                  </button>
+                  {/* Auto refresh with frequency dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowFrequencyDropdown(!showFrequencyDropdown)}
+                      className={`flex items-center gap-1.5 px-3 h-9 rounded-full text-[12px] font-medium transition-colors cursor-pointer border shadow-sm ${
+                        autoRefreshFrequency !== 'Off'
+                          ? 'border-brand-300 bg-brand-50 text-brand-700'
+                          : 'border-canvas-border bg-canvas-elevated text-ink-500 hover:border-brand-200'
+                      }`}
+                    >
+                      <Clock size={13} />
+                      Auto refresh: {autoRefreshFrequency !== 'Off' ? 'On' : 'Off'}
+                    </button>
+                    {showFrequencyDropdown && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowFrequencyDropdown(false)} />
+                        <div className="absolute top-full left-0 mt-2 w-48 bg-canvas-elevated border border-canvas-border rounded-lg shadow-xl py-1.5 z-50">
+                          {['Off', 'Daily', 'Weekly', 'Biweekly', 'Monthly', 'Quarterly', 'Semi-Annually', 'Annually'].map(freq => (
+                            <button
+                              key={freq}
+                              onClick={() => {
+                                setAutoRefreshFrequency(freq);
+                                setAutoRefresh(freq !== 'Off');
+                                setShowFrequencyDropdown(false);
+                                addToast({ message: freq === 'Off' ? 'Auto refresh disabled' : `Auto refresh set to ${freq}`, type: 'info' });
+                              }}
+                              className={`w-full flex items-center justify-between px-4 py-2 text-[13px] transition-colors cursor-pointer ${
+                                autoRefreshFrequency === freq
+                                  ? 'bg-brand-50 text-brand-700 font-medium'
+                                  : 'text-ink-700 hover:bg-brand-50 hover:text-brand-700'
+                              }`}
+                            >
+                              {freq}
+                              {autoRefreshFrequency === freq && (
+                                <CheckCircle2 size={14} className="text-brand-600" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
 
                   {/* Divider */}
                   <div className="w-px h-5 bg-canvas-border" />
 
                   {/* + Add Widget — primary CTA */}
                   <button
-                    onClick={() => addToast({ message: 'Widget picker opening.', type: 'info' })}
+                    onClick={() => setAddWidgetOpen(true)}
                     className="flex items-center gap-1.5 px-4 h-9 bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
                   >
                     <Plus size={14} />
@@ -1570,21 +2767,15 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
             {/* Alerts & Daily Digest */}
             <AlertsPanel dashboardId={activeId} />
 
-            {/* Charts row — Interactive Widget Cards */}
+            {/* Charts — 2×2 grid of big widget cards */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.25 }}
-              className={`grid gap-4 mb-6 ${
-                dashboard.donut && dashboard.bars && dashboard.progress
-                  ? 'grid-cols-3'
-                  : dashboard.donut && dashboard.bars
-                    ? 'grid-cols-2'
-                    : dashboard.bars && dashboard.progress
-                      ? 'grid-cols-2'
-                      : 'grid-cols-1'
-              }`}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6"
+              style={{ gridAutoRows: 'minmax(420px, auto)' }}
             >
+              {/* Widget 1 — Donut / Distribution */}
               {dashboard.donut && (
                 <WidgetCard
                   title={dashboard.donut.title}
@@ -1595,10 +2786,9 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
                   onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                   onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
                 >
-                  {/* Donut chart content */}
-                  <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-10 py-10 px-4">
                     <div className="relative shrink-0">
-                      <svg width="110" height="110" viewBox="0 0 100 100">
+                      <svg width="180" height="180" viewBox="0 0 100 100">
                         {(() => {
                           const segs = dashboard.donut!.segments;
                           const total = segs.reduce((a, s) => a + s.value, 0);
@@ -1610,8 +2800,7 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
                             offset += pct;
                             return (
                               <motion.circle
-                                key={s.label}
-                                cx="50" cy="50" r="40" fill="none"
+                                key={s.label} cx="50" cy="50" r="40" fill="none"
                                 stroke={s.color} strokeWidth="10"
                                 strokeDasharray={dashArray} strokeDashoffset={dashOffset}
                                 strokeLinecap="round" transform="rotate(-90 50 50)"
@@ -1622,20 +2811,20 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
                         })()}
                         {dashboard.donut!.centerLabel && (
                           <>
-                            <text x="50" y="48" textAnchor="middle" className="fill-ink-900 font-bold" fontSize="16">{dashboard.donut!.centerLabel}</text>
-                            <text x="50" y="62" textAnchor="middle" className="fill-ink-500" fontSize="9">Total</text>
+                            <text x="50" y="46" textAnchor="middle" className="fill-ink-900 font-bold" fontSize="18">{dashboard.donut!.centerLabel}</text>
+                            <text x="50" y="60" textAnchor="middle" className="fill-ink-500" fontSize="9">Total</text>
                           </>
                         )}
                       </svg>
                     </div>
-                    <div className="space-y-2 flex-1 min-w-0">
+                    <div className="space-y-3 flex-1 min-w-0">
                       {dashboard.donut!.segments.map(s => (
                         <div key={s.label} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
-                            <span className="text-[12px] text-ink-600 truncate">{s.label}</span>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-3 h-3 rounded-full shrink-0" style={{ background: s.color }} />
+                            <span className="text-[13px] text-ink-700">{s.label}</span>
                           </div>
-                          <span className="text-[12px] font-semibold text-ink-900 shrink-0 ml-2">
+                          <span className="text-[14px] font-bold text-ink-900 shrink-0 ml-3">
                             {dashboard.donut!.segments.reduce((a, s) => a + s.value, 0) > 100 ? s.value : `${s.value}%`}
                           </span>
                         </div>
@@ -1644,6 +2833,8 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
                   </div>
                 </WidgetCard>
               )}
+
+              {/* Widget 2 — Bar Chart */}
               {dashboard.bars && (
                 <WidgetCard
                   title={dashboard.bars.title}
@@ -1654,13 +2845,12 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
                   onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                   onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
                 >
-                  {/* Bar chart content */}
-                  <div className="flex items-end gap-2 h-36">
+                  <div className="flex items-end gap-3 pt-6" style={{ height: '280px' }}>
                     {dashboard.bars!.data.map((d, i) => {
                       const max = Math.max(...dashboard.bars!.data.map(dd => dd.value));
                       const height = (d.value / max) * 100;
                       return (
-                        <div key={d.label} className="flex-1 flex flex-col items-center gap-1">
+                        <div key={d.label} className="flex-1 flex flex-col items-center gap-1.5">
                           <span className="text-[12px] text-ink-500 font-medium">
                             {d.value >= 1000 ? `${(d.value / 1000).toFixed(1)}K` : d.value}
                           </span>
@@ -1678,7 +2868,9 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
                   </div>
                 </WidgetCard>
               )}
-              {dashboard.progress && (
+
+              {/* Widget 3 — Progress / Compliance Rates */}
+              {dashboard.progress ? (
                 <WidgetCard
                   title={dashboard.progress.title}
                   subtitle="Completion rates"
@@ -1688,15 +2880,14 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
                   onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                   onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
                 >
-                  {/* Progress chart content */}
-                  <div className="space-y-3">
+                  <div className="space-y-5 py-8 px-2">
                     {dashboard.progress!.data.map((d, i) => (
                       <div key={d.label}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[12px] text-ink-600">{d.label}</span>
-                          <span className="text-[12px] font-semibold text-ink-900">{d.value}%</span>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[13px] text-ink-700">{d.label}</span>
+                          <span className="text-[13px] font-bold text-ink-900">{d.value}%</span>
                         </div>
-                        <div className="h-2 bg-surface-3 rounded-full overflow-hidden">
+                        <div className="h-2.5 bg-surface-3 rounded-full overflow-hidden">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${d.value}%` }}
@@ -1709,7 +2900,81 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
                     ))}
                   </div>
                 </WidgetCard>
+              ) : (
+                <WidgetCard
+                  title="Detection Accuracy"
+                  subtitle="ML model performance vs targets"
+                  addToast={addToast}
+                  onExpand={() => setExpandedWidget({ title: 'Detection Accuracy', subtitle: 'ML model performance vs targets' })}
+                  onEdit={() => addToast({ message: 'Edit widget opening.', type: 'info' })}
+                  onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
+                  onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                >
+                  <div className="py-8 px-2">
+                    <svg width="100%" height="260" viewBox="0 0 400 260" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--color-brand-500)" stopOpacity="0.15" />
+                          <stop offset="100%" stopColor="var(--color-brand-500)" stopOpacity="0.02" />
+                        </linearGradient>
+                      </defs>
+                      <polyline points="0,260 0,200 57,160 114,180 171,120 228,140 285,80 342,100 400,40 400,260" fill="url(#areaGrad)" />
+                      <polyline points="0,200 57,160 114,180 171,120 228,140 285,80 342,100 400,40" fill="none" stroke="var(--color-brand-500)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      {[0, 57, 114, 171, 228, 285, 342, 400].map((x, i) => (
+                        <circle key={i} cx={x} cy={[200,160,180,120,140,80,100,40][i]} r="4" fill="var(--color-brand-600)" stroke="white" strokeWidth="2" />
+                      ))}
+                    </svg>
+                    <div className="flex justify-between text-[11px] text-ink-500 mt-2 px-1">
+                      {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'].map(m => <span key={m}>{m}</span>)}
+                    </div>
+                  </div>
+                </WidgetCard>
               )}
+
+              {/* Widget 4 — Line Trend / Processing Analytics */}
+              <WidgetCard
+                title={dashboard.lineTrend?.title || 'Processing Analytics'}
+                subtitle={dashboard.lineTrend ? 'Performance over time' : 'Invoice processing & detection'}
+                addToast={addToast}
+                onExpand={() => setExpandedWidget({ title: dashboard.lineTrend?.title || 'Processing Analytics', subtitle: 'Performance over time' })}
+                onEdit={() => addToast({ message: 'Edit widget opening.', type: 'info' })}
+                onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
+                onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+              >
+                <div className="py-8 px-2">
+                  {(() => {
+                    const data = dashboard.lineTrend?.data || [85, 78, 92, 88, 95, 91, 87, 93, 89, 96, 94, 98];
+                    const labels = dashboard.lineTrend?.labels || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const color = dashboard.lineTrend?.color || 'var(--color-compliant)';
+                    const max = Math.max(...data);
+                    const min = Math.min(...data);
+                    const range = max - min || 1;
+                    const w = 400;
+                    const h = 260;
+                    const points = data.map((v, i) => `${i * (w / (data.length - 1))},${h - ((v - min) / range) * (h - 20) - 10}`).join(' ');
+                    return (
+                      <>
+                        <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+                          <defs>
+                            <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={color} stopOpacity="0.12" />
+                              <stop offset="100%" stopColor={color} stopOpacity="0.01" />
+                            </linearGradient>
+                          </defs>
+                          <polyline points={`0,${h} ${points} ${w},${h}`} fill="url(#lineGrad)" />
+                          <polyline points={points} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                          {data.map((v, i) => (
+                            <circle key={i} cx={i * (w / (data.length - 1))} cy={h - ((v - min) / range) * (h - 20) - 10} r="3.5" fill={color} stroke="white" strokeWidth="2" />
+                          ))}
+                        </svg>
+                        <div className="flex justify-between text-[11px] text-ink-500 mt-2 px-1">
+                          {labels.map(l => <span key={l}>{l}</span>)}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </WidgetCard>
             </motion.div>
 
             {/* Table — wrapped in WidgetCard */}
@@ -1904,6 +3169,13 @@ export default function DashboardView({ initialDashboardId, onBack, onImportPowe
           setFilterRisk([]);
           setFilterDepartment([]);
         }}
+      />
+
+      {/* Add Widget Modal */}
+      <AddWidgetModal
+        open={addWidgetOpen}
+        onClose={() => setAddWidgetOpen(false)}
+        addToast={addToast}
       />
     </div>
   );
