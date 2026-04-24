@@ -3,6 +3,7 @@ import { motion, AnimatePresence, Reorder, useDragControls } from 'motion/react'
 import {
   FileText, Shield, AlertTriangle, CheckCircle2, BarChart3,
   TrendingUp, Download, Share2, ArrowRight, ArrowLeft, ChevronDown,
+  ChevronLeft, ChevronRight,
   Sparkles, Settings, Palette, Type,
   Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2, Trash2,
   List, LayoutGrid, GripVertical, Plus, StickyNote, PanelLeftClose, PanelLeftOpen,
@@ -36,6 +37,85 @@ const CATEGORY_COLORS: Record<string, string> = {
   Executive: 'text-indigo-600 bg-indigo-50',
 };
 
+// Dummy user-created templates. Replace with real data when the create-custom-template flow lands.
+const CUSTOM_TEMPLATES = [
+  {
+    id: 'ct-001',
+    name: 'Vendor Risk Scorecard',
+    desc: 'Custom scorecard for third-party vendors with risk tiers, control gaps, and remediation SLAs.',
+    category: 'Risk',
+    icon: 'alert-triangle',
+    sections: [
+      { name: 'Vendor Overview', icon: 'file-text' },
+      { name: 'Risk Tier Summary', icon: 'alert-triangle' },
+      { name: 'Control Gaps', icon: 'shield' },
+      { name: 'Remediation Plan', icon: 'check-circle' },
+    ],
+  },
+  {
+    id: 'ct-002',
+    name: 'Quarterly Audit Snapshot',
+    desc: 'One-page executive snapshot of quarterly audit findings and status.',
+    category: 'Audit',
+    icon: 'file-text',
+    sections: [
+      { name: 'Quarter Summary', icon: 'file-text' },
+      { name: 'Key Findings', icon: 'alert-triangle' },
+      { name: 'Status & Owners', icon: 'check-circle' },
+    ],
+  },
+  {
+    id: 'ct-003',
+    name: 'Internal Controls Health Report',
+    desc: 'Tracks control design effectiveness and operating effectiveness across business processes.',
+    category: 'Controls',
+    icon: 'check-circle',
+    sections: [
+      { name: 'Scope', icon: 'file-text' },
+      { name: 'Design Effectiveness', icon: 'shield' },
+      { name: 'Operating Effectiveness', icon: 'check-circle' },
+      { name: 'Recommendations', icon: 'trending-up' },
+    ],
+  },
+  {
+    id: 'ct-004',
+    name: 'Board Slide Deck',
+    desc: 'Executive board-ready deck with headline metrics, risk heatmap, and narrative commentary.',
+    category: 'Executive',
+    icon: 'trending-up',
+    sections: [
+      { name: 'Headline Metrics', icon: 'bar-chart' },
+      { name: 'Risk Heatmap', icon: 'alert-triangle' },
+      { name: 'Narrative', icon: 'file-text' },
+      { name: 'Outlook', icon: 'trending-up' },
+    ],
+  },
+  {
+    id: 'ct-005',
+    name: 'Ad-hoc Exception Summary',
+    desc: 'Quick exception digest grouped by owner with action taken and resolution status.',
+    category: 'Risk',
+    icon: 'alert-triangle',
+    sections: [
+      { name: 'Exception List', icon: 'alert-triangle' },
+      { name: 'Owner Responses', icon: 'file-text' },
+      { name: 'Resolution Status', icon: 'check-circle' },
+    ],
+  },
+  {
+    id: 'ct-006',
+    name: 'Finance Close Checklist',
+    desc: 'Period-close checklist with reconciliation status, journal review, and sign-offs.',
+    category: 'Audit',
+    icon: 'clipboard-check',
+    sections: [
+      { name: 'Reconciliations', icon: 'check-circle' },
+      { name: 'Journal Review', icon: 'file-text' },
+      { name: 'Sign-offs', icon: 'shield' },
+    ],
+  },
+];
+
 
 const SECTION_ICONS: Record<string, React.ElementType> = {
   'file-text': FileText,
@@ -53,6 +133,65 @@ interface ReportsViewProps {
   onOpenBuilder?: () => void;
   onShare?: (id: string) => void;
   onManageExceptions?: () => void;
+}
+
+function TemplateCarousel({ children }: { children: React.ReactNode }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollButtons = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  };
+
+  useEffect(() => {
+    updateScrollButtons();
+    const el = scrollRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(updateScrollButtons);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const scroll = (dir: 'left' | 'right') => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const delta = dir === 'left' ? -el.clientWidth * 0.8 : el.clientWidth * 0.8;
+    el.scrollBy({ left: delta, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="relative group/carousel">
+      <button
+        type="button"
+        onClick={() => scroll('left')}
+        disabled={!canScrollLeft}
+        aria-label="Scroll left"
+        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-9 h-9 rounded-full bg-white border border-border shadow-md flex items-center justify-center text-text hover:bg-surface-2 hover:border-primary/40 disabled:opacity-0 disabled:pointer-events-none transition-all cursor-pointer"
+      >
+        <ChevronLeft size={16} />
+      </button>
+      <div
+        ref={scrollRef}
+        onScroll={updateScrollButtons}
+        className="flex gap-4 overflow-x-auto scroll-smooth pb-3 items-stretch"
+      >
+        {children}
+      </div>
+      <button
+        type="button"
+        onClick={() => scroll('right')}
+        disabled={!canScrollRight}
+        aria-label="Scroll right"
+        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-9 h-9 rounded-full bg-white border border-border shadow-md flex items-center justify-center text-text hover:bg-surface-2 hover:border-primary/40 disabled:opacity-0 disabled:pointer-events-none transition-all cursor-pointer"
+      >
+        <ChevronRight size={16} />
+      </button>
+    </div>
+  );
 }
 
 // ─── Upload Template Modal ───
@@ -2233,49 +2372,71 @@ export default function ReportsView({ onShare, onManageExceptions }: ReportsView
           </div>
         )}
 
-        {activeTab === 'templates' && (
-          <div className="grid grid-cols-3 gap-4">
-            {REPORT_TEMPLATES.map((rt, i) => {
-              const Icon = ICON_MAP[rt.icon] || FileText;
-              const color = CATEGORY_COLORS[rt.category] || 'text-ink-500 bg-paper-50';
-              return (
-                <motion.div
-                  key={rt.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="glass-card rounded-2xl p-5 hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.98] transition-all duration-300 group cursor-pointer"
-                  onClick={() => setPreviewingTemplate(rt)}
-                >
-                  <div className="mb-3">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className={`p-2.5 shrink-0 ${color} transition-colors`} style={{ borderRadius: '8px' }}><Icon size={18} /></div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }}
-                        className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer shrink-0"
-                      >
-                        <Edit3 size={10} /> Edit
-                      </button>
-                    </div>
-                    <h3 className="font-semibold text-text mb-1 group-hover:text-primary transition-colors" style={{ fontSize: '14px', lineHeight: '20px' }}>{rt.name}</h3>
-                    <p className="text-[12px] text-text-secondary leading-relaxed">{rt.desc}</p>
+        {activeTab === 'templates' && (() => {
+          const renderCard = (rt: typeof REPORT_TEMPLATES[0], i: number, fixedWidth?: boolean) => {
+            const Icon = ICON_MAP[rt.icon] || FileText;
+            const color = CATEGORY_COLORS[rt.category] || 'text-ink-500 bg-paper-50';
+            return (
+              <motion.div
+                key={rt.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className={`glass-card rounded-2xl p-5 hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.98] transition-all duration-300 group cursor-pointer flex flex-col ${fixedWidth ? 'w-[200px] shrink-0' : ''}`}
+                onClick={() => setPreviewingTemplate(rt)}
+              >
+                <div className="mb-3 flex-1">
+                  <div className="flex items-start gap-2.5 mb-2">
+                    <div className={`p-2 shrink-0 ${color} transition-colors`} style={{ borderRadius: '8px' }}><Icon size={16} /></div>
+                    <h3 className="font-semibold text-text group-hover:text-primary transition-colors flex-1 min-w-0" style={{ fontSize: '13px', lineHeight: '18px' }}>{rt.name}</h3>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }}
+                      className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer shrink-0"
+                    >
+                      <Edit3 size={10} /> Edit
+                    </button>
                   </div>
-                  <div className="flex items-center justify-start pt-3 border-t border-border-light">
-                    <div className="flex gap-1">
-                      <button onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }} className="text-text-muted hover:text-primary font-medium flex items-center gap-0.5 cursor-pointer" style={{ fontSize: '12px', lineHeight: '20px' }}>
-                        <Settings size={11} /> Customize
-                      </button>
-                      <span className="text-border-light mx-1">|</span>
-                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: 'Generating PDF download...' }); }} className="text-primary font-semibold flex items-center gap-0.5 cursor-pointer" style={{ fontSize: '12px', lineHeight: '20px' }}>
-                        Generate <ArrowRight size={11} />
-                      </button>
-                    </div>
+                  <p className="text-[12px] text-text-secondary leading-relaxed">{rt.desc}</p>
+                </div>
+                <div className="flex items-center justify-start pt-3 border-t border-border-light">
+                  <div className="flex gap-1">
+                    <button onClick={(e) => { e.stopPropagation(); setEditingTemplate(rt); }} className="text-text-muted hover:text-primary font-medium flex items-center gap-0.5 cursor-pointer" style={{ fontSize: '12px', lineHeight: '20px' }}>
+                      <Settings size={11} /> Customize
+                    </button>
+                    <span className="text-border-light mx-1">|</span>
+                    <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: 'Generating PDF download...' }); }} className="text-primary font-semibold flex items-center gap-0.5 cursor-pointer" style={{ fontSize: '12px', lineHeight: '20px' }}>
+                      Generate <ArrowRight size={11} />
+                    </button>
                   </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
+                </div>
+              </motion.div>
+            );
+          };
+
+          return (
+            <div className="space-y-8">
+              <section>
+                <h2 className="font-display text-[20px] font-[420] tracking-tight text-ink-900 leading-[1.2] mb-3">Standard Templates</h2>
+                <TemplateCarousel>
+                  {REPORT_TEMPLATES.map((rt, i) => renderCard(rt, i, true))}
+                </TemplateCarousel>
+              </section>
+
+              <section>
+                <h2 className="font-display text-[20px] font-[420] tracking-tight text-ink-900 leading-[1.2] mb-3">Custom Templates</h2>
+                {CUSTOM_TEMPLATES.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border-light p-8 text-center text-[13px] text-text-muted">
+                    No custom templates yet. Create one from an existing report or upload a file.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    {CUSTOM_TEMPLATES.map((rt, i) => renderCard(rt as any, i, false))}
+                  </div>
+                )}
+              </section>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Template Editor Modal */}
