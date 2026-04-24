@@ -3,44 +3,33 @@ import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 import {
   ChevronDown,
-  CheckCircle2,
   X,
   File as FileIcon,
   Eye,
   ArrowLeftRight,
-  Plus,
   Search,
+  Check,
 } from 'lucide-react';
 import type {
   WorkflowDraft,
   JourneyFiles,
   JourneyAlignments,
-  ColumnAlignment,
-  InputSpec,
 } from './types';
 
 interface Props {
   workflow: WorkflowDraft;
   files: JourneyFiles;
   setFiles: (f: JourneyFiles) => void;
+  // Kept for backward compatibility with the parent — no longer rendered.
   alignments: JourneyAlignments;
   expandedInputId?: string | null;
   onToggleExpand?: (inputId: string) => void;
 }
 
-const DTYPE_STYLE: Record<string, string> = {
-  STRING: 'bg-slate-100 text-slate-500',
-  DECIMAL: 'bg-brand-50 text-brand-700',
-  INT: 'bg-evidence-50 text-evidence-700',
-  TIMESTAMP: 'bg-mitigated-50 text-mitigated-700',
-  BOOL: 'bg-compliant-50 text-compliant-700',
-};
-
 export default function StepMapData({
   workflow,
   files,
   setFiles,
-  alignments,
   expandedInputId,
   onToggleExpand,
 }: Props) {
@@ -55,11 +44,39 @@ export default function StepMapData({
       setInternalExpanded((prev) => (prev === inputId ? null : inputId));
     }
   };
+
   const [selectFileOpen, setSelectFileOpen] = useState<string | null>(null);
   const [selectFileSearch, setSelectFileSearch] = useState('');
   const [previewInput, setPreviewInput] = useState<{ name: string; files: { name: string }[] } | null>(null);
 
-  // Collect all uploaded files across all inputs for the file selector
+  // Column selection state — seeded with ALL columns selected per input.
+  const [selectedByInput, setSelectedByInput] = useState<Record<string, Set<string>>>(() => {
+    const init: Record<string, Set<string>> = {};
+    workflow.inputs.forEach((inp) => {
+      init[inp.id] = new Set(inp.columns ?? []);
+    });
+    return init;
+  });
+  const [searchByInput, setSearchByInput] = useState<Record<string, string>>({});
+
+  const toggleColumn = (inputId: string, col: string) => {
+    setSelectedByInput((prev) => {
+      const next = { ...prev };
+      const cur = new Set(prev[inputId] ?? []);
+      if (cur.has(col)) cur.delete(col);
+      else cur.add(col);
+      next[inputId] = cur;
+      return next;
+    });
+  };
+
+  const selectAll = (inputId: string, cols: string[]) => {
+    setSelectedByInput((prev) => ({ ...prev, [inputId]: new Set(cols) }));
+  };
+  const deselectAll = (inputId: string) => {
+    setSelectedByInput((prev) => ({ ...prev, [inputId]: new Set() }));
+  };
+
   const allUploadedFiles = useMemo(() => {
     const all: { name: string; inputId: string }[] = [];
     Object.entries(files).forEach(([inputId, fileList]) => {
@@ -76,10 +93,14 @@ export default function StepMapData({
       className="flex flex-col gap-3"
     >
       {workflow.inputs.map((input) => {
-        const list = alignments[input.id] ?? [];
+        const allCols = input.columns ?? [];
+        const selected = selectedByInput[input.id] ?? new Set<string>();
+        const search = searchByInput[input.id] ?? '';
+        const filteredCols = allCols.filter((c) =>
+          c.toLowerCase().includes(search.toLowerCase()),
+        );
         const isOpen = expanded === input.id;
         const uploaded = files[input.id] ?? [];
-        const mappedCount = list.filter((a) => !!a.target).length;
 
         return (
           <section
@@ -101,12 +122,12 @@ export default function StepMapData({
               <div className="flex items-center gap-3 shrink-0 ml-4">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-[18px] font-bold text-ink-800 tabular-nums leading-tight">
-                    {mappedCount}/{list.length || input.columns?.length || 0}
+                    {selected.size}/{allCols.length}
                   </span>
                   <span className="text-[10px] text-ink-400 font-semibold leading-tight">
                     columns
                     <br />
-                    mapped
+                    selected
                   </span>
                 </div>
                 <ChevronDown
@@ -120,7 +141,6 @@ export default function StepMapData({
             <div className="px-5 pb-4">
               <div className="border-t border-canvas-border/30 mb-3" />
 
-              {/* Row 1: label + preview · match */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400">
@@ -139,7 +159,6 @@ export default function StepMapData({
                 </div>
               </div>
 
-              {/* Row 2: file pills · select button */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center flex-wrap gap-1.5 min-w-0">
                   {uploaded.length === 0 ? (
@@ -190,7 +209,6 @@ export default function StepMapData({
                     if (isCurrentlySelected) {
                       setFiles({ ...files, [input.id]: current.filter((f) => f.name !== fileName) });
                     } else {
-                      // Find the file from any input to copy its metadata
                       const source = allUploadedFiles.find((f) => f.name === fileName);
                       if (source) {
                         const original = (files[source.inputId] ?? []).find((f) => f.name === fileName);
@@ -202,10 +220,106 @@ export default function StepMapData({
               </div>
             </div>
 
-            {/* Column Alignment */}
+            {/* Column selection */}
             {isOpen && (
               <div className="border-t border-canvas-border/30 rounded-b-2xl overflow-hidden">
-                <ColumnAlignmentTable input={input} rows={list} />
+                {allCols.length === 0 ? (
+                  <div className="px-5 py-4 text-[11.5px] text-ink-400">
+                    No columns detected for {input.name}.
+                  </div>
+                ) : (
+                  <div className="px-5 py-4">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400">
+                        Select Columns To Use
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => selectAll(input.id, allCols)}
+                          className="text-[11px] font-semibold text-brand-700 hover:text-brand-800 cursor-pointer px-1.5 py-0.5 rounded hover:bg-brand-50 transition-colors"
+                        >
+                          Select all
+                        </button>
+                        <span className="text-ink-300">·</span>
+                        <button
+                          type="button"
+                          onClick={() => deselectAll(input.id)}
+                          className="text-[11px] font-semibold text-ink-500 hover:text-ink-700 cursor-pointer px-1.5 py-0.5 rounded hover:bg-canvas transition-colors"
+                        >
+                          Deselect all
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Search */}
+                    <div className="relative mb-2.5">
+                      <Search
+                        size={12}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400"
+                      />
+                      <input
+                        type="text"
+                        value={search}
+                        onChange={(e) =>
+                          setSearchByInput((prev) => ({ ...prev, [input.id]: e.target.value }))
+                        }
+                        placeholder="Type to filter columns…"
+                        className="w-full rounded-lg border border-canvas-border bg-canvas px-8 py-1.5 text-[12px] text-ink-800 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/30 transition-all"
+                      />
+                    </div>
+
+                    {/* Columns grid */}
+                    {filteredCols.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-canvas-border px-3 py-4 text-center text-[11.5px] text-ink-400">
+                        No columns match “{search}”.
+                      </div>
+                    ) : (
+                      <ul className="grid grid-cols-2 gap-1.5">
+                        {filteredCols.map((col) => {
+                          const isSelected = selected.has(col);
+                          return (
+                            <li key={col}>
+                              <button
+                                type="button"
+                                onClick={() => toggleColumn(input.id, col)}
+                                aria-pressed={isSelected}
+                                className={[
+                                  'w-full flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left transition-colors cursor-pointer',
+                                  isSelected
+                                    ? 'border-brand-300 bg-brand-50/60'
+                                    : 'border-canvas-border bg-canvas hover:border-brand-300 hover:bg-brand-50/30',
+                                ].join(' ')}
+                              >
+                                <span
+                                  className={[
+                                    'w-4 h-4 rounded-md flex items-center justify-center shrink-0 transition-colors',
+                                    isSelected
+                                      ? 'bg-brand-600 text-white'
+                                      : 'border border-canvas-border bg-canvas-elevated',
+                                  ].join(' ')}
+                                >
+                                  {isSelected && <Check size={11} strokeWidth={3} />}
+                                </span>
+                                <span className="flex-1 text-[12px] font-medium text-ink-800 truncate">
+                                  {col}
+                                </span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+
+                    {/* Footer */}
+                    <div className="mt-3 rounded-lg bg-brand-50/40 border border-brand-100 px-3 py-1.5 text-[11.5px] text-ink-700">
+                      <b className="text-brand-700 tabular-nums">
+                        Selected {selected.size} of {allCols.length}
+                      </b>{' '}
+                      columns
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -221,71 +335,6 @@ export default function StepMapData({
         />
       )}
     </motion.div>
-  );
-}
-
-// ─── Column alignment table ───────────────────────────────────────────
-
-interface TableProps {
-  input: InputSpec;
-  rows: ColumnAlignment[];
-}
-
-function ColumnAlignmentTable({ input, rows }: TableProps) {
-  if (rows.length === 0) {
-    return (
-      <div className="px-5 pb-5 text-[11.5px] text-ink-400">
-        No columns detected for {input.name}.
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      {/* Sub-header */}
-      <div className="grid grid-cols-[1fr_20px_1fr] gap-3 px-5 py-2 text-[9.5px] font-bold uppercase tracking-[0.12em] text-ink-400 border-b border-canvas-border/60 bg-canvas/60">
-        <span>Source Column</span>
-        <span />
-        <span>Target Schema</span>
-      </div>
-      <div>
-        {rows.map((row) => (
-          <FieldRow key={row.id} row={row} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Single alignment row ─────────────────────────────────────────────
-
-function FieldRow({ row }: { row: ColumnAlignment }) {
-  return (
-    <div className="relative grid grid-cols-[1fr_20px_1fr] items-center gap-3 px-5 py-2.5">
-      {/* Source */}
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="text-[12.5px] font-semibold text-ink-800 truncate">
-          {row.source.name}
-        </span>
-        <span
-          className={`text-[9.5px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 shrink-0 ${DTYPE_STYLE[row.source.dtype] ?? DTYPE_STYLE.STRING}`}
-        >
-          {row.source.dtype}
-        </span>
-        {row.reason === 'type_mismatch' && row.target && (
-          <span className="text-[9.5px] font-bold text-mitigated-700 bg-mitigated-50 rounded px-1.5 py-0.5 shrink-0">
-            ≠ {row.target.dtype}
-          </span>
-        )}
-      </div>
-
-      <div className="text-center text-ink-300 text-[13px] leading-none select-none">→</div>
-
-      {/* Target — dropdown selector */}
-      <div className="flex items-center min-w-0">
-        <TargetColumnSelector row={row} />
-      </div>
-    </div>
   );
 }
 
@@ -386,150 +435,6 @@ function SelectFileDropdown({
   );
 }
 
-// ─── Target column selector dropdown ─────────────────────────────────
-
-const DEMO_UPLOADED_COLUMNS = [
-  'VendorId', 'VendorName', 'vendor_name', 'vendor_code',
-  'inv_number', 'inv_date', 'amount', 'total_amount',
-  'po_ref', 'po_number', 'status', 'country',
-  'region', 'department', 'description', 'gl_code',
-  'account_name', 'debit', 'credit', 'period',
-];
-
-function TargetColumnSelector({ row }: { row: ColumnAlignment }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 224 });
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open || !triggerRef.current) return;
-    const updatePos = () => {
-      const rect = triggerRef.current!.getBoundingClientRect();
-      const width = Math.max(rect.width, 224);
-      let left = rect.left;
-      if (left + width > window.innerWidth - 12) left = window.innerWidth - width - 12;
-      if (left < 12) left = 12;
-      setPos({
-        top: rect.bottom + 6 + window.scrollY,
-        left: left + window.scrollX,
-        width,
-      });
-    };
-    updatePos();
-    window.addEventListener('scroll', updatePos, true);
-    window.addEventListener('resize', updatePos);
-    return () => {
-      window.removeEventListener('scroll', updatePos, true);
-      window.removeEventListener('resize', updatePos);
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (
-        triggerRef.current && !triggerRef.current.contains(t) &&
-        panelRef.current && !panelRef.current.contains(t)
-      ) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  const filtered = DEMO_UPLOADED_COLUMNS.filter((c) =>
-    c.toLowerCase().includes(search.toLowerCase()),
-  );
-
-  return (
-    <>
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
-        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-          row.target
-            ? 'border border-canvas-border hover:border-brand-400/40 hover:shadow-sm'
-            : 'border border-dashed border-brand-300 hover:border-brand-500 hover:bg-brand-50/60'
-        }`}
-      >
-        {row.target ? (
-          <>
-            <span className="text-[12.5px] font-semibold text-brand-700 truncate">
-              {row.target.name}
-            </span>
-            <span
-              className={`text-[9.5px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 shrink-0 ${DTYPE_STYLE[row.target.dtype] ?? DTYPE_STYLE.STRING}`}
-            >
-              {row.target.dtype}
-            </span>
-          </>
-        ) : (
-          <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-brand-700">
-            <Plus size={11} />
-            Map column
-          </span>
-        )}
-        <ChevronDown
-          size={11}
-          className={`text-ink-400/70 shrink-0 transition-transform ml-0.5 ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {open &&
-        createPortal(
-          <div
-            ref={panelRef}
-            style={{ position: 'absolute', top: pos.top, left: pos.left, width: pos.width }}
-            className="bg-canvas-elevated rounded-xl shadow-lg border border-canvas-border z-[9999] overflow-hidden"
-          >
-            <div className="p-2 border-b border-canvas-border/60">
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search columns..."
-                className="w-full text-[12px] px-3 py-1.5 rounded-lg border border-canvas-border outline-none focus:border-ink-300 placeholder:text-ink-400 bg-transparent"
-                autoFocus
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-            <div className="max-h-48 overflow-y-auto py-1">
-              {filtered.length > 0 ? (
-                filtered.map((colName) => (
-                  <button
-                    key={colName}
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setOpen(false); }}
-                    className={`w-full text-left px-3 py-2 text-[12px] hover:bg-brand-50 transition-colors flex items-center justify-between ${
-                      colName === row.target?.name
-                        ? 'bg-brand-50/80 text-brand-700 font-semibold'
-                        : 'text-ink-600'
-                    }`}
-                  >
-                    <span>{colName}</span>
-                    {colName === row.target?.name && (
-                      <CheckCircle2 size={13} className="text-brand-600" />
-                    )}
-                  </button>
-                ))
-              ) : (
-                <p className="px-3 py-3 text-[11px] text-ink-400 text-center">
-                  No matching columns
-                </p>
-              )}
-            </div>
-          </div>,
-          document.body,
-        )}
-    </>
-  );
-}
-
 // ─── Data Preview Modal ──────────────────────────────────────────────
 
 const PREVIEW_DATA = [
@@ -563,7 +468,6 @@ function DataPreviewModal({
         className="relative w-[680px] max-h-[80vh] bg-canvas-elevated rounded-2xl shadow-2xl border border-canvas-border overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-canvas-border">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-brand-100 flex items-center justify-center">
@@ -583,7 +487,6 @@ function DataPreviewModal({
           </button>
         </div>
 
-        {/* Table */}
         <div className="overflow-auto max-h-[60vh]">
           <table className="w-full text-[12.5px]">
             <thead>
@@ -613,7 +516,6 @@ function DataPreviewModal({
           </table>
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between px-6 py-3 border-t border-canvas-border">
           <span className="text-[11px] text-ink-400">Previewing first 5 entries</span>
           <button
@@ -629,4 +531,3 @@ function DataPreviewModal({
     document.body,
   );
 }
-
