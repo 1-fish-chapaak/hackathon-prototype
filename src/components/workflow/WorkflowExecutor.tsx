@@ -8,9 +8,12 @@ import {
   TrendingUp, Users, Percent, CalendarDays, Pencil, AlertCircle,
 } from 'lucide-react';
 import PlanPanel, { type ExecutorParameters } from '../concierge-workflow-builder/PlanPanel';
+import StepMapData from '../concierge-workflow-builder/StepMapData';
+import { seedAlignments } from '../concierge-workflow-builder/mockApi';
 import type {
   WorkflowDraft,
   JourneyFiles,
+  JourneyAlignments,
   UploadedFile,
 } from '../concierge-workflow-builder/types';
 import { DATA_SOURCES } from '../../data/mockData';
@@ -179,6 +182,10 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
   const stepRef = useRef(0);
   const elapsedRef = useRef(0);
 
+  // Column-mapping pause (runs right after clarification is resolved)
+  const [columnMapPending, setColumnMapPending] = useState(false);
+  const [alignments, setAlignments] = useState<JourneyAlignments>(() => seedAlignments(workflow));
+
   const [files, setFiles] = useState<JourneyFiles>({});
   const [requiredOpen, setRequiredOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -330,6 +337,7 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
     setClarificationPending(false);
     setClarificationChoice(null);
     setClarificationOther('');
+    setColumnMapPending(false);
     advance();
   }, [hasRequired, advance]);
 
@@ -339,11 +347,17 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
     setCurrentStep(0);
     setProgress(0);
     setClarificationPending(false);
+    setColumnMapPending(false);
   }, []);
 
   const resolveClarification = useCallback(() => {
     clarificationAnsweredRef.current = true;
     setClarificationPending(false);
+    setColumnMapPending(true);
+  }, []);
+
+  const resolveColumnMap = useCallback(() => {
+    setColumnMapPending(false);
     advance();
   }, [advance]);
 
@@ -788,14 +802,14 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
                 >
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-[13px] font-bold text-ink-800 flex items-center gap-2">
-                      {clarificationPending ? (
+                      {(clarificationPending || columnMapPending) ? (
                         <AlertCircle size={15} className="text-mitigated-700" />
                       ) : (
                         <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>
                           <Loader2 size={15} className="text-brand-600" />
                         </motion.div>
                       )}
-                      {clarificationPending ? 'Paused — waiting for input' : 'Running Workflow'}
+                      {(clarificationPending || columnMapPending) ? 'Paused — waiting for input' : 'Running Workflow'}
                     </h3>
                     <div className="flex items-center gap-3">
                       <span className="text-[12px] font-mono font-bold text-brand-700">{progress}%</span>
@@ -989,6 +1003,57 @@ export default function WorkflowExecutor({ workflowId, onBack }: WorkflowExecuto
                     <button
                       type="button"
                       onClick={resolveClarification}
+                      className="text-[12.5px] font-semibold text-ink-500 hover:text-brand-700 transition-colors cursor-pointer"
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </motion.section>
+              )}
+            </AnimatePresence>
+
+            {/* Column mapping (pauses execution after clarification) */}
+            <AnimatePresence>
+              {phase === 'running' && columnMapPending && (
+                <motion.section
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25 }}
+                  className="rounded-2xl border border-canvas-border bg-canvas-elevated p-5 mb-6"
+                >
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                      <h3 className="text-[14px] font-bold text-ink-800 leading-snug">
+                        Confirm column mapping
+                      </h3>
+                      <p className="text-[11.5px] text-ink-500 mt-0.5">
+                        Review auto-mapped columns and resolve any that need attention before execution continues.
+                      </p>
+                    </div>
+                    <span className="text-[12px] text-ink-400 shrink-0">1 of 1</span>
+                  </div>
+
+                  <StepMapData
+                    workflow={workflow}
+                    files={files}
+                    setFiles={setFiles}
+                    alignments={alignments}
+                    setAlignments={setAlignments}
+                  />
+
+                  <div className="flex items-center justify-between mt-5">
+                    <button
+                      type="button"
+                      onClick={resolveColumnMap}
+                      className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold bg-brand-600 hover:bg-brand-500 text-white transition-colors cursor-pointer"
+                    >
+                      Confirm mapping & continue
+                      <ArrowRight size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resolveColumnMap}
                       className="text-[12.5px] font-semibold text-ink-500 hover:text-brand-700 transition-colors cursor-pointer"
                     >
                       Skip
