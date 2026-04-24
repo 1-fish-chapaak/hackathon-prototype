@@ -3,15 +3,11 @@ import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 import {
   ChevronDown,
-  ChevronUp,
-  AlertTriangle,
   CheckCircle2,
-  Sparkles,
   X,
   File as FileIcon,
   Eye,
   ArrowLeftRight,
-  Info,
   Plus,
   Search,
 } from 'lucide-react';
@@ -29,9 +25,9 @@ interface Props {
   setFiles: (f: JourneyFiles) => void;
   alignments: JourneyAlignments;
   setAlignments: (a: JourneyAlignments) => void;
+  expandedInputId?: string | null;
+  onToggleExpand?: (inputId: string) => void;
 }
-
-const AUTO_THRESHOLD = 85;
 
 const DTYPE_STYLE: Record<string, string> = {
   STRING: 'bg-slate-100 text-slate-500',
@@ -41,25 +37,26 @@ const DTYPE_STYLE: Record<string, string> = {
   BOOL: 'bg-compliant-50 text-compliant-700',
 };
 
-function confidenceColor(c: number): string {
-  if (c >= 85) return 'text-compliant';
-  if (c >= 70) return 'text-mitigated';
-  if (c >= 55) return 'text-high';
-  return 'text-risk';
-}
-
-function barColor(c: number): string {
-  if (c >= 80) return 'bg-compliant';
-  if (c >= 60) return 'bg-mitigated';
-  return 'bg-risk';
-}
-
-export default function StepMapData({ workflow, files, setFiles, alignments, setAlignments }: Props) {
-  const [expanded, setExpanded] = useState<string | null>(
+export default function StepMapData({
+  workflow,
+  files,
+  setFiles,
+  alignments,
+  setAlignments,
+  expandedInputId,
+  onToggleExpand,
+}: Props) {
+  const [internalExpanded, setInternalExpanded] = useState<string | null>(
     workflow.inputs[0]?.id ?? null,
   );
-  const [autoExpanded, setAutoExpanded] = useState<Record<string, boolean>>({});
-  const [popover, setPopover] = useState<string | null>(null);
+  const expanded = expandedInputId !== undefined ? expandedInputId : internalExpanded;
+  const toggleExpanded = (inputId: string) => {
+    if (onToggleExpand) {
+      onToggleExpand(inputId);
+    } else {
+      setInternalExpanded((prev) => (prev === inputId ? null : inputId));
+    }
+  };
   const [selectFileOpen, setSelectFileOpen] = useState<string | null>(null);
   const [selectFileSearch, setSelectFileSearch] = useState('');
   const [previewInput, setPreviewInput] = useState<{ name: string; files: { name: string }[] } | null>(null);
@@ -85,9 +82,6 @@ export default function StepMapData({ workflow, files, setFiles, alignments, set
         const isOpen = expanded === input.id;
         const uploaded = files[input.id] ?? [];
         const mappedCount = list.filter((a) => !!a.target).length;
-        const matchPct = list.length
-          ? Math.round(list.reduce((n, a) => n + a.confidence, 0) / list.length)
-          : 0;
 
         return (
           <section
@@ -97,7 +91,7 @@ export default function StepMapData({ workflow, files, setFiles, alignments, set
             {/* Header */}
             <button
               type="button"
-              onClick={() => setExpanded(isOpen ? null : input.id)}
+              onClick={() => toggleExpanded(input.id)}
               className="w-full flex items-start justify-between px-5 py-4 cursor-pointer hover:bg-brand-50/40 transition-colors text-left"
             >
               <div className="min-w-0">
@@ -145,33 +139,6 @@ export default function StepMapData({ workflow, files, setFiles, alignments, set
                     </button>
                   )}
                 </div>
-                {list.length > 0 && (
-                  <div
-                    className={[
-                      'inline-flex items-center gap-1 tabular-nums',
-                      matchPct >= 85
-                        ? 'text-compliant-700'
-                        : matchPct >= 65
-                          ? 'text-mitigated-700'
-                          : 'text-risk-700',
-                    ].join(' ')}
-                    title="Aggregate match score across all column alignments"
-                  >
-                    <span className="text-[11px] font-bold uppercase tracking-wider">
-                      {matchPct}% Match
-                    </span>
-                    <Info
-                      size={12}
-                      className={
-                        matchPct >= 85
-                          ? 'text-compliant/70'
-                          : matchPct >= 65
-                            ? 'text-mitigated/80'
-                            : 'text-risk/80'
-                      }
-                    />
-                  </div>
-                )}
               </div>
 
               {/* Row 2: file pills · select button */}
@@ -240,29 +207,7 @@ export default function StepMapData({ workflow, files, setFiles, alignments, set
             {/* Column Alignment */}
             {isOpen && (
               <div className="border-t border-canvas-border/30 rounded-b-2xl overflow-hidden">
-                <div className="px-5 pt-3 pb-2">
-                  <div className="text-[12px] font-semibold text-ink-700 flex items-center gap-1.5">
-                    <Sparkles size={11} className="text-brand-600" />
-                    Column Alignment
-                  </div>
-                </div>
-                <ColumnAlignmentTable
-                  input={input}
-                  rows={list}
-                  autoExpanded={!!autoExpanded[input.id]}
-                  onToggleAuto={() =>
-                    setAutoExpanded((prev) => ({
-                      ...prev,
-                      [input.id]: !prev[input.id],
-                    }))
-                  }
-                  openPopoverId={popover}
-                  onOpenPopover={(id) => setPopover(popover === id ? null : id)}
-                  onClosePopover={() => setPopover(null)}
-                  onUpdate={(next) =>
-                    setAlignments({ ...alignments, [input.id]: next })
-                  }
-                />
+                <ColumnAlignmentTable input={input} rows={list} />
               </div>
             )}
           </section>
@@ -286,36 +231,9 @@ export default function StepMapData({ workflow, files, setFiles, alignments, set
 interface TableProps {
   input: InputSpec;
   rows: ColumnAlignment[];
-  autoExpanded: boolean;
-  onToggleAuto: () => void;
-  openPopoverId: string | null;
-  onOpenPopover: (id: string) => void;
-  onClosePopover: () => void;
-  onUpdate: (rows: ColumnAlignment[]) => void;
 }
 
-function ColumnAlignmentTable({
-  input,
-  rows,
-  autoExpanded,
-  onToggleAuto,
-  openPopoverId,
-  onOpenPopover,
-  onClosePopover,
-  onUpdate,
-}: TableProps) {
-  const auto = rows.filter((r) => r.confidence >= AUTO_THRESHOLD && !r.reason);
-  const exceptions = rows.filter((r) => r.confidence < AUTO_THRESHOLD || !!r.reason);
-  const avgAuto = auto.length
-    ? Math.round(auto.reduce((s, r) => s + r.confidence, 0) / auto.length)
-    : 0;
-
-  const clearReason = (id: string) => {
-    onUpdate(
-      rows.map((r) => (r.id === id ? { ...r, reason: null, confidence: Math.max(r.confidence, AUTO_THRESHOLD) } : r)),
-    );
-  };
-
+function ColumnAlignmentTable({ input, rows }: TableProps) {
   if (rows.length === 0) {
     return (
       <div className="px-5 pb-5 text-[11.5px] text-ink-400">
@@ -327,122 +245,25 @@ function ColumnAlignmentTable({
   return (
     <div>
       {/* Sub-header */}
-      <div className="grid grid-cols-[1fr_20px_1fr_90px] gap-3 px-5 py-2 text-[9.5px] font-bold uppercase tracking-[0.12em] text-ink-400 border-b border-canvas-border/60 bg-canvas/60">
+      <div className="grid grid-cols-[1fr_20px_1fr] gap-3 px-5 py-2 text-[9.5px] font-bold uppercase tracking-[0.12em] text-ink-400 border-b border-canvas-border/60 bg-canvas/60">
         <span>Source Column</span>
         <span />
         <span>Target Schema</span>
-        <span className="text-right">Confidence</span>
       </div>
-
-      {/* Auto-mapped summary row */}
-      {auto.length > 0 && (
-        <>
-          <button
-            type="button"
-            onClick={onToggleAuto}
-            className="w-full flex items-center justify-between px-5 py-2.5 bg-brand-50/60 hover:bg-brand-50 transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={13} className="text-brand-600" />
-              <span className="text-[12px] text-brand-700 font-semibold">
-                {auto.length} field{auto.length === 1 ? '' : 's'} auto-mapped
-                <span className="text-brand-400/70 mx-1.5">·</span>
-                <span className="font-medium text-brand-500">
-                  avg {avgAuto}% confidence
-                </span>
-              </span>
-            </div>
-            <span className="inline-flex items-center gap-0.5 text-[11.5px] text-brand-600 font-semibold">
-              {autoExpanded ? 'Collapse' : 'Expand'}
-              {autoExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            </span>
-          </button>
-          {autoExpanded && (
-            <div>
-              {auto.map((row) => (
-                <FieldRow
-                  key={row.id}
-                  row={row}
-                  variant="auto"
-                  popoverOpen={openPopoverId === row.id}
-                  onOpenPopover={() => onOpenPopover(row.id)}
-                  onClosePopover={onClosePopover}
-                  onClearReason={clearReason}
-                />
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Needs attention */}
-      {exceptions.length > 0 && (
-        <>
-          <div className="px-5 py-2 flex items-center gap-2 bg-mitigated-50/60 border-b border-canvas-border/40">
-            <AlertTriangle size={12} className="text-mitigated" />
-            <span className="text-[9.5px] font-bold uppercase tracking-[0.12em] text-mitigated-700">
-              Needs Attention ({exceptions.length})
-            </span>
-          </div>
-          <div className="bg-mitigated-50/20 overflow-hidden">
-            {exceptions.map((row) => (
-              <FieldRow
-                key={row.id}
-                row={row}
-                variant="exception"
-                popoverOpen={openPopoverId === row.id}
-                onOpenPopover={() => onOpenPopover(row.id)}
-                onClosePopover={onClosePopover}
-                onClearReason={clearReason}
-              />
-            ))}
-          </div>
-        </>
-      )}
+      <div>
+        {rows.map((row) => (
+          <FieldRow key={row.id} row={row} />
+        ))}
+      </div>
     </div>
   );
 }
 
 // ─── Single alignment row ─────────────────────────────────────────────
 
-interface FieldRowProps {
-  row: ColumnAlignment;
-  variant: 'auto' | 'exception';
-  popoverOpen: boolean;
-  onOpenPopover: () => void;
-  onClosePopover: () => void;
-  onClearReason: (id: string) => void;
-}
-
-function FieldRow({
-  row,
-  variant,
-  popoverOpen,
-  onOpenPopover,
-  onClosePopover,
-  onClearReason,
-}: FieldRowProps) {
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!popoverOpen) return;
-    const onDoc = (e: MouseEvent) => {
-      if (!wrapperRef.current?.contains(e.target as Node)) onClosePopover();
-    };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [popoverOpen, onClosePopover]);
-
-  const accent =
-    variant === 'exception'
-      ? 'border-l-[3px] border-mitigated'
-      : 'border-l-[3px] border-transparent';
-
+function FieldRow({ row }: { row: ColumnAlignment }) {
   return (
-    <div
-      ref={wrapperRef}
-      className={`relative grid grid-cols-[1fr_20px_1fr_90px] items-center gap-3 px-5 py-2.5 ${accent}`}
-    >
+    <div className="relative grid grid-cols-[1fr_20px_1fr] items-center gap-3 px-5 py-2.5">
       {/* Source */}
       <div className="flex items-center gap-2 min-w-0">
         <span className="text-[12.5px] font-semibold text-ink-800 truncate">
@@ -465,20 +286,6 @@ function FieldRow({
       {/* Target — dropdown selector */}
       <div className="flex items-center min-w-0">
         <TargetColumnSelector row={row} />
-      </div>
-
-      {/* Confidence + info */}
-      <div className="flex items-center justify-end gap-1 tabular-nums">
-        <span className={`text-[13px] font-bold ${confidenceColor(row.confidence)}`}>
-          {row.confidence}%
-        </span>
-        <AIJustificationButton
-          row={row}
-          popoverOpen={popoverOpen}
-          onOpenPopover={onOpenPopover}
-          onClosePopover={onClosePopover}
-          onClearReason={onClearReason}
-        />
       </div>
     </div>
   );
@@ -532,7 +339,7 @@ function SelectFileDropdown({
         className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 bg-canvas-elevated hover:bg-brand-50 px-3 py-1.5 text-[11.5px] font-semibold text-brand-700 transition-colors cursor-pointer"
       >
         <ArrowLeftRight size={12} />
-        Select File(s)
+        Choose File
       </button>
 
       {isOpen && (
@@ -594,12 +401,43 @@ const DEMO_UPLOADED_COLUMNS = [
 function TargetColumnSelector({ row }: { row: ColumnAlignment }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 224 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const updatePos = () => {
+      const rect = triggerRef.current!.getBoundingClientRect();
+      const width = Math.max(rect.width, 224);
+      let left = rect.left;
+      if (left + width > window.innerWidth - 12) left = window.innerWidth - width - 12;
+      if (left < 12) left = 12;
+      setPos({
+        top: rect.bottom + 6 + window.scrollY,
+        left: left + window.scrollX,
+        width,
+      });
+    };
+    updatePos();
+    window.addEventListener('scroll', updatePos, true);
+    window.addEventListener('resize', updatePos);
+    return () => {
+      window.removeEventListener('scroll', updatePos, true);
+      window.removeEventListener('resize', updatePos);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (
+        triggerRef.current && !triggerRef.current.contains(t) &&
+        panelRef.current && !panelRef.current.contains(t)
+      ) {
+        setOpen(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -610,8 +448,9 @@ function TargetColumnSelector({ row }: { row: ColumnAlignment }) {
   );
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
         className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
@@ -643,206 +482,50 @@ function TargetColumnSelector({ row }: { row: ColumnAlignment }) {
         />
       </button>
 
-      {open && (
-        <div className="absolute top-full left-0 mt-1.5 w-56 bg-canvas-elevated rounded-xl shadow-lg border border-canvas-border z-50 overflow-hidden">
-          <div className="p-2 border-b border-canvas-border/60">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search columns..."
-              className="w-full text-[12px] px-3 py-1.5 rounded-lg border border-canvas-border outline-none focus:border-ink-300 placeholder:text-ink-400 bg-transparent"
-              autoFocus
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-          <div className="max-h-48 overflow-y-auto py-1">
-            {filtered.length > 0 ? (
-              filtered.map((colName) => (
-                <button
-                  key={colName}
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setOpen(false); }}
-                  className={`w-full text-left px-3 py-2 text-[12px] hover:bg-brand-50 transition-colors flex items-center justify-between ${
-                    colName === row.target?.name
-                      ? 'bg-brand-50/80 text-brand-700 font-semibold'
-                      : 'text-ink-600'
-                  }`}
-                >
-                  <span>{colName}</span>
-                  {colName === row.target?.name && (
-                    <CheckCircle2 size={13} className="text-brand-600" />
-                  )}
-                </button>
-              ))
-            ) : (
-              <p className="px-3 py-3 text-[11px] text-ink-400 text-center">
-                No matching columns
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── AI Justification button + portal popover ────────────────────────
-
-function AIJustificationButton({
-  row,
-  popoverOpen,
-  onOpenPopover,
-  onClosePopover,
-  onClearReason,
-}: {
-  row: ColumnAlignment;
-  popoverOpen: boolean;
-  onOpenPopover: () => void;
-  onClosePopover: () => void;
-  onClearReason: (id: string) => void;
-}) {
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-
-  useEffect(() => {
-    if (popoverOpen && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      const panelW = 300;
-      let left = rect.right - panelW;
-      if (left < 12) left = 12;
-      if (left + panelW > window.innerWidth - 12) left = window.innerWidth - panelW - 12;
-      setPos({
-        top: rect.bottom + 10 + window.scrollY,
-        left: left + window.scrollX,
-      });
-    }
-  }, [popoverOpen]);
-
-  useEffect(() => {
-    if (!popoverOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        panelRef.current && !panelRef.current.contains(e.target as Node) &&
-        triggerRef.current && !triggerRef.current.contains(e.target as Node)
-      ) {
-        onClosePopover();
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [popoverOpen, onClosePopover]);
-
-  const metrics = [
-    { label: 'Name Similarity', weight: 35, score: row.breakdown.nameSimilarity, desc: 'Fuzzy string matching & token comparison' },
-    { label: 'Type Compatibility', weight: 25, score: row.breakdown.typeCompatibility, desc: 'Data type inference & format alignment' },
-    { label: 'Statistical Profile', weight: 20, score: row.breakdown.statisticalProfile, desc: 'Value distribution, cardinality & null ratio' },
-    { label: 'Semantic Similarity', weight: 20, score: row.breakdown.semanticSimilarity, desc: 'Embedding-based meaning comparison' },
-  ];
-
-  return (
-    <>
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={onOpenPopover}
-        className={`w-5 h-5 rounded-full transition-colors flex items-center justify-center cursor-pointer ${
-          popoverOpen
-            ? 'text-brand-600 bg-brand-100'
-            : 'text-ink-400 hover:text-brand-600 hover:bg-brand-50'
-        }`}
-        aria-label="AI justification"
-      >
-        <Info size={12} />
-      </button>
-
-      {popoverOpen &&
+      {open &&
         createPortal(
-          <motion.div
+          <div
             ref={panelRef}
-            initial={{ opacity: 0, y: 4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
-            className="w-[300px] rounded-xl bg-canvas-elevated border border-canvas-border shadow-xl z-[9999]"
-            style={{ position: 'absolute', top: pos.top, left: pos.left }}
+            style={{ position: 'absolute', top: pos.top, left: pos.left, width: pos.width }}
+            className="bg-canvas-elevated rounded-xl shadow-lg border border-canvas-border z-[9999] overflow-hidden"
           >
-            <div className="flex items-center justify-between px-3.5 pt-3 pb-2">
-              <div className="flex items-center gap-1.5">
-                <div className="w-5 h-5 rounded bg-brand-100 text-brand-600 flex items-center justify-center">
-                  <Sparkles size={11} />
-                </div>
-                <span className="text-[9.5px] font-bold uppercase tracking-[0.12em] text-brand-700">
-                  AI Justification
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={onClosePopover}
-                className="text-ink-400 hover:text-ink-800 transition-colors cursor-pointer"
-                aria-label="Close"
-              >
-                <X size={12} />
-              </button>
+            <div className="p-2 border-b border-canvas-border/60">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search columns..."
+                className="w-full text-[12px] px-3 py-1.5 rounded-lg border border-canvas-border outline-none focus:border-ink-300 placeholder:text-ink-400 bg-transparent"
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+              />
             </div>
-            <div className="px-3.5 pb-3 space-y-2.5">
-              {metrics.map((m) => (
-                <div key={m.label}>
-                  <div className="flex items-baseline justify-between mb-1">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-[11.5px] font-bold text-ink-800">{m.label}</span>
-                      <span className="text-[9.5px] font-medium text-ink-400">×{m.weight}%</span>
-                    </div>
-                    <span className={`text-[11.5px] font-bold tabular-nums ${confidenceColor(m.score)}`}>
-                      {m.score}%
-                    </span>
-                  </div>
-                  <div className="w-full h-[5px] bg-canvas rounded-full overflow-hidden mb-0.5">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${barColor(m.score)}`}
-                      style={{ width: `${m.score}%` }}
-                    />
-                  </div>
-                  <p className="text-[9.5px] text-ink-400 leading-snug">{m.desc}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mx-3.5 border-t border-canvas-border" />
-            <div className="px-3.5 py-2.5">
-              <p className="text-[10.5px] text-ink-600 leading-relaxed">{row.explanation}</p>
-              <div className="flex items-center justify-between gap-2 mt-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span
-                    className={[
-                      'inline-flex items-center rounded-full border px-2 py-0.5 text-[9.5px] font-bold tracking-wide',
-                      row.confidence >= 85
-                        ? 'bg-compliant-50 text-compliant-700 border-compliant/40'
-                        : row.confidence >= 70
-                          ? 'bg-mitigated-50 text-mitigated-700 border-mitigated/40'
-                          : 'bg-risk-50 text-risk-700 border-risk/40',
-                    ].join(' ')}
-                  >
-                    Overall: {row.confidence}%
-                  </span>
-                  <span className="text-[9.5px] text-ink-400 truncate">
-                    {row.source.name} → {row.target?.name ?? '—'}
-                  </span>
-                </div>
-                {row.reason && (
+            <div className="max-h-48 overflow-y-auto py-1">
+              {filtered.length > 0 ? (
+                filtered.map((colName) => (
                   <button
+                    key={colName}
                     type="button"
-                    onClick={() => {
-                      onClearReason(row.id);
-                      onClosePopover();
-                    }}
-                    className="inline-flex items-center gap-1 rounded-md bg-brand-600 hover:bg-brand-500 text-white text-[10.5px] font-semibold px-2 py-1 transition-colors cursor-pointer"
+                    onClick={(e) => { e.stopPropagation(); setOpen(false); }}
+                    className={`w-full text-left px-3 py-2 text-[12px] hover:bg-brand-50 transition-colors flex items-center justify-between ${
+                      colName === row.target?.name
+                        ? 'bg-brand-50/80 text-brand-700 font-semibold'
+                        : 'text-ink-600'
+                    }`}
                   >
-                    Accept
+                    <span>{colName}</span>
+                    {colName === row.target?.name && (
+                      <CheckCircle2 size={13} className="text-brand-600" />
+                    )}
                   </button>
-                )}
-              </div>
+                ))
+              ) : (
+                <p className="px-3 py-3 text-[11px] text-ink-400 text-center">
+                  No matching columns
+                </p>
+              )}
             </div>
-          </motion.div>,
+          </div>,
           document.body,
         )}
     </>

@@ -7,6 +7,7 @@ import type {
   ColumnDType,
   InputSpec,
   JourneyAlignments,
+  ClarifyQuestion,
 } from './types';
 import { SAMPLE_WORKFLOWS } from './sampleWorkflows';
 
@@ -135,6 +136,39 @@ export function generateWorkflow(prompt: string): WorkflowDraft {
     id: `draft-${Date.now()}`,
     logicPrompt: prompt.trim() || base.logicPrompt,
   };
+}
+
+export function getClarifyQuestions(w: WorkflowDraft): ClarifyQuestion[] {
+  const dateRange: ClarifyQuestion = {
+    id: 'dateRange',
+    title: 'First — what date range should I cover?',
+    options: ['Last 30 days', 'Last 90 days', 'Full FY26', 'Custom range'],
+  };
+  const materiality: ClarifyQuestion = {
+    id: 'materiality',
+    title: 'What materiality threshold should apply?',
+    options: ['Strict (< 1%)', 'Moderate (< 5%)', 'Relaxed (< 10%)', 'Custom'],
+  };
+  const vendorScope: ClarifyQuestion = {
+    id: 'vendorScope',
+    title: 'Which vendor scope should I analyze?',
+    options: ['All vendors', 'Top 50 by spend', 'Flagged vendors only', 'Specific vendor'],
+  };
+  const accountScope: ClarifyQuestion = {
+    id: 'accountScope',
+    title: 'Which account scope should I reconcile?',
+    options: ['All accounts', 'Cash accounts only', 'Balance sheet only', 'Custom selection'],
+  };
+  const outputFormat: ClarifyQuestion = {
+    id: 'outputFormat',
+    title: 'How would you like the output?',
+    options: ['Flag list', 'Detailed table', 'Executive summary', 'Interactive dashboard'],
+  };
+
+  if (w.category === 'Financial Audit') {
+    return [dateRange, materiality, accountScope, outputFormat];
+  }
+  return [dateRange, materiality, vendorScope, outputFormat];
 }
 
 export async function runWorkflow(
