@@ -129,6 +129,8 @@ export interface EngagementMeta {
   racmVersion: string;
   snapshotId: string;
   status: string;
+  activatedAt: string;
+  activatedBy: string;
 }
 
 // ─── Engagement ──────────────────────────────────────────────────────────────
@@ -149,6 +151,8 @@ export const ENGAGEMENT: EngagementMeta = {
   racmVersion: 'RACM v2.1 (Feb 2026)',
   snapshotId: 'SNAP-ENG-001',
   status: 'Active',
+  activatedAt: 'Apr 5, 2025 09:12 AM',
+  activatedBy: 'Karan Mehta',
 };
 
 // ─── Controls (realistic multi-state) ────────────────────────────────────────
