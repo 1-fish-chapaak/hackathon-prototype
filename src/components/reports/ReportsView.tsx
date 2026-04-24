@@ -7,7 +7,7 @@ import {
   Sparkles, Settings, Palette, Type,
   Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2, Trash2,
   List, LayoutGrid, GripVertical, Plus, StickyNote, PanelLeftClose, PanelLeftOpen,
-  ShieldAlert, MoreVertical, Eye, Database
+  ShieldAlert, MoreVertical, Eye, Database, Search, PackageOpen
 } from 'lucide-react';
 import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/mockData';
 import { StatusBadge } from '../shared/StatusBadge';
@@ -355,8 +355,7 @@ function UploadTemplateModal({ onClose }: { onClose: () => void }) {
 }
 
 // ─── Template Preview Modal ───
-function TemplatePreviewModal({ template, onClose, onEdit }: { template: typeof REPORT_TEMPLATES[0]; onClose: () => void; onEdit: () => void }) {
-  const { addToast } = useToast();
+function TemplatePreviewModal({ template, onClose, onEdit, onUse }: { template: typeof REPORT_TEMPLATES[0]; onClose: () => void; onEdit: () => void; onUse: () => void }) {
   const Icon = ICON_MAP[template.icon] || FileText;
   const color = CATEGORY_COLORS[template.category] || 'text-ink-500 bg-paper-50';
 
@@ -418,10 +417,131 @@ function TemplatePreviewModal({ template, onClose, onEdit }: { template: typeof 
             <Edit3 size={12} /> Edit Template
           </button>
           <button
-            onClick={() => { addToast({ type: 'success', message: 'Template applied to new report' }); onClose(); }}
+            onClick={onUse}
             className="flex items-center gap-1.5 px-5 py-2 bg-primary text-white rounded-xl text-[12px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer"
           >
             <Sparkles size={12} /> Use This Template
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── Choose Report Modal ───
+function ChooseReportModal({
+  template,
+  reports,
+  onCancel,
+  onClose,
+  onContinue,
+  onAddNew,
+}: {
+  template: typeof REPORT_TEMPLATES[0];
+  reports: typeof GENERATED_REPORTS;
+  onCancel: () => void;
+  onClose: () => void;
+  onContinue: (report: typeof GENERATED_REPORTS[0]) => void;
+  onAddNew: () => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const filtered = reports.filter(r => r.name.toLowerCase().includes(search.trim().toLowerCase()));
+  const selected = reports.find(r => r.id === selectedId) || null;
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        role="dialog" aria-modal="true" aria-label="Choose Report"
+        className="relative bg-white rounded-2xl shadow-2xl w-[520px] max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-border-light flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-primary/10 text-primary rounded-xl"><PackageOpen size={16} /></div>
+            <div>
+              <h3 className="text-[15px] font-semibold text-text">Choose Report</h3>
+              <p className="text-[12px] text-text-muted">Select an existing report or create a new report</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-paper-50 rounded-lg transition-colors cursor-pointer"><X size={16} className="text-text-muted" /></button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          {/* Search */}
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border-light focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+            <Search size={14} className="text-text-muted shrink-0" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search Report"
+              className="flex-1 bg-transparent text-[13px] text-text placeholder:text-text-muted focus:outline-none"
+            />
+          </div>
+
+          {/* Report list */}
+          <div className="space-y-2">
+            {filtered.length === 0 && (
+              <div className="px-3 py-6 text-center text-[12px] text-text-muted">No reports match your search</div>
+            )}
+            {filtered.map(r => {
+              const isSelected = selectedId === r.id;
+              return (
+                <button
+                  key={r.id}
+                  onClick={() => setSelectedId(r.id)}
+                  className={`w-full text-left flex items-start gap-3 px-4 py-3 rounded-xl border transition-colors cursor-pointer ${
+                    isSelected ? 'border-primary bg-primary/[0.04]' : 'border-border-light hover:border-primary/30 hover:bg-surface-2'
+                  }`}
+                >
+                  <span className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
+                    isSelected ? 'border-primary' : 'border-border'
+                  }`}>
+                    {isSelected && <span className="w-2 h-2 rounded-full bg-primary" />}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[13px] font-semibold text-text truncate">{r.name}</span>
+                      <span className="text-[11px] text-text-muted shrink-0">{r.generatedAt}</span>
+                    </div>
+                    <div className="text-[11px] text-text-muted truncate mt-0.5">{r.tag}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Add New Report */}
+          <button
+            onClick={onAddNew}
+            className="w-full px-4 py-3 rounded-xl bg-primary/10 hover:bg-primary/15 text-primary text-[13px] font-semibold transition-colors cursor-pointer"
+          >
+            + Add New Report
+          </button>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-border-light flex items-center gap-3 shrink-0">
+          <button
+            onClick={onCancel}
+            className="flex-1 px-5 py-2.5 rounded-lg border border-border-light text-text-secondary text-[13px] font-semibold hover:bg-paper-50 hover:text-text transition-colors cursor-pointer"
+          >
+            Back
+          </button>
+          <button
+            onClick={() => { if (selected) onContinue(selected); }}
+            disabled={!selected}
+            className="flex-1 px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold transition-colors cursor-pointer disabled:bg-primary/40 disabled:cursor-not-allowed"
+            title={`Apply "${template.name}"`}
+          >
+            Continue
           </button>
         </div>
       </motion.div>
@@ -1384,15 +1504,16 @@ function SectionTocRow({
 }
 
 // ─── Report View (with multiple queries) ───
-function ReportView({ report, onBack, onShare, onManageExceptions }: {
+function ReportView({ report, onBack, onShare, onManageExceptions, initialTemplate }: {
   report: typeof GENERATED_REPORTS[0];
   onBack: () => void;
   onShare?: () => void;
   onManageExceptions?: () => void;
+  initialTemplate?: typeof REPORT_TEMPLATES[0] | null;
 }) {
   const { addToast } = useToast();
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
-  const [appliedTemplate, setAppliedTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
+  const [appliedTemplate, setAppliedTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(initialTemplate ?? null);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
 
@@ -2069,18 +2190,21 @@ export default function ReportsView({ onShare, onManageExceptions }: ReportsView
   const [editingTemplate, setEditingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [previewingTemplate, setPreviewingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [reportAppliedTemplates] = useState<Record<string, typeof REPORT_TEMPLATES[0]>>({});
+  const [reportAppliedTemplates, setReportAppliedTemplates] = useState<Record<string, typeof REPORT_TEMPLATES[0]>>({});
+  const [chooseReportFor, setChooseReportFor] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [showNewReportTemplateSelector, setShowNewReportTemplateSelector] = useState(false);
   const [showBuilderModal, setShowBuilderModal] = useState(false);
   const [newReportName, setNewReportName] = useState('');
   const [newReportDesc, setNewReportDesc] = useState('');
   const [newReportTemplate, setNewReportTemplate] = useState('');
+  const [newReportTemplatePrefilled, setNewReportTemplatePrefilled] = useState(false);
   const { addToast } = useToast();
 
   const openNewReportModal = () => {
     setNewReportName('');
     setNewReportDesc('');
     setNewReportTemplate('');
+    setNewReportTemplatePrefilled(false);
     setShowNewReportTemplateSelector(true);
   };
   const closeNewReportModal = () => {
@@ -2129,6 +2253,7 @@ export default function ReportsView({ onShare, onManageExceptions }: ReportsView
         onBack={() => setViewingReport(null)}
         onShare={onShare ? () => onShare(viewingReport.id) : undefined}
         onManageExceptions={onManageExceptions}
+        initialTemplate={reportAppliedTemplates[viewingReport.id] ?? null}
       />
     );
   }
@@ -2137,12 +2262,14 @@ export default function ReportsView({ onShare, onManageExceptions }: ReportsView
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
       <div className="max-w-5xl mx-auto px-8 py-8 relative">
         {/* Header */}
-        <div className="flex items-end justify-between mb-6">
+        <div className="flex items-start justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-text tracking-tight">Reports</h1>
-            <p className="text-sm text-text-secondary mt-1">Generate, manage, and export compliance reports</p>
+            <div className="font-mono text-[11px] text-ink-500 mb-2 tracking-tight">
+              Reports · {activeTab === 'my-reports' ? 'My Reports' : activeTab === 'shared-reports' ? 'Shared Reports' : 'Templates'}
+            </div>
+            <h1 className="font-display text-[34px] font-[420] tracking-tight text-ink-900 leading-[1.15]">Reports</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pt-2">
             <button
               onClick={() => setShowUploadModal(true)}
               className="flex items-center gap-2 px-4 py-2 border border-border-light hover:border-primary/30 text-text-secondary hover:text-primary bg-white text-[13px] font-medium transition-colors cursor-pointer" style={{ borderRadius: '8px' }}
@@ -2453,6 +2580,33 @@ export default function ReportsView({ onShare, onManageExceptions }: ReportsView
             template={previewingTemplate}
             onClose={() => setPreviewingTemplate(null)}
             onEdit={() => { setEditingTemplate(previewingTemplate); setPreviewingTemplate(null); }}
+            onUse={() => { setChooseReportFor(previewingTemplate); setPreviewingTemplate(null); }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Choose Report Modal */}
+      <AnimatePresence>
+        {chooseReportFor && (
+          <ChooseReportModal
+            template={chooseReportFor}
+            reports={GENERATED_REPORTS}
+            onClose={() => setChooseReportFor(null)}
+            onCancel={() => { setPreviewingTemplate(chooseReportFor); setChooseReportFor(null); }}
+            onContinue={(report) => {
+              setReportAppliedTemplates(prev => ({ ...prev, [report.id]: chooseReportFor }));
+              addToast({ type: 'success', message: `"${chooseReportFor.name}" applied to "${report.name}"` });
+              setViewingReport(report);
+              setChooseReportFor(null);
+            }}
+            onAddNew={() => {
+              setNewReportName('');
+              setNewReportDesc('');
+              setNewReportTemplate(chooseReportFor.id);
+              setNewReportTemplatePrefilled(true);
+              setShowNewReportTemplateSelector(true);
+              setChooseReportFor(null);
+            }}
           />
         )}
       </AnimatePresence>
@@ -2511,11 +2665,20 @@ export default function ReportsView({ onShare, onManageExceptions }: ReportsView
                   />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-semibold text-text mb-1.5">Template</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[12px] font-semibold text-text">Template</label>
+                    {newReportTemplatePrefilled && newReportTemplate && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
+                        <Sparkles size={10} /> Pre-filled from selection
+                      </span>
+                    )}
+                  </div>
                   <select
                     value={newReportTemplate}
-                    onChange={e => setNewReportTemplate(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-border-light text-[13px] text-text appearance-none outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer bg-white"
+                    onChange={e => { setNewReportTemplate(e.target.value); setNewReportTemplatePrefilled(false); }}
+                    className={`w-full px-3 py-2.5 border text-[13px] text-text appearance-none outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer bg-white ${
+                      newReportTemplatePrefilled && newReportTemplate ? 'border-primary/50' : 'border-border-light'
+                    }`}
                     style={{ borderRadius: '8px', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236a12cd' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
                   >
                     <option value="">Select a template</option>
