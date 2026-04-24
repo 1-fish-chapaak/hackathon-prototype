@@ -57,7 +57,7 @@ export default function StepWritePrompt({
             onChange={(e) => setPrompt(e.target.value)}
             rows={3}
             placeholder="Describe a workflow and let Auditify do the rest…"
-            className="w-full bg-transparent resize-none text-[14px] text-ink-800 placeholder:text-ink-400 focus:outline-none leading-relaxed"
+            className="no-focus-ring w-full bg-transparent resize-none text-[14px] text-ink-800 placeholder:text-ink-400 focus:outline-none leading-relaxed"
           />
           <div className="flex items-center justify-between pt-3 border-t border-canvas-border">
             <div className="flex items-center gap-1.5">

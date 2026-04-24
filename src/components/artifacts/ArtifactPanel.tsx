@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X, ChevronDown, FileCode,
-  Database, BarChart3, Table2, Sparkles, Copy, Download,
-  Maximize2, ArrowRight, AlertTriangle, FileText, Share2
+  Database, BarChart3, Sparkles, Copy, Download,
+  Maximize2, AlertTriangle
 } from 'lucide-react';
 import type { ArtifactTab } from '../../hooks/useAppState';
 
@@ -20,7 +20,6 @@ const TABS: { id: ArtifactTab; label: string; icon: React.ElementType }[] = [
   { id: 'plan', label: 'Plan', icon: Sparkles },
   { id: 'code', label: 'Code', icon: FileCode },
   { id: 'sources', label: 'Sources', icon: Database },
-  { id: 'result', label: 'Result', icon: BarChart3 },
 ];
 
 function CollapsibleSection({ title, icon: Icon, defaultOpen = true, children }: { title: string; icon: React.ElementType; defaultOpen?: boolean; children: React.ReactNode }) {
@@ -198,114 +197,7 @@ function SourcesTab() {
   );
 }
 
-function ResultTab({ onManageExceptions, onAddToReport, onShareResults }: {
-  onManageExceptions?: () => void;
-  onAddToReport?: () => void;
-  onShareResults?: () => void;
-}) {
-  const risks = [
-    { id: 'RSK-001', name: 'Unauthorized vendor payments', severity: 'high', controls: 3, keyControls: 1, status: 'open' },
-    { id: 'RSK-002', name: 'Duplicate invoices leading to overpayment', severity: 'high', controls: 4, keyControls: 2, status: 'mitigated' },
-    { id: 'RSK-004', name: 'Fictitious vendor registration', severity: 'critical', controls: 0, keyControls: 0, status: 'open' },
-    { id: 'RSK-007', name: 'Malware infection via vendor portals', severity: 'high', controls: 0, keyControls: 0, status: 'open' },
-    { id: 'RSK-008', name: 'SOD violation in Accounts Payable', severity: 'critical', controls: 3, keyControls: 1, status: 'open' },
-  ];
-
-  const severityColor: Record<string, string> = {
-    critical: 'bg-risk-50 text-risk-700',
-    high: 'bg-high-50 text-high-700',
-  };
-
-  const statusColor: Record<string, string> = {
-    open: 'text-risk-700',
-    mitigated: 'text-compliant-700',
-  };
-
-  return (
-    <div className="space-y-3 pt-4">
-      <CollapsibleSection title="Query Results — 5 High/Critical Risks" icon={Table2}>
-        <div className="pt-3">
-          <div className="overflow-x-auto rounded-lg border border-border-light">
-            <table className="w-full text-[12px]">
-              <thead>
-                <tr className="bg-surface-2">
-                  <th className="text-left px-3 py-2 font-semibold text-text-secondary">ID</th>
-                  <th className="text-left px-3 py-2 font-semibold text-text-secondary">Risk</th>
-                  <th className="text-left px-3 py-2 font-semibold text-text-secondary">Severity</th>
-                  <th className="text-center px-3 py-2 font-semibold text-text-secondary">Controls</th>
-                  <th className="text-left px-3 py-2 font-semibold text-text-secondary">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {risks.map((r, i) => (
-                  <tr key={r.id} className={`border-t border-border-light hover:bg-primary-xlight/50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-surface-2/50'}`}>
-                    <td className="px-3 py-2.5 font-mono text-text-muted">{r.id}</td>
-                    <td className="px-3 py-2.5 text-text font-medium">{r.name}</td>
-                    <td className="px-3 py-2.5">
-                      <span className={`inline-flex items-center px-2 h-6 rounded-full text-[12px] font-medium ${severityColor[r.severity]}`}>
-                        {r.severity}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-center text-text">
-                      {r.controls} <span className="text-text-muted">({r.keyControls} key)</span>
-                    </td>
-                    <td className={`px-3 py-2.5 font-medium capitalize ${statusColor[r.status]}`}>{r.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </CollapsibleSection>
-
-      <CollapsibleSection title="Summary Insight" icon={Sparkles} defaultOpen={false}>
-        <div className="pt-3 text-[12.5px] text-text leading-relaxed">
-          <p>Found <strong>5 high/critical risks</strong> in the P2P process. <strong>2 risks</strong> (RSK-004, RSK-007) have <strong>zero controls</strong> mapped — these represent the highest exposure. RSK-008 (SOD violation) has controls but requires immediate attention due to critical severity.</p>
-          <div className="mt-3 flex gap-2">
-            <button className="text-[12px] text-primary font-semibold flex items-center gap-1 hover:underline cursor-pointer" id="artifact-add-report">
-              Add to Report <ArrowRight size={10} />
-            </button>
-            <button className="text-[12px] text-primary font-semibold flex items-center gap-1 hover:underline cursor-pointer">
-              Add to Dashboard <ArrowRight size={10} />
-            </button>
-          </div>
-        </div>
-      </CollapsibleSection>
-
-      {/* Action Buttons */}
-      <div className="flex gap-2 pt-2">
-        {onAddToReport && (
-          <button
-            onClick={onAddToReport}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 border border-border-light rounded-xl text-[12px] font-semibold text-text-secondary hover:border-primary/30 hover:text-primary hover:bg-primary-xlight/50 transition-all cursor-pointer"
-          >
-            <FileText size={12} />
-            Add to Report
-          </button>
-        )}
-        {onManageExceptions && (
-          <button
-            onClick={onManageExceptions}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-brand-600 text-white rounded-md text-[12px] font-semibold hover:bg-brand-500 transition-colors cursor-pointer"
-          >
-            <AlertTriangle size={12} />
-            Manage exceptions
-          </button>
-        )}
-        {onShareResults && (
-          <button
-            onClick={onShareResults}
-            className="flex items-center justify-center gap-1.5 px-3 py-2.5 border border-border-light rounded-xl text-[12px] font-semibold text-text-secondary hover:border-primary/30 hover:text-primary hover:bg-primary-xlight/50 transition-all cursor-pointer"
-          >
-            <Share2 size={12} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export default function ArtifactPanel({ activeTab, setActiveTab, onClose, onManageExceptions, onAddToReport, onShareResults }: ArtifactPanelProps) {
+export default function ArtifactPanel({ activeTab, setActiveTab, onClose }: ArtifactPanelProps) {
   return (
     <motion.div
       initial={{ width: 0, opacity: 0 }}
@@ -358,7 +250,6 @@ export default function ArtifactPanel({ activeTab, setActiveTab, onClose, onMana
             {activeTab === 'plan' && <PlanTab />}
             {activeTab === 'code' && <CodeTab />}
             {activeTab === 'sources' && <SourcesTab />}
-            {activeTab === 'result' && <ResultTab onManageExceptions={onManageExceptions} onAddToReport={onAddToReport} onShareResults={onShareResults} />}
           </motion.div>
         </AnimatePresence>
       </div>

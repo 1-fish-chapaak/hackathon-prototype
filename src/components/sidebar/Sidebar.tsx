@@ -5,7 +5,8 @@ import {
   FileBarChart, ChevronDown, PanelLeft,
   AlertTriangle, Sparkles, Building2, Home, Calendar,
   Shield, Search as SearchIcon, Settings, Clock, Check,
-  Wand2, MoreHorizontal, LogOut, HelpCircle, ExternalLink
+  Wand2, MoreHorizontal, LogOut, HelpCircle, ExternalLink,
+  ClipboardCheck, FileText, Target
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
 
@@ -256,7 +257,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
 
           <NavItem icon={LayoutDashboard} label="Dashboard" active={view === 'dashboards'} expanded={isExpanded} onClick={() => setView('dashboards')} />
           <NavItem icon={FileBarChart} label="Report" active={view === 'reports' || view === 'report-history' || view === 'report-builder'} expanded={isExpanded} onClick={() => setView('reports')} />
-          <NavItem icon={Workflow} label="Workflow Library" active={workflowViews.includes(view)} expanded={isExpanded} onClick={() => setView('workflow-templates')} />
+          <NavItem icon={Workflow} label="Workflow Library" active={workflowViews.includes(view)} expanded={isExpanded} onClick={() => setView('workflow-library')} />
           <NavItem icon={Wand2} label="AI Concierge" active={aiConciergeViews.includes(view)} expanded={isExpanded} onClick={() => setView('ai-concierge')} />
 
           {/* ── SYSTEM ── */}

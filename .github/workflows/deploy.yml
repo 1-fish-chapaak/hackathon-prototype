@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   PROJECT_ID: gen-lang-client-0250661731
   REGION: us-central1
   SERVICE: hackathon-demo

@@ -2,11 +2,13 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Send, Paperclip, Sparkles, History, X, FileText,
-  Workflow, ShieldCheck, BarChart3, Search, ChevronDown,
-  MessageSquare, ArrowRight, ArrowRightLeft, Mic, Plus, Lightbulb, Zap,
-  SlidersHorizontal, Target, Code2, Database, Save, CheckCircle
+  Workflow, ShieldCheck, BarChart3, ChevronDown, ChevronRight,
+  MessageSquare, ArrowRight, Mic, Plus, Lightbulb,
+  Save, CheckCircle, Maximize2,
+  ExternalLink, Download, MoreHorizontal, Pencil, CornerDownLeft, ArrowUpRight,
 } from 'lucide-react';
 import { CHAT_HISTORY, CHAT_CONVERSATIONS, CLARIFICATION_STEPS } from '../../data/mockData';
+import { useToast } from '../shared/Toast';
 import type { WorkflowTypeId } from '../../data/mockData';
 import type { ArtifactTab } from '../../hooks/useAppState';
 import { TextShimmer } from '../shared/TextShimmer';
@@ -15,8 +17,6 @@ import BorderGlow from '../shared/BorderGlow';
 import FloatingLines from '../shared/FloatingLines';
 // Persona removed — Rive WebGL crashes in some browsers
 import ClarificationCard from './ClarificationCard';
-import AssumptionsPanel from './AssumptionsPanel';
-import ProgressiveLoader from './ProgressiveLoader';
 
 interface ChatMessage {
   id: string;
@@ -28,9 +28,68 @@ interface ChatMessage {
   followUps?: string[];
   timestamp: Date;
   // Rich inline components
-  richType?: 'summary-kpi' | 'threshold-control' | 'save-workflow-prompt';
+  richType?: 'summary-kpi' | 'audit-result' | 'audit-loading' | 'clarification' | 'save-workflow-prompt';
   richData?: Record<string, unknown>;
 }
+
+// Clarification interaction shape (one per IRA message of richType 'clarification')
+interface ClarificationData {
+  intro: string;
+  questions: { question: string; options: string[] }[];
+  answers: Record<number, string>;
+  status: 'open' | 'submitted'; // 'submitted' freezes the UI into a recap
+}
+
+// ─── Audit-query result fixture ──────────────────────────────────────────────
+const AUDIT_RESULT = {
+  kpis: [
+    { label: 'Records scanned', value: '1.2M', color: 'text-ink-800' },
+    { label: 'Duplicates found', value: '8', color: 'text-risk-700' },
+    { label: 'Total amount', value: '₹6.16L', color: 'text-mitigated-700' },
+    { label: 'Highest match', value: '96%', color: 'text-evidence-700' },
+  ],
+  charts: [
+    {
+      id: 'confidence',
+      label: 'By confidence',
+      // Match-score histogram — 4 vertical bars
+      data: [
+        { bucket: '90–100%', count: 5, tone: 'bg-risk' },
+        { bucket: '80–89%', count: 2, tone: 'bg-high' },
+        { bucket: '70–79%', count: 1, tone: 'bg-mitigated' },
+        { bucket: '60–69%', count: 0, tone: 'bg-compliant' },
+      ],
+    },
+    {
+      id: 'vendor',
+      label: 'By vendor',
+      // Top vendors — horizontal bars
+      data: [
+        { bucket: 'Acme Corp', count: 4, tone: 'bg-risk' },
+        { bucket: 'Global Supplies', count: 2, tone: 'bg-high' },
+        { bucket: 'TechParts Ltd', count: 1, tone: 'bg-mitigated' },
+        { bucket: 'FastShip Logistics', count: 1, tone: 'bg-mitigated' },
+      ],
+    },
+  ],
+  table: {
+    columns: ['Invoice A', 'Invoice B', 'Vendor', 'Amount', 'Match %'],
+    rows: [
+      ['INV-2024-8821', 'INV-2024-8847', 'Acme Corp', '₹1,42,500', '96%'],
+      ['INV-2024-8910', 'INV-2024-9001', 'Acme Corp', '₹89,200', '94%'],
+      ['INV-2024-9112', 'INV-2024-9183', 'Global Supplies', '₹2,18,400', '92%'],
+      ['INV-2024-9245', 'INV-2024-9301', 'Acme Corp', '₹54,000', '91%'],
+      ['INV-2024-9377', 'INV-2024-9420', 'Global Supplies', '₹76,800', '90%'],
+    ],
+    totalRows: 8,
+  },
+};
+
+const AUDIT_FOLLOWUPS = [
+  'Show match-method breakdown for the top 3 flags',
+  'Drill into Acme Corp’s flagged invoices',
+  'Build a recurring duplicate-invoice monitoring workflow',
+];
 
 interface ChatViewProps {
   showChatHistory: boolean;
@@ -51,197 +110,19 @@ interface ChatViewProps {
   setView?: (v: import('../../hooks/useAppState').View) => void;
 }
 
-type DetailedQueryType = 'duplicate-invoice' | 'workflow' | 'reconciliation' | 'sox-compliance' | 'vendor-spend' | 'uncontrolled-risks' | 'control-effectiveness' | 'generic';
-
-const classifyDetailedQuery = (msg: string): DetailedQueryType => {
-  const lower = msg.toLowerCase();
-  // Reconciliation (check before workflow since "build a reconciliation" should match reconciliation)
-  if (lower.includes('reconciliation') || lower.includes('three-way') || lower.includes('3-way') || lower.includes('po match')) {
-    return 'reconciliation';
-  }
-  // Workflow
-  if (lower.includes('workflow') || lower.includes('build a') || lower.includes('build me') || lower.includes('create a') || lower.includes('design a')) {
-    return 'workflow';
-  }
-  // Duplicate invoice
-  if ((lower.includes('duplicate') && lower.includes('invoice')) || (lower.includes('duplicate') && lower.includes('detect'))) {
-    return 'duplicate-invoice';
-  }
-  // SOX compliance
-  if (lower.includes('sox') || (lower.includes('compliance') && (lower.includes('status') || lower.includes('audit') || lower.includes('report') || lower.includes('progress')))) {
-    return 'sox-compliance';
-  }
-  // Vendor spend
-  if (lower.includes('vendor spend') || lower.includes('vendor analysis') || lower.includes('top vendor') || lower.includes('vendor concentration') || lower.includes('spend analysis')) {
-    return 'vendor-spend';
-  }
-  // Uncontrolled risks
-  if (lower.includes('uncontrolled risk') || lower.includes('risks without control') || lower.includes('no controls') || lower.includes('zero controls') || lower.includes('unmapped risk')) {
-    return 'uncontrolled-risks';
-  }
-  // Control effectiveness
-  if (lower.includes('control effectiveness') || lower.includes('ineffective control') || lower.includes('control performance') || lower.includes('effectiveness rate')) {
-    return 'control-effectiveness';
-  }
-  return 'generic';
-};
-
-const DETAILED_QUERY_CONFIG: Record<Exclude<DetailedQueryType, 'duplicate-invoice' | 'workflow' | 'reconciliation'>, {
-  thinking: string[];
-  responseText: string;
-  insightsText: string;
-  kpis: { label: string; value: string; color: string }[];
-  followUps: string[];
-}> = {
-  'sox-compliance': {
-    thinking: [
-      'Analyzing SOX compliance scope...',
-      'Querying control testing results...',
-      'Evaluating deficiency classifications...',
-      'Cross-referencing PCAOB standards...',
-      'Compiling compliance dashboard...',
-    ],
-    responseText: "Here's your current SOX audit status. The assessment is 58% complete with 14 of 24 controls tested so far. 2 deficiencies have been identified that require remediation before the reporting deadline.",
-    insightsText: "**Key Insights:** 2 material weaknesses identified in IT General Controls (ITGC-003, ITGC-007). Revenue recognition controls (SOX-RC-01) passed with no exceptions. Segregation of duties testing is pending for 4 remaining controls. Recommend escalating ITGC remediation to meet Q2 deadline.",
-    kpis: [
-      { label: 'Controls Tested', value: '14/24', color: 'text-evidence-700' },
-      { label: 'Completion', value: '58%', color: 'text-primary' },
-      { label: 'Deficiencies', value: '2', color: 'text-risk-700' },
-      { label: 'On Track', value: 'At Risk', color: 'text-high-700' },
-    ],
-    followUps: [
-      'Show details on the 2 deficiencies found',
-      'Which controls are still pending testing?',
-      'Generate a SOX status report for the audit committee',
-      'What is the remediation timeline for ITGC issues?',
-      'Compare progress against last year\'s SOX timeline',
-    ],
-  },
-  'vendor-spend': {
-    thinking: [
-      'Querying vendor master data...',
-      'Aggregating spend by vendor...',
-      'Calculating concentration risk metrics...',
-      'Identifying single-source dependencies...',
-      'Generating vendor analysis...',
-    ],
-    responseText: "I've analyzed vendor spend across all business units. Your top 5 vendors account for 67% of total procurement spend, indicating moderate concentration risk. Here's the breakdown:",
-    insightsText: "**Key Insights:** Acme Corp ($4.2M, 23% of spend) is the largest vendor with no secondary source. 3 vendors have contracts expiring within 60 days. Vendor VND-0042 (TechServ Ltd) shows a 340% spend increase YoY — flagged for review. Recommend diversifying supply chain for critical categories.",
-    kpis: [
-      { label: 'Total Spend', value: '$18.4M', color: 'text-text' },
-      { label: 'Top 5 Share', value: '67%', color: 'text-high-700' },
-      { label: 'Active Vendors', value: '892', color: 'text-evidence-700' },
-      { label: 'High Risk', value: '3', color: 'text-risk-700' },
-    ],
-    followUps: [
-      'Show the full vendor concentration breakdown',
-      'Which vendors have contracts expiring soon?',
-      'Flag vendors with unusual spend increases',
-      'Build a vendor risk monitoring workflow',
-      'Compare vendor spend against budget allocations',
-    ],
-  },
-  'uncontrolled-risks': {
-    thinking: [
-      'Scanning risk register...',
-      'Cross-referencing control mappings...',
-      'Identifying gaps in coverage...',
-      'Evaluating residual risk exposure...',
-      'Compiling uncontrolled risk report...',
-    ],
-    responseText: "I've identified 3 risks with zero controls mapped: RSK-004 (Unauthorized vendor payments), RSK-007 (Data exfiltration via API), and RSK-009 (Segregation of duties bypass). These represent your highest exposure areas.",
-    insightsText: "**Key Insights:** RSK-004 has been uncontrolled for 120+ days and is rated Critical severity. RSK-007 was added last quarter after a penetration test finding. RSK-009 was previously controlled by CTR-011 which was retired in Jan 2026. Recommend immediate control mapping for all three — combined inherent risk exposure is $2.1M.",
-    kpis: [
-      { label: 'Uncontrolled', value: '3', color: 'text-risk-700' },
-      { label: 'Critical', value: '1', color: 'text-risk-700' },
-      { label: 'Exposure', value: '$2.1M', color: 'text-high-700' },
-      { label: 'Avg Days Open', value: '87', color: 'text-high-700' },
-    ],
-    followUps: [
-      'Suggest controls for RSK-004',
-      'Show the full risk register with control gaps',
-      'What controls were previously mapped to these risks?',
-      'Escalate uncontrolled risks to the risk committee',
-      'Build an automated control gap monitoring workflow',
-    ],
-  },
-  'control-effectiveness': {
-    thinking: [
-      'Pulling control testing results...',
-      'Computing effectiveness scores...',
-      'Identifying underperforming controls...',
-      'Analyzing failure patterns...',
-      'Generating effectiveness report...',
-    ],
-    responseText: "Control effectiveness analysis complete. Your overall effectiveness rate is 79% across 42 active controls. CTR-004 (Three-way match verification) is rated Ineffective with a 34% pass rate in the last testing cycle.",
-    insightsText: "**Key Insights:** CTR-004 failed 19 of 29 test samples — root cause is manual override by AP clerks. CTR-012 (Access review) dropped from 95% to 71% effectiveness this quarter. 6 controls are rated Needs Improvement. Top performing: CTR-001 (automated bank reconciliation) at 99% effectiveness. Recommend automating CTR-004 to eliminate manual bypass.",
-    kpis: [
-      { label: 'Overall Rate', value: '79%', color: 'text-evidence-700' },
-      { label: 'Ineffective', value: '1', color: 'text-risk-700' },
-      { label: 'Needs Improvement', value: '6', color: 'text-high-700' },
-      { label: 'Effective', value: '35', color: 'text-compliant' },
-    ],
-    followUps: [
-      'Show details on CTR-004 failures',
-      'What is causing the decline in CTR-012?',
-      'Recommend automation options for manual controls',
-      'Compare effectiveness rates quarter over quarter',
-      'Generate a control effectiveness report for management',
-    ],
-  },
-  'generic': {
-    thinking: [
-      'Analyzing query...',
-      'Identifying relevant data sources...',
-      'Querying SAP ERP — AP Module...',
-      'Processing 1.2M records...',
-      'Generating results...',
-    ],
-    responseText: "I found the relevant data from your connected sources. Here's a summary:",
-    insightsText: "**Key Insights:** 2 risks (RSK-004, RSK-007) have zero controls mapped — highest exposure. RSK-008 (SOD violation) has controls but requires immediate attention due to critical severity. Recommend prioritizing control mapping for uncontrolled risks and scheduling a focused review of AP segregation of duties.",
-    kpis: [
-      { label: 'Records Scanned', value: '1.2M', color: 'text-text' },
-      { label: 'Risks Found', value: '5', color: 'text-high-700' },
-      { label: 'Critical', value: '2', color: 'text-risk-700' },
-      { label: 'Uncontrolled', value: '2', color: 'text-risk-700' },
-    ],
-    followUps: [
-      'Show me the trend over the last 6 months',
-      'Which controls can mitigate these risks?',
-      'Generate a compliance report from these results',
-      'Build a monitoring workflow for these risks',
-      'Compare this against last quarter\'s assessment',
-    ],
-  },
-};
-
 const QUICK_ACTIONS = [
   { icon: Workflow, label: 'Build a workflow', color: 'from-purple-500 to-violet-600' },
   { icon: ShieldCheck, label: 'Run audit query', color: 'from-blue-500 to-cyan-500' },
-  { icon: BarChart3, label: 'Generate report', color: 'from-emerald-500 to-teal-500' },
-  { icon: Search, label: 'Search risk register', color: 'from-orange-500 to-amber-500' },
-  { icon: ArrowRightLeft, label: 'Run 3-way reconciliation', color: 'from-teal-500 to-emerald-500' },
 ];
 
-const QUERY_FOLLOWUPS = [
-  'Show me the trend over the last 6 months',
-  'Which controls can mitigate these risks?',
-  'Generate a compliance report from these results',
-  'Build a monitoring workflow for these risks',
-  'Compare this against last quarter\'s assessment',
-];
-
-const RECOMMENDED_WORKFLOWS = [
-  { label: 'Three-Way PO Reconciliation', desc: 'Match PO, GRN & Invoice data with freeze options', icon: ArrowRightLeft, color: 'text-teal-600 bg-teal-50' },
-  { label: 'Payment Anomaly Detector', desc: 'ML-based unusual payment pattern detection', icon: Zap, color: 'text-high-700 bg-high-50' },
-  { label: 'Audit Evidence Collector', desc: 'Auto-gather evidence for control testing', icon: BarChart3, color: 'text-compliant bg-compliant-50' },
-];
-
-const LOADING_STEPS = [
-  { label: 'Generating execution plan...', title: 'Execution Plan', content: '5-step query plan: Ingest → Normalize → Match → Score → Flag', icon: Target, type: 'plan' as const },
-  { label: 'Writing SQL query...', title: 'Generated Query', content: 'SELECT inv.*, similarity_score(...) AS match_pct FROM invoices inv JOIN ...', icon: Code2, type: 'code' as const },
-  { label: 'Connecting data sources...', title: 'Data Sources', content: 'SAP ERP AP Module (1.2M rows), Vendor Master (892), Invoice Archive (4,521)', icon: Database, type: 'sources' as const },
-  { label: 'Processing 1.2M records...', title: 'Results', content: '8 potential duplicates found totaling ₹6.16L. Highest match: 96%', icon: BarChart3, type: 'result' as const },
+// Step labels for the subtle inline audit loader. The artifact panel renders
+// the full Plan / Code / Sources detail; here we only narrate progress as a
+// single shimmering line and sync the active artifact tab.
+const LOADING_STEPS: { label: string; tab: ArtifactTab | null }[] = [
+  { label: 'Generating execution plan…',  tab: 'plan' },
+  { label: 'Writing SQL query…',          tab: 'code' },
+  { label: 'Connecting data sources…',    tab: 'sources' },
+  { label: 'Processing 1.2M records…',    tab: null },
 ];
 
 const WORKFLOW_TYPE_NAMES: Record<WorkflowTypeId, string> = {
@@ -260,6 +141,526 @@ const detectWorkflowType = (msg: string): WorkflowTypeId => {
   return 'detection';
 };
 
+// ─── Chart primitives ────────────────────────────────────────────────────────
+
+type ChartDatum = { bucket: string; count: number; tone: string };
+
+function VerticalBars({ data, maxBarHeight = 140 }: { data: ChartDatum[]; maxBarHeight?: number }) {
+  const max = Math.max(...data.map(d => d.count), 1);
+  return (
+    <div className="flex items-end justify-around gap-3 px-2" style={{ height: maxBarHeight + 32 }}>
+      {data.map(d => {
+        const h = (d.count / max) * maxBarHeight;
+        return (
+          <div key={d.bucket} className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
+            <div className="text-[12px] font-semibold text-ink-700 tabular-nums">{d.count}</div>
+            <div className={`w-full rounded-t-md ${d.tone}`} style={{ height: Math.max(h, 2) }} />
+            <div className="text-[11px] text-ink-500 truncate w-full text-center">{d.bucket}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function HorizontalBars({ data }: { data: ChartDatum[] }) {
+  const max = Math.max(...data.map(d => d.count), 1);
+  return (
+    <div className="flex flex-col gap-2 px-2 py-3">
+      {data.map(d => {
+        const w = (d.count / max) * 100;
+        return (
+          <div key={d.bucket} className="flex items-center gap-3">
+            <div className="w-32 text-[12px] text-ink-700 truncate shrink-0">{d.bucket}</div>
+            <div className="flex-1 h-5 bg-paper-100 rounded-md overflow-hidden">
+              <div className={`h-full rounded-md ${d.tone}`} style={{ width: `${w}%` }} />
+            </div>
+            <div className="w-6 text-right text-[12px] font-semibold text-ink-700 tabular-nums">{d.count}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function renderChart(chart: typeof AUDIT_RESULT.charts[number], variant: 'inline' | 'fullscreen') {
+  if (chart.id === 'confidence') return <VerticalBars data={chart.data} maxBarHeight={variant === 'fullscreen' ? 280 : 140} />;
+  return <HorizontalBars data={chart.data} />;
+}
+
+// ─── ChartGroup with chip toggle + fullscreen ────────────────────────────────
+
+function ChartGroup({ charts }: { charts: typeof AUDIT_RESULT.charts }) {
+  const [activeId, setActiveId] = useState(charts[0].id);
+  const [fullscreen, setFullscreen] = useState(false);
+  const active = charts.find(c => c.id === activeId) ?? charts[0];
+
+  return (
+    <>
+      <div className="rounded-xl border border-canvas-border bg-canvas-elevated overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-canvas-border bg-paper-50/60">
+          {charts.length > 1 ? (
+            <div className="inline-flex items-center gap-1 p-0.5 rounded-md bg-paper-100">
+              {charts.map(c => {
+                const isActive = c.id === activeId;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setActiveId(c.id)}
+                    className={`px-2.5 h-7 rounded text-[12px] font-medium transition-colors ${
+                      isActive ? 'bg-canvas-elevated text-brand-700 shadow-sm' : 'text-ink-500 hover:text-ink-700'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <span className="text-[12px] font-medium text-ink-700">{active.label}</span>
+          )}
+          <button
+            onClick={() => setFullscreen(true)}
+            className="p-1.5 rounded-md text-ink-500 hover:text-ink-700 hover:bg-paper-100 transition-colors cursor-pointer"
+            aria-label="Expand chart"
+          >
+            <Maximize2 size={14} />
+          </button>
+        </div>
+        <div className="py-3">{renderChart(active, 'inline')}</div>
+      </div>
+      <AnimatePresence>
+        {fullscreen && (
+          <FullscreenChartModal
+            charts={charts}
+            activeId={activeId}
+            onActiveChange={setActiveId}
+            onClose={() => setFullscreen(false)}
+          />
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+function FullscreenChartModal({
+  charts, activeId, onActiveChange, onClose,
+}: {
+  charts: typeof AUDIT_RESULT.charts;
+  activeId: string;
+  onActiveChange: (id: string) => void;
+  onClose: () => void;
+}) {
+  const active = charts.find(c => c.id === activeId) ?? charts[0];
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+    >
+      <div className="absolute inset-0 bg-ink-900/40 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ scale: 0.96, y: 8 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.96, y: 8 }}
+        transition={{ duration: 0.15, ease: [0.2, 0, 0, 1] }}
+        className="relative w-[960px] max-w-[90vw] bg-canvas-elevated rounded-2xl border border-canvas-border shadow-xl overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-5 py-3 border-b border-canvas-border">
+          {charts.length > 1 ? (
+            <div className="inline-flex items-center gap-1 p-0.5 rounded-md bg-paper-100">
+              {charts.map(c => {
+                const isActive = c.id === activeId;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => onActiveChange(c.id)}
+                    className={`px-3 h-7 rounded text-[12px] font-medium transition-colors ${
+                      isActive ? 'bg-canvas-elevated text-brand-700 shadow-sm' : 'text-ink-500 hover:text-ink-700'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <span className="text-[13px] font-semibold text-ink-800">{active.label}</span>
+          )}
+          <button onClick={onClose} className="p-1.5 rounded-md text-ink-500 hover:text-ink-700 hover:bg-paper-100 transition-colors cursor-pointer">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="overflow-x-auto p-6">
+          <div className="min-w-[600px]">{renderChart(active, 'fullscreen')}</div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── Results table preview ───────────────────────────────────────────────────
+
+function ResultsTable({
+  columns, rows, totalRows, onOpen, onDownload,
+}: {
+  columns: string[];
+  rows: string[][];
+  totalRows: number;
+  onOpen: () => void;
+  onDownload: () => void;
+}) {
+  return (
+    <div className="rounded-xl border border-canvas-border bg-canvas-elevated overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="border-b border-canvas-border bg-paper-50">
+              {columns.map(c => (
+                <th key={c} className="text-left px-3 py-2.5 font-semibold text-ink-500">{c}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i} className="border-b border-canvas-border last:border-b-0 hover:bg-brand-50/40 transition-colors">
+                {row.map((cell, j) => (
+                  <td key={j} className={`px-3 py-2.5 text-ink-700 ${j >= 3 ? 'tabular-nums' : ''}`}>{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex items-center justify-between px-3 py-2 border-t border-canvas-border bg-paper-50/60">
+        <span className="text-[12px] text-ink-500">Preview · <span className="tabular-nums">{rows.length}</span> of <span className="tabular-nums">{totalRows}</span> results</span>
+        <div className="flex items-center gap-1">
+          <button onClick={onOpen} className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[12px] text-ink-600 hover:text-brand-700 hover:bg-brand-50 transition-colors cursor-pointer">
+            <ExternalLink size={12} /> Open in new view
+          </button>
+          <button onClick={onDownload} className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[12px] text-ink-600 hover:text-brand-700 hover:bg-brand-50 transition-colors cursor-pointer">
+            <Download size={12} /> Download CSV
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Actions dropdown ────────────────────────────────────────────────────────
+
+function ActionsMenu({ onPick }: { onPick: (action: 'workflow' | 'report' | 'dashboard') => void }) {
+  const [open, setOpen] = useState(false);
+  const items: { id: 'workflow' | 'report' | 'dashboard'; label: string; icon: React.ElementType }[] = [
+    { id: 'workflow', label: 'Save as workflow', icon: Workflow },
+    { id: 'report', label: 'Add to report', icon: FileText },
+    { id: 'dashboard', label: 'Add to dashboard', icon: BarChart3 },
+  ];
+  return (
+    <div className="relative inline-block">
+      <button
+        onClick={() => setOpen(p => !p)}
+        className="inline-flex items-center gap-2 h-9 px-3 rounded-md bg-canvas-elevated border border-canvas-border text-[12px] font-semibold text-ink-700 hover:border-brand-200 hover:text-ink-800 transition-colors cursor-pointer"
+      >
+        <MoreHorizontal size={14} />
+        Actions
+        <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.12 }}
+              className="absolute left-0 top-full mt-1 w-56 z-20 bg-canvas-elevated border border-canvas-border rounded-md py-1 shadow-md"
+            >
+              {items.map(item => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => { onPick(item.id); setOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-ink-700 hover:bg-brand-50 hover:text-brand-700 transition-colors cursor-pointer"
+                  >
+                    <Icon size={14} className="text-ink-500" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Collapsible thinking trail (one per IRA message) ───────────────────────
+
+function ThinkingTrail({ summary, steps, defaultOpen = false }: {
+  summary: string;
+  steps: string[];
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  if (!steps.length) return null;
+  return (
+    <button
+      onClick={() => setOpen(p => !p)}
+      className="group inline-flex items-start gap-1.5 text-left text-[12px] text-ink-500 hover:text-ink-700 transition-colors cursor-pointer mb-2"
+    >
+      <ChevronRight size={12} className={`mt-0.5 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+      <span className="flex-1">
+        <span className="block">{summary}</span>
+        {open && (
+          <span className="mt-1.5 block pl-2 border-l border-canvas-border space-y-0.5">
+            {steps.map((s, i) => (
+              <span key={i} className="block text-ink-500">— {s}</span>
+            ))}
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}
+
+// ─── Clarification block (interactive, lives inside an IRA message) ────────
+
+function ClarificationBlock({
+  data, onAnswer, onSubmit, onSkipAll, onSkipCurrent,
+}: {
+  data: ClarificationData;
+  onAnswer: (qIndex: number, answer: string) => void;
+  onSubmit: () => void;
+  onSkipAll: () => void;
+  onSkipCurrent: (qIndex: number) => void;
+}) {
+  const total = data.questions.length;
+  const answeredCount = Object.keys(data.answers).length;
+  const activeIndex = data.questions.findIndex((_, i) => data.answers[i] === undefined);
+
+  const [highlighted, setHighlighted] = useState(0);
+  const [customInput, setCustomInput] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const customInputRef = useRef(customInput);
+  customInputRef.current = customInput;
+
+  // Reset highlight + input when active question changes
+  useEffect(() => {
+    setHighlighted(0);
+    setCustomInput('');
+  }, [activeIndex]);
+
+  const activeQ = activeIndex !== -1 ? data.questions[activeIndex] : null;
+  const optionCount = activeQ?.options.length ?? 0;
+
+  // Keyboard navigation — only fires while clarification is open and active
+  useEffect(() => {
+    if (data.status === 'submitted' || activeIndex === -1 || !activeQ) return;
+    const handler = (e: KeyboardEvent) => {
+      const active = document.activeElement;
+      const inMainTextarea =
+        active instanceof HTMLTextAreaElement ||
+        (active instanceof HTMLInputElement && active !== inputRef.current);
+      const inOurInput = active === inputRef.current;
+
+      if (e.key === 'ArrowDown') {
+        if (inMainTextarea) return;
+        e.preventDefault();
+        setHighlighted(h => Math.min(h + 1, optionCount - 1));
+      } else if (e.key === 'ArrowUp') {
+        if (inMainTextarea) return;
+        e.preventDefault();
+        setHighlighted(h => Math.max(h - 1, 0));
+      } else if (e.key === 'Enter' && !inMainTextarea && !inOurInput) {
+        e.preventDefault();
+        selectOption(activeQ.options[highlighted]);
+      } else if (e.key === 'Escape') {
+        if (inMainTextarea) return;
+        e.preventDefault();
+        skipCurrent();
+      } else if (/^[1-9]$/.test(e.key) && !inMainTextarea && !inOurInput) {
+        const num = parseInt(e.key, 10) - 1;
+        if (num < optionCount) {
+          e.preventDefault();
+          selectOption(activeQ.options[num]);
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+    // selectOption / skipCurrent close over highlighted + activeIndex; we want fresh ones
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlighted, activeIndex, optionCount, data.status]);
+
+  if (data.status === 'submitted') {
+    return (
+      <div className="text-[13px] text-ink-700 leading-relaxed">
+        Got it — running with these inputs.
+      </div>
+    );
+  }
+
+  if (activeIndex === -1 || !activeQ) {
+    return null;
+  }
+
+  function selectOption(opt: string) {
+    if (activeIndex === -1) return;
+    const wasLast = answeredCount === total - 1;
+    onAnswer(activeIndex, opt);
+    if (wasLast) setTimeout(() => onSubmit(), 80);
+  }
+
+  function skipCurrent() {
+    if (activeIndex === -1) return;
+    const wasLast = activeIndex === total - 1;
+    onSkipCurrent(activeIndex);
+    if (wasLast) setTimeout(() => onSubmit(), 80);
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="rounded-xl border border-canvas-border bg-canvas-elevated overflow-hidden shadow-sm">
+        {/* Header */}
+        <div className="px-4 py-3 border-b border-canvas-border bg-paper-50/40 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[13px] font-semibold text-ink-800 truncate">{activeQ.question}</span>
+            <span className="text-[11px] text-ink-500 tabular-nums shrink-0">· {activeIndex + 1} of {total}</span>
+          </div>
+          <button
+            onClick={onSkipAll}
+            aria-label="Dismiss clarification"
+            className="text-ink-400 hover:text-ink-700 p-0.5 rounded transition-colors cursor-pointer shrink-0"
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Numbered options */}
+        <div role="listbox" aria-label={activeQ.question}>
+          {activeQ.options.map((opt, idx) => {
+            const isHighlighted = highlighted === idx;
+            return (
+              <button
+                key={opt}
+                role="option"
+                aria-selected={isHighlighted}
+                onClick={() => selectOption(opt)}
+                onMouseEnter={() => setHighlighted(idx)}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left border-t border-canvas-border first:border-t-0 transition-colors cursor-pointer ${
+                  isHighlighted ? 'bg-paper-100/70' : 'hover:bg-paper-50/50'
+                }`}
+              >
+                <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-[11px] font-mono tabular-nums shrink-0 transition-colors ${
+                  isHighlighted ? 'bg-paper-200 text-ink-800' : 'bg-paper-100 text-ink-500'
+                }`}>
+                  {idx + 1}
+                </span>
+                <span className="flex-1 text-[13px] text-ink-800">{opt}</span>
+                {isHighlighted && (
+                  <CornerDownLeft size={12} className="text-ink-500 shrink-0" />
+                )}
+              </button>
+            );
+          })}
+
+          {/* Custom input row */}
+          <div className="border-t border-canvas-border flex items-center gap-3 px-4 py-2">
+            <Pencil size={13} className="text-ink-400 shrink-0" />
+            <input
+              ref={inputRef}
+              value={customInput}
+              onChange={e => setCustomInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && customInputRef.current.trim()) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  selectOption(customInputRef.current.trim());
+                }
+              }}
+              placeholder="Something else"
+              className="flex-1 bg-transparent text-[13px] text-ink-800 placeholder:text-ink-400 outline-none h-8"
+            />
+            <button
+              onClick={skipCurrent}
+              className="px-3 h-7 text-[12px] font-medium text-ink-600 hover:text-ink-800 border border-canvas-border bg-paper-50/60 hover:bg-paper-100/60 rounded-md transition-colors cursor-pointer shrink-0"
+            >
+              Skip
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer kbd hints + answered tally */}
+      <div className="flex items-center justify-between gap-4 text-[11px] text-ink-500 px-1">
+        <div className="flex items-center gap-3">
+          <span>↑↓ to navigate</span>
+          <span className="text-ink-300">·</span>
+          <span>Enter to select</span>
+          <span className="text-ink-300">·</span>
+          <span>Esc to skip</span>
+        </div>
+        <span className="tabular-nums">{answeredCount} of {total} answered</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Subtle inline audit loader ───────────────────────────────────────────────
+// Single shimmering line that cycles through LOADING_STEPS, syncs the active
+// artifact tab as it advances, and fires onComplete when done. The artifact
+// panel carries the heavy detail (Plan / Code / Sources); inline stays quiet.
+function InlineAuditLoader({
+  steps,
+  onTabSwitch,
+  onComplete,
+  stepDurationMs = 1700,
+}: {
+  steps: { label: string; tab: ArtifactTab | null }[];
+  onTabSwitch?: (tab: ArtifactTab) => void;
+  onComplete: () => void;
+  stepDurationMs?: number;
+}) {
+  const [stepIdx, setStepIdx] = useState(0);
+  const completedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const onTabSwitchRef = useRef(onTabSwitch);
+  onCompleteRef.current = onComplete;
+  onTabSwitchRef.current = onTabSwitch;
+
+  useEffect(() => {
+    if (completedRef.current) return;
+    if (stepIdx >= steps.length) {
+      completedRef.current = true;
+      onCompleteRef.current();
+      return;
+    }
+    const tab = steps[stepIdx].tab;
+    if (tab) onTabSwitchRef.current?.(tab);
+    const t = setTimeout(() => setStepIdx(i => i + 1), stepDurationMs);
+    return () => clearTimeout(t);
+  }, [stepIdx, steps, stepDurationMs]);
+
+  const active = steps[Math.min(stepIdx, steps.length - 1)];
+  return (
+    <div className="flex items-center gap-2 text-[13px] text-ink-600">
+      <span className="relative flex h-1.5 w-1.5 shrink-0" aria-hidden>
+        <span className="absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-60 animate-ping" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-600" />
+      </span>
+      <TextShimmer as="span" duration={2} spread={1.5}>
+        {active.label}
+      </TextShimmer>
+    </div>
+  );
+}
+
 function SaveWorkflowButton() {
   const [saved, setSaved] = useState(false);
   if (saved) {
@@ -276,30 +677,26 @@ function SaveWorkflowButton() {
   );
 }
 
-export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowType, setQueryAssumptions, initialQuery, onInitialQueryProcessed, selectedChatId, onChatLoaded, setView }: ChatViewProps) {
+export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowType, initialQuery, onInitialQueryProcessed, selectedChatId, onChatLoaded, setView }: ChatViewProps) {
+  const { addToast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [thinkingSteps, setThinkingSteps] = useState<string[]>([]);
-  const [thinkingExpanded, setThinkingExpanded] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const processingRef = useRef(false);
 
   // New flow state
   const [showClarificationCard, setShowClarificationCard] = useState(false);
   const [clarificationQuestions, setClarificationQuestions] = useState<Array<{ question: string; options: string[] }>>([]);
-  const [showAssumptions, setShowAssumptions] = useState(false);
-  const [currentAssumptions, setCurrentAssumptions] = useState<string[]>([]);
-  const [clarificationAnswers, setClarificationAnswers] = useState<Record<number, string>>({});
   const [showProgressiveLoader, setShowProgressiveLoader] = useState(false);
 
   // Workflow build flow state
   const [workflowBuildPhase, setWorkflowBuildPhase] = useState(0); // 0=idle, 1=asking-files, 2=asking-logic, 3=confirming, 4=input-config, 5=freeze-confirm, 6=output-config, 7=save
   const [currentWorkflowType, setCurrentWorkflowType] = useState<WorkflowTypeId | null>(null);
 
-  // Track which query flow triggered the progressive loader
-  const activeQueryFlowRef = useRef<'duplicate-invoice' | 'other' | null>(null);
-  const activeQueryConfigRef = useRef<typeof DETAILED_QUERY_CONFIG['sox-compliance'] | null>(null);
+  // Track whether the progressive loader is rendering an audit-query response
+  const activeQueryFlowRef = useRef<'audit-query' | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -319,7 +716,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     if (!isUserScrolledUp.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isTyping, thinkingSteps, showClarificationCard, showAssumptions, showProgressiveLoader]);
+  }, [messages, isTyping, thinkingSteps, showClarificationCard, showProgressiveLoader]);
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -362,7 +759,6 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     }));
     setMessages(msgs);
     setShowClarificationCard(false);
-    setShowAssumptions(false);
     setShowProgressiveLoader(false);
     setIsTyping(false);
     setThinkingSteps([]);
@@ -382,31 +778,85 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
   }, [selectedChatId, loadChatById, onChatLoaded]);
 
   // ─── Query Clarification Complete Handler ───
-  const handleQueryClarificationComplete = (answers: Record<number, string>) => {
-    setClarificationAnswers(answers);
+  // ─── Start the audit run as ONE IRA message that hosts the loader inline ───
+  const auditRunMsgIdRef = useRef<string | null>(null);
+  const startAuditQueryRun = () => {
+    activeQueryFlowRef.current = 'audit-query';
+    const msgId = `msg-audit-run-${Date.now()}`;
+    auditRunMsgIdRef.current = msgId;
 
-    // Add summary message
-    const answerEntries = Object.entries(answers);
-    if (answerEntries.length > 0) {
-      const summaryLines = answerEntries.map(([, value]) => `• ${value}`).join('\n');
+    setMessages(prev => [...prev, {
+      id: msgId,
+      role: 'assistant',
+      text: '',
+      thinking: [
+        'Generating execution plan',
+        'Writing SQL query',
+        'Connecting to data sources',
+        'Processing 1.2M records',
+      ],
+      timestamp: new Date(),
+      richType: 'audit-loading',
+    }]);
+
+    setShowProgressiveLoader(true);
+    setArtifactMode('query');
+    setShowArtifacts(true);
+    setActiveArtifactTab('plan');
+  };
+
+  // ─── Update an answer for the active clarification message ───
+  const updateClarificationAnswer = (msgId: string, qIndex: number, answer: string) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== msgId || m.richType !== 'clarification') return m;
+      const data = m.richData as unknown as ClarificationData;
+      return {
+        ...m,
+        richData: { ...data, answers: { ...data.answers, [qIndex]: answer } } as unknown as Record<string, unknown>,
+      };
+    }));
+  };
+
+  // ─── Skip a single clarification question — sentinel '' marks "skipped but acknowledged" ───
+  const skipClarificationQuestion = (msgId: string, qIndex: number) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== msgId || m.richType !== 'clarification') return m;
+      const data = m.richData as unknown as ClarificationData;
+      return {
+        ...m,
+        richData: { ...data, answers: { ...data.answers, [qIndex]: '' } } as unknown as Record<string, unknown>,
+      };
+    }));
+  };
+
+  // ─── Submit the clarification — freeze it, drop a single user msg, start the run ───
+  const submitClarification = (msgId: string, fromSkip = false) => {
+    let consolidated: { question: string; answer: string }[] = [];
+    setMessages(prev => prev.map(m => {
+      if (m.id !== msgId || m.richType !== 'clarification') return m;
+      const data = m.richData as unknown as ClarificationData;
+      consolidated = data.questions
+        .map((q, qi) => ({ question: q.question, answer: data.answers[qi] }))
+        .filter(p => !!p.answer);
+      return {
+        ...m,
+        richData: { ...data, status: 'submitted' } as unknown as Record<string, unknown>,
+      };
+    }));
+
+    schedule(() => {
+      const userText = consolidated.length
+        ? consolidated.map(c => `• ${c.answer}`).join('\n')
+        : (fromSkip ? 'Skip — use sensible defaults.' : 'Run with the inputs above.');
       setMessages(prev => [...prev, {
-        id: `msg-clarification-summary-${Date.now()}`,
-        role: 'assistant',
-        text: `Got it! Here's what I'll use:\n\n${summaryLines}`,
+        id: `msg-user-clarify-${Date.now()}`,
+        role: 'user',
+        text: userText,
         timestamp: new Date(),
       }]);
-    }
+    }, 80);
 
-    // Generate assumptions
-    const assumptions = [
-      'Excluding voided invoices',
-      'Currency conversion at booking rate',
-      'Looking back 12 months for duplicates',
-      'Results sorted by match score (descending)',
-    ];
-    setCurrentAssumptions(assumptions);
-    setQueryAssumptions?.(assumptions);
-    setShowAssumptions(true);
+    schedule(() => startAuditQueryRun(), 240);
   };
 
   // ─── Workflow Clarification Complete Handler ───
@@ -449,123 +899,68 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     }
   };
 
-  // ─── Clarification Card Complete Router ───
+  // ─── Clarification Card Complete Router (workflow flow only — audit-query is inline now) ───
   const handleClarificationCardComplete = (answers: Record<number, string>) => {
     setShowClarificationCard(false);
-    setClarificationAnswers(answers);
-
     if (workflowBuildPhase > 0) {
       handleWorkflowClarificationComplete(answers);
-    } else {
-      handleQueryClarificationComplete(answers);
     }
   };
 
-  // ─── Assumptions Confirmed Handler ───
-  const handleAssumptionsConfirmed = () => {
-    setShowAssumptions(false);
-    activeQueryFlowRef.current = 'duplicate-invoice';
-
-    // Add starting message
-    setMessages(prev => [...prev, {
-      id: `msg-starting-analysis-${Date.now()}`,
-      role: 'assistant',
-      text: "Starting analysis...",
-      timestamp: new Date(),
-    }]);
-
-    // Show progressive loader
-    setShowProgressiveLoader(true);
-
-    // Open artifact panel in query mode
-    setArtifactMode('query');
-    setShowArtifacts(true);
-    setActiveArtifactTab('plan');
-  };
-
-  // ─── Progressive Loading Complete Handler ───
-  const handleProgressiveLoadingComplete = () => {
-    setShowProgressiveLoader(false);
-    setActiveArtifactTab('result');
-
-    if (activeQueryFlowRef.current === 'other' && activeQueryConfigRef.current) {
-      // "Other query type" flow — show type-specific KPIs and follow-ups
-      const config = activeQueryConfigRef.current;
-      setMessages(prev => [...prev, {
-        id: `msg-result-kpi-${Date.now()}`,
-        role: 'assistant',
-        text: '',
-        timestamp: new Date(),
-        richType: 'summary-kpi',
-        richData: { kpis: config.kpis },
-      }]);
-
-      schedule(() => {
-        setMessages(prev => [...prev, {
-          id: `msg-insights-${Date.now()}`,
-          role: 'assistant',
-          text: config.insightsText,
-          hasArtifact: true,
-          artifactType: 'query',
-          timestamp: new Date(),
-        }]);
-      }, 600);
-
-      schedule(() => {
-        const shuffled = [...config.followUps].sort(() => Math.random() - 0.5);
-        setMessages(prev => [...prev, {
-          id: `msg-threshold-${Date.now()}`,
-          role: 'assistant',
-          text: '',
-          timestamp: new Date(),
-          richType: 'threshold-control',
-          followUps: shuffled.slice(0, 3),
-        }]);
-      }, 1100);
-
-      activeQueryFlowRef.current = null;
-      activeQueryConfigRef.current = null;
-    } else {
-      // Duplicate-invoice flow — original behavior
-      const shuffled = [...QUERY_FOLLOWUPS].sort(() => Math.random() - 0.5);
-      setMessages(prev => [...prev, {
-        id: `msg-final-result-${Date.now()}`,
-        role: 'assistant',
-        text: "Analysis complete! I've identified 8 potential duplicate invoices across your vendor payments. The artifact panel shows the full execution plan, SQL query, data sources, and detailed results table with match scores.",
-        hasArtifact: true,
-        artifactType: 'query',
-        followUps: shuffled.slice(0, 3),
-        timestamp: new Date(),
-      }]);
-      activeQueryFlowRef.current = null;
-    }
-  };
-
-  // ─── Query Clarification Flow (duplicate-invoice) ───
+  // ─── Inline Query Clarification Flow ───
+  // ONE IRA message holds: thinking summary + intro + 4 stacked questions + submit row.
+  // User answers via clicking options or typing in the main chat box (routed to first
+  // unanswered question while a clarification is open).
   const startQueryClarificationFlow = () => {
     clearTimers();
     setIsTyping(true);
-    setThinkingSteps([]);
 
-    // Brief thinking animation
     schedule(() => {
       setIsTyping(false);
-      // Add ambiguity message
-      setMessages(prev => [...prev, {
-        id: `msg-ambiguity-${Date.now()}`,
-        role: 'assistant',
-        text: "Identified ambiguity in your query. A few quick questions before I dive in:",
-        timestamp: new Date(),
-      }]);
-
-      // Set clarification questions from CLARIFICATION_STEPS
       const questions = CLARIFICATION_STEPS.map(step => ({
         question: step.question,
         options: step.options,
       }));
-      setClarificationQuestions(questions);
-      setShowClarificationCard(true);
-    }, 1000);
+      const data: ClarificationData = {
+        intro: "One quick check before I run — pick what fits, or type your own.",
+        questions,
+        answers: {},
+        status: 'open',
+      };
+      setMessages(prev => [...prev, {
+        id: `msg-clarify-${Date.now()}`,
+        role: 'assistant',
+        text: '',
+        thinking: [
+          'Parsed intent: invoice duplicate detection',
+          'Identified 4 underspecified parameters',
+          'Selected highest-impact prompts for clarification',
+        ],
+        timestamp: new Date(),
+        richType: 'clarification',
+        richData: data as unknown as Record<string, unknown>,
+      }]);
+    }, 600);
+  };
+
+  // ─── Progressive Loading Complete — swap the SAME IRA msg from loading → result ───
+  const handleProgressiveLoadingComplete = () => {
+    setShowProgressiveLoader(false);
+    activeQueryFlowRef.current = null;
+
+    const targetId = auditRunMsgIdRef.current;
+    auditRunMsgIdRef.current = null;
+
+    setMessages(prev => prev.map(m => {
+      if (m.id !== targetId) return m;
+      return {
+        ...m,
+        text: "Done. I scanned 1.2M invoice records and surfaced 8 potential duplicates — total exposure ₹6.16L, with the highest-confidence pair at 96% match (Acme Corp). Acme accounts for half of the flags and is the first place I'd look.",
+        followUps: AUDIT_FOLLOWUPS,
+        richType: 'audit-result',
+        richData: AUDIT_RESULT,
+      };
+    }));
   };
 
   // ─── Conversational Workflow Flow ───
@@ -652,6 +1047,18 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     }, 20000);
   };
 
+  const handleAuditAction = (action: 'workflow' | 'report' | 'dashboard') => {
+    const labels: Record<typeof action, { in_progress: string; done: string }> = {
+      workflow: { in_progress: 'Adding to workflow library…', done: 'Saved as workflow “AQ-2026-04-24”.' },
+      report: { in_progress: 'Adding to report draft…', done: 'Added to report “FY26 Q1 — Findings”.' },
+      dashboard: { in_progress: 'Adding to dashboard…', done: 'Added to dashboard “P2P health”.' },
+    };
+    addToast({ type: 'info', message: labels[action].in_progress });
+    setTimeout(() => {
+      addToast({ type: 'success', message: labels[action].done });
+    }, 1200);
+  };
+
   const simulateResponse = (userMsg: string) => {
     clearTimers();
 
@@ -661,68 +1068,14 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
       return;
     }
 
-    const detailedType = classifyDetailedQuery(userMsg);
-
-    // Reconciliation queries → workflow flow
-    if (detailedType === 'reconciliation') {
+    const lower = userMsg.toLowerCase();
+    if (lower.includes('workflow') || lower.includes('build a') || lower.includes('build me') || lower.includes('create a') || lower.includes('design a') || lower.includes('reconciliation')) {
       startConversationalWorkflowFlow(userMsg);
       return;
     }
 
-    // Workflow queries → workflow flow
-    if (detailedType === 'workflow') {
-      startConversationalWorkflowFlow(userMsg);
-      return;
-    }
-
-    // Duplicate invoice query → query clarification flow
-    if (detailedType === 'duplicate-invoice') {
-      startQueryClarificationFlow();
-      return;
-    }
-
-    // All other query types — thinking steps → progressive loading (Plan → Code → Sources → Result)
-    const config = DETAILED_QUERY_CONFIG[detailedType];
-    const thinkingList = config.thinking;
-
-    setIsTyping(true);
-    setThinkingSteps([]);
-    setThinkingExpanded(true);
-    isUserScrolledUp.current = false;
-
-    thinkingList.forEach((step, i) => {
-      schedule(() => {
-        setThinkingSteps(prev => [...prev, step]);
-      }, 400 * (i + 1));
-    });
-
-    const totalThinkingTime = 400 * thinkingList.length + 400;
-
-    // After thinking completes — show response + start progressive loading
-    schedule(() => {
-      setMessages(prev => [...prev, {
-        id: `msg-${Date.now()}`,
-        role: 'assistant',
-        text: config.responseText,
-        timestamp: new Date(),
-        thinking: [...thinkingList],
-      }]);
-      setIsTyping(false);
-      setThinkingSteps([]);
-
-      // Store config so handleProgressiveLoadingComplete can use type-specific data
-      activeQueryFlowRef.current = 'other';
-      activeQueryConfigRef.current = config;
-
-      // Start progressive loading — loader in chat drives tab switching via onTabClick
-      setShowProgressiveLoader(true);
-
-      // Open artifact panel with plan tab first
-      setArtifactMode('query');
-      setShowArtifacts(true);
-      setActiveArtifactTab('plan');
-    }, totalThinkingTime);
-    // ProgressiveLoader will fire onComplete → handleProgressiveLoadingComplete handles the rest
+    // Default — audit query flow with clarification → assumptions → loader → inline rich response
+    startQueryClarificationFlow();
   };
 
   const handleSend = () => {
@@ -730,6 +1083,24 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     if (!trimmed && files.length === 0) return;
     let text = trimmed;
     if (files.length > 0) text += `\n[Attached: ${files.map(f => f.name).join(', ')}]`;
+
+    // If a clarification message is open, route the typed text to its first
+    // unanswered question instead of starting a new chat turn.
+    const openClarify = [...messages].reverse().find(
+      m => m.richType === 'clarification' && (m.richData as unknown as ClarificationData)?.status === 'open'
+    );
+    if (openClarify && trimmed) {
+      const data = openClarify.richData as unknown as ClarificationData;
+      const firstUnanswered = data.questions.findIndex((_, i) => !data.answers[i]);
+      if (firstUnanswered !== -1) {
+        updateClarificationAnswer(openClarify.id, firstUnanswered, trimmed);
+        setInput('');
+        setFiles([]);
+        if (textareaRef.current) textareaRef.current.style.height = 'auto';
+        return;
+      }
+    }
+
     setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'user', text, timestamp: new Date() }]);
     setInput('');
     setFiles([]);
@@ -761,6 +1132,11 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
   };
 
   const isEmpty = messages.length === 0;
+
+  // Most-recent open clarification — drives the docked picker at the bottom of the chat.
+  const openClarification = [...messages].reverse().find(
+    m => m.richType === 'clarification' && (m.richData as unknown as ClarificationData)?.status === 'open'
+  );
 
   /* ────────────────────── CHAT HISTORY SIDEBAR ────────────────────── */
   const chatHistoryPanel = (
@@ -927,7 +1303,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                       className="px-5 py-2.5 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-[13px] font-semibold transition-all flex items-center gap-2 shadow-sm cursor-pointer"
                     >
                       <Sparkles size={14} />
-                      I'm feeling lucky
+                      Submit
                     </button>
                   </div>
                 </div>
@@ -955,56 +1331,6 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                 ))}
               </div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-              >
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <Lightbulb size={13} className="text-primary/60" />
-                  <span className="text-[12px] font-semibold text-text-muted">AI Recommended</span>
-                </div>
-                <div className="flex justify-center gap-4">
-                  {RECOMMENDED_WORKFLOWS.map((rw, i) => (
-                    <motion.div
-                      key={rw.label}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.8 + i * 0.1 }}
-                      className="flex-1 max-w-[220px]"
-                    >
-                      <BorderGlow
-                        borderRadius={16}
-                        glowRadius={35}
-                        glowIntensity={1}
-                        coneSpread={30}
-                        edgeSensitivity={40}
-                        backgroundColor="#ffffff"
-                        colors={['#6a12cd', '#9b59d6', '#c084fc']}
-                      >
-                        <div
-                          className="p-4 text-left cursor-pointer group rounded-2xl hover:shadow-sm transition-shadow"
-                          onClick={() => {
-                            const text = `Build a ${rw.label.toLowerCase()}`;
-                            setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'user', text, timestamp: new Date() }]);
-                            simulateResponse(text);
-                          }}
-                        >
-                          <div className={`p-2 rounded-lg ${rw.color} w-fit mb-3`}>
-                            <rw.icon size={15} />
-                          </div>
-                          <div className="text-[12.5px] font-semibold text-text group-hover:text-primary transition-colors leading-tight mb-1">{rw.label}</div>
-                          <div className="text-[12px] text-text-muted leading-snug">{rw.desc}</div>
-                          <div className="mt-3 flex items-center gap-1 text-[12px] text-primary/60 group-hover:text-primary transition-colors font-medium">
-                            <Sparkles size={9} />
-                            Click to build
-                          </div>
-                        </div>
-                      </BorderGlow>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
             </motion.div>
           </div>
         </div>
@@ -1027,7 +1353,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { setMessages([]); setInput(''); setShowClarificationCard(false); setShowAssumptions(false); setShowProgressiveLoader(false); setWorkflowBuildPhase(0); setCurrentWorkflowType(null); clearTimers(); }}
+              onClick={() => { setMessages([]); setInput(''); setShowClarificationCard(false); setShowProgressiveLoader(false); setWorkflowBuildPhase(0); setCurrentWorkflowType(null); clearTimers(); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-light text-[12px] font-medium text-text-secondary hover:bg-white hover:border-primary/20 transition-all cursor-pointer"
             >
               <Plus size={12} />
@@ -1046,99 +1372,107 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           onScroll={handleScroll}
           className="flex-1 overflow-y-auto"
         >
-          <div className="px-10 sm:px-6 py-6 space-y-6">
+          <div className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
             <AnimatePresence initial={false}>
               {messages.map((msg, msgIdx) => (
-                <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <motion.div key={msg.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className="max-w-[85%]">
-                    {msg.role === 'assistant' && !msg.richType && (
-                      <div className="mb-1.5 font-mono text-[12px] text-ink-500 tabular-nums">
-                        IRA · responding
-                      </div>
-                    )}
-                    {msg.role === 'assistant' && msg.thinking && (
-                      <div className="mb-2 ml-7">
-                        <button onClick={() => setThinkingExpanded(p => !p)} className="flex items-center gap-1.5 text-[12px] text-text-muted hover:text-text-secondary transition-colors cursor-pointer">
-                          <ChevronDown size={12} className={`transition-transform ${thinkingExpanded ? '' : '-rotate-90'}`} />
-                          <Sparkles size={10} className="text-primary/50" />
-                          Thought for {msg.thinking.length} steps
-                        </button>
-                        <AnimatePresence>
-                          {thinkingExpanded && (
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                              <div className="mt-1.5 pl-3 border-l-2 border-primary/15 space-y-1">
-                                {msg.thinking.map((step, i) => (
-                                  <div key={i} className="text-[12px] text-text-muted/70 flex items-center gap-1.5">
-                                    <div className="w-1 h-1 rounded-full bg-primary/30" />
-                                    {step}
-                                  </div>
-                                ))}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
+                    {/* Single thinking trail per IRA message */}
+                    {msg.role === 'assistant' && msg.thinking && msg.thinking.length > 0 && (
+                      <ThinkingTrail
+                        summary={
+                          msg.richType === 'clarification' ? 'Identified ambiguity, asking for inputs' :
+                          msg.richType === 'audit-loading' ? 'Running query through plan → SQL → sources → results' :
+                          msg.richType === 'audit-result' ? 'Completed query — running through plan → SQL → sources → results' :
+                          `Thought for ${msg.thinking.length} steps`
+                        }
+                        steps={msg.thinking}
+                      />
                     )}
 
                     {/* Rich inline components */}
-                    {msg.richType === 'summary-kpi' ? (
+                    {msg.richType === 'clarification' ? (
+                      <div className="max-w-[66ch]">
+                        {(msg.richData as unknown as ClarificationData).status === 'submitted' ? (
+                          <div className="text-[13px] text-ink-700 leading-relaxed">
+                            Got it — running with these inputs.
+                          </div>
+                        ) : (
+                          <div className="text-[15px] leading-[1.65] text-ink-800">
+                            {(msg.richData as unknown as ClarificationData).intro}
+                          </div>
+                        )}
+                      </div>
+                    ) : msg.richType === 'audit-loading' ? (
+                      <div className="max-w-[680px]">
+                        {showProgressiveLoader && msg.id === auditRunMsgIdRef.current && (
+                          <InlineAuditLoader
+                            steps={LOADING_STEPS}
+                            onTabSwitch={setActiveArtifactTab}
+                            onComplete={handleProgressiveLoadingComplete}
+                          />
+                        )}
+                      </div>
+                    ) : msg.richType === 'audit-result' ? (
+                      <div className="space-y-4 max-w-[680px]">
+                        {/* Body text */}
+                        {msg.text && (
+                          <div className="text-[15px] leading-[1.65] text-ink-800 max-w-[66ch]">{msg.text}</div>
+                        )}
+
+                        {/* Affordance: link inline result to the auto-opened panel */}
+                        <button
+                          onClick={() => setShowArtifacts(true)}
+                          className="inline-flex items-center gap-1.5 text-[12px] text-ink-500 hover:text-brand-700 transition-colors cursor-pointer"
+                        >
+                          <span>Plan, query, and sources are in the artifact panel</span>
+                          <ArrowUpRight size={12} />
+                        </button>
+
+                        {/* KPI cards */}
+                        <div className="grid grid-cols-4 gap-2">
+                          {AUDIT_RESULT.kpis.map((kpi, ki) => (
+                            <motion.div
+                              key={kpi.label}
+                              initial={{ opacity: 0, y: 6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: ki * 0.05 }}
+                              className="rounded-xl border border-canvas-border bg-canvas-elevated p-3"
+                            >
+                              <div className={`text-[18px] font-semibold tabular-nums ${kpi.color}`}>{kpi.value}</div>
+                              <div className="text-[12px] text-ink-500 mt-0.5">{kpi.label}</div>
+                            </motion.div>
+                          ))}
+                        </div>
+
+                        {/* Charts */}
+                        <ChartGroup charts={AUDIT_RESULT.charts} />
+
+                        {/* Table preview */}
+                        <ResultsTable
+                          columns={AUDIT_RESULT.table.columns}
+                          rows={AUDIT_RESULT.table.rows}
+                          totalRows={AUDIT_RESULT.table.totalRows}
+                          onOpen={() => addToast({ type: 'info', message: 'Opening full results in a new view…' })}
+                          onDownload={() => addToast({ type: 'success', message: 'CSV download started.' })}
+                        />
+
+                        {/* Actions dropdown */}
+                        <div className="flex items-center gap-2">
+                          <ActionsMenu onPick={handleAuditAction} />
+                        </div>
+                      </div>
+                    ) : msg.richType === 'summary-kpi' ? (
                       <div className="ml-7 grid grid-cols-4 gap-2">
-                        {((msg.richData?.kpis as { label: string; value: string; color: string }[] | undefined) || [
-                          { label: 'Records Scanned', value: '1.2M', color: 'text-text' },
-                          { label: 'Risks Found', value: '5', color: 'text-high-700' },
-                          { label: 'Critical', value: '2', color: 'text-risk-700' },
-                          { label: 'Uncontrolled', value: '2', color: 'text-risk-700' },
-                        ]).map((kpi, ki) => (
+                        {((msg.richData?.kpis as { label: string; value: string; color: string }[] | undefined) || []).map((kpi, ki) => (
                           <motion.div key={kpi.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: ki * 0.1 }}
-                            className="glass-card rounded-xl p-3 text-center"
+                            className="rounded-xl border border-canvas-border bg-canvas-elevated p-3 text-center"
                           >
-                            <div className={`text-lg font-bold ${kpi.color}`}>{kpi.value}</div>
-                            <div className="text-[12px] text-text-muted mt-0.5">{kpi.label}</div>
+                            <div className={`text-lg font-semibold tabular-nums ${kpi.color}`}>{kpi.value}</div>
+                            <div className="text-[12px] text-ink-500 mt-0.5">{kpi.label}</div>
                           </motion.div>
                         ))}
                       </div>
-                    ) : msg.richType === 'threshold-control' ? (
-                      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="ml-7">
-                        <div className="glass-card rounded-xl p-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <SlidersHorizontal size={14} className="text-primary" />
-                            <span className="text-[12px] font-semibold text-text">Adjust Parameters</span>
-                            <span className="text-[12px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">Interactive</span>
-                          </div>
-                          <div className="space-y-3">
-                            <div>
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-[12px] text-text-secondary">Severity Threshold</span>
-                                <span className="text-[12px] font-bold text-primary">High+</span>
-                              </div>
-                              <div className="h-2 bg-paper-100 rounded-full overflow-hidden">
-                                <div className="h-full w-3/4 bg-mitigated rounded-full" />
-                              </div>
-                              <div className="flex justify-between text-[12px] text-text-muted mt-0.5">
-                                <span>Low</span><span>Medium</span><span>High</span><span>Critical</span>
-                              </div>
-                            </div>
-                            <div className="flex gap-3">
-                              <div className="flex-1 flex items-center justify-between p-2 rounded-lg bg-surface-2">
-                                <span className="text-[12px] text-text-secondary">Min Controls</span>
-                                <span className="text-[12px] font-bold text-text bg-white px-2 py-0.5 rounded border border-border-light">0</span>
-                              </div>
-                              <div className="flex-1 flex items-center justify-between p-2 rounded-lg bg-surface-2">
-                                <span className="text-[12px] text-text-secondary">Time Range</span>
-                                <span className="text-[12px] font-bold text-text bg-white px-2 py-0.5 rounded border border-border-light">90 days</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="mt-3 flex gap-2">
-                            <button className="flex-1 text-[12px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg py-2 transition-colors cursor-pointer">
-                              Re-run with filters
-                            </button>
-                            <button className="text-[12px] font-medium text-text-muted hover:text-text-secondary px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-                              Reset
-                            </button>
-                          </div>
-                        </div>
-                      </motion.div>
                     ) : msg.richType === 'save-workflow-prompt' ? (
                       <div className="ml-12 mt-1">
                         <div className="glass-card rounded-xl p-4 border border-primary/10 max-w-md">
@@ -1167,19 +1501,6 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                         </div>
                       )
                     ) : null}
-
-                    {msg.hasArtifact && (
-                      <button
-                        onClick={() => { setShowArtifacts(true); setArtifactMode(msg.artifactType === 'workflow' ? 'workflow' : 'query'); setActiveArtifactTab('result'); }}
-                        className="mt-2 ml-7 flex items-center gap-2 text-[12px] text-primary hover:text-primary-hover font-medium transition-colors group cursor-pointer"
-                      >
-                        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary/10 to-primary-medium/10 flex items-center justify-center">
-                          <Sparkles size={11} className="text-primary" />
-                        </div>
-                        View {msg.artifactType === 'workflow' ? 'workflow canvas' : 'artifact'}
-                        <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
-                      </button>
-                    )}
 
                     {/* AI Recommended Follow-up Questions */}
                     {msg.role === 'assistant' && msg.followUps && msg.followUps.length > 0 && msgIdx === messages.length - 1 && (
@@ -1277,88 +1598,72 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Clarification Card — moved to input area */}
-
-          {/* Assumptions Panel */}
-          <AnimatePresence>
-            {showAssumptions && (
-              <div className="px-10 pb-4">
-                <AssumptionsPanel
-                  answers={clarificationAnswers}
-                  assumptions={currentAssumptions}
-                  onConfirm={handleAssumptionsConfirmed}
-                />
-              </div>
-            )}
-          </AnimatePresence>
-
-          {/* Progressive Loader */}
-          <AnimatePresence>
-            {showProgressiveLoader && (
-              <div className="px-10 pb-4">
-                <ProgressiveLoader
-                  steps={LOADING_STEPS}
-                  onComplete={handleProgressiveLoadingComplete}
-                  onTabClick={(tab) => setActiveArtifactTab(tab as ArtifactTab)}
-                />
-              </div>
-            )}
-          </AnimatePresence>
+          {/* Inline rich messages render the loader + clarification — no global panel */}
         </div>
 
-        {/* Input area — clarification card sits on top, connected */}
+        {/* Input area */}
         <div className="shrink-0 px-4 sm:px-6 pb-5 max-w-3xl mx-auto w-full">
-          {/* Clarification Card — joined to input box */}
+          {/* Workflow clarification (legacy ClarificationCard kept for the workflow flow only) */}
           <AnimatePresence>
-            {showClarificationCard && (
+            {showClarificationCard && workflowBuildPhase > 0 && (
               <div className="mb-0">
                 <ClarificationCard
                   questions={clarificationQuestions}
                   onComplete={handleClarificationCardComplete}
                   onSkipAll={() => {
                     setShowClarificationCard(false);
-                    if (workflowBuildPhase > 0) {
-                      handleWorkflowClarificationComplete({});
-                    } else {
-                      handleQueryClarificationComplete({});
-                    }
+                    handleWorkflowClarificationComplete({});
                   }}
                 />
               </div>
             )}
           </AnimatePresence>
-          {files.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {files.map((f, i) => (
-                <div key={i} className="flex items-center gap-1 bg-primary-light text-primary text-[12px] px-2 py-1 rounded-md font-medium">
-                  <FileText size={11} />
-                  <span className="truncate max-w-[100px]">{f.name}</span>
-                  <button onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))} className="hover:text-primary-hover ml-0.5 cursor-pointer"><X size={10} /></button>
+
+          {openClarification ? (
+            // Audit-query clarification — docked picker replaces the chat input until submitted/dismissed
+            <ClarificationBlock
+              data={openClarification.richData as unknown as ClarificationData}
+              onAnswer={(qi, ans) => updateClarificationAnswer(openClarification.id, qi, ans)}
+              onSubmit={() => submitClarification(openClarification.id)}
+              onSkipAll={() => submitClarification(openClarification.id, true)}
+              onSkipCurrent={(qi) => skipClarificationQuestion(openClarification.id, qi)}
+            />
+          ) : (
+            <>
+              {files.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {files.map((f, i) => (
+                    <div key={i} className="flex items-center gap-1 bg-primary-light text-primary text-[12px] px-2 py-1 rounded-md font-medium">
+                      <FileText size={11} />
+                      <span className="truncate max-w-[100px]">{f.name}</span>
+                      <button onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))} className="hover:text-primary-hover ml-0.5 cursor-pointer"><X size={10} /></button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-          <div className="ai-border">
-            <div className="relative bg-white rounded-[18px]">
-              <textarea
-                value={input}
-                onChange={e => { setInput(e.target.value); handleTextareaInput(); }}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask anything or describe a workflow to build..."
-                className="w-full bg-transparent border-none outline-none resize-none py-4 pl-4 pr-28 text-[13.5px] text-text placeholder:text-text-muted min-h-[48px] max-h-[160px] rounded-[18px]"
-                rows={1}
-              />
-              <div className="absolute right-2 bottom-2 flex items-center gap-1">
-                <label className="cursor-pointer p-2 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-colors">
-                  <Paperclip size={15} />
-                  <input type="file" multiple className="hidden" onChange={handleFileUpload} />
-                </label>
-                <button onClick={handleSend} disabled={!input.trim() && files.length === 0} className="p-2 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white rounded-xl transition-all cursor-pointer">
-                  <Send size={15} />
-                </button>
+              )}
+              <div className="ai-border">
+                <div className="relative bg-white rounded-[18px]">
+                  <textarea
+                    value={input}
+                    onChange={e => { setInput(e.target.value); handleTextareaInput(); }}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ask anything or describe a workflow to build..."
+                    className="w-full bg-transparent border-none outline-none resize-none py-4 pl-4 pr-28 text-[13.5px] text-text placeholder:text-text-muted min-h-[48px] max-h-[160px] rounded-[18px]"
+                    rows={1}
+                  />
+                  <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                    <label className="cursor-pointer p-2 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-colors">
+                      <Paperclip size={15} />
+                      <input type="file" multiple className="hidden" onChange={handleFileUpload} />
+                    </label>
+                    <button onClick={handleSend} disabled={!input.trim() && files.length === 0} className="p-2 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white rounded-xl transition-all cursor-pointer">
+                      <Send size={15} />
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>

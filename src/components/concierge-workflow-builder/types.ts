@@ -49,6 +49,14 @@ export interface WorkflowDraft {
 export type UploadedFile = { name: string; size: number; linkedSource?: boolean };
 export type JourneyFiles = Record<string, UploadedFile[]>;
 
+export interface ClarifyQuestion {
+  id: string;
+  title: string;
+  options: string[];
+}
+
+export type ClarifyAnswers = Record<string, string>;
+
 // mappings keyed as: stepId -> inputId -> [{ column, role }]
 export type StepMapping = Record<string, { column: string; role: ColumnRole }[]>;
 export type JourneyMappings = Record<string, StepMapping>;
