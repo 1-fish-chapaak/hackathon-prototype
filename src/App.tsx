@@ -14,6 +14,7 @@ import BusinessProcesses from './components/audit/BusinessProcesses';
 import RiskRegister from './components/audit/RiskRegister';
 import AuditExecution from './components/audit/AuditExecution';
 import DashboardView from './components/dashboard/DashboardView';
+import DashboardListPage from './components/dashboard/DashboardListPage';
 import ReportsView from './components/reports/ReportsView';
 import HomeView from './components/home/HomeView';
 import RecentsView from './components/recents/RecentsView';
@@ -34,12 +35,12 @@ import WorkflowBuilderJourney from './components/concierge-workflow-builder/Work
 import AdminView from './components/admin/AdminView';
 import FindingsView from './components/execution/FindingsView';
 import WorkflowExecutor from './components/workflow/WorkflowExecutor';
-import WorkingPaperPanel from './components/execution/WorkingPaperPanel';
-import WorkflowExecutionPanel from './components/execution/WorkflowExecutionPanel';
-import TraceabilityPanel from './components/execution/TraceabilityPanel';
 import EngagementDetailView from './components/engagement/EngagementDetailView';
 import ControlDetailDrawer from './components/engagement/ControlDetailDrawer';
 import ManageExceptionsView from './components/exceptions/ManageExceptionsView';
+import WorkingPaperPanel from './components/execution/WorkingPaperPanel';
+import WorkflowExecutionPanel from './components/execution/WorkflowExecutionPanel';
+import TraceabilityPanel from './components/execution/TraceabilityPanel';
 
 export default function App() {
   const {
@@ -67,6 +68,10 @@ export default function App() {
     openWorkflowExecutor,
     openChat,
     setSelectedChatId,
+    openDashboard,
+    saveDashboardWidgets,
+    addCreatedDashboard,
+    deleteCreatedDashboard,
     openExecutionPanel,
     closeExecutionPanel,
     setExceptionRole,
@@ -230,9 +235,26 @@ export default function App() {
 
       case 'dashboards':
         return (
-          <DashboardView
+          <DashboardListPage
+            onDashboardClick={(id, customFields) => openDashboard(id, customFields)}
             onImportPowerBI={() => setShowPowerBIWizard(true)}
-            onShare={() => setShowShareModal(true, { type: 'dashboard', id: 'dash-1' })}
+            createdDashboards={state.createdDashboards}
+            onCreateDashboard={addCreatedDashboard}
+            onDeleteDashboard={deleteCreatedDashboard}
+          />
+        );
+
+      case 'dashboard-detail':
+        return (
+          <DashboardView
+            initialDashboardId={state.selectedDashboardId}
+            initialDashboardName={state.createdDashboards.find(d => d.id === state.selectedDashboardId)?.name}
+            initialCustomFields={state.dashboardCustomFields}
+            savedWidgets={state.dashboardWidgets[state.selectedDashboardId || ''] || []}
+            onSaveWidgets={(widgets) => saveDashboardWidgets(state.selectedDashboardId || '', widgets)}
+            onBack={() => setView('dashboards')}
+            onImportPowerBI={() => setShowPowerBIWizard(true)}
+            onShare={() => setShowShareModal(true, { type: 'dashboard', id: state.selectedDashboardId || 'dash-1' })}
           />
         );
 

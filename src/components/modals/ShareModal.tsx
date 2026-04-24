@@ -1,29 +1,42 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { X, Link2, Mail, Copy, Send, Check, Eye, Edit, MessageSquare } from 'lucide-react';
+import { X, Link2, Globe, ChevronDown } from 'lucide-react';
 import { useToast } from '../shared/Toast';
 
 interface Props {
   onClose: () => void;
 }
 
-const PERMISSIONS = [
-  { id: 'view', label: 'Can view', icon: Eye },
-  { id: 'edit', label: 'Can edit', icon: Edit },
-  { id: 'comment', label: 'Can comment', icon: MessageSquare },
-];
+interface SharedUser {
+  name: string;
+  email: string;
+  initials: string;
+  avatarClass: string;
+  permission: 'edit' | 'view';
+}
 
-const RECENT_SHARES = [
-  { name: 'Tushar Goel', email: 'tushar.goel@company.com', initials: 'TG', permission: 'edit' },
-  { name: 'Karan Mehta', email: 'karan.mehta@company.com', initials: 'KM', permission: 'view' },
+const PERMISSION_OPTIONS = ['can view', 'can edit', 'can comment'] as const;
+
+const OWNER = {
+  name: 'Aastha Jain',
+  email: 'aastha.jain@irame.ai',
+  initials: 'A',
+  avatarClass: 'bg-blue-500 text-white',
+};
+
+const INITIAL_SHARED: SharedUser[] = [
+  { name: 'Tushar Goel', email: 'tushar.goel@company.com', initials: 'TG', avatarClass: 'bg-primary/15 text-primary', permission: 'edit' },
+  { name: 'Karan Mehta', email: 'karan.mehta@company.com', initials: 'KM', avatarClass: 'bg-primary/15 text-primary', permission: 'view' },
 ];
 
 export default function ShareModal({ onClose }: Props) {
   const { addToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'share' | 'link'>('share');
   const [email, setEmail] = useState('');
-  const [permission, setPermission] = useState('view');
-  const [copied, setCopied] = useState(false);
+  const [inviteChips, setInviteChips] = useState<string[]>([]);
+  const [invitePermission, setInvitePermission] = useState<'can view' | 'can edit'>('can view');
+  const [shared, setShared] = useState<SharedUser[]>(INITIAL_SHARED);
+  const [anyonePermission, setAnyonePermission] = useState<'can view' | 'can edit'>('can view');
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -32,16 +45,50 @@ export default function ShareModal({ onClose }: Props) {
   }, [onClose]);
 
   const handleCopyLink = () => {
-    setCopied(true);
     addToast({ type: 'success', message: 'Link copied to clipboard!' });
-    setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSendInvite = () => {
-    if (!email.trim()) return;
-    addToast({ type: 'success', message: `Invitation sent to ${email}` });
+  const addChips = (raw: string) => {
+    const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length === 0) return;
+    setInviteChips(prev => Array.from(new Set([...prev, ...parts])));
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      if (email.trim()) {
+        addChips(email);
+        setEmail('');
+      } else if (e.key === 'Enter') {
+        handleInvite();
+      }
+    } else if (e.key === 'Backspace' && !email && inviteChips.length > 0) {
+      setInviteChips(prev => prev.slice(0, -1));
+    }
+  };
+
+  const removeChip = (chip: string) => {
+    setInviteChips(prev => prev.filter(c => c !== chip));
+  };
+
+  const handleInvite = () => {
+    const pending = [...inviteChips];
+    if (email.trim()) pending.push(email.trim());
+    if (pending.length === 0) return;
+    addToast({ type: 'success', message: `Invitation sent to ${pending.join(', ')}` });
+    setInviteChips([]);
     setEmail('');
   };
+
+  const canInvite = inviteChips.length > 0 || email.trim().length > 0;
+
+  const updatePermission = (targetEmail: string, next: 'edit' | 'view') => {
+    setShared(prev => prev.map(u => u.email === targetEmail ? { ...u, permission: next } : u));
+    setOpenMenu(null);
+  };
+
+  const permissionLabel = (p: 'edit' | 'view') => p === 'edit' ? 'can edit' : 'can view';
 
   return (
     <motion.div
@@ -60,105 +107,171 @@ export default function ShareModal({ onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label="Share"
-        className="relative glass-card-strong rounded-2xl shadow-2xl w-[400px] overflow-hidden"
+        className="relative bg-white rounded-2xl shadow-2xl w-[520px] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="px-5 py-4 border-b border-border-light flex items-center justify-between">
           <h3 className="text-[15px] font-semibold text-text">Share</h3>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
-            <X size={16} className="text-text-muted" />
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="px-5 pt-3 flex gap-1">
-          {(['share', 'link'] as const).map(tab => (
+          <div className="flex items-center gap-3">
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-medium transition-colors cursor-pointer capitalize ${
-                activeTab === tab ? 'bg-primary/10 text-primary' : 'text-text-muted hover:bg-gray-50'
-              }`}
+              onClick={handleCopyLink}
+              className="flex items-center gap-1.5 text-[13px] font-medium text-primary hover:text-primary-hover transition-colors cursor-pointer"
             >
-              {tab === 'share' ? <Mail size={13} /> : <Link2 size={13} />}
-              {tab}
+              <Link2 size={14} />
+              Copy link
             </button>
-          ))}
+            <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+              <X size={16} className="text-text-muted" />
+            </button>
+          </div>
         </div>
 
-        <div className="px-5 py-4">
-          {activeTab === 'share' ? (
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="Enter email address..."
-                  className="flex-1 px-3 py-2.5 rounded-xl border border-border-light text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
-                />
-                <select
-                  value={permission}
-                  onChange={e => setPermission(e.target.value)}
-                  className="px-3 py-2.5 rounded-xl border border-border-light text-[12px] text-text-secondary bg-white focus:outline-none cursor-pointer"
-                >
-                  {PERMISSIONS.map(p => (
-                    <option key={p.id} value={p.id}>{p.label}</option>
-                  ))}
-                </select>
-              </div>
-              <button
-                onClick={handleSendInvite}
-                disabled={!email.trim()}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary to-primary-medium text-white rounded-xl text-[13px] font-semibold hover:from-primary-hover hover:to-primary disabled:opacity-40 transition-all cursor-pointer"
-              >
-                <Send size={13} />
-                Send Invitation
-              </button>
-
-              {RECENT_SHARES.length > 0 && (
-                <div>
-                  <div className="text-[12px] font-semibold text-text-muted mb-2">Shared with</div>
-                  <div className="space-y-2">
-                    {RECENT_SHARES.map(share => (
-                      <div key={share.email} className="flex items-center gap-3 p-2.5 rounded-lg bg-surface-2">
-                        <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-[12px] font-bold flex items-center justify-center">
-                          {share.initials}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[12px] font-medium text-text">{share.name}</div>
-                          <div className="text-[12px] text-text-muted truncate">{share.email}</div>
-                        </div>
-                        <span className="text-[12px] text-text-muted capitalize bg-white px-2 py-0.5 rounded border border-border-light">
-                          {share.permission}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+        {/* Body */}
+        <div className="px-5 py-4 space-y-4">
+          {/* Invite row */}
+          <div className="flex gap-2">
+            <div className="flex-1 flex items-center gap-1.5 flex-wrap px-2.5 py-1.5 rounded-lg border border-border-light bg-surface-2 focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+              {inviteChips.map(chip => (
+                <span key={chip} className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md bg-white border border-border-light text-[12px] text-text">
+                  {chip}
+                  <button
+                    onClick={() => removeChip(chip)}
+                    className="p-0.5 text-text-muted hover:text-text cursor-pointer"
+                    aria-label={`Remove ${chip}`}
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                onBlur={() => { if (email.trim()) { addChips(email); setEmail(''); } }}
+                placeholder={inviteChips.length === 0 ? 'Add comma separated emails to invite' : ''}
+                className="flex-1 min-w-[120px] bg-transparent py-1 text-[13px] text-text placeholder:text-text-muted focus:outline-none"
+              />
+              {inviteChips.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => setOpenMenu(openMenu === 'invite' ? null : 'invite')}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-[12px] text-text-secondary hover:text-text transition-colors cursor-pointer"
+                  >
+                    {invitePermission}
+                    <ChevronDown size={12} />
+                  </button>
+                  {openMenu === 'invite' && (
+                    <div className="absolute right-0 top-full mt-1 bg-white border border-border-light rounded-lg shadow-lg py-1 w-32 z-10">
+                      {(['can view', 'can edit'] as const).map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => { setInvitePermission(opt); setOpenMenu(null); }}
+                          className="w-full text-left px-3 py-1.5 text-[12px] text-text hover:bg-surface-2 cursor-pointer"
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-surface-2 border border-border-light">
-                <Link2 size={14} className="text-text-muted shrink-0" />
-                <span className="flex-1 text-[12px] text-text-secondary font-mono truncate">
-                  https://auditify.ai/shared/rpt-fx26q1...
-                </span>
-                <button
-                  onClick={handleCopyLink}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-[12px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer whitespace-nowrap"
-                >
-                  {copied ? <Check size={12} /> : <Copy size={12} />}
-                  {copied ? 'Copied!' : 'Copy Link'}
-                </button>
+            <button
+              onClick={handleInvite}
+              disabled={!canInvite}
+              className="px-5 py-2 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed bg-primary text-white hover:bg-primary-hover disabled:bg-gray-100 disabled:text-text-muted"
+            >
+              Invite
+            </button>
+          </div>
+
+          {/* Who has access */}
+          <div>
+            <div className="text-[12px] font-semibold text-text-muted mb-2">Who has access</div>
+            <div className="space-y-1">
+              {/* Anyone with link */}
+              <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface-2 transition-colors">
+                <div className="w-8 h-8 rounded-full bg-surface-2 border border-border-light flex items-center justify-center shrink-0">
+                  <Globe size={15} className="text-text-muted" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-medium text-text">Anyone with link</div>
+                </div>
+                <div className="relative">
+                  <button
+                    onClick={() => setOpenMenu(openMenu === 'anyone' ? null : 'anyone')}
+                    className="flex items-center gap-1 text-[12px] text-text-muted hover:text-text transition-colors cursor-pointer"
+                  >
+                    {anyonePermission}
+                    <ChevronDown size={12} />
+                  </button>
+                  {openMenu === 'anyone' && (
+                    <div className="absolute right-0 top-full mt-1 bg-white border border-border-light rounded-lg shadow-lg py-1 w-32 z-10">
+                      {(['can view', 'can edit'] as const).map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => { setAnyonePermission(opt); setOpenMenu(null); }}
+                          className="w-full text-left px-3 py-1.5 text-[12px] text-text hover:bg-surface-2 cursor-pointer"
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="text-[12px] text-text-muted">
-                Anyone with the link can view this resource. You can change permissions anytime.
+
+              {/* Owner */}
+              <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface-2 transition-colors">
+                <div className={`w-8 h-8 rounded-full text-[12px] font-bold flex items-center justify-center shrink-0 ${OWNER.avatarClass}`}>
+                  {OWNER.initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] text-text">
+                    <span className="font-medium">{OWNER.name}</span>
+                    <span className="text-text-muted"> (you)</span>
+                  </div>
+                </div>
+                <span className="text-[12px] text-text-muted">owner</span>
               </div>
+
+              {/* Shared users */}
+              {shared.map(user => (
+                <div key={user.email} className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface-2 transition-colors">
+                  <div className={`w-8 h-8 rounded-full text-[12px] font-bold flex items-center justify-center shrink-0 ${user.avatarClass}`}>
+                    {user.initials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-medium text-text truncate">{user.name}</div>
+                  </div>
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpenMenu(openMenu === user.email ? null : user.email)}
+                      className="flex items-center gap-1 text-[12px] text-text-muted hover:text-text transition-colors cursor-pointer"
+                    >
+                      {permissionLabel(user.permission)}
+                      <ChevronDown size={12} />
+                    </button>
+                    {openMenu === user.email && (
+                      <div className="absolute right-0 top-full mt-1 bg-white border border-border-light rounded-lg shadow-lg py-1 w-32 z-10">
+                        {PERMISSION_OPTIONS.filter(p => p !== 'can comment').map(opt => (
+                          <button
+                            key={opt}
+                            onClick={() => updatePermission(user.email, opt === 'can edit' ? 'edit' : 'view')}
+                            className="w-full text-left px-3 py-1.5 text-[12px] text-text hover:bg-surface-2 cursor-pointer"
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
         </div>
       </motion.div>
     </motion.div>

@@ -27,8 +27,8 @@ function NavItem({ icon: Icon, label, active, expanded, onClick, badge }: {
       onClick={onClick}
       title={!expanded ? label : undefined}
       className={`
-        w-full flex items-center gap-2.5 rounded-lg transition-colors duration-150 relative cursor-pointer
-        ${expanded ? 'h-9 px-3.5' : 'h-10 px-0 justify-center'}
+        flex items-center gap-2.5 rounded-lg transition-colors duration-150 relative cursor-pointer
+        ${expanded ? 'w-full h-8 px-3.5' : 'w-8 h-8 mx-auto px-0 justify-center'}
         ${active
           ? 'bg-sidebar-surface-active text-sidebar-accent font-semibold'
           : 'text-sidebar-text hover:bg-sidebar-surface-hover hover:text-sidebar-accent'
@@ -46,7 +46,7 @@ function NavItem({ icon: Icon, label, active, expanded, onClick, badge }: {
             animate={{ opacity: 1, width: 'auto' }}
             exit={{ opacity: 0, width: 0 }}
             transition={{ duration: 0.15 }}
-            className="text-[13.5px] truncate overflow-hidden whitespace-nowrap"
+            className="text-[14px] leading-[20px] truncate overflow-hidden whitespace-nowrap"
             style={{ fontWeight: active ? 600 : 520 }}
           >
             {label}
@@ -72,10 +72,16 @@ function NavItem({ icon: Icon, label, active, expanded, onClick, badge }: {
 
 /* ── Section divider with optional label ── */
 function Divider({ label, expanded }: { label?: string; expanded: boolean }) {
-  if (!expanded || !label) return <div className="h-px bg-sidebar-border my-2 mx-3" />;
+  if (!expanded || !label) {
+    return (
+      <div className="mx-0 py-[13.5px]">
+        <div className="h-px bg-sidebar-border" />
+      </div>
+    );
+  }
   return (
-    <div className="px-3.5 pt-2 pb-1">
-      <span className="text-[12px] font-medium uppercase text-white">{label}</span>
+    <div className="px-3.5 py-2">
+      <span className="text-[12px] leading-[16px] font-medium uppercase text-white/60">{label}</span>
     </div>
   );
 }
@@ -121,6 +127,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
   const isExpanded = expanded || hoverExpanded;
 
   const handleMouseEnter = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     if (!expanded) {
       hoverTimerRef.current = setTimeout(() => setHoverExpanded(true), 200);
     }
@@ -128,7 +135,9 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
 
   const handleMouseLeave = () => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-    if (!expanded) setHoverExpanded(false);
+    if (!expanded) {
+      hoverTimerRef.current = setTimeout(() => setHoverExpanded(false), 250);
+    }
   };
 
   /* View group helpers for active detection */
@@ -139,16 +148,19 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
   return (
     <motion.div
       animate={{ width: isExpanded ? 256 : 64 }}
-      transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+      transition={{
+        duration: 0.28,
+        // ease: [0.22, 1, 0.36, 1],
+      }}
       className="h-full bg-sidebar-bg noise-texture flex flex-col shrink-0 overflow-hidden z-50"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {/* ── Logo row + team switcher ── */}
-      <div className={`border-b border-sidebar-border shrink-0 relative ${isExpanded ? 'px-4 pt-[18px] pb-4' : 'px-2 py-3'}`} ref={teamRef}>
+      <div className={`border-b border-sidebar-border shrink-0 relative h-[59px] flex items-center ${isExpanded ? 'px-4' : 'px-0 justify-center'}`} ref={teamRef}>
         <div className={`flex items-center ${isExpanded ? 'gap-3' : 'justify-center'}`}>
-          <div className="w-[30px] h-[30px] rounded-lg bg-gradient-to-br from-brand-500 to-brand-400 flex items-center justify-center shrink-0" style={{ boxShadow: '0 2px 8px rgb(106 18 205 / 0.30)' }}>
-            <Sparkles size={12} className="text-white" />
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-400 flex items-center justify-center shrink-0" style={{ boxShadow: '0 2px 8px rgb(106 18 205 / 0.30)' }}>
+            <Sparkles size={14} className="text-white" />
           </div>
           <AnimatePresence>
             {isExpanded && (
@@ -234,7 +246,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
       </div>
 
       {/* ── Navigation ── */}
-      <nav className={`flex-1 overflow-y-auto overflow-x-hidden ${isExpanded ? 'px-2 py-2' : 'px-1.5 py-3'}`}>
+      <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-2 ${isExpanded ? 'px-2' : 'px-0'}`}>
         <div className="space-y-0.5">
 
           {/* Top actions */}
@@ -251,13 +263,6 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
           <NavItem icon={Building2} label="Process Hub" active={view === 'business-processes' || view === 'bp-detail'} expanded={isExpanded} onClick={() => setView('business-processes')} />
           <NavItem icon={AlertTriangle} label="Risk Register" active={view === 'audit-risk-register'} expanded={isExpanded} onClick={() => setView('audit-risk-register')} badge="14" />
           <NavItem icon={Shield} label="Control Library" active={view === 'governance-controls' || view === 'governance-control-detail'} expanded={isExpanded} onClick={() => setView('governance-controls')} />
-
-          {/* ── EXECUTION ── */}
-          <Divider label="Execution" expanded={isExpanded} />
-
-          <NavItem icon={ClipboardCheck} label="Control Testing" active={view === 'execution-testing'} expanded={isExpanded} onClick={() => setView('execution-testing')} />
-          <NavItem icon={FileText} label="Evidence & Workpapers" active={view === 'execution-evidence'} expanded={isExpanded} onClick={() => setView('execution-evidence')} />
-          <NavItem icon={Target} label="Findings" active={view === 'findings'} expanded={isExpanded} onClick={() => setView('findings')} badge="5" />
 
           {/* ── GLOBAL ── */}
           <Divider label="Global" expanded={isExpanded} />
@@ -277,7 +282,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
       </nav>
 
       {/* ── User profile ── */}
-      <div className={`border-t border-sidebar-border shrink-0 relative ${isExpanded ? 'px-3 py-3' : 'px-2 py-2'}`} ref={userMenuRef}>
+      <div className={`border-t border-sidebar-border shrink-0 relative py-3 ${isExpanded ? 'px-3' : 'px-0'}`} ref={userMenuRef}>
         <AnimatePresence>
           {isExpanded && (
             <motion.div
