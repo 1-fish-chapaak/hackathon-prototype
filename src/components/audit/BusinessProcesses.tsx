@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Search, Plus, Upload, Link2,
@@ -6,9 +6,9 @@ import {
   ChevronRight, ChevronDown, Sparkles, FileSpreadsheet, X, Check,
   ArrowLeft, Shield, Workflow, CheckCircle2,
   ArrowRight, TrendingUp, RefreshCw, GitBranch, Network,
-  Zap, Eye
+  Zap, Eye, Building2, Briefcase, Users, Calendar
 } from 'lucide-react';
-import { BUSINESS_PROCESSES, SOPS, RACMS, RISKS, CONTROLS, WORKFLOWS, SOP_FLOWS, SOP_AI_RECOMMENDATIONS } from '../../data/mockData';
+import { BUSINESS_PROCESSES, SOPS, RACMS, RISKS, CONTROLS, WORKFLOWS, SOP_FLOWS, SOP_AI_RECOMMENDATIONS, ENGAGEMENTS } from '../../data/mockData';
 import { StatusBadge, SeverityBadge, FrameworkBadge, TypeBadge, Avatar } from '../shared/StatusBadge';
 import { CardContainer, CardBody, CardItem } from '../shared/3DCard';
 import Orb from '../shared/Orb';
@@ -17,7 +17,15 @@ import { useToast } from '../shared/Toast';
 interface Props {
   selectedBPId: string | null;
   onSelectBP: (id: string | null) => void;
+  onOpenEngagement?: (engagementId: string) => void;
 }
+
+type HubTabId = 'engagements' | 'business-processes';
+
+const HUB_TABS: { id: HubTabId; label: string; icon: React.ElementType }[] = [
+  { id: 'engagements',        label: 'Engagements',       icon: Briefcase },
+  { id: 'business-processes', label: 'Business processes', icon: Building2 },
+];
 
 /* ─── Link Controls Modal ─── */
 function LinkControlsModal({ risk, onClose }: { risk: typeof RISKS[0]; onClose: () => void }) {
@@ -469,17 +477,280 @@ function RACMWorkflowPanel({ bpId }: { bpId: string }) {
   );
 }
 
+/* ─── Sub-process helpers (each SOP defines a sub-process) ─── */
+
+interface SubProcess {
+  id: string;       // = sop.id
+  name: string;     // SOP name minus " SOP" suffix
+  sopId: string;
+  racmId: string | null;
+}
+
+function deriveSubProcesses(bpId: string): SubProcess[] {
+  return SOPS.filter(s => s.bpId === bpId).map(sop => ({
+    id: sop.id,
+    name: sop.name.replace(/\s*SOP$/i, '').trim(),
+    sopId: sop.id,
+    racmId: sop.racmId,
+  }));
+}
+
+// Round-robin partition: stable assignment of items across sub-processes by index.
+function partitionByIndex<T>(items: T[], subProcesses: SubProcess[]): Map<string, T[]> {
+  const result = new Map<string, T[]>();
+  subProcesses.forEach(sp => result.set(sp.id, []));
+  if (subProcesses.length === 0) return result;
+  items.forEach((item, idx) => {
+    const sp = subProcesses[idx % subProcesses.length];
+    result.get(sp.id)!.push(item);
+  });
+  return result;
+}
+
+/* ─── Sub-process accordion (used inside every BP detail tab) ─── */
+function SubProcessAccordion({
+  sp, count, defaultOpen = true, children,
+}: {
+  sp: SubProcess; count: number; defaultOpen?: boolean; children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-xl border border-border-light bg-white overflow-hidden mb-3">
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-paper-50/60 transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <ChevronDown size={14} className={`text-text-muted transition-transform shrink-0 ${open ? '' : '-rotate-90'}`} />
+          <span className="text-[13px] font-semibold text-text truncate">{sp.name}</span>
+          <span className="text-[11px] text-text-muted tabular-nums shrink-0">{count}</span>
+        </div>
+        <span className="text-[11px] font-mono text-text-muted shrink-0">{sp.sopId.toUpperCase()}</span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden border-t border-border-light"
+          >
+            <div className="p-4">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ─── Link/unlink chip primitive ─── */
+function LinkChip({
+  label, sublabel, onUnlink, tone = 'brand',
+}: {
+  label: string; sublabel?: string; onUnlink: () => void; tone?: 'brand' | 'evidence' | 'compliant';
+}) {
+  const tones: Record<string, string> = {
+    brand:     'bg-brand-50 text-brand-700 border-brand-100',
+    evidence:  'bg-evidence-50 text-evidence-700 border-evidence-50',
+    compliant: 'bg-compliant-50 text-compliant-700 border-compliant-50',
+  };
+  return (
+    <span className={`inline-flex items-center gap-1.5 pl-2 pr-1 h-6 rounded-full border text-[11px] font-medium ${tones[tone]}`}>
+      <span className="truncate max-w-[180px]">{label}{sublabel && <span className="opacity-60"> · {sublabel}</span>}</span>
+      <button
+        onClick={(e) => { e.stopPropagation(); onUnlink(); }}
+        aria-label={`Unlink ${label}`}
+        className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-black/5 transition-colors cursor-pointer"
+      >
+        <X size={10} />
+      </button>
+    </span>
+  );
+}
+
+/* ─── Risk health donut (compact SVG) ─── */
+const HEALTH_TONES = {
+  healthy:   { stroke: '#15803D', bg: 'bg-compliant-50', text: 'text-compliant-700', label: 'Healthy' },
+  unhealthy: { stroke: '#B42318', bg: 'bg-risk-50',      text: 'text-risk-700',      label: 'Not healthy' },
+  untested:  { stroke: '#6B5D82', bg: 'bg-paper-100',    text: 'text-ink-600',       label: 'Untested' },
+} as const;
+
+function RiskHealthDonut({ data }: { data: { healthy: number; unhealthy: number; untested: number } }) {
+  const total = data.healthy + data.unhealthy + data.untested;
+  const r = 38, c = 2 * Math.PI * r;
+  const segs = (['healthy', 'unhealthy', 'untested'] as const).map(k => ({ k, v: data[k] }));
+  let offset = 0;
+  return (
+    <div className="flex items-center gap-5">
+      <div className="relative">
+        <svg width={100} height={100} viewBox="0 0 100 100" className="-rotate-90">
+          <circle cx={50} cy={50} r={r} fill="none" stroke="#F0EAF6" strokeWidth={12} />
+          {total > 0 && segs.map(s => {
+            const len = (s.v / total) * c;
+            const dasharray = `${len} ${c - len}`;
+            const cs = (
+              <circle
+                key={s.k}
+                cx={50} cy={50} r={r}
+                fill="none"
+                stroke={HEALTH_TONES[s.k].stroke}
+                strokeWidth={12}
+                strokeDasharray={dasharray}
+                strokeDashoffset={-offset}
+              />
+            );
+            offset += len;
+            return cs;
+          })}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="text-[20px] font-semibold tabular-nums text-ink-900 leading-none">{total}</div>
+          <div className="text-[10px] text-text-muted uppercase tracking-wide">Risks</div>
+        </div>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {segs.map(s => (
+          <div key={s.k} className="flex items-center gap-2 text-[12px]">
+            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: HEALTH_TONES[s.k].stroke }} />
+            <span className="text-ink-700 w-[80px]">{HEALTH_TONES[s.k].label}</span>
+            <span className="font-mono tabular-nums text-ink-900">{s.v}</span>
+            <span className="text-text-muted">({total > 0 ? Math.round((s.v / total) * 100) : 0}%)</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Sub-process × health heatmap ─── */
+function RiskHealthHeatmap({
+  rows,
+}: {
+  rows: { spName: string; healthy: number; unhealthy: number; untested: number }[];
+}) {
+  const max = Math.max(1, ...rows.flatMap(r => [r.healthy, r.unhealthy, r.untested]));
+  const cellTone = (k: 'healthy' | 'unhealthy' | 'untested', v: number) => {
+    const intensity = v / max; // 0–1
+    const baseAlpha = v === 0 ? 0.06 : 0.18 + intensity * 0.62;
+    const colour: Record<typeof k, string> = {
+      healthy:   `rgba(21,128,61,${baseAlpha})`,
+      unhealthy: `rgba(180,35,24,${baseAlpha})`,
+      untested:  `rgba(107,93,130,${baseAlpha})`,
+    };
+    return colour[k];
+  };
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-border-light bg-white">
+      <table className="w-full text-[12px]">
+        <thead>
+          <tr className="bg-paper-50/60 border-b border-border-light">
+            <th className="text-left px-3 py-2 font-semibold text-text-secondary">Sub-process</th>
+            <th className="text-center px-3 py-2 font-semibold text-compliant-700">Healthy</th>
+            <th className="text-center px-3 py-2 font-semibold text-risk-700">Not healthy</th>
+            <th className="text-center px-3 py-2 font-semibold text-ink-600">Untested</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr key={r.spName} className="border-b border-border-light last:border-0">
+              <td className="px-3 py-2 font-medium text-text">{r.spName}</td>
+              {(['healthy', 'unhealthy', 'untested'] as const).map(k => (
+                <td key={k} className="px-3 py-2">
+                  <div
+                    className="inline-flex items-center justify-center w-full h-7 rounded font-mono tabular-nums text-[12.5px] text-ink-900"
+                    style={{ background: cellTone(k, r[k]) }}
+                  >
+                    {r[k]}
+                  </div>
+                </td>
+              ))}
+            </tr>
+          ))}
+          {rows.length === 0 && (
+            <tr><td colSpan={4} className="px-3 py-6 text-center text-text-muted">No sub-processes yet.</td></tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ─── Compact multi-status pill ─── */
+function StatusPillSm({ tone, label }: { tone: 'compliant' | 'risk' | 'mitigated' | 'evidence' | 'draft' | 'brand'; label: string }) {
+  const map: Record<string, string> = {
+    compliant: 'bg-compliant-50 text-compliant-700',
+    risk:      'bg-risk-50 text-risk-700',
+    mitigated: 'bg-mitigated-50 text-mitigated-700',
+    evidence:  'bg-evidence-50 text-evidence-700',
+    draft:     'bg-paper-100 text-ink-600',
+    brand:     'bg-brand-50 text-brand-700',
+  };
+  return (
+    <span className={`inline-flex items-center px-2 h-5 rounded-full text-[11px] font-semibold whitespace-nowrap ${map[tone]}`}>
+      {label}
+    </span>
+  );
+}
+
+/* ─── Add-link picker (popover-style) ─── */
+function AddLinkPicker<T extends { id: string; name: string }>({
+  options, onPick, label = '+ Link',
+}: {
+  options: T[]; onPick: (id: string) => void; label?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative inline-block">
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        className="inline-flex items-center gap-1 h-6 px-2 rounded-full border border-dashed border-border text-[11px] font-medium text-text-muted hover:border-primary/40 hover:text-primary transition-colors cursor-pointer"
+      >
+        {label}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute z-50 left-0 mt-1 w-64 rounded-lg border border-border-light bg-white shadow-md overflow-hidden">
+            {options.length === 0 ? (
+              <div className="px-3 py-3 text-[12px] text-text-muted">Nothing left to link.</div>
+            ) : (
+              options.map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => { onPick(opt.id); setOpen(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-[12.5px] text-text hover:bg-paper-50 transition-colors cursor-pointer"
+                >
+                  <Plus size={11} className="text-text-muted shrink-0" />
+                  <span className="font-mono text-[11px] text-text-muted shrink-0">{opt.id}</span>
+                  <span className="truncate">{opt.name}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ─── BP Detail View ─── */
 function BPDetailView({ bp, onBack }: {
   bp: typeof BUSINESS_PROCESSES[0]; onBack: () => void;
 }) {
-  const [tab, setTab] = useState<'sop' | 'racm' | 'workflows' | 'risks'>('sop');
+  const [tab, setTab] = useState<'sop' | 'racm' | 'risks' | 'controls' | 'workflows'>('sop');
   const [linkModal, setLinkModal] = useState<typeof RISKS[0] | null>(null);
   const [uploadModal, setUploadModal] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedWorkflows, setSelectedWorkflows] = useState<Set<string>>(new Set());
   const [sopVisuals, setSopVisuals] = useState<Record<string, 'flow' | 'map' | null>>({});
   const [racmFilterTag, setRacmFilterTag] = useState<string>('all');
+  const [controlEngagementFilter, setControlEngagementFilter] = useState<string>('all'); // engagement id or 'all'
+  const [wfRacmFilter, setWfRacmFilter] = useState<string>('all');
+  const [wfSopFilter, setWfSopFilter] = useState<string>('all');
+  const [wfSpFilter, setWfSpFilter] = useState<string>('all');
   const { addToast } = useToast();
 
   const toggleSopVisual = (sopId: string, type: 'flow' | 'map') => {
@@ -511,12 +782,172 @@ function BPDetailView({ bp, onBack }: {
   const bpSops = SOPS.filter(s => s.bpId === bp.id);
   const bpWfs = WORKFLOWS.filter(w => w.bpId === bp.id);
   const bpRisks = RISKS.filter(r => r.bpId === bp.id);
+  const bpRiskIds = new Set(bpRisks.map(r => r.id));
+  const bpControls = CONTROLS.filter(c => bpRiskIds.has(c.riskId));
+
+  // ─── Sub-process model + per-tab partition ───
+  const subProcesses = useMemo(() => deriveSubProcesses(bp.id), [bp.id]);
+
+  const risksBySP = useMemo(() => partitionByIndex(bpRisks, subProcesses), [bpRisks, subProcesses]);
+
+  // Each control inherits its sub-process from its linked risk's assignment
+  const riskToSP = useMemo(() => {
+    const map = new Map<string, string>();
+    if (subProcesses.length === 0) return map;
+    bpRisks.forEach((r, idx) => map.set(r.id, subProcesses[idx % subProcesses.length].id));
+    return map;
+  }, [bpRisks, subProcesses]);
+
+  const controlsBySP = useMemo(() => {
+    const map = new Map<string, typeof bpControls>(subProcesses.map(sp => [sp.id, []]));
+    bpControls.forEach(c => {
+      const spId = riskToSP.get(c.riskId);
+      if (spId && map.has(spId)) map.get(spId)!.push(c);
+    });
+    return map;
+  }, [bpControls, riskToSP, subProcesses]);
+
+  // ─── Mock derivations: risk health, version + multi-status, engagement assignment ───
+  const RACM_VERSIONS = ['v2.1', 'v1.8', 'v3.0', 'v1.0'];
+  const CTL_VERSIONS  = ['v2.0', 'v1.3', 'v1.0', 'v3.1', 'v2.5', 'v1.7', 'v1.1', 'v2.2'];
+  const TEST_RESULTS  = ['Passed', 'Failing', 'Not run']     as const;
+  const APPROVALS     = ['Approved', 'Pending review', 'Changes requested'] as const;
+  const COVERAGE      = ['Full', 'Partial', 'Spot-check']    as const;
+  type Health = 'healthy' | 'unhealthy' | 'untested';
+
+  function getRiskHealth(risk: typeof bpRisks[0]): Health {
+    if (risk.ctls === 0) return 'untested';
+    if (risk.status === 'mitigated') return 'healthy';
+    return 'unhealthy';
+  }
+
+  function getRacmMeta(racm: typeof bpRacms[0]) {
+    const idx = bpRacms.findIndex(r => r.id === racm.id);
+    return {
+      version:  RACM_VERSIONS[idx % RACM_VERSIONS.length],
+      lastTest: TEST_RESULTS[idx % TEST_RESULTS.length],
+      approval: APPROVALS[(idx * 2 + 1) % APPROVALS.length],
+    };
+  }
+
+  function getControlMeta(ctl: typeof bpControls[0]) {
+    const idx = bpControls.findIndex(c => c.id === ctl.id);
+    return {
+      version:  CTL_VERSIONS[idx % CTL_VERSIONS.length],
+      lastTest: TEST_RESULTS[idx % TEST_RESULTS.length],
+      coverage: COVERAGE[(idx * 3) % COVERAGE.length],
+    };
+  }
+
+  // Each control deterministically belongs to a subset of engagements that include this BP.
+  const bpEngagements = useMemo(() => ENGAGEMENTS.filter(e => e.bps.includes(bp.id)), [bp.id]);
+  function getControlEngagementIds(ctl: typeof bpControls[0]): string[] {
+    if (bpEngagements.length === 0) return [];
+    const idx = bpControls.findIndex(c => c.id === ctl.id);
+    // Round-robin: each control belongs to ⌈half⌉ + 1 of the BP's engagements (deterministic, varied)
+    return bpEngagements
+      .filter((_, ei) => (idx + ei) % 2 === 0 || idx % bpEngagements.length === ei)
+      .map(e => e.id);
+  }
+
+  // Workflow → sub-process (round-robin) and RACM (via the sub-process's RACM)
+  function getWorkflowSubProcessId(wf: typeof bpWfs[0]): string | null {
+    if (subProcesses.length === 0) return null;
+    const idx = bpWfs.findIndex(w => w.id === wf.id);
+    return subProcesses[idx % subProcesses.length].id;
+  }
+  function getWorkflowRacmId(wf: typeof bpWfs[0]): string | null {
+    const spId = getWorkflowSubProcessId(wf);
+    if (!spId) return null;
+    return subProcesses.find(sp => sp.id === spId)?.racmId ?? null;
+  }
+  function getWorkflowSopId(wf: typeof bpWfs[0]): string | null {
+    return getWorkflowSubProcessId(wf); // sub-process id == sop id
+  }
+
+  // ─── Mocked link/unlink session state ───
+  // SOP → RACM (1:1, may be unlinked)
+  const [sopRacmLinks, setSopRacmLinks] = useState<Record<string, string | null>>(() => {
+    const init: Record<string, string | null> = {};
+    bpSops.forEach(s => { init[s.id] = s.racmId; });
+    return init;
+  });
+
+  // RACM → controls (many controls per RACM, partitioned from BP controls by round-robin)
+  const [racmControlLinks, setRacmControlLinks] = useState<Record<string, Set<string>>>(() => {
+    const init: Record<string, Set<string>> = {};
+    bpRacms.forEach((r, ri) => {
+      init[r.id] = new Set(
+        bpControls.filter((_, ci) => bpRacms.length > 0 && ci % bpRacms.length === ri).map(c => c.id)
+      );
+    });
+    return init;
+  });
+
+  // Control → workflows (many workflows per control, round-robin)
+  const [controlWorkflowLinks, setControlWorkflowLinks] = useState<Record<string, Set<string>>>(() => {
+    const init: Record<string, Set<string>> = {};
+    bpControls.forEach((c, ci) => {
+      init[c.id] = new Set(bpWfs.length > 0 ? [bpWfs[ci % bpWfs.length].id] : []);
+    });
+    return init;
+  });
+
+  // ─── Link/unlink handlers ───
+  const linkRacmToSop = (sopId: string, racmId: string) => {
+    setSopRacmLinks(prev => ({ ...prev, [sopId]: racmId }));
+    const racm = bpRacms.find(r => r.id === racmId);
+    addToast({ type: 'success', message: `Linked ${racm?.name ?? racmId} to ${bpSops.find(s => s.id === sopId)?.name ?? sopId}` });
+  };
+  const unlinkRacmFromSop = (sopId: string) => {
+    setSopRacmLinks(prev => ({ ...prev, [sopId]: null }));
+    addToast({ type: 'info', message: 'RACM unlinked.' });
+  };
+
+  const linkControlToRacm = (racmId: string, controlId: string) => {
+    setRacmControlLinks(prev => {
+      const next = { ...prev };
+      next[racmId] = new Set(prev[racmId] ?? []);
+      next[racmId].add(controlId);
+      return next;
+    });
+    addToast({ type: 'success', message: `Control ${controlId} linked.` });
+  };
+  const unlinkControlFromRacm = (racmId: string, controlId: string) => {
+    setRacmControlLinks(prev => {
+      const next = { ...prev };
+      next[racmId] = new Set(prev[racmId] ?? []);
+      next[racmId].delete(controlId);
+      return next;
+    });
+    addToast({ type: 'info', message: `Control ${controlId} unlinked.` });
+  };
+
+  const linkWorkflowToControl = (controlId: string, workflowId: string) => {
+    setControlWorkflowLinks(prev => {
+      const next = { ...prev };
+      next[controlId] = new Set(prev[controlId] ?? []);
+      next[controlId].add(workflowId);
+      return next;
+    });
+    addToast({ type: 'success', message: `Workflow linked to ${controlId}.` });
+  };
+  const unlinkWorkflowFromControl = (controlId: string, workflowId: string) => {
+    setControlWorkflowLinks(prev => {
+      const next = { ...prev };
+      next[controlId] = new Set(prev[controlId] ?? []);
+      next[controlId].delete(workflowId);
+      return next;
+    });
+    addToast({ type: 'info', message: `Workflow unlinked from ${controlId}.` });
+  };
 
   const tabs = [
-    { id: 'sop' as const, label: 'SOP', count: bpSops.length },
-    { id: 'racm' as const, label: 'RACM', count: bpRacms.length },
-    { id: 'workflows' as const, label: 'Workflows', count: bpWfs.length },
-    { id: 'risks' as const, label: 'Risks', count: bpRisks.length },
+    { id: 'sop' as const,       label: 'SOP',             count: bpSops.length },
+    { id: 'racm' as const,      label: 'RACM',            count: bpRacms.length },
+    { id: 'risks' as const,     label: 'Risk register',   count: bpRisks.length },
+    { id: 'controls' as const,  label: 'Control library', count: bpControls.length },
+    { id: 'workflows' as const, label: 'Workflows',       count: bpWfs.length },
   ];
 
   return (
@@ -648,25 +1079,28 @@ function BPDetailView({ bp, onBack }: {
               </div>
             </div>
 
-            <div className="space-y-3">
-              {bpSops.map((sop, i) => {
-                const linked = bpRacms.find(r => r.id === sop.racmId);
+            {subProcesses.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border-light bg-white p-8 text-center text-[13px] text-text-muted">
+                No SOPs uploaded yet — upload one above to define your first sub-process.
+              </div>
+            ) : (
+              subProcesses.map(sp => {
+                const sop = bpSops.find(s => s.id === sp.sopId);
+                if (!sop) return null;
+                const linkedRacmId = sopRacmLinks[sop.id];
+                const linkedRacm = linkedRacmId ? bpRacms.find(r => r.id === linkedRacmId) : null;
+                const unlinkedRacms = bpRacms.filter(r => !Object.values(sopRacmLinks).includes(r.id));
                 const activeVisual = sopVisuals[sop.id] || null;
                 const flowSteps = SOP_FLOWS[sop.id];
+
                 return (
-                  <motion.div
-                    key={sop.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="bg-white rounded-xl border border-border-light p-5 ai-card hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300"
-                  >
+                  <SubProcessAccordion key={sp.id} sp={sp} count={1}>
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-success-bg flex items-center justify-center shrink-0">
                         <FileSpreadsheet size={18} className="text-success" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="text-[13px] font-semibold text-text">{sop.name}</span>
                           <span className="text-[12px] font-bold bg-paper-50 text-text-muted px-1.5 py-0.5 rounded">{sop.version}</span>
                           <StatusBadge status={sop.status} />
@@ -675,25 +1109,77 @@ function BPDetailView({ bp, onBack }: {
                           Uploaded by {sop.by} · {sop.at} · {sop.risks} risks · {sop.controls} controls extracted
                         </div>
                       </div>
-                      {linked ? (
-                        <button className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-light text-primary rounded-lg text-[12px] font-semibold hover:bg-primary/15 transition-colors">
-                          <Link2 size={12} />
-                          View RACM
-                        </button>
-                      ) : (
-                        <button className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-paper-50 transition-colors">
-                          <Plus size={12} />
-                          Generate RACM
-                        </button>
-                      )}
                     </div>
+
+                    {/* Linked RACM chip OR prominent CTA */}
+                    {linkedRacm ? (
+                      <div className="mt-3 pt-3 border-t border-border-light flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-bold uppercase tracking-wide text-text-muted mr-1">RACM</span>
+                        <LinkChip
+                          label={linkedRacm.name}
+                          sublabel={linkedRacm.id}
+                          onUnlink={() => unlinkRacmFromSop(sop.id)}
+                          tone="brand"
+                        />
+                        {unlinkedRacms.length > 0 && (
+                          <span className="text-[11px] text-text-muted ml-1">or</span>
+                        )}
+                        {unlinkedRacms.length > 0 && (
+                          <AddLinkPicker
+                            options={unlinkedRacms.map(r => ({ id: r.id, name: r.name }))}
+                            onPick={(racmId) => linkRacmToSop(sop.id, racmId)}
+                            label="+ Link another"
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-3 pt-3 border-t border-border-light">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Sparkles size={13} className="text-mitigated-700" />
+                          <span className="text-[12.5px] font-semibold text-text">No RACM linked yet</span>
+                        </div>
+                        <p className="text-[12px] text-text-muted mb-3">
+                          Generate a Risk &amp; Control Matrix from this SOP to start tracking risks and controls.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            onClick={() => {
+                              const newId = `RACM-NEW-${Date.now().toString(36).toUpperCase().slice(-4)}`;
+                              addToast({ type: 'success', message: `RACM extracted from ${sop.name} via AI.` });
+                              setSopRacmLinks(prev => ({ ...prev, [sop.id]: newId }));
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3.5 h-9 rounded-md bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white text-[12.5px] font-semibold shadow-sm transition-colors cursor-pointer"
+                          >
+                            <Sparkles size={13} />
+                            Extract with AI
+                          </button>
+                          <button
+                            onClick={() => addToast({ type: 'info', message: 'RACM upload — drop your .xlsx to process.' })}
+                            className="inline-flex items-center gap-1.5 px-3.5 h-9 rounded-md border border-border-light bg-white hover:border-brand-300 text-text text-[12.5px] font-semibold transition-colors cursor-pointer"
+                          >
+                            <Upload size={13} />
+                            Upload RACM file
+                          </button>
+                          {unlinkedRacms.length > 0 && (
+                            <>
+                              <span className="text-[11px] text-text-muted ml-1">or pick existing</span>
+                              <AddLinkPicker
+                                options={unlinkedRacms.map(r => ({ id: r.id, name: r.name }))}
+                                onPick={(racmId) => linkRacmToSop(sop.id, racmId)}
+                                label="+ Link RACM"
+                              />
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Visualization Toggle Buttons */}
                     <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border-light">
                       {flowSteps && (
                         <button
                           onClick={() => toggleSopVisual(sop.id, 'flow')}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer ${
                             activeVisual === 'flow'
                               ? 'bg-primary/10 text-primary border border-primary/20'
                               : 'bg-paper-50 text-ink-500 border border-gray-200 hover:bg-paper-50'
@@ -705,7 +1191,7 @@ function BPDetailView({ bp, onBack }: {
                       )}
                       <button
                         onClick={() => toggleSopVisual(sop.id, 'map')}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer ${
                           activeVisual === 'map'
                             ? 'bg-primary/10 text-primary border border-primary/20'
                             : 'bg-paper-50 text-ink-500 border border-gray-200 hover:bg-paper-50'
@@ -754,150 +1240,194 @@ function BPDetailView({ bp, onBack }: {
 
                     {/* AI Recommendations */}
                     <SOPAIRecommendations sopId={sop.id} />
-                  </motion.div>
+                  </SubProcessAccordion>
                 );
-              })}
-            </div>
+              })
+            )}
           </div>
         )}
 
         {/* RACM Tab */}
         {tab === 'racm' && (
           <div>
-            <div className="flex gap-3 mb-4">
-              <div className="flex-1 relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                <input placeholder="Search RACMs..." className="w-full pl-9 pr-4 py-2 rounded-lg border border-border bg-white text-[13px] outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10" />
+            {subProcesses.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border-light bg-white p-8 text-center text-[13px] text-text-muted">
+                Upload an SOP first — RACMs are generated per sub-process.
               </div>
-              <button className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-[13px] font-semibold hover:bg-primary-hover transition-colors">
-                <Plus size={14} />
-                Create RACM
-              </button>
-            </div>
+            ) : (
+              subProcesses.map(sp => {
+                const racm = bpRacms.find(r => r.id === sp.racmId);
+                if (!racm) {
+                  return (
+                    <SubProcessAccordion key={sp.id} sp={sp} count={0}>
+                      <div className="text-[12.5px] text-text-muted">No RACM generated yet for this sub-process.</div>
+                    </SubProcessAccordion>
+                  );
+                }
+                const linkedControlIds = racmControlLinks[racm.id] ?? new Set<string>();
+                const linkedControls = bpControls.filter(c => linkedControlIds.has(c.id));
+                const unlinkedControls = bpControls.filter(c => !linkedControlIds.has(c.id));
 
-            <div className="bg-white rounded-xl border border-border-light overflow-hidden">
-              <table className="w-full text-[12.5px]">
-                <thead>
-                  <tr className="bg-surface-2 border-b border-border-light">
-                    <th className="text-left px-4 py-3 font-semibold text-text-secondary">RACM</th>
-                    <th className="text-left px-3 py-3 font-semibold text-text-secondary">Framework</th>
-                    <th className="text-left px-3 py-3 font-semibold text-text-secondary">Status</th>
-                    <th className="text-left px-3 py-3 font-semibold text-text-secondary">Owner</th>
-                    <th className="text-left px-3 py-3 font-semibold text-text-secondary">Last Run</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bpRacms.map((r, i) => {
-                    return (
-                      <motion.tr
-                        key={r.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: i * 0.04 }}
-                        className="border-b border-border-light last:border-0 hover:bg-primary-xlight/50 transition-colors cursor-pointer group"
-                      >
-                        <td className="px-4 py-3" colSpan={5}>
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[13px] font-medium text-text group-hover:text-primary transition-colors">{r.name}</div>
-                              <div className="text-[12px] text-text-muted">{r.id}{r.sopId && <span className="text-primary"> · SOP linked</span>}</div>
-                            </div>
-                            <div className="shrink-0"><FrameworkBadge fw={r.fw} /></div>
-                            <div className="shrink-0"><StatusBadge status={r.status} /></div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <Avatar name={r.owner} size={20} />
-                              <span className="text-text-secondary text-[12px]">{r.owner.split(' ')[0]}</span>
-                            </div>
-                            <div className="text-text-muted text-[12px] flex items-center gap-1 shrink-0">
-                              <Clock size={11} />
-                              {r.lastRun}
-                            </div>
-                          </div>
-                          {/* Linked Workflows */}
-                          <RACMWorkflowPanel bpId={r.bpId} />
+                const racmMeta = getRacmMeta(racm);
+                return (
+                  <SubProcessAccordion key={sp.id} sp={sp} count={linkedControls.length}>
+                    {/* RACM header line */}
+                    <div className="flex items-start justify-between gap-3 mb-3 pb-3 border-b border-border-light">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[13px] font-medium text-text">{racm.name}</span>
+                          <span className="text-[11px] font-bold bg-paper-50 text-text-muted px-1.5 py-0.5 rounded">{racmMeta.version}</span>
+                        </div>
+                        <div className="text-[11px] text-text-muted font-mono mt-0.5">{racm.id}</div>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                        <FrameworkBadge fw={racm.fw} />
+                        <StatusPillSm tone={racm.status === 'active' ? 'compliant' : 'draft'} label={`Lifecycle · ${racm.status}`} />
+                        <StatusPillSm
+                          tone={racmMeta.lastTest === 'Passed' ? 'compliant' : racmMeta.lastTest === 'Failing' ? 'risk' : 'draft'}
+                          label={`Last test · ${racmMeta.lastTest}`}
+                        />
+                        <StatusPillSm
+                          tone={racmMeta.approval === 'Approved' ? 'compliant' : racmMeta.approval === 'Pending review' ? 'mitigated' : 'risk'}
+                          label={`Approval · ${racmMeta.approval}`}
+                        />
+                      </div>
+                    </div>
 
-                          {/* AI Recommended Controls */}
-                          {RACM_RECOMMENDED_CONTROLS[r.id] && (
-                            <div className="mt-3 p-3 bg-gradient-to-r from-primary-xlight/50 to-white rounded-xl border border-primary/10">
-                              <div className="flex items-center gap-1.5 mb-2">
-                                <Sparkles size={12} className="text-primary" />
-                                <span className="text-[12px] font-bold text-primary">AI Recommended Controls</span>
-                              </div>
-                              <div className="space-y-2">
-                                {RACM_RECOMMENDED_CONTROLS[r.id].map((rec, idx) => (
-                                  <div key={idx} className="flex items-start gap-2.5 p-2 rounded-lg bg-white/80 border border-border-light hover:shadow-sm transition-all">
-                                    <div className={`p-1 rounded-md shrink-0 ${
-                                      rec.type === 'automated' ? 'bg-evidence-50 text-evidence-700' :
-                                      rec.type === 'detective' ? 'bg-mitigated-50 text-mitigated-700' :
-                                      'bg-compliant-50 text-compliant-700'
-                                    }`}>
-                                      {rec.type === 'automated' ? <Zap size={10} /> : rec.type === 'detective' ? <Eye size={10} /> : <Shield size={10} />}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-[12px] font-medium text-text">{rec.control}</div>
-                                      <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[12px] text-text-muted">Mitigates: {rec.risk}</span>
-                                        <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded-full ${
-                                          rec.type === 'automated' ? 'bg-evidence-50 text-evidence-700' :
-                                          rec.type === 'detective' ? 'bg-mitigated-50 text-mitigated-700' :
-                                          'bg-compliant-50 text-compliant-700'
-                                        }`}>{rec.type}</span>
-                                      </div>
-                                    </div>
-                                    <div className="shrink-0 text-right">
-                                      <div className="text-[12px] font-bold text-primary">{rec.confidence}%</div>
-                                      <div className="w-12 h-1 bg-surface-3 rounded-full overflow-hidden mt-0.5">
-                                        <div className="h-full bg-primary rounded-full" style={{ width: `${rec.confidence}%` }} />
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
+                    {/* Risk → Control table */}
+                    <div className="overflow-hidden rounded-lg border border-border-light">
+                      <table className="w-full text-[12.5px]">
+                        <thead>
+                          <tr className="bg-paper-50/60 border-b border-border-light">
+                            <th className="text-left px-3 py-2 font-semibold text-text-secondary">Risk</th>
+                            <th className="text-left px-3 py-2 font-semibold text-text-secondary">Control</th>
+                            <th className="text-left px-3 py-2 font-semibold text-text-secondary">Status</th>
+                            <th className="text-right px-3 py-2 font-semibold text-text-secondary w-16"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {linkedControls.length === 0 && (
+                            <tr>
+                              <td colSpan={4} className="px-3 py-6 text-center text-text-muted text-[12.5px]">
+                                No controls linked to this RACM yet.
+                              </td>
+                            </tr>
                           )}
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          {linkedControls.map(ctl => {
+                            const linkedRisk = bpRisks.find(r => r.id === ctl.riskId);
+                            return (
+                              <tr key={ctl.id} className="border-b border-border-light last:border-0 hover:bg-primary-xlight/30 transition-colors">
+                                <td className="px-3 py-2.5">
+                                  {linkedRisk ? (
+                                    <div className="flex flex-col">
+                                      <span className="font-mono text-[11px] text-text-muted">{linkedRisk.id}</span>
+                                      <span className="text-[12.5px] text-text truncate max-w-[240px]">{linkedRisk.name}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-text-muted">—</span>
+                                  )}
+                                </td>
+                                <td className="px-3 py-2.5">
+                                  <div className="flex flex-col">
+                                    <span className="font-mono text-[11px] text-text-muted">{ctl.id}</span>
+                                    <span className="text-[12.5px] text-text">{ctl.name}</span>
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2.5"><StatusBadge status={ctl.status} /></td>
+                                <td className="px-3 py-2.5 text-right">
+                                  <button
+                                    onClick={() => unlinkControlFromRacm(racm.id, ctl.id)}
+                                    aria-label={`Unlink ${ctl.id}`}
+                                    className="p-1 rounded-md text-text-muted hover:text-risk hover:bg-risk-50/40 transition-colors cursor-pointer"
+                                  >
+                                    <X size={13} />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
 
+                    {/* + Link control row */}
+                    <div className="mt-3">
+                      <AddLinkPicker
+                        options={unlinkedControls.map(c => ({ id: c.id, name: c.name }))}
+                        onPick={(controlId) => linkControlToRacm(racm.id, controlId)}
+                        label="+ Link control"
+                      />
+                    </div>
+                  </SubProcessAccordion>
+                );
+              })
+            )}
           </div>
         )}
 
         {/* Workflows Tab */}
-        {tab === 'workflows' && (
+        {tab === 'workflows' && (() => {
+          const filteredWfs = bpWfs.filter(wf => {
+            if (wfSpFilter   !== 'all' && getWorkflowSubProcessId(wf) !== wfSpFilter)   return false;
+            if (wfRacmFilter !== 'all' && getWorkflowRacmId(wf)       !== wfRacmFilter) return false;
+            if (wfSopFilter  !== 'all' && getWorkflowSopId(wf)        !== wfSopFilter)  return false;
+            // Legacy chip filter (RACM ID) still respected if set
+            if (racmFilterTag !== 'all' && getWorkflowRacmId(wf) !== racmFilterTag)     return false;
+            return true;
+          });
+          const anyFilterActive = wfSpFilter !== 'all' || wfRacmFilter !== 'all' || wfSopFilter !== 'all' || racmFilterTag !== 'all';
+
+          return (
           <div>
-            {/* RACM tag filter chips */}
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-[12px] font-bold text-text-muted shrink-0">RACM Filter:</span>
-              <button
-                onClick={() => setRacmFilterTag('all')}
-                className={`px-2.5 py-1 rounded-full text-[12px] font-semibold transition-all cursor-pointer ${
-                  racmFilterTag === 'all' ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
-                }`}
+            {/* Filters */}
+            <div className="flex items-center gap-3 mb-4 flex-wrap">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Filter</span>
+              <select
+                value={wfSpFilter}
+                onChange={(e) => setWfSpFilter(e.target.value)}
+                className="h-8 px-3 rounded-md border border-border-light bg-white text-[12.5px] text-text focus:outline-none focus:border-brand-600 cursor-pointer"
               >
-                All
-              </button>
-              {bpRacms.map(r => (
+                <option value="all">All sub-processes</option>
+                {subProcesses.map(sp => (
+                  <option key={sp.id} value={sp.id}>{sp.name}</option>
+                ))}
+              </select>
+              <select
+                value={wfRacmFilter}
+                onChange={(e) => { setWfRacmFilter(e.target.value); setRacmFilterTag('all'); }}
+                className="h-8 px-3 rounded-md border border-border-light bg-white text-[12.5px] text-text focus:outline-none focus:border-brand-600 cursor-pointer"
+              >
+                <option value="all">All RACMs</option>
+                {bpRacms.map(r => (
+                  <option key={r.id} value={r.id}>{r.id} — {r.name}</option>
+                ))}
+              </select>
+              <select
+                value={wfSopFilter}
+                onChange={(e) => setWfSopFilter(e.target.value)}
+                className="h-8 px-3 rounded-md border border-border-light bg-white text-[12.5px] text-text focus:outline-none focus:border-brand-600 cursor-pointer"
+              >
+                <option value="all">All SOPs</option>
+                {bpSops.map(s => (
+                  <option key={s.id} value={s.id}>{s.name} {s.version}</option>
+                ))}
+              </select>
+              {anyFilterActive && (
                 <button
-                  key={r.id}
-                  onClick={() => setRacmFilterTag(racmFilterTag === r.id ? 'all' : r.id)}
-                  className={`px-2.5 py-1 rounded-full text-[12px] font-semibold transition-all cursor-pointer ${
-                    racmFilterTag === r.id ? 'bg-primary text-white shadow-sm' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
-                  }`}
+                  onClick={() => { setWfSpFilter('all'); setWfRacmFilter('all'); setWfSopFilter('all'); setRacmFilterTag('all'); }}
+                  className="text-[11.5px] text-text-muted hover:text-text-secondary cursor-pointer"
                 >
-                  {r.id}
+                  Clear all
                 </button>
-              ))}
+              )}
             </div>
+
             <div className="flex items-center justify-between mb-4">
-              <p className="text-[13px] text-text-secondary">Workflows for {bp.name}{racmFilterTag !== 'all' ? ` (filtered by ${racmFilterTag})` : ''}</p>
+              <p className="text-[13px] text-text-secondary">Workflows for {bp.name} ({filteredWfs.length} of {bpWfs.length})</p>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => { setBulkMode(!bulkMode); setSelectedWorkflows(new Set()); }}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer ${
                     bulkMode
                       ? 'bg-high-50 text-high-700 hover:bg-high-50'
                       : 'border border-border text-text-secondary hover:bg-paper-50'
@@ -906,7 +1436,7 @@ function BPDetailView({ bp, onBack }: {
                   <CheckCircle2 size={13} />
                   {bulkMode ? 'Exit Bulk Mode' : 'Bulk Run'}
                 </button>
-                <button className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-lg text-[12px] font-semibold hover:bg-primary-hover">
+                <button className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-lg text-[12px] font-semibold hover:bg-primary-hover cursor-pointer">
                   <Plus size={13} />
                   Create Workflow
                 </button>
@@ -914,7 +1444,7 @@ function BPDetailView({ bp, onBack }: {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {bpWfs.map((wf, i) => (
+              {filteredWfs.map((wf, i) => (
                 <motion.div
                   key={wf.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -994,60 +1524,249 @@ function BPDetailView({ bp, onBack }: {
               )}
             </AnimatePresence>
           </div>
-        )}
+          );
+        })()}
 
         {/* Risks Tab */}
-        {tab === 'risks' && (
+        {tab === 'risks' && (() => {
+          const totalHealth = bpRisks.reduce(
+            (acc, r) => {
+              const h = getRiskHealth(r);
+              acc[h]++;
+              return acc;
+            },
+            { healthy: 0, unhealthy: 0, untested: 0 } as { healthy: number; unhealthy: number; untested: number }
+          );
+          const heatmapRows = subProcesses.map(sp => {
+            const risksInSP = risksBySP.get(sp.id) ?? [];
+            const totals = { healthy: 0, unhealthy: 0, untested: 0 };
+            risksInSP.forEach(r => { totals[getRiskHealth(r)]++; });
+            return { spName: sp.name, ...totals };
+          });
+
+          return (
           <div>
-            <p className="text-[13px] text-text-secondary mb-4">Risks identified for {bp.name}</p>
-            <div className="bg-white rounded-xl border border-border-light overflow-hidden">
-              <table className="w-full text-[12.5px]">
-                <thead>
-                  <tr className="bg-surface-2 border-b border-border-light">
-                    <th className="text-left px-4 py-3 font-semibold text-text-secondary">Risk ID</th>
-                    <th className="text-left px-3 py-3 font-semibold text-text-secondary">Description</th>
-                    <th className="text-left px-3 py-3 font-semibold text-text-secondary">Severity</th>
-                    <th className="text-left px-3 py-3 font-semibold text-text-secondary">Controls</th>
-                    <th className="text-left px-3 py-3 font-semibold text-text-secondary">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bpRisks.map((risk, i) => (
-                    <motion.tr
-                      key={risk.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: i * 0.04 }}
-                      className="border-b border-border-light last:border-0 hover:bg-primary-xlight/50 transition-colors cursor-pointer"
-                    >
-                      <td className="px-4 py-3 font-mono text-text-muted text-[12px]">{risk.id}</td>
-                      <td className="px-3 py-3">
-                        <div className="text-[13px] font-medium text-text truncate max-w-[280px]">{risk.name}</div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <SeverityBadge severity={risk.severity} />
-                      </td>
-                      <td className="px-3 py-3">
-                        <span className="text-[12px] text-text">{risk.ctls} <span className="text-text-muted">({risk.keyCtls} key)</span></span>
-                      </td>
-                      <td className="px-3 py-3">
-                        <StatusBadge status={risk.status} />
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {bpRisks.filter(r => r.ctls === 0).length > 0 && (
-              <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-primary-xlight via-white to-primary-xlight border border-primary/10">
-                <div className="flex items-center gap-2 mb-1">
-                  <Sparkles size={13} className="text-primary" />
-                  <span className="text-[12px] font-bold text-text">AI Insight</span>
-                </div>
-                <p className="text-[12px] text-text-secondary">
-                  {bpRisks.filter(r => r.ctls === 0).length} risks have no controls mapped. Consider auto-suggesting controls for these risks.
-                </p>
+            {subProcesses.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border-light bg-white p-8 text-center text-[13px] text-text-muted">
+                Upload an SOP first — risks are grouped by sub-process.
               </div>
+            ) : (
+              <>
+                {/* Health overview — donut + heatmap */}
+                <div className="grid grid-cols-[auto_1fr] gap-4 mb-5">
+                  <div className="rounded-xl border border-border-light bg-white p-4">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-text-muted mb-3">Last-run health</div>
+                    <RiskHealthDonut data={totalHealth} />
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-text-muted mb-2">By sub-process</div>
+                    <RiskHealthHeatmap rows={heatmapRows} />
+                  </div>
+                </div>
+
+                {subProcesses.map(sp => {
+                  const risksInSP = risksBySP.get(sp.id) ?? [];
+                  return (
+                    <SubProcessAccordion key={sp.id} sp={sp} count={risksInSP.length}>
+                      {risksInSP.length === 0 ? (
+                        <div className="text-[12.5px] text-text-muted py-2">No risks in this sub-process yet.</div>
+                      ) : (
+                        <div className="overflow-hidden rounded-lg border border-border-light">
+                          <table className="w-full text-[12.5px]">
+                            <thead>
+                              <tr className="bg-paper-50/60 border-b border-border-light">
+                                <th className="text-left px-3 py-2 font-semibold text-text-secondary">Risk ID</th>
+                                <th className="text-left px-3 py-2 font-semibold text-text-secondary">Description</th>
+                                <th className="text-left px-3 py-2 font-semibold text-text-secondary">Severity</th>
+                                <th className="text-left px-3 py-2 font-semibold text-text-secondary">Controls</th>
+                                <th className="text-left px-3 py-2 font-semibold text-text-secondary">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {risksInSP.map(risk => (
+                                <tr key={risk.id} className="border-b border-border-light last:border-0 hover:bg-primary-xlight/30 transition-colors">
+                                  <td className="px-3 py-2.5 font-mono text-text-muted text-[12px]">{risk.id}</td>
+                                  <td className="px-3 py-2.5">
+                                    <div className="text-[12.5px] font-medium text-text truncate max-w-[320px]">{risk.name}</div>
+                                  </td>
+                                  <td className="px-3 py-2.5"><SeverityBadge severity={risk.severity} /></td>
+                                  <td className="px-3 py-2.5">
+                                    <span className="text-[12px] text-text">{risk.ctls} <span className="text-text-muted">({risk.keyCtls} key)</span></span>
+                                  </td>
+                                  <td className="px-3 py-2.5"><StatusBadge status={risk.status} /></td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </SubProcessAccordion>
+                  );
+                })}
+                {bpRisks.filter(r => r.ctls === 0).length > 0 && (
+                  <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-primary-xlight via-white to-primary-xlight border border-primary/10">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Sparkles size={13} className="text-primary" />
+                      <span className="text-[12px] font-bold text-text">AI Insight</span>
+                    </div>
+                    <p className="text-[12px] text-text-secondary">
+                      {bpRisks.filter(r => r.ctls === 0).length} risks have no controls mapped. Consider auto-suggesting controls for these risks.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          );
+        })()}
+
+        {/* Control Library Tab */}
+        {tab === 'controls' && (
+          <div>
+            {subProcesses.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border-light bg-white p-8 text-center text-[13px] text-text-muted">
+                Upload an SOP first — controls are grouped by sub-process.
+              </div>
+            ) : (
+              <>
+                {/* Engagement filter */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Engagement</span>
+                  <select
+                    value={controlEngagementFilter}
+                    onChange={(e) => setControlEngagementFilter(e.target.value)}
+                    className="h-8 px-3 rounded-md border border-border-light bg-white text-[12.5px] text-text focus:outline-none focus:border-brand-600 cursor-pointer"
+                  >
+                    <option value="all">All engagements</option>
+                    {bpEngagements.map(e => (
+                      <option key={e.id} value={e.id}>{e.name} ({e.id.toUpperCase()})</option>
+                    ))}
+                  </select>
+                  {controlEngagementFilter !== 'all' && (
+                    <button
+                      onClick={() => setControlEngagementFilter('all')}
+                      className="text-[11.5px] text-text-muted hover:text-text-secondary cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {subProcesses.map(sp => {
+                  const allInSP = controlsBySP.get(sp.id) ?? [];
+                  const controlsInSP = controlEngagementFilter === 'all'
+                    ? allInSP
+                    : allInSP.filter(c => getControlEngagementIds(c).includes(controlEngagementFilter));
+                  return (
+                    <SubProcessAccordion key={sp.id} sp={sp} count={controlsInSP.length}>
+                      {controlsInSP.length === 0 ? (
+                        <div className="text-[12.5px] text-text-muted py-2">
+                          {allInSP.length === 0 ? 'No controls in this sub-process yet.' : 'No controls match the selected engagement filter.'}
+                        </div>
+                      ) : (
+                        <div className="overflow-hidden rounded-lg border border-border-light">
+                          <table className="w-full text-[12.5px]">
+                            <thead>
+                              <tr className="bg-paper-50/60 border-b border-border-light">
+                                <th className="text-left px-3 py-2 font-semibold text-text-secondary">Control</th>
+                                <th className="text-left px-3 py-2 font-semibold text-text-secondary">Type</th>
+                                <th className="text-left px-3 py-2 font-semibold text-text-secondary">Risk linked</th>
+                                <th className="text-left px-3 py-2 font-semibold text-text-secondary">Status</th>
+                                <th className="text-left px-3 py-2 font-semibold text-text-secondary">Workflows</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {controlsInSP.map(ctl => {
+                                const linkedRisk = bpRisks.find(r => r.id === ctl.riskId);
+                                const linkedWfIds = controlWorkflowLinks[ctl.id] ?? new Set<string>();
+                                const linkedWfs = bpWfs.filter(w => linkedWfIds.has(w.id));
+                                const unlinkedWfs = bpWfs.filter(w => !linkedWfIds.has(w.id));
+                                const ctlMeta = getControlMeta(ctl);
+                                const ctlEngs = getControlEngagementIds(ctl);
+                                return (
+                                  <tr key={ctl.id} className="border-b border-border-light last:border-0 hover:bg-primary-xlight/30 transition-colors align-top">
+                                    <td className="px-3 py-2.5">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-mono text-[11px] text-text-muted">{ctl.id}</span>
+                                        <span className="text-[10px] font-bold bg-paper-50 text-text-muted px-1.5 py-0.5 rounded">{ctlMeta.version}</span>
+                                      </div>
+                                      <div className="text-[12.5px] font-medium text-text">{ctl.name}</div>
+                                      <div className="text-[11.5px] text-text-muted truncate max-w-[280px]">{ctl.desc}</div>
+                                      {ctlEngs.length > 0 && (
+                                        <div className="flex flex-wrap items-center gap-1 mt-1">
+                                          {ctlEngs.map(eid => (
+                                            <span key={eid} className="text-[10.5px] font-mono px-1.5 py-0.5 rounded bg-evidence-50 text-evidence-700">
+                                              {eid.toUpperCase()}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-2.5 whitespace-nowrap">
+                                      <span className={`inline-flex items-center px-2 h-5 rounded-full text-[11px] font-semibold ${
+                                        ctl.isKey ? 'bg-brand-50 text-brand-700' : 'bg-paper-100 text-ink-600'
+                                      }`}>
+                                        {ctl.isKey ? 'Key' : 'Standard'}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2.5">
+                                      {linkedRisk ? (
+                                        <div className="flex flex-col">
+                                          <span className="font-mono text-[11px] text-text-muted">{linkedRisk.id}</span>
+                                          <span className="text-[12px] text-text truncate max-w-[200px]">{linkedRisk.name}</span>
+                                        </div>
+                                      ) : (
+                                        <span className="text-text-muted text-[12px]">—</span>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-2.5">
+                                      <div className="flex flex-col gap-1">
+                                        <StatusBadge status={ctl.status} />
+                                        <div className="flex flex-wrap gap-1">
+                                          <StatusPillSm
+                                            tone={ctlMeta.lastTest === 'Passed' ? 'compliant' : ctlMeta.lastTest === 'Failing' ? 'risk' : 'draft'}
+                                            label={ctlMeta.lastTest}
+                                          />
+                                          <StatusPillSm
+                                            tone={ctlMeta.coverage === 'Full' ? 'compliant' : ctlMeta.coverage === 'Partial' ? 'mitigated' : 'draft'}
+                                            label={ctlMeta.coverage}
+                                          />
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="px-3 py-2.5">
+                                      <div className="flex flex-wrap items-center gap-1.5 max-w-[260px]">
+                                        {linkedWfs.map(wf => (
+                                          <LinkChip
+                                            key={wf.id}
+                                            label={wf.name}
+                                            onUnlink={() => unlinkWorkflowFromControl(ctl.id, wf.id)}
+                                            tone="evidence"
+                                          />
+                                        ))}
+                                        {unlinkedWfs.length > 0 && (
+                                          <AddLinkPicker
+                                            options={unlinkedWfs.map(w => ({ id: w.id, name: w.name }))}
+                                            onPick={(wfId) => linkWorkflowToControl(ctl.id, wfId)}
+                                            label="+ Workflow"
+                                          />
+                                        )}
+                                        {linkedWfs.length === 0 && unlinkedWfs.length === 0 && (
+                                          <span className="text-text-muted text-[11.5px]">No workflows in this BP.</span>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </SubProcessAccordion>
+                  );
+                })}
+              </>
             )}
           </div>
         )}
@@ -1057,124 +1776,315 @@ function BPDetailView({ bp, onBack }: {
 }
 
 /* ─── Business Processes List ─── */
-export default function BusinessProcesses({ selectedBPId, onSelectBP }: Props) {
+export default function BusinessProcesses({ selectedBPId, onSelectBP, onOpenEngagement }: Props) {
+  const [tab, setTab] = useState<HubTabId>('engagements');
+  const [search, setSearch] = useState('');
+
   if (selectedBPId) {
     const bp = BUSINESS_PROCESSES.find(b => b.id === selectedBPId);
     if (bp) return <BPDetailView bp={bp} onBack={() => onSelectBP(null)} />;
   }
 
+  const activeTabLabel = HUB_TABS.find(t => t.id === tab)!.label;
+
+  // Filtered counts + lists per tab
+  const lcSearch = search.trim().toLowerCase();
+  const filteredEngagements = ENGAGEMENTS.filter(e => {
+    if (!lcSearch) return true;
+    return e.name.toLowerCase().includes(lcSearch) || e.owner.toLowerCase().includes(lcSearch) || e.type.toLowerCase().includes(lcSearch);
+  });
+  const filteredBPs = BUSINESS_PROCESSES.filter(b => {
+    if (!lcSearch) return true;
+    return b.name.toLowerCase().includes(lcSearch) || b.abbr.toLowerCase().includes(lcSearch);
+  });
+
+  const newButtonLabel = tab === 'engagements' ? 'New engagement' : 'Add process';
+
   return (
-    <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
-      <Orb hoverIntensity={0.09} rotateOnHover hue={275} opacity={0.08} />
-      <div className="p-8 relative">
-        <div className="flex items-end justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-bold text-text">Business Processes</h1>
-            <p className="text-sm text-text-secondary mt-1">Manage processes, SOPs, RACMs, and control mappings</p>
+    <div className="h-full overflow-y-auto bg-canvas">
+      {/* Page header */}
+      <div className="border-b border-canvas-border bg-canvas-elevated">
+        <div className="max-w-6xl mx-auto px-8 pt-8 pb-0">
+          <div className="font-mono text-[11px] text-ink-500 mb-2 tracking-tight">
+            Process Hub · {activeTabLabel}
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors">
-            <Plus size={14} />
-            Add Process
-          </button>
-        </div>
 
-        {/* AI Insight Banner */}
-        <div className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-2xl border border-primary/10 p-5 mb-6 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shrink-0">
-            <Sparkles size={18} className="text-white" />
-          </div>
-          <div className="flex-1">
-            <div className="text-[13px] font-semibold text-text">AI Coverage Analysis</div>
-            <div className="text-[12px] text-text-secondary mt-0.5">
-              2 processes are below 60% control coverage. <span className="text-primary font-semibold cursor-pointer hover:underline">View recommendations</span>
-            </div>
-          </div>
-          <div className="flex gap-4 shrink-0">
-            <div className="text-center">
-              <div className="text-lg font-bold font-mono text-text">{BUSINESS_PROCESSES.length}</div>
-              <div className="text-[12px] text-text-muted">Processes</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold font-mono text-primary">{Math.round(BUSINESS_PROCESSES.reduce((s, b) => s + b.coverage, 0) / BUSINESS_PROCESSES.length)}%</div>
-              <div className="text-[12px] text-text-muted">Avg Coverage</div>
-            </div>
-          </div>
-        </div>
+          <div className="flex items-end justify-between mb-6">
+            <h1 className="font-display text-[40px] font-[420] tracking-tight text-ink-900 leading-[1.1]">
+              {activeTabLabel}
+            </h1>
 
-        {/* BP Cards — 3D Hover */}
-        <div className="grid grid-cols-2 gap-5">
-          {BUSINESS_PROCESSES.map((bp, i) => (
-            <motion.div
-              key={bp.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06 }}
-            >
-              <CardContainer containerClassName="w-full">
-                <CardBody
-                  className="bg-white rounded-2xl border border-border-light p-6 cursor-pointer hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.998] transition-all duration-300 group relative overflow-hidden"
+            <button className="flex items-center gap-2 px-4 h-10 rounded-md bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white text-[13px] font-semibold transition-colors cursor-pointer">
+              <Plus size={14} />
+              {newButtonLabel}
+            </button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex items-center gap-0 border-b border-transparent -mb-px">
+            {HUB_TABS.map(t => {
+              const Icon = t.icon;
+              const isActive = tab === t.id;
+              const count = t.id === 'engagements' ? ENGAGEMENTS.length : BUSINESS_PROCESSES.length;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`relative flex items-center gap-2 px-4 h-11 text-[13px] font-medium transition-colors cursor-pointer ${
+                    isActive ? 'text-brand-700' : 'text-ink-500 hover:text-ink-700'
+                  }`}
                 >
-                  {/* Accent gradient orb */}
-                  <div
-                    className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-[0.07] blur-2xl pointer-events-none"
-                    style={{ background: bp.color }}
-                  />
-                  <div
-                    className="absolute bottom-0 left-0 right-0 h-[2px] opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ background: `linear-gradient(90deg, ${bp.color}, ${bp.color}80, transparent)` }}
-                  />
-
-                  <div onClick={() => onSelectBP(bp.id)} className="relative">
-                    <CardItem translateZ={40}>
-                      <div className="flex items-center gap-3 mb-5">
-                        <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm transition-transform duration-300" style={{ background: bp.color + '1a' }}>
-                          <span className="text-sm font-bold" style={{ color: bp.color }}>{bp.abbr}</span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-[15px] font-semibold text-text group-hover:text-primary transition-colors">{bp.name}</div>
-                          <div className="text-[12px] text-text-muted">FY 2025–26</div>
-                        </div>
-                        <ChevronRight size={15} className="text-text-muted opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
-                      </div>
-                    </CardItem>
-
-                    <CardItem translateZ={25}>
-                      <div className="grid grid-cols-4 gap-3 mb-5">
-                        {[
-                          { l: 'Risks', v: bp.risks, c: '#dc2626' },
-                          { l: 'Controls', v: bp.controls, c: '#0284c7' },
-                          { l: 'SOPs', v: bp.sops, c: '#16a34a' },
-                          { l: 'Workflows', v: bp.workflows, c: '#d97706' },
-                        ].map(s => (
-                          <div key={s.l} className="text-center p-2 rounded-lg bg-surface-2/80 border border-border-light/50">
-                            <div className="text-lg font-bold text-text leading-none mb-0.5">{s.v}</div>
-                            <div className="text-[12px] text-text-muted font-medium">{s.l}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardItem>
-
-                    <CardItem translateZ={15}>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-2.5 bg-border-light rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${bp.coverage}%` }}
-                            transition={{ duration: 0.8, delay: 0.2 + i * 0.1 }}
-                            className="h-full rounded-full"
-                            style={{ background: `linear-gradient(90deg, ${bp.color}, ${bp.color}cc)` }}
-                          />
-                        </div>
-                        <span className="text-[13px] font-bold font-mono" style={{ color: bp.color }}>{bp.coverage}%</span>
-                      </div>
-                    </CardItem>
-                  </div>
-                </CardBody>
-              </CardContainer>
-            </motion.div>
-          ))}
+                  <Icon size={14} />
+                  {t.label}
+                  <span className={`tabular-nums text-[11px] ${isActive ? 'text-brand-600' : 'text-ink-400'}`}>
+                    {count}
+                  </span>
+                  {isActive && (
+                    <motion.div
+                      layoutId="hub-tab-bar"
+                      className="absolute left-0 right-0 -bottom-px h-[2px] bg-brand-600"
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
+
+      {/* Search */}
+      <div className="max-w-6xl mx-auto px-8 pt-6">
+        <div className="relative max-w-md">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
+          <input
+            type="text"
+            placeholder={`Search ${activeTabLabel.toLowerCase()}…`}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 h-9 rounded-md border border-canvas-border bg-canvas-elevated text-[13px] text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-brand-600 transition-colors"
+          />
+        </div>
+      </div>
+
+      {/* Tab content */}
+      <div className="max-w-6xl mx-auto px-8 py-6">
+        <AnimatePresence mode="wait">
+          {tab === 'engagements' ? (
+            <motion.div
+              key="engagements"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="grid grid-cols-2 gap-5"
+            >
+              {filteredEngagements.map((e, i) => (
+                <EngagementCard
+                  key={e.id}
+                  eng={e}
+                  index={i}
+                  onOpen={() => onOpenEngagement?.(e.id)}
+                />
+              ))}
+              {filteredEngagements.length === 0 && (
+                <div className="col-span-2 text-center py-16 text-[13px] text-ink-500">
+                  No engagements match "{search}".
+                </div>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="bps"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              {/* AI Insight Banner */}
+              <div className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-2xl border border-primary/10 p-5 mb-6 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shrink-0">
+                  <Sparkles size={18} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-[13px] font-semibold text-text">AI Coverage Analysis</div>
+                  <div className="text-[12px] text-text-secondary mt-0.5">
+                    2 processes are below 60% control coverage. <span className="text-primary font-semibold cursor-pointer hover:underline">View recommendations</span>
+                  </div>
+                </div>
+                <div className="flex gap-4 shrink-0">
+                  <div className="text-center">
+                    <div className="text-lg font-bold font-mono text-text">{BUSINESS_PROCESSES.length}</div>
+                    <div className="text-[12px] text-text-muted">Processes</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold font-mono text-primary">{Math.round(BUSINESS_PROCESSES.reduce((s, b) => s + b.coverage, 0) / BUSINESS_PROCESSES.length)}%</div>
+                    <div className="text-[12px] text-text-muted">Avg Coverage</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* BP Cards — 3D Hover */}
+              <div className="grid grid-cols-2 gap-5">
+                {filteredBPs.map((bp, i) => (
+                  <motion.div
+                    key={bp.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.06 }}
+                  >
+                    <CardContainer containerClassName="w-full">
+                      <CardBody
+                        className="bg-white rounded-2xl border border-border-light p-6 cursor-pointer hover:shadow-primary/5 hover:border-primary/20 active:scale-[0.998] transition-all duration-300 group relative overflow-hidden"
+                      >
+                        {/* Accent gradient orb */}
+                        <div
+                          className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-[0.07] blur-2xl pointer-events-none"
+                          style={{ background: bp.color }}
+                        />
+                        <div
+                          className="absolute bottom-0 left-0 right-0 h-[2px] opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ background: `linear-gradient(90deg, ${bp.color}, ${bp.color}80, transparent)` }}
+                        />
+
+                        <div onClick={() => onSelectBP(bp.id)} className="relative">
+                          <CardItem translateZ={40}>
+                            <div className="flex items-center gap-3 mb-5">
+                              <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-sm transition-transform duration-300" style={{ background: bp.color + '1a' }}>
+                                <span className="text-sm font-bold" style={{ color: bp.color }}>{bp.abbr}</span>
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-[15px] font-semibold text-text group-hover:text-primary transition-colors">{bp.name}</div>
+                                <div className="text-[12px] text-text-muted">FY 2025–26</div>
+                              </div>
+                              <ChevronRight size={15} className="text-text-muted opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                            </div>
+                          </CardItem>
+
+                          <CardItem translateZ={25}>
+                            <div className="grid grid-cols-4 gap-3 mb-5">
+                              {[
+                                { l: 'Risks', v: bp.risks, c: '#dc2626' },
+                                { l: 'Controls', v: bp.controls, c: '#0284c7' },
+                                { l: 'SOPs', v: bp.sops, c: '#16a34a' },
+                                { l: 'Workflows', v: bp.workflows, c: '#d97706' },
+                              ].map(s => (
+                                <div key={s.l} className="text-center p-2 rounded-lg bg-surface-2/80 border border-border-light/50">
+                                  <div className="text-lg font-bold text-text leading-none mb-0.5">{s.v}</div>
+                                  <div className="text-[12px] text-text-muted font-medium">{s.l}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </CardItem>
+
+                          <CardItem translateZ={15}>
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 h-2.5 bg-border-light rounded-full overflow-hidden">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${bp.coverage}%` }}
+                                  transition={{ duration: 0.8, delay: 0.2 + i * 0.1 }}
+                                  className="h-full rounded-full"
+                                  style={{ background: `linear-gradient(90deg, ${bp.color}, ${bp.color}cc)` }}
+                                />
+                              </div>
+                              <span className="text-[13px] font-bold font-mono" style={{ color: bp.color }}>{bp.coverage}%</span>
+                            </div>
+                          </CardItem>
+                        </div>
+                      </CardBody>
+                    </CardContainer>
+                  </motion.div>
+                ))}
+                {filteredBPs.length === 0 && (
+                  <div className="col-span-2 text-center py-16 text-[13px] text-ink-500">
+                    No business processes match "{search}".
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
+  );
+}
+
+/* ─── Engagement Card (used by Engagements tab) ─── */
+function EngagementCard({ eng, index, onOpen }: { eng: typeof ENGAGEMENTS[0]; index: number; onOpen: () => void }) {
+  const statusTone =
+    eng.status === 'active'   ? { bg: 'bg-evidence-50', text: 'text-evidence-700', label: 'In fieldwork' } :
+    eng.status === 'complete' ? { bg: 'bg-compliant-50', text: 'text-compliant-700', label: 'Closed' } :
+    eng.status === 'draft'    ? { bg: 'bg-paper-100',   text: 'text-ink-600',      label: 'Planned' } :
+                                { bg: 'bg-paper-100',   text: 'text-ink-600',      label: eng.status };
+
+  const progressPct = eng.controls > 0 ? Math.round((eng.tested / eng.controls) * 100) : 0;
+  const effectivePct = eng.tested > 0 ? Math.round((eng.effective / eng.tested) * 100) : 0;
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.06 }}
+      onClick={onOpen}
+      className="text-left group relative bg-canvas-elevated rounded-2xl border border-canvas-border p-6 hover:border-brand-600/40 hover:shadow-sm transition-all cursor-pointer"
+    >
+      <div className="flex items-start justify-between gap-3 mb-5">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center shrink-0">
+            <Briefcase size={18} className="text-brand-600" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[15px] font-semibold text-ink-900 group-hover:text-brand-700 transition-colors truncate">{eng.name}</div>
+            <div className="text-[12px] text-ink-500 mt-0.5 flex items-center gap-2">
+              <span className="font-mono">{eng.id.toUpperCase()}</span>
+              <span className="text-ink-300">·</span>
+              <span>{eng.type}</span>
+            </div>
+          </div>
+        </div>
+        <span className={`inline-flex items-center px-2 h-6 rounded-full text-[11px] font-semibold whitespace-nowrap ${statusTone.bg} ${statusTone.text}`}>
+          {statusTone.label}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="rounded-lg bg-paper-50/60 border border-canvas-border p-2.5">
+          <div className="text-[18px] font-semibold text-ink-900 tabular-nums leading-none mb-1">{eng.controls}</div>
+          <div className="text-[11px] text-ink-500">Controls</div>
+        </div>
+        <div className="rounded-lg bg-paper-50/60 border border-canvas-border p-2.5">
+          <div className="text-[18px] font-semibold text-ink-900 tabular-nums leading-none mb-1">{eng.tested}</div>
+          <div className="text-[11px] text-ink-500">Tested</div>
+        </div>
+        <div className="rounded-lg bg-paper-50/60 border border-canvas-border p-2.5">
+          <div className={`text-[18px] font-semibold tabular-nums leading-none mb-1 ${eng.deficiencies > 0 ? 'text-risk-700' : 'text-ink-900'}`}>{eng.deficiencies}</div>
+          <div className="text-[11px] text-ink-500">Deficiencies</div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex-1 h-1.5 bg-paper-100 rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${progressPct}%` }}
+            transition={{ duration: 0.6, delay: 0.15 + index * 0.05 }}
+            className="h-full rounded-full bg-brand-600"
+          />
+        </div>
+        <span className="text-[12px] font-semibold text-ink-700 tabular-nums">{progressPct}%</span>
+      </div>
+
+      <div className="flex items-center justify-between text-[12px] text-ink-500">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5"><Users size={11} />{eng.owner}</span>
+          <span className="text-ink-300">·</span>
+          <span className="flex items-center gap-1.5"><Calendar size={11} />{eng.start} – {eng.end}</span>
+        </div>
+        {eng.tested > 0 && (
+          <span className="font-mono text-[11px]">{effectivePct}% effective</span>
+        )}
+      </div>
+    </motion.button>
   );
 }
