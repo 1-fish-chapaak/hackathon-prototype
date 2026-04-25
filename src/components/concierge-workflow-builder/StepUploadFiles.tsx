@@ -127,128 +127,6 @@ export default function StepUploadFiles({
       transition={{ duration: 0.3 }}
       className="flex flex-col gap-4"
     >
-      {/* Required Files (collapsible) */}
-      <section className="rounded-xl border border-canvas-border bg-canvas-elevated">
-        <button
-          type="button"
-          onClick={() => setRequiredOpen((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-3 cursor-pointer"
-        >
-          <div className="flex items-center gap-2">
-            <FileIcon size={14} className="text-brand-600" />
-            <span className="text-[13px] font-semibold text-ink-800">Required Files</span>
-            <span className="text-[12px] text-ink-400">
-              {workflow.inputs.filter((i) => i.required).length} required ·{' '}
-              {workflow.inputs.length} total
-            </span>
-          </div>
-          <span className="text-[12px] text-ink-500 inline-flex items-center gap-1">
-            {requiredOpen ? 'Click to collapse' : 'Click to expand'}
-            {requiredOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </span>
-        </button>
-        {!requiredOpen ? (
-          <div className="px-4 pb-4 flex flex-wrap gap-2">
-            {workflow.inputs.map((input) => {
-              const uploaded = (files[input.id] ?? []).length;
-              const isFocused = focusedInputId === input.id;
-              return (
-                <button
-                  key={input.id}
-                  type="button"
-                  onClick={() => onFocusInput?.(input)}
-                  className={[
-                    'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12px] font-semibold border transition-colors cursor-pointer',
-                    isFocused
-                      ? 'bg-brand-50 border-brand-400 text-brand-700 ring-1 ring-brand-200/70'
-                      : uploaded > 0
-                        ? 'bg-compliant-50 border-compliant/30 text-compliant-700 hover:border-compliant/60'
-                        : 'bg-canvas border-canvas-border text-ink-700 hover:border-brand-300',
-                  ].join(' ')}
-                >
-                  {input.name}
-                  <span className="text-[12px] font-bold opacity-70">
-                    {input.type}
-                  </span>
-                  {uploaded > 0 && (
-                    <span className="text-[12px] rounded-full bg-white/70 px-1.5 py-0.5 text-compliant-700">
-                      {uploaded}
-                    </span>
-                  )}
-                  {input.required && uploaded === 0 && (
-                    <span className="text-[9.5px] font-bold text-risk">
-                      Required
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="px-4 pb-4 flex flex-col gap-2">
-            {workflow.inputs.map((input) => {
-              const uploaded = (files[input.id] ?? []).length;
-              const isFocused = focusedInputId === input.id;
-              return (
-                <button
-                  key={input.id}
-                  type="button"
-                  onClick={() => onFocusInput?.(input)}
-                  className={[
-                    'w-full text-left rounded-lg border px-3 py-2.5 transition-colors cursor-pointer',
-                    isFocused
-                      ? 'border-brand-400 bg-brand-50/60 ring-1 ring-brand-200/70'
-                      : uploaded > 0
-                        ? 'bg-compliant-50/40 border-compliant/30 hover:border-compliant/60'
-                        : 'bg-canvas border-canvas-border hover:border-brand-300',
-                  ].join(' ')}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[12.5px] font-semibold text-ink-800">
-                      {input.name}
-                    </span>
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-ink-500">
-                      {input.type}
-                    </span>
-                    {uploaded > 0 ? (
-                      <span className="text-[11px] font-semibold rounded-full bg-compliant/15 px-1.5 py-0.5 text-compliant-700">
-                        {uploaded} added
-                      </span>
-                    ) : input.required ? (
-                      <span className="text-[9.5px] font-bold text-risk">
-                        Required
-                      </span>
-                    ) : null}
-                  </div>
-                  {input.description && (
-                    <p className="text-[12px] text-ink-500 leading-snug mb-2">
-                      {input.description}
-                    </p>
-                  )}
-                  {input.columns && input.columns.length > 0 && (
-                    <div>
-                      <div className="text-[10.5px] font-bold uppercase tracking-wider text-ink-400 mb-1">
-                        Required columns
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {input.columns.map((col) => (
-                          <span
-                            key={col}
-                            className="inline-flex items-center rounded-md border border-canvas-border bg-canvas-elevated px-1.5 py-0.5 text-[11px] font-mono text-ink-700"
-                          >
-                            {col}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
       {/* Add Files */}
       <section className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
         <div className="flex items-center gap-2 mb-3">
@@ -390,6 +268,130 @@ export default function StepUploadFiles({
           })}
         </ul>
       </section>
+
+      {/* Required Files (collapsible) — only after user adds files */}
+      {totalCount > 0 && (
+      <section className="rounded-xl border border-canvas-border bg-canvas-elevated">
+        <button
+          type="button"
+          onClick={() => setRequiredOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <FileIcon size={14} className="text-brand-600" />
+            <span className="text-[13px] font-semibold text-ink-800">Required Files</span>
+            <span className="text-[12px] text-ink-400">
+              {workflow.inputs.filter((i) => i.required).length} required ·{' '}
+              {workflow.inputs.length} total
+            </span>
+          </div>
+          <span className="text-[12px] text-ink-500 inline-flex items-center gap-1">
+            {requiredOpen ? 'Click to collapse' : 'Click to expand'}
+            {requiredOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </span>
+        </button>
+        {!requiredOpen ? (
+          <div className="px-4 pb-4 flex flex-wrap gap-2">
+            {workflow.inputs.map((input) => {
+              const uploaded = (files[input.id] ?? []).length;
+              const isFocused = focusedInputId === input.id;
+              return (
+                <button
+                  key={input.id}
+                  type="button"
+                  onClick={() => onFocusInput?.(input)}
+                  className={[
+                    'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12px] font-semibold border transition-colors cursor-pointer',
+                    isFocused
+                      ? 'bg-brand-50 border-brand-400 text-brand-700 ring-1 ring-brand-200/70'
+                      : uploaded > 0
+                        ? 'bg-compliant-50 border-compliant/30 text-compliant-700 hover:border-compliant/60'
+                        : 'bg-canvas border-canvas-border text-ink-700 hover:border-brand-300',
+                  ].join(' ')}
+                >
+                  {input.name}
+                  <span className="text-[12px] font-bold opacity-70">
+                    {input.type}
+                  </span>
+                  {uploaded > 0 && (
+                    <span className="text-[12px] rounded-full bg-white/70 px-1.5 py-0.5 text-compliant-700">
+                      {uploaded}
+                    </span>
+                  )}
+                  {input.required && uploaded === 0 && (
+                    <span className="text-[9.5px] font-bold text-risk">
+                      Required
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="px-4 pb-4 flex flex-col gap-2">
+            {workflow.inputs.map((input) => {
+              const uploaded = (files[input.id] ?? []).length;
+              const isFocused = focusedInputId === input.id;
+              return (
+                <button
+                  key={input.id}
+                  type="button"
+                  onClick={() => onFocusInput?.(input)}
+                  className={[
+                    'w-full text-left rounded-lg border px-3 py-2.5 transition-colors cursor-pointer',
+                    isFocused
+                      ? 'border-brand-400 bg-brand-50/60 ring-1 ring-brand-200/70'
+                      : uploaded > 0
+                        ? 'bg-compliant-50/40 border-compliant/30 hover:border-compliant/60'
+                        : 'bg-canvas border-canvas-border hover:border-brand-300',
+                  ].join(' ')}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[12.5px] font-semibold text-ink-800">
+                      {input.name}
+                    </span>
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-ink-500">
+                      {input.type}
+                    </span>
+                    {uploaded > 0 ? (
+                      <span className="text-[11px] font-semibold rounded-full bg-compliant/15 px-1.5 py-0.5 text-compliant-700">
+                        {uploaded} added
+                      </span>
+                    ) : input.required ? (
+                      <span className="text-[9.5px] font-bold text-risk">
+                        Required
+                      </span>
+                    ) : null}
+                  </div>
+                  {input.description && (
+                    <p className="text-[12px] text-ink-500 leading-snug mb-2">
+                      {input.description}
+                    </p>
+                  )}
+                  {input.columns && input.columns.length > 0 && (
+                    <div>
+                      <div className="text-[10.5px] font-bold uppercase tracking-wider text-ink-400 mb-1">
+                        Required columns
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {input.columns.map((col) => (
+                          <span
+                            key={col}
+                            className="inline-flex items-center rounded-md border border-canvas-border bg-canvas-elevated px-1.5 py-0.5 text-[11px] font-mono text-ink-700"
+                          >
+                            {col}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
+      )}
     </motion.div>
   );
 }

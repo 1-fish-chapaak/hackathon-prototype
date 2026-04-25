@@ -26,6 +26,7 @@ export type View =
   | 'execution-evidence'
   // Intelligence
   | 'dashboards'
+  | 'dashboard-detail'
   | 'reports'
   | 'report-history'
   | 'report-builder'
@@ -87,6 +88,13 @@ export interface AppState {
   selectedChatId: string | null;
   // Query assumptions
   queryAssumptions: string[];
+  // Dashboard detail
+  selectedDashboardId: string | null;
+  dashboardCustomFields: string[] | null;
+  // Persisted widgets per custom dashboard
+  dashboardWidgets: Record<string, Array<{ chartType: string; title: string; xField: string; yField: string }>>;
+  // User-created dashboards (persisted across navigation)
+  createdDashboards: Array<{ id: string; name: string; description: string; timeAgo: string; creator: string; accent: string }>;
   // Execution panels
   executionPanel: ExecutionPanel;
   executionPanelControlId: string | null;
@@ -128,6 +136,10 @@ const INITIAL_STATE: AppState = {
   chatWorkflowContext: null,
   selectedChatId: null,
   queryAssumptions: [],
+  selectedDashboardId: null,
+  dashboardCustomFields: null,
+  dashboardWidgets: {},
+  createdDashboards: [],
   executionPanel: null,
   executionPanelControlId: null,
   exceptionRole: 'risk-owner',
@@ -241,6 +253,22 @@ export function useAppState() {
     setState(prev => ({ ...prev, view: 'workflow-executor' as View, selectedWorkflowId: workflowId }));
   }, []);
 
+  const openDashboard = useCallback((dashboardId: string, customFields?: string[]) => {
+    setState(prev => ({ ...prev, view: 'dashboard-detail' as View, selectedDashboardId: dashboardId, dashboardCustomFields: customFields || null }));
+  }, []);
+
+  const saveDashboardWidgets = useCallback((dashboardId: string, widgets: Array<{ chartType: string; title: string; xField: string; yField: string }>) => {
+    setState(prev => ({ ...prev, dashboardWidgets: { ...prev.dashboardWidgets, [dashboardId]: widgets } }));
+  }, []);
+
+  const addCreatedDashboard = useCallback((dashboard: AppState['createdDashboards'][number]) => {
+    setState(prev => ({ ...prev, createdDashboards: [dashboard, ...prev.createdDashboards] }));
+  }, []);
+
+  const deleteCreatedDashboard = useCallback((id: string) => {
+    setState(prev => ({ ...prev, createdDashboards: prev.createdDashboards.filter(d => d.id !== id) }));
+  }, []);
+
   const openExecutionPanel = useCallback((panel: ExecutionPanel, controlId?: string) => {
     setState(prev => ({ ...prev, executionPanel: panel, executionPanelControlId: controlId ?? null }));
   }, []);
@@ -278,6 +306,10 @@ export function useAppState() {
     openAuditExecution,
     openChat,
     setSelectedChatId,
+    openDashboard,
+    saveDashboardWidgets,
+    addCreatedDashboard,
+    deleteCreatedDashboard,
     openExecutionPanel,
     closeExecutionPanel,
     setExceptionRole,
