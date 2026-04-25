@@ -1779,6 +1779,7 @@ function BPDetailView({ bp, onBack }: {
 export default function BusinessProcesses({ selectedBPId, onSelectBP, onOpenEngagement }: Props) {
   const [tab, setTab] = useState<HubTabId>('engagements');
   const [search, setSearch] = useState('');
+  const { addToast } = useToast();
 
   if (selectedBPId) {
     const bp = BUSINESS_PROCESSES.find(b => b.id === selectedBPId);
@@ -1799,76 +1800,86 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP, onOpenEnga
   });
 
   const newButtonLabel = tab === 'engagements' ? 'New engagement' : 'Add process';
+  const onNewClick = () => addToast({
+    type: 'info',
+    message: tab === 'engagements'
+      ? 'New engagement wizard — coming soon.'
+      : 'Add process wizard — coming soon.',
+  });
 
   return (
-    <div className="h-full overflow-y-auto bg-canvas">
-      {/* Page header */}
-      <div className="border-b border-canvas-border bg-canvas-elevated">
-        <div className="max-w-6xl mx-auto px-8 pt-8 pb-0">
-          <div className="font-mono text-[11px] text-ink-500 mb-2 tracking-tight">
-            Process Hub · {activeTabLabel}
+    <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
+      <Orb hoverIntensity={0.06} rotateOnHover hue={275} opacity={0.05} />
+
+      <div className="p-8 relative">
+        {/* Header */}
+        <div className="flex items-end justify-between mb-6">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-primary-medium text-white">
+                <Building2 size={16} />
+              </div>
+              <h1 className="text-xl font-bold text-text">Process Hub</h1>
+            </div>
+            <p className="text-sm text-text-secondary mt-1 ml-9">
+              {tab === 'engagements'
+                ? 'Active and historical audit engagements across your business.'
+                : 'End-to-end business processes with linked SOPs, RACMs, controls and workflows.'}
+            </p>
           </div>
-
-          <div className="flex items-end justify-between mb-6">
-            <h1 className="font-display text-[40px] font-[420] tracking-tight text-ink-900 leading-[1.1]">
-              {activeTabLabel}
-            </h1>
-
-            <button className="flex items-center gap-2 px-4 h-10 rounded-md bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white text-[13px] font-semibold transition-colors cursor-pointer">
-              <Plus size={14} />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onNewClick}
+              className="flex items-center gap-1.5 px-3 py-2 border border-primary/30 bg-primary/5 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+            >
+              <Plus size={13} />
               {newButtonLabel}
             </button>
           </div>
+        </div>
 
-          {/* Tabs */}
-          <div className="flex items-center gap-0 border-b border-transparent -mb-px">
-            {HUB_TABS.map(t => {
-              const Icon = t.icon;
-              const isActive = tab === t.id;
-              const count = t.id === 'engagements' ? ENGAGEMENTS.length : BUSINESS_PROCESSES.length;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
-                  className={`relative flex items-center gap-2 px-4 h-11 text-[13px] font-medium transition-colors cursor-pointer ${
-                    isActive ? 'text-brand-700' : 'text-ink-500 hover:text-ink-700'
-                  }`}
-                >
-                  <Icon size={14} />
-                  {t.label}
-                  <span className={`tabular-nums text-[11px] ${isActive ? 'text-brand-600' : 'text-ink-400'}`}>
-                    {count}
-                  </span>
-                  {isActive && (
-                    <motion.div
-                      layoutId="hub-tab-bar"
-                      className="absolute left-0 right-0 -bottom-px h-[2px] bg-brand-600"
-                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                    />
-                  )}
-                </button>
-              );
-            })}
+        {/* Tabs */}
+        <div className="flex items-center border-b border-border-light mb-4">
+          {HUB_TABS.map(t => {
+            const Icon = t.icon;
+            const isActive = tab === t.id;
+            const count = t.id === 'engagements' ? ENGAGEMENTS.length : BUSINESS_PROCESSES.length;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors cursor-pointer ${
+                  isActive
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-text-muted hover:text-text-secondary'
+                }`}
+              >
+                <Icon size={14} />
+                {t.label}
+                <span className={`tabular-nums text-[11px] ${isActive ? 'text-primary' : 'text-text-muted'}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search */}
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+            <input
+              type="text"
+              placeholder={`Search ${activeTabLabel.toLowerCase()}…`}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 h-9 rounded-md border border-border-light bg-white text-[13px] text-text placeholder:text-text-muted focus:outline-none focus:border-primary transition-colors"
+            />
           </div>
         </div>
-      </div>
 
-      {/* Search */}
-      <div className="max-w-6xl mx-auto px-8 pt-6">
-        <div className="relative max-w-md">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
-          <input
-            type="text"
-            placeholder={`Search ${activeTabLabel.toLowerCase()}…`}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 h-9 rounded-md border border-canvas-border bg-canvas-elevated text-[13px] text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-brand-600 transition-colors"
-          />
-        </div>
-      </div>
-
-      {/* Tab content */}
-      <div className="max-w-6xl mx-auto px-8 py-6">
+        {/* Tab content */}
+        <div>
         <AnimatePresence mode="wait">
           {tab === 'engagements' ? (
             <motion.div
@@ -1888,7 +1899,7 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP, onOpenEnga
                 />
               ))}
               {filteredEngagements.length === 0 && (
-                <div className="col-span-2 text-center py-16 text-[13px] text-ink-500">
+                <div className="col-span-2 text-center py-16 text-[13px] text-text-muted">
                   No engagements match "{search}".
                 </div>
               )}
@@ -1997,7 +2008,7 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP, onOpenEnga
                   </motion.div>
                 ))}
                 {filteredBPs.length === 0 && (
-                  <div className="col-span-2 text-center py-16 text-[13px] text-ink-500">
+                  <div className="col-span-2 text-center py-16 text-[13px] text-text-muted">
                     No business processes match "{search}".
                   </div>
                 )}
@@ -2005,6 +2016,7 @@ export default function BusinessProcesses({ selectedBPId, onSelectBP, onOpenEnga
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </div>
     </div>
   );
@@ -2027,18 +2039,18 @@ function EngagementCard({ eng, index, onOpen }: { eng: typeof ENGAGEMENTS[0]; in
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.06 }}
       onClick={onOpen}
-      className="text-left group relative bg-canvas-elevated rounded-2xl border border-canvas-border p-6 hover:border-brand-600/40 hover:shadow-sm transition-all cursor-pointer"
+      className="text-left group relative bg-white rounded-2xl border border-border-light p-6 hover:border-primary/20 hover:shadow-sm transition-all cursor-pointer"
     >
       <div className="flex items-start justify-between gap-3 mb-5">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center shrink-0">
-            <Briefcase size={18} className="text-brand-600" />
+          <div className="w-11 h-11 rounded-xl bg-primary-xlight flex items-center justify-center shrink-0">
+            <Briefcase size={18} className="text-primary" />
           </div>
           <div className="min-w-0">
-            <div className="text-[15px] font-semibold text-ink-900 group-hover:text-brand-700 transition-colors truncate">{eng.name}</div>
-            <div className="text-[12px] text-ink-500 mt-0.5 flex items-center gap-2">
+            <div className="text-[15px] font-semibold text-text group-hover:text-primary transition-colors truncate">{eng.name}</div>
+            <div className="text-[12px] text-text-muted mt-0.5 flex items-center gap-2">
               <span className="font-mono">{eng.id.toUpperCase()}</span>
-              <span className="text-ink-300">·</span>
+              <span className="text-text-muted/50">·</span>
               <span>{eng.type}</span>
             </div>
           </div>
@@ -2049,36 +2061,36 @@ function EngagementCard({ eng, index, onOpen }: { eng: typeof ENGAGEMENTS[0]; in
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-5">
-        <div className="rounded-lg bg-paper-50/60 border border-canvas-border p-2.5">
-          <div className="text-[18px] font-semibold text-ink-900 tabular-nums leading-none mb-1">{eng.controls}</div>
-          <div className="text-[11px] text-ink-500">Controls</div>
+        <div className="rounded-lg bg-surface-2/80 border border-border-light/50 p-2.5">
+          <div className="text-[18px] font-semibold text-text tabular-nums leading-none mb-1">{eng.controls}</div>
+          <div className="text-[11px] text-text-muted">Controls</div>
         </div>
-        <div className="rounded-lg bg-paper-50/60 border border-canvas-border p-2.5">
-          <div className="text-[18px] font-semibold text-ink-900 tabular-nums leading-none mb-1">{eng.tested}</div>
-          <div className="text-[11px] text-ink-500">Tested</div>
+        <div className="rounded-lg bg-surface-2/80 border border-border-light/50 p-2.5">
+          <div className="text-[18px] font-semibold text-text tabular-nums leading-none mb-1">{eng.tested}</div>
+          <div className="text-[11px] text-text-muted">Tested</div>
         </div>
-        <div className="rounded-lg bg-paper-50/60 border border-canvas-border p-2.5">
-          <div className={`text-[18px] font-semibold tabular-nums leading-none mb-1 ${eng.deficiencies > 0 ? 'text-risk-700' : 'text-ink-900'}`}>{eng.deficiencies}</div>
-          <div className="text-[11px] text-ink-500">Deficiencies</div>
+        <div className="rounded-lg bg-surface-2/80 border border-border-light/50 p-2.5">
+          <div className={`text-[18px] font-semibold tabular-nums leading-none mb-1 ${eng.deficiencies > 0 ? 'text-risk-700' : 'text-text'}`}>{eng.deficiencies}</div>
+          <div className="text-[11px] text-text-muted">Deficiencies</div>
         </div>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
-        <div className="flex-1 h-1.5 bg-paper-100 rounded-full overflow-hidden">
+        <div className="flex-1 h-1.5 bg-surface-2 rounded-full overflow-hidden">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${progressPct}%` }}
             transition={{ duration: 0.6, delay: 0.15 + index * 0.05 }}
-            className="h-full rounded-full bg-brand-600"
+            className="h-full rounded-full bg-primary"
           />
         </div>
-        <span className="text-[12px] font-semibold text-ink-700 tabular-nums">{progressPct}%</span>
+        <span className="text-[12px] font-semibold text-text-secondary tabular-nums">{progressPct}%</span>
       </div>
 
-      <div className="flex items-center justify-between text-[12px] text-ink-500">
+      <div className="flex items-center justify-between text-[12px] text-text-muted">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5"><Users size={11} />{eng.owner}</span>
-          <span className="text-ink-300">·</span>
+          <span className="text-text-muted/50">·</span>
           <span className="flex items-center gap-1.5"><Calendar size={11} />{eng.start} – {eng.end}</span>
         </div>
         {eng.tested > 0 && (

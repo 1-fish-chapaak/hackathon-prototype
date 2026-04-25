@@ -80,6 +80,7 @@ export default function App() {
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [viewLoading, setViewLoading] = useState(false);
   const [controlDrawerId, setControlDrawerId] = useState<string | null>(null);
+  const [engagementBackView, setEngagementBackView] = useState<'audit-planning' | 'business-processes'>('audit-planning');
 
   useEffect(() => {
     if (mainScrollRef.current) {
@@ -212,6 +213,7 @@ export default function App() {
             selectedBPId={state.selectedBPId}
             onSelectBP={setSelectedBP}
             onOpenEngagement={(engId) => {
+              setEngagementBackView('business-processes');
               openAuditExecution(engId);
               setView('engagement-detail' as any);
             }}
@@ -232,7 +234,7 @@ export default function App() {
         return (
           <EngagementDetailView
             engagementId={state.selectedEngagementId ?? undefined}
-            onBack={() => setView('audit-planning')}
+            onBack={() => setView(engagementBackView)}
             onOpenControl={(controlId) => setControlDrawerId(controlId)}
           />
         );
@@ -291,6 +293,7 @@ export default function App() {
 
       case 'audit-planning':
         return <AuditPlanningView onNavigateToExecution={(engId) => {
+          setEngagementBackView('audit-planning');
           openAuditExecution(engId);
           setView('engagement-detail' as any);
         }} />;
