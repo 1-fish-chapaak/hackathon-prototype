@@ -211,6 +211,10 @@ export default function App() {
           <BusinessProcesses
             selectedBPId={state.selectedBPId}
             onSelectBP={setSelectedBP}
+            onOpenEngagement={(engId) => {
+              openAuditExecution(engId);
+              setView('engagement-detail' as any);
+            }}
           />
         );
 
