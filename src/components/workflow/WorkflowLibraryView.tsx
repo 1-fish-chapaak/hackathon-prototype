@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Search,
@@ -21,9 +21,13 @@ import {
   UploadCloud,
   Database,
   ChevronUp,
+  AlertTriangle,
+  Upload,
+  Minus,
 } from 'lucide-react';
 import { DATA_SOURCES } from '../../data/mockData';
 import { useToast } from '../shared/Toast';
+import { useBulkRunProgress } from '../shared/BulkRunProgress';
 
 const FREQUENCIES = ['Hourly', 'Daily', 'Weekly', 'Monthly'] as const;
 type Frequency = typeof FREQUENCIES[number];
@@ -57,43 +61,146 @@ const REQUIRED_FILES = [
 ];
 
 // Columns present in each uploaded source file (dummy — what the CSV "contains")
-const FILE_SOURCE_COLUMNS: Record<string, string[]> = {
-  'AP Invoice Register': ['invoice_no', 'vendor_id', 'amount', 'invoice_date', 'gl_account_code', 'entered_by_user', 'post_status', 'payment_terms'],
-  'Vendor Master': ['vendor_id', 'vendor_name', 'approval_status', 'payment_terms', 'country_iso', 'tax_id'],
-  'GL Trial Balance': ['account_number', 'period_end_date', 'debit_amount', 'credit_amount', 'currency_code', 'cost_center'],
+const AVAILABLE_COLUMNS = [
+  'invoice_no', 'inv_date', 'amount_before_tax', 'amount_after_tax',
+  'vendor_id', 'vendor_name', 'pan', 'gstin_no', 'hsn_code',
+  'pmt_block', 'acct_no', 'ifsc', 'currency',
+];
+
+type ColumnMatchConfidence = 'exact' | 'fuzzy' | 'missing';
+
+type ColumnMapping = {
+  required: string;
+  matched: string | null;
+  confidence: ColumnMatchConfidence;
 };
 
-type MapStatus = 'exact' | 'fuzzy' | 'missing';
-type ExpectedColumn = { file: string; expected: string; autoMatch: string | null; autoStatus: MapStatus };
+type ReviewWorkflowStatus = 'mapped' | 'column' | 'file' | 'notmapped' | 'dropped';
 
-// Deterministic expected-column set per workflow (dummy for the bulk-mapping review)
-function expectedColumnsFor(wf: LibraryWorkflow): ExpectedColumn[] {
-  switch (wf.businessProcess) {
-    case 'P2P':
-      return [
-        { file: 'AP Invoice Register', expected: 'Invoice Number', autoMatch: 'invoice_no', autoStatus: 'exact' },
-        { file: 'AP Invoice Register', expected: 'Vendor ID', autoMatch: 'vendor_id', autoStatus: 'exact' },
-        { file: 'AP Invoice Register', expected: 'Invoice Amount', autoMatch: 'amount', autoStatus: 'fuzzy' },
-        { file: 'Vendor Master', expected: 'Approved Vendor Flag', autoMatch: 'approval_status', autoStatus: 'fuzzy' },
-        { file: 'AP Invoice Register', expected: 'Three-way Match Ref', autoMatch: null, autoStatus: 'missing' },
-      ];
-    case 'Finance':
-      return [
-        { file: 'GL Trial Balance', expected: 'Account Number', autoMatch: 'account_number', autoStatus: 'exact' },
-        { file: 'GL Trial Balance', expected: 'Period End', autoMatch: 'period_end_date', autoStatus: 'fuzzy' },
-        { file: 'GL Trial Balance', expected: 'Debit Amount', autoMatch: 'debit_amount', autoStatus: 'exact' },
-        { file: 'GL Trial Balance', expected: 'Credit Amount', autoMatch: 'credit_amount', autoStatus: 'exact' },
-        { file: 'AP Invoice Register', expected: 'Invoice Date', autoMatch: 'invoice_date', autoStatus: 'exact' },
-      ];
-    default:
-      return [
-        { file: 'AP Invoice Register', expected: 'Entered By', autoMatch: 'entered_by_user', autoStatus: 'fuzzy' },
-        { file: 'AP Invoice Register', expected: 'Post Status', autoMatch: 'post_status', autoStatus: 'exact' },
-        { file: 'Vendor Master', expected: 'Vendor Name', autoMatch: 'vendor_name', autoStatus: 'exact' },
-        { file: 'Vendor Master', expected: 'Country', autoMatch: 'country_iso', autoStatus: 'fuzzy' },
-      ];
-  }
+type ReviewWorkflow = {
+  id: string;
+  code: string;
+  name: string;
+  status: ReviewWorkflowStatus;
+  prevStatus?: Exclude<ReviewWorkflowStatus, 'dropped'>;
+  runtime: number;
+  mappedFiles?: string[];
+  fileError?: string;
+  missingFiles?: string[];
+  columns?: ColumnMapping[];
+  hasOverrides?: boolean;
+};
+
+const DEMO_REVIEW_WORKFLOWS: ReviewWorkflow[] = [
+  {
+    id: 'rw-1',
+    code: 'P2P-001',
+    name: '3-Way Match (PO · GRN · Invoice)',
+    status: 'mapped',
+    runtime: 4.2,
+    mappedFiles: ['po_dump_q3.sql', 'grn_records.json', 'invoice_batch_sep2026.pdf'],
+  },
+  {
+    id: 'rw-2',
+    code: 'P2P-002',
+    name: 'Invoice Duplicate Detection',
+    status: 'column',
+    runtime: 2.8,
+    mappedFiles: ['invoice_batch_sep2026.pdf', 'vendor_master_v3.xlsx'],
+    columns: [
+      { required: 'Invoice_Number', matched: 'invoice_no', confidence: 'exact' },
+      { required: 'Vendor_GSTIN', matched: null, confidence: 'missing' },
+      { required: 'Invoice_Date', matched: 'inv_date', confidence: 'exact' },
+      { required: 'Taxable_Amount', matched: 'amount_before_tax', confidence: 'fuzzy' },
+      { required: 'Vendor_Code', matched: 'vendor_id', confidence: 'fuzzy' },
+    ],
+  },
+  {
+    id: 'rw-3',
+    code: 'VDR-014',
+    name: 'Vendor Risk Score',
+    status: 'file',
+    runtime: 3.5,
+    fileError: 'Expected: vendor_risk_signals dataset. Got: GRN_Records.json (schema mismatch)',
+  },
+  {
+    id: 'rw-4',
+    code: 'GL-009',
+    name: 'GL Anomaly Detection',
+    status: 'mapped',
+    runtime: 5.1,
+    mappedFiles: ['gl_q3_2026.csv'],
+  },
+  {
+    id: 'rw-5',
+    code: 'P2P-007',
+    name: 'PO-GRN Quantity Reconciliation',
+    status: 'mapped',
+    runtime: 3.0,
+    mappedFiles: ['po_dump_q3.sql', 'grn_records.json'],
+  },
+  {
+    id: 'rw-6',
+    code: 'TAX-003',
+    name: 'TDS Compliance (194Q · 194C)',
+    status: 'notmapped',
+    runtime: 2.4,
+    missingFiles: ['TDS Deduction Register'],
+  },
+  {
+    id: 'rw-7',
+    code: 'P2P-012',
+    name: 'Payment Block Review',
+    status: 'column',
+    runtime: 2.2,
+    mappedFiles: ['vendor_master_v3.xlsx', 'invoice_batch_sep2026.pdf'],
+    columns: [
+      { required: 'Vendor_Bank_Account', matched: 'acct_no', confidence: 'fuzzy' },
+      { required: 'Block_Indicator', matched: 'pmt_block', confidence: 'fuzzy' },
+      { required: 'IFSC_Code', matched: 'ifsc', confidence: 'exact' },
+    ],
+  },
+  {
+    id: 'rw-8',
+    code: 'GL-018',
+    name: 'Period-End Accrual Check',
+    status: 'notmapped',
+    runtime: 1.8,
+    missingFiles: ['Accrual Schedule'],
+  },
+];
+
+type UploadedFile = {
+  id: string;
+  name: string;
+  size: number;
+  error?: string;
+};
+
+function humanSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
+
+function makeUploaded(files: File[]): UploadedFile[] {
+  const stamp = Date.now();
+  return files.map((file, idx) => ({
+    id: `${file.name}-${file.size}-${stamp}-${idx}`,
+    name: file.name,
+    size: file.size,
+    error: /\.(dmg|exe)$/i.test(file.name) ? 'Request failed with status code 500' : undefined,
+  }));
+}
+
+const SEED_UPLOADED_FILES: UploadedFile[] = [
+  { id: 'seed-gl', name: 'gl_q3_2026.csv', size: Math.round(12.4 * 1024 * 1024) },
+  { id: 'seed-invoice', name: 'invoice_batch_sep2026.pdf', size: Math.round(48.1 * 1024 * 1024) },
+  { id: 'seed-vendor', name: 'vendor_master_v3.xlsx', size: Math.round(2.8 * 1024 * 1024) },
+  { id: 'seed-po', name: 'po_dump_q3.sql', size: Math.round(8.2 * 1024 * 1024) },
+  { id: 'seed-grn', name: 'grn_records.json', size: Math.round(4.7 * 1024 * 1024) },
+];
 
 interface Props {
   onCreateWorkflow: () => void;
@@ -285,7 +392,7 @@ export default function WorkflowLibraryView({ onCreateWorkflow, onSelectWorkflow
     runTime: string;
     retry: Retry;
   }) => {
-    addToast({ type: 'success', message: `"${data.auditName}" captured. Data Source step coming next.` });
+    void data;
     setBulkModalOpen(false);
     exitBulkMode();
   };
@@ -841,26 +948,32 @@ function BulkExecuteModal({
   }) => void;
 }) {
   const { addToast } = useToast();
+  const { startBulkRun } = useBulkRunProgress();
   const [modalDeselected, setModalDeselected] = useState<Set<string>>(new Set());
-  const [auditName, setAuditName] = useState('');
+  const [auditName, setAuditName] = useState('Q3-P2P');
   const [auditDescription, setAuditDescription] = useState('');
   const [frequency, setFrequency] = useState<Frequency>('Daily');
   const [triggerOn, setTriggerOn] = useState<Trigger>('Schedule');
   const [runTime, setRunTime] = useState('06:00');
   const [retry, setRetry] = useState<Retry>('3x');
   const [isFetching, setIsFetching] = useState(false);
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   // Step 2 state
-  const [requiredFilesOpen, setRequiredFilesOpen] = useState(true);
+  const [requiredFilesOpen, setRequiredFilesOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(true);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>(SEED_UPLOADED_FILES);
+  const [selectedUploadIds, setSelectedUploadIds] = useState<Set<string>>(new Set());
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dsSearch, setDsSearch] = useState('');
-  const [linkedSourceId, setLinkedSourceId] = useState<string | null>(null);
+  const [linkedSourceIds, setLinkedSourceIds] = useState<Set<string>>(new Set());
+  // Step 2 — sub-view: first upload, then review
+  const [step2View, setStep2View] = useState<'upload' | 'review'>('upload');
+  const [uploadModeTab, setUploadModeTab] = useState<'upload' | 'existing'>('upload');
   // Step 2 — Review state
-  const [reviewFilter, setReviewFilter] = useState<'all' | 'mapped' | 'attention' | 'removed'>('all');
-  const [expandedWfId, setExpandedWfId] = useState<string | null>(null);
-  const [columnMappings, setColumnMappings] = useState<Record<string, Record<string, string>>>({});
+  const [reviewFilter, setReviewFilter] = useState<'all' | ReviewWorkflowStatus>('all');
+  const [reviewWorkflows, setReviewWorkflows] = useState<ReviewWorkflow[]>(DEMO_REVIEW_WORKFLOWS);
+  const [expandedReviewId, setExpandedReviewId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -899,34 +1012,46 @@ function BulkExecuteModal({
     setIsFetching(true);
     window.setTimeout(() => {
       setIsFetching(false);
+      setStep2View('upload');
       setStep(2);
     }, 2200);
   };
 
   const handleStep2Continue = () => {
-    if (uploadedFiles.length === 0 && !linkedSourceId) {
+    if (uploadedFiles.length === 0 && linkedSourceIds.size === 0) {
       addToast({
         type: 'error',
         message: 'Upload files or link an existing data source before continuing.',
       });
       return;
     }
-    const attention = workflowReview.filter(r => r.status === 'attention').length;
-    if (attention > 0) {
+    const failedFiles = uploadedFiles.filter(u => u.error).length;
+    if (failedFiles > 0) {
       addToast({
         type: 'error',
-        message: `${attention} workflow${attention === 1 ? '' : 's'} still need column mapping. Resolve or remove them before continuing.`,
+        message: `${failedFiles} of ${uploadedFiles.length} file${uploadedFiles.length === 1 ? '' : 's'} failed to upload. Delete or resolve them before continuing.`,
       });
       return;
     }
-    const mapped = workflowReview.filter(r => r.status === 'mapped').length;
-    if (mapped === 0) {
+    const active = reviewWorkflows.filter(rw => rw.status === 'mapped' || rw.status === 'column').length;
+    if (active === 0) {
       addToast({
         type: 'error',
-        message: 'No workflows are ready to run. Map at least one workflow.',
+        message: 'No workflows are ready to run. Resolve mappings or restore at least one workflow.',
       });
       return;
     }
+    setStep(3);
+  };
+
+  const handleStep3Execute = () => {
+    const activeRunWorkflows = reviewWorkflows
+      .filter(rw => rw.status === 'mapped' || rw.status === 'column')
+      .map(rw => ({ id: rw.id, name: rw.name }));
+    startBulkRun({
+      name: auditName.trim() || 'Bulk Run',
+      workflows: activeRunWorkflows,
+    });
     onContinue({
       auditName: auditName.trim(),
       auditDescription: auditDescription.trim(),
@@ -942,96 +1067,154 @@ function BulkExecuteModal({
     setIsDragging(false);
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      setUploadedFiles(prev => [...prev, ...files]);
-      setLinkedSourceId(null);
+      setUploadedFiles(prev => [...prev, ...makeUploaded(files)]);
+      setLinkedSourceIds(new Set());
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
     if (files.length > 0) {
-      setUploadedFiles(prev => [...prev, ...files]);
-      setLinkedSourceId(null);
+      setUploadedFiles(prev => [...prev, ...makeUploaded(files)]);
+      setLinkedSourceIds(new Set());
     }
     e.target.value = '';
   };
 
-  const removeUpload = (idx: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== idx));
+  const removeUpload = (id: string) => {
+    setUploadedFiles(prev => prev.filter(u => u.id !== id));
+    setSelectedUploadIds(prev => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   };
 
-  const pickDataSource = (id: string) => {
-    setLinkedSourceId(id);
+  const toggleUploadSelection = (id: string) => {
+    setSelectedUploadIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allUploadsSelected = uploadedFiles.length > 0 && selectedUploadIds.size === uploadedFiles.length;
+
+  const toggleSelectAllUploads = () => {
+    if (allUploadsSelected) {
+      setSelectedUploadIds(new Set());
+    } else {
+      setSelectedUploadIds(new Set(uploadedFiles.map(u => u.id)));
+    }
+  };
+
+  const switchToChooseExisting = () => {
     setUploadedFiles([]);
+    setSelectedUploadIds(new Set());
+    setUploadModeTab('existing');
+  };
+
+  const triggerUpload = () => fileInputRef.current?.click();
+
+  const toggleDataSource = (id: string) => {
+    setLinkedSourceIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    if (uploadedFiles.length > 0) {
+      setUploadedFiles([]);
+      setSelectedUploadIds(new Set());
+    }
   };
 
   const filteredDataSources = DATA_SOURCES.filter(ds =>
     ds.name.toLowerCase().includes(dsSearch.trim().toLowerCase())
   );
 
-  const hasUpload = uploadedFiles.length > 0 || linkedSourceId !== null;
+  const hasUpload = uploadedFiles.length > 0 || linkedSourceIds.size > 0;
 
-  // Per-workflow review data — resolves current column mapping and overall status
-  const workflowReview = useMemo(() => {
-    return selectedWorkflows.map(wf => {
-      const expected = expectedColumnsFor(wf);
-      const resolved = expected.map(ec => {
-        const override = columnMappings[wf.id]?.[ec.expected];
-        const current = override !== undefined ? override : (ec.autoMatch ?? '');
-        let currentStatus: MapStatus;
-        if (!current) currentStatus = 'missing';
-        else if (current === ec.autoMatch) currentStatus = ec.autoStatus === 'exact' ? 'exact' : 'fuzzy';
-        else currentStatus = 'fuzzy';
-        return { ...ec, current, currentStatus };
-      });
-      const missingCount = resolved.filter(r => !r.current).length;
-      const removed = modalDeselected.has(wf.id);
-      const status: 'mapped' | 'attention' | 'removed' = removed
-        ? 'removed'
-        : missingCount === 0
-        ? 'mapped'
-        : 'attention';
-      return { wf, expected: resolved, status, missingCount };
-    });
-  }, [selectedWorkflows, columnMappings, modalDeselected]);
+  const reviewCounts = useMemo(() => {
+    const base = {
+      all: reviewWorkflows.length,
+      mapped: 0,
+      column: 0,
+      file: 0,
+      notmapped: 0,
+      dropped: 0,
+      active: 0,
+    };
+    for (const rw of reviewWorkflows) {
+      base[rw.status] += 1;
+      if (rw.status === 'mapped' || rw.status === 'column') base.active += 1;
+    }
+    return base;
+  }, [reviewWorkflows]);
 
-  const reviewCounts = useMemo(() => ({
-    all: workflowReview.length,
-    mapped: workflowReview.filter(r => r.status === 'mapped').length,
-    attention: workflowReview.filter(r => r.status === 'attention').length,
-    removed: workflowReview.filter(r => r.status === 'removed').length,
-  }), [workflowReview]);
+  const filteredReviewWorkflows = useMemo(() => {
+    if (reviewFilter === 'all') return reviewWorkflows;
+    return reviewWorkflows.filter(rw => rw.status === reviewFilter);
+  }, [reviewFilter, reviewWorkflows]);
 
-  const filteredReview = useMemo(() => {
-    if (reviewFilter === 'all') return workflowReview;
-    return workflowReview.filter(r => r.status === reviewFilter);
-  }, [reviewFilter, workflowReview]);
-
-  const setColumnMapping = (wfId: string, expected: string, source: string) => {
-    setColumnMappings(prev => ({
-      ...prev,
-      [wfId]: { ...(prev[wfId] ?? {}), [expected]: source },
-    }));
+  const dropReviewWorkflow = (id: string) => {
+    setReviewWorkflows(prev =>
+      prev.map(rw =>
+        rw.id === id && rw.status !== 'dropped'
+          ? { ...rw, status: 'dropped', prevStatus: rw.status }
+          : rw
+      )
+    );
+    setExpandedReviewId(prev => (prev === id ? null : prev));
   };
 
-  const removeFromBulkRun = (wfId: string) => {
-    setModalDeselected(prev => {
-      const next = new Set(prev);
-      next.add(wfId);
-      return next;
-    });
-    setExpandedWfId(prev => (prev === wfId ? null : prev));
+  const restoreReviewWorkflow = (id: string) => {
+    setReviewWorkflows(prev =>
+      prev.map(rw =>
+        rw.id === id && rw.status === 'dropped'
+          ? { ...rw, status: rw.prevStatus ?? 'mapped', prevStatus: undefined }
+          : rw
+      )
+    );
   };
 
-  const restoreToBulkRun = (wfId: string) => {
-    setModalDeselected(prev => {
-      const next = new Set(prev);
-      next.delete(wfId);
-      return next;
-    });
+  const updateReviewColumn = (wfId: string, idx: number, value: string) => {
+    setReviewWorkflows(prev =>
+      prev.map(rw => {
+        if (rw.id !== wfId || !rw.columns) return rw;
+        const next = rw.columns.map((c, i) => {
+          if (i !== idx) return c;
+          if (!value) return { ...c, matched: null, confidence: 'missing' as ColumnMatchConfidence };
+          return {
+            ...c,
+            matched: value,
+            confidence: c.confidence === 'missing' ? ('fuzzy' as ColumnMatchConfidence) : c.confidence,
+          };
+        });
+        return { ...rw, columns: next };
+      })
+    );
   };
 
-  const step2CanContinue = hasUpload && reviewCounts.attention === 0 && reviewCounts.mapped > 0;
+  const confirmReviewColumns = (wfId: string) => {
+    setReviewWorkflows(prev =>
+      prev.map(rw => {
+        if (rw.id !== wfId || !rw.columns) return rw;
+        const allResolved = rw.columns.every(c => c.confidence !== 'missing');
+        if (!allResolved) return rw;
+        return { ...rw, status: 'mapped', hasOverrides: true };
+      })
+    );
+    setExpandedReviewId(null);
+  };
+
+  const toggleReviewExpand = (id: string) => {
+    setExpandedReviewId(prev => (prev === id ? null : id));
+  };
+
+  const step2CanContinue = hasUpload && reviewCounts.active > 0;
 
   const stepState = (n: 1 | 2 | 3): 'active' | 'done' | 'pending' => {
     if (n < step) return 'done';
@@ -1061,7 +1244,7 @@ function BulkExecuteModal({
         role="dialog"
         aria-modal="true"
         aria-label="Bulk Execute"
-        className="relative bg-white rounded-2xl shadow-2xl w-[720px] max-h-[85vh] overflow-hidden flex flex-col"
+        className="relative bg-white rounded-2xl shadow-2xl w-[720px] h-[680px] max-h-[90vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -1072,7 +1255,8 @@ function BulkExecuteModal({
           </button>
         </div>
 
-        {/* Stepper */}
+        {/* Stepper — hidden while the loader is shown */}
+        {!isFetching && (
         <div className="px-6 py-4 border-b border-border-light shrink-0 flex items-center gap-4">
           {STEPS.map((s, idx) => (
             <div key={s.n} className="flex items-center gap-4 flex-1">
@@ -1096,6 +1280,7 @@ function BulkExecuteModal({
             </div>
           ))}
         </div>
+        )}
 
         {isFetching ? (
           <FetchingFilesLoader workflowCount={activeWorkflows.length} />
@@ -1284,10 +1469,12 @@ function BulkExecuteModal({
           </button>
         </div>
         </>
-        ) : (
+        ) : step === 2 ? (
         <>
         {/* Body — Step 2 */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          {step2View === 'upload' && (
+          <>
           {/* Required Files */}
           <div className="rounded-lg border border-border-light bg-white">
             <button
@@ -1351,173 +1538,186 @@ function BulkExecuteModal({
               </div>
             </button>
             {uploadOpen && (
-              <div className="px-4 pb-4 grid grid-cols-2 gap-3 border-t border-border-light pt-3">
-                {/* Dropzone */}
-                <label
-                  onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={handleFileDrop}
-                  className={`flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed cursor-pointer transition-colors min-h-[220px] px-4 py-6 ${
-                    isDragging
-                      ? 'border-primary bg-primary/5'
-                      : 'border-primary/30 bg-primary-xlight/40 hover:border-primary/50 hover:bg-primary/5'
-                  }`}
-                >
-                  <input
-                    type="file"
-                    multiple
-                    onChange={handleFileSelect}
-                    className="hidden"
-                    accept=".csv,.pdf,.png,.jpg,.jpeg,.xlsx"
-                  />
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <UploadCloud size={22} className="text-primary" />
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[13px] font-semibold text-text">Drop files here or click to upload</div>
-                    <div className="text-[12px] text-text-muted mt-1">
-                      CSV, PDF, images — any data files for this workflow
-                    </div>
-                    <div className="text-[11px] text-text-muted/80 mt-2">Auto-mapped to required inputs</div>
-                  </div>
-                  {uploadedFiles.length > 0 && (
-                    <div className="w-full mt-1 space-y-1.5">
-                      {uploadedFiles.map((f, i) => (
-                        <div
-                          key={`${f.name}-${i}`}
-                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-white border border-border-light"
-                        >
-                          <FileText size={12} className="text-text-muted shrink-0" />
-                          <span className="flex-1 min-w-0 truncate text-[12px] text-text">{f.name}</span>
-                          <button
-                            type="button"
-                            onClick={e => { e.preventDefault(); removeUpload(i); }}
-                            className="p-0.5 text-text-muted hover:text-risk transition-colors cursor-pointer"
-                            aria-label={`Remove ${f.name}`}
-                          >
-                            <X size={11} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </label>
+              <div className="px-4 pb-4 border-t border-border-light pt-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  accept=".csv,.pdf,.png,.jpg,.jpeg,.xlsx"
+                />
 
-                {/* Existing data sources */}
-                <div className="rounded-lg border border-border-light bg-white p-3 flex flex-col min-h-[220px]">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-text-muted text-center mb-2">
-                    Or link from existing data source
-                  </div>
-                  <div className="relative mb-2">
-                    <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                    <input
-                      value={dsSearch}
-                      onChange={e => setDsSearch(e.target.value)}
-                      placeholder="Search data sources..."
-                      className="w-full pl-8 pr-3 h-8 rounded-md border border-border-light text-[12px] text-text bg-white outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
-                    />
-                  </div>
-                  <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
-                    {filteredDataSources.length === 0 ? (
-                      <div className="text-[12px] text-text-muted text-center py-4">No data sources match.</div>
+                {uploadedFiles.length === 0 ? (
+                  <div>
+                    {/* Mode tabs */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => setUploadModeTab('upload')}
+                        className={`inline-flex items-center gap-1.5 h-9 px-4 rounded-md border text-[12.5px] font-semibold transition-colors cursor-pointer ${
+                          uploadModeTab === 'upload'
+                            ? 'bg-primary border-primary text-white'
+                            : 'bg-white border-primary/30 text-primary hover:bg-primary/5'
+                        }`}
+                      >
+                        <Upload size={13} />
+                        Upload
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUploadModeTab('existing')}
+                        className={`inline-flex items-center gap-1.5 h-9 px-4 rounded-md border text-[12.5px] font-semibold transition-colors cursor-pointer ${
+                          uploadModeTab === 'existing'
+                            ? 'bg-primary border-primary text-white'
+                            : 'bg-white border-primary/30 text-primary hover:bg-primary/5'
+                        }`}
+                      >
+                        <Database size={13} />
+                        Choose Existing
+                      </button>
+                    </div>
+
+                    {uploadModeTab === 'upload' ? (
+                      <div
+                        onClick={triggerUpload}
+                        onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                        onDragLeave={() => setIsDragging(false)}
+                        onDrop={handleFileDrop}
+                        className={`flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed cursor-pointer transition-colors min-h-[220px] px-4 py-8 ${
+                          isDragging
+                            ? 'border-primary bg-primary/5'
+                            : 'border-primary/30 bg-primary-xlight/40 hover:border-primary/50 hover:bg-primary/5'
+                        }`}
+                      >
+                        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <UploadCloud size={22} className="text-primary" />
+                        </div>
+                        <div className="text-center">
+                          <div className="text-[13px] font-semibold text-text">Drop files here or click to upload</div>
+                          <div className="text-[12px] text-text-muted mt-1">
+                            CSV, PDF, images — any data files for this workflow
+                          </div>
+                          <div className="text-[11px] text-text-muted/80 mt-2">Auto-mapped to required inputs</div>
+                        </div>
+                      </div>
                     ) : (
-                      filteredDataSources.map(ds => {
-                        const isLinked = linkedSourceId === ds.id;
-                        return (
-                          <button
-                            key={ds.id}
-                            type="button"
-                            onClick={() => pickDataSource(ds.id)}
-                            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md border transition-colors cursor-pointer text-left ${
-                              isLinked
-                                ? 'border-primary bg-primary/5'
-                                : 'border-border-light hover:border-primary/30 hover:bg-surface-2'
-                            }`}
-                          >
-                            <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-                              <Database size={13} className="text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[12.5px] font-semibold text-text truncate">{ds.name}</div>
-                              <div className="text-[11px] text-text-muted truncate">
-                                {ds.records} records · last sync {ds.lastSync}
-                              </div>
-                            </div>
-                            <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                              isLinked ? 'border-primary' : 'border-border'
-                            }`}>
-                              {isLinked && <span className="w-2 h-2 rounded-full bg-primary" />}
-                            </span>
-                          </button>
-                        );
-                      })
+                      <div className="rounded-lg border border-border-light bg-white p-3 flex flex-col min-h-[220px]">
+                        <div className="relative mb-2">
+                          <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                          <input
+                            value={dsSearch}
+                            onChange={e => setDsSearch(e.target.value)}
+                            placeholder="Search data sources..."
+                            className="w-full pl-8 pr-3 h-8 rounded-md border border-border-light text-[12px] text-text bg-white outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
+                          />
+                        </div>
+                        <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
+                          {filteredDataSources.length === 0 ? (
+                            <div className="text-[12px] text-text-muted text-center py-4">No data sources match.</div>
+                          ) : (
+                            filteredDataSources.map(ds => {
+                              const isLinked = linkedSourceIds.has(ds.id);
+                              return (
+                                <button
+                                  key={ds.id}
+                                  type="button"
+                                  role="checkbox"
+                                  aria-checked={isLinked}
+                                  onClick={() => toggleDataSource(ds.id)}
+                                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md border transition-colors cursor-pointer text-left ${
+                                    isLinked
+                                      ? 'border-primary bg-primary/5'
+                                      : 'border-border-light hover:border-primary/30 hover:bg-surface-2'
+                                  }`}
+                                >
+                                  <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                                    <Database size={13} className="text-primary" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-[12.5px] font-semibold text-text truncate">{ds.name}</div>
+                                    <div className="text-[11px] text-text-muted truncate">
+                                      {ds.records} records · last sync {ds.lastSync}
+                                    </div>
+                                  </div>
+                                  <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                                    isLinked ? 'border-primary bg-primary text-white' : 'border-border bg-white text-transparent'
+                                  }`}>
+                                    <Check size={11} strokeWidth={3} />
+                                  </span>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
-                </div>
+                ) : (
+                  <UploadedFilesPanel
+                    files={uploadedFiles}
+                    selectedIds={selectedUploadIds}
+                    allSelected={allUploadsSelected}
+                    onToggleAll={toggleSelectAllUploads}
+                    onToggleOne={toggleUploadSelection}
+                    onRemove={removeUpload}
+                    onUploadMore={triggerUpload}
+                    onChooseExisting={switchToChooseExisting}
+                  />
+                )}
               </div>
             )}
           </div>
 
-          {/* Review mapping — appears after upload or data-source link */}
-          {hasUpload && (
-            <div className="rounded-lg border border-border-light bg-white">
-              {/* Header + stats */}
-              <div className="px-4 pt-3 pb-3 border-b border-border-light">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-[13px] font-semibold text-text">Review data source mapping</div>
-                    <div className="text-[11.5px] text-text-muted mt-0.5">
-                      {linkedSourceId
-                        ? `Linked to ${DATA_SOURCES.find(d => d.id === linkedSourceId)?.name ?? 'source'}`
-                        : `${uploadedFiles.length} file${uploadedFiles.length === 1 ? '' : 's'} uploaded · auto-matched to required inputs`}
-                    </div>
-                  </div>
-                </div>
+          </>
+          )}
 
-                <div className="grid grid-cols-3 gap-2 mt-3">
-                  <div className="rounded-md border border-compliant/25 bg-compliant-50 px-3 py-2">
-                    <div className="text-[10px] font-semibold uppercase tracking-wider text-compliant-700">Ready to run</div>
-                    <div className="text-[18px] font-semibold text-compliant-700 leading-tight mt-0.5">
-                      {reviewCounts.mapped}<span className="text-[12px] text-compliant-700/70 font-medium"> / {reviewCounts.all}</span>
+          {/* Workflow Mapping — Step 2b, appears after user hits Continue on upload view */}
+          {step2View === 'review' && (
+            <div className="rounded-lg border border-border-light bg-white">
+              {/* Header */}
+              <div className="px-4 pt-4 pb-3">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold text-text">Workflow Mapping</div>
+                    <div className="text-[11.5px] text-text-muted mt-0.5">
+                      Auto-mapped {reviewCounts.mapped} of {reviewCounts.all} workflows. Review issues below, fix column mappings, or drop workflows from this run.
                     </div>
                   </div>
-                  <div className={`rounded-md border px-3 py-2 ${reviewCounts.attention > 0 ? 'border-mitigated/30 bg-mitigated-50' : 'border-border-light bg-surface-2/40'}`}>
-                    <div className={`text-[10px] font-semibold uppercase tracking-wider ${reviewCounts.attention > 0 ? 'text-mitigated-700' : 'text-text-muted'}`}>Needs attention</div>
-                    <div className={`text-[18px] font-semibold leading-tight mt-0.5 ${reviewCounts.attention > 0 ? 'text-mitigated-700' : 'text-text'}`}>
-                      {reviewCounts.attention}
-                    </div>
-                  </div>
-                  <div className="rounded-md border border-border-light bg-surface-2/40 px-3 py-2">
-                    <div className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Removed</div>
-                    <div className="text-[18px] font-semibold text-text leading-tight mt-0.5">{reviewCounts.removed}</div>
+                  <div className="flex items-center gap-1.5 text-[11px] shrink-0 pt-0.5">
+                    <Sparkles size={12} className="text-primary" />
+                    <span className="text-primary font-medium">Auto-mapping complete</span>
                   </div>
                 </div>
 
                 {/* Filter chips */}
-                <div className="flex flex-wrap gap-1.5 mt-3">
+                <div className="flex flex-wrap gap-1.5 pb-3 border-b border-border-light">
                   {([
-                    { key: 'all', label: 'All', count: reviewCounts.all },
-                    { key: 'mapped', label: 'Mapped', count: reviewCounts.mapped },
-                    { key: 'attention', label: 'Needs attention', count: reviewCounts.attention },
-                    { key: 'removed', label: 'Removed', count: reviewCounts.removed },
-                  ] as const).map(f => {
-                    const active = reviewFilter === f.key;
+                    { key: 'all',       label: 'All',           dot: null,             count: reviewCounts.all },
+                    { key: 'mapped',    label: 'Mapped',        dot: 'bg-compliant',   count: reviewCounts.mapped },
+                    { key: 'column',    label: 'Column Issues', dot: 'bg-mitigated',   count: reviewCounts.column },
+                    { key: 'file',      label: 'File Issues',   dot: 'bg-risk',        count: reviewCounts.file },
+                    { key: 'notmapped', label: 'Not Mapped',    dot: 'bg-text-muted',  count: reviewCounts.notmapped },
+                    ...(reviewCounts.dropped > 0
+                      ? [{ key: 'dropped' as const, label: 'Dropped', dot: 'bg-text', count: reviewCounts.dropped }]
+                      : []),
+                  ] as const).map(chip => {
+                    const active = reviewFilter === chip.key;
                     return (
                       <button
-                        key={f.key}
+                        key={chip.key}
                         type="button"
-                        onClick={() => setReviewFilter(f.key)}
-                        className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border text-[11.5px] font-medium transition-colors cursor-pointer ${
+                        onClick={() => setReviewFilter(chip.key)}
+                        className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[11.5px] font-medium transition-colors cursor-pointer ${
                           active
-                            ? 'border-primary bg-primary text-white'
-                            : 'border-border-light bg-white text-text-muted hover:border-primary/30 hover:text-text'
+                            ? 'border-text bg-text text-white'
+                            : 'border-border-light bg-white text-text-muted hover:border-border hover:text-text'
                         }`}
                       >
-                        {f.label}
-                        <span className={`inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-semibold ${
-                          active ? 'bg-white/25 text-white' : 'bg-surface-2 text-text-muted'
-                        }`}>
-                          {f.count}
+                        {chip.dot && <span className={`w-1.5 h-1.5 rounded-full ${chip.dot}`} />}
+                        {chip.label}
+                        <span className={`font-mono text-[10.5px] ${active ? 'opacity-70' : 'opacity-60'}`}>
+                          {chip.count}
                         </span>
                       </button>
                     );
@@ -1525,145 +1725,95 @@ function BulkExecuteModal({
                 </div>
               </div>
 
-              {/* Source file tiles */}
-              <div className="px-4 pt-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-text-muted mb-2">Source files</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {REQUIRED_FILES.map(f => (
-                    <div
-                      key={f.name}
-                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border-light bg-surface-2/40"
-                    >
-                      <FileText size={11} className="text-text-muted" />
-                      <span className="text-[11.5px] font-medium text-text">{f.name}</span>
-                      <span className="text-[10px] font-mono text-text-muted">{f.format}</span>
-                      <span className="inline-flex items-center gap-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-compliant-700">
-                        <Check size={9} strokeWidth={3} />
-                        Mapped
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {/* Workflow rows */}
-              <div className="p-4 space-y-1.5">
-                {filteredReview.length === 0 ? (
-                  <div className="text-[12px] text-text-muted text-center py-6">
+              <div className="px-4 pb-4 space-y-2">
+                {filteredReviewWorkflows.length === 0 ? (
+                  <div className="text-[12px] text-text-muted text-center py-12">
                     No workflows match this filter.
                   </div>
                 ) : (
-                  filteredReview.map(({ wf, expected, status }) => {
-                    const expanded = expandedWfId === wf.id;
-                    const isRemoved = status === 'removed';
+                  filteredReviewWorkflows.map(rw => {
+                    const isExpanded = expandedReviewId === rw.id;
+                    const isDropped = rw.status === 'dropped';
+                    const hasMissing = rw.columns?.some(c => c.confidence === 'missing') ?? false;
                     return (
                       <div
-                        key={wf.id}
-                        className={`rounded-md border overflow-hidden transition-colors ${
-                          isRemoved ? 'border-border-light bg-surface-2/40' : 'border-border-light bg-white'
+                        key={rw.id}
+                        className={`rounded-xl border overflow-hidden transition-colors ${
+                          isDropped
+                            ? 'border-border-light bg-surface-2/60 opacity-60'
+                            : 'border-border-light bg-white hover:border-border'
                         }`}
                       >
-                        <div className="flex items-center gap-2 px-3 py-2">
-                          <button
-                            type="button"
-                            onClick={() => !isRemoved && setExpandedWfId(prev => (prev === wf.id ? null : wf.id))}
-                            disabled={isRemoved}
-                            className={`p-0.5 transition-colors ${
-                              isRemoved
-                                ? 'text-text-muted/40 cursor-not-allowed'
-                                : 'text-text-muted hover:text-text cursor-pointer'
-                            }`}
-                            aria-label={expanded ? 'Collapse mapper' : 'Expand mapper'}
-                          >
-                            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                          </button>
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          <div className="font-mono text-[11px] text-text-muted/70 w-16 shrink-0">{rw.code}</div>
                           <div className="flex-1 min-w-0">
-                            <div className={`text-[12.5px] font-semibold truncate ${
-                              isRemoved ? 'text-text-muted line-through' : 'text-text'
-                            }`}>
-                              {wf.name}
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className={`text-[12.5px] font-medium truncate ${isDropped ? 'text-text-muted line-through' : 'text-text'}`}>
+                                {rw.name}
+                              </span>
+                              <ReviewStatusChip status={rw.status} />
                             </div>
-                            <div className="text-[10.5px] text-text-muted truncate">
-                              {wf.businessProcess} · <span className="font-mono">{wf.controlId}</span>
+                            <div className="text-[11px] text-text-muted truncate">
+                              {(rw.status === 'mapped' || rw.status === 'column') && rw.mappedFiles && rw.mappedFiles.length > 0 ? (
+                                <span className="font-mono">{rw.mappedFiles.join(' · ')}</span>
+                              ) : rw.status === 'file' ? (
+                                <span className="text-risk">{rw.fileError}</span>
+                              ) : rw.status === 'notmapped' ? (
+                                <span>Missing: {(rw.missingFiles ?? []).join(', ')}</span>
+                              ) : isDropped ? (
+                                <span className="italic">Excluded from this run</span>
+                              ) : null}
                             </div>
                           </div>
-                          {/* Status chip */}
-                          {status === 'mapped' && (
-                            <span className="inline-flex items-center gap-1 px-1.5 h-5 rounded text-[10px] font-semibold uppercase tracking-wide bg-compliant-50 text-compliant-700 border border-compliant/25">
-                              <Check size={9} strokeWidth={3} />
-                              Mapped
-                            </span>
-                          )}
-                          {status === 'attention' && (
-                            <span className="inline-flex items-center gap-1 px-1.5 h-5 rounded text-[10px] font-semibold uppercase tracking-wide bg-mitigated-50 text-mitigated-700 border border-mitigated/30">
-                              Needs Attention
-                            </span>
-                          )}
-                          {status === 'removed' && (
-                            <span className="inline-flex items-center gap-1 px-1.5 h-5 rounded text-[10px] font-semibold uppercase tracking-wide bg-surface-2 text-text-muted border border-border-light">
-                              Removed
-                            </span>
-                          )}
-                          {/* Remove / Restore */}
-                          {isRemoved ? (
-                            <button
-                              type="button"
-                              onClick={() => restoreToBulkRun(wf.id)}
-                              className="px-2 h-6 rounded-md text-[11px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors cursor-pointer shrink-0"
-                            >
-                              Restore
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => removeFromBulkRun(wf.id)}
-                              className="px-2 h-6 rounded-md text-[11px] font-semibold text-text-muted border border-border-light bg-white hover:text-risk hover:border-risk/30 hover:bg-risk/5 transition-colors cursor-pointer shrink-0"
-                            >
-                              Remove
-                            </button>
-                          )}
+
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {isDropped ? (
+                              <ReviewActionButton variant="primary" onClick={() => restoreReviewWorkflow(rw.id)}>
+                                Restore
+                              </ReviewActionButton>
+                            ) : rw.status === 'mapped' ? (
+                              <ReviewActionButton variant="danger" onClick={() => dropReviewWorkflow(rw.id)}>
+                                Drop
+                              </ReviewActionButton>
+                            ) : rw.status === 'column' ? (
+                              <>
+                                <ReviewActionButton variant="primary" onClick={() => toggleReviewExpand(rw.id)}>
+                                  {isExpanded ? 'Collapse' : hasMissing ? 'Fix Columns' : 'Review Columns'}
+                                </ReviewActionButton>
+                                <ReviewActionButton variant="danger" onClick={() => dropReviewWorkflow(rw.id)}>
+                                  Drop
+                                </ReviewActionButton>
+                              </>
+                            ) : rw.status === 'file' ? (
+                              <>
+                                <ReviewActionButton variant="primary" onClick={() => setStep2View('upload')}>
+                                  Re-upload
+                                </ReviewActionButton>
+                                <ReviewActionButton variant="danger" onClick={() => dropReviewWorkflow(rw.id)}>
+                                  Drop
+                                </ReviewActionButton>
+                              </>
+                            ) : rw.status === 'notmapped' ? (
+                              <>
+                                <ReviewActionButton variant="primary" onClick={() => setStep2View('upload')}>
+                                  Upload
+                                </ReviewActionButton>
+                                <ReviewActionButton variant="danger" onClick={() => dropReviewWorkflow(rw.id)}>
+                                  Drop
+                                </ReviewActionButton>
+                              </>
+                            ) : null}
+                          </div>
                         </div>
 
-                        {expanded && !isRemoved && (
-                          <div className="border-t border-border-light bg-surface-2/30 px-3 py-2.5 space-y-1.5">
-                            <div className="text-[10px] font-semibold uppercase tracking-wider text-text-muted mb-1">
-                              Map expected columns
-                            </div>
-                            {expected.map(ec => (
-                              <div key={ec.expected} className="flex items-center gap-2">
-                                <div className="w-[180px] min-w-0 shrink-0">
-                                  <div className="text-[12px] font-medium text-text truncate">{ec.expected}</div>
-                                  <div className="text-[10px] text-text-muted truncate">{ec.file}</div>
-                                </div>
-                                <ArrowRight size={11} className="text-text-muted shrink-0" />
-                                <select
-                                  value={ec.current}
-                                  onChange={e => setColumnMapping(wf.id, ec.expected, e.target.value)}
-                                  className="flex-1 min-w-0 px-2 h-7 rounded-md border border-border-light text-[11.5px] text-text bg-white font-mono outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
-                                >
-                                  <option value="">— Not mapped —</option>
-                                  {(FILE_SOURCE_COLUMNS[ec.file] ?? []).map(sc => (
-                                    <option key={sc} value={sc}>{sc}</option>
-                                  ))}
-                                </select>
-                                {ec.currentStatus === 'exact' && (
-                                  <span className="inline-flex items-center px-1.5 h-5 rounded text-[9.5px] font-semibold uppercase tracking-wide bg-compliant-50 text-compliant-700 border border-compliant/25 shrink-0 w-[58px] justify-center">
-                                    Exact
-                                  </span>
-                                )}
-                                {ec.currentStatus === 'fuzzy' && (
-                                  <span className="inline-flex items-center px-1.5 h-5 rounded text-[9.5px] font-semibold uppercase tracking-wide bg-mitigated-50 text-mitigated-700 border border-mitigated/30 shrink-0 w-[58px] justify-center">
-                                    Fuzzy
-                                  </span>
-                                )}
-                                {ec.currentStatus === 'missing' && (
-                                  <span className="inline-flex items-center px-1.5 h-5 rounded text-[9.5px] font-semibold uppercase tracking-wide bg-risk/10 text-risk border border-risk/30 shrink-0 w-[58px] justify-center">
-                                    Missing
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
+                        {isExpanded && rw.status === 'column' && rw.columns && (
+                          <ReviewColumnMapper
+                            columns={rw.columns}
+                            onUpdate={(idx, value) => updateReviewColumn(rw.id, idx, value)}
+                            onConfirm={() => confirmReviewColumns(rw.id)}
+                          />
                         )}
                       </div>
                     );
@@ -1677,25 +1827,60 @@ function BulkExecuteModal({
         {/* Footer — Step 2 */}
         <div className="px-6 py-4 border-t border-border-light flex items-center justify-between shrink-0">
           <button
-            onClick={() => setStep(1)}
+            onClick={() => {
+              if (step2View === 'review') setStep2View('upload');
+              else setStep(1);
+            }}
             className="px-4 h-9 rounded-md bg-white text-text border border-border text-[13px] font-semibold hover:bg-surface-2 transition-colors cursor-pointer"
           >
             Back
           </button>
-          <button
-            onClick={handleStep2Continue}
-            aria-disabled={!step2CanContinue}
-            className={`flex items-center gap-2 px-4 h-9 rounded-md text-white text-[13px] font-semibold transition-colors ${
-              step2CanContinue
-                ? 'bg-primary hover:bg-primary-hover cursor-pointer'
-                : 'bg-primary/40 cursor-not-allowed'
-            }`}
-          >
-            Continue
-            <ArrowRight size={14} />
-          </button>
+          {step2View === 'upload' ? (
+            <button
+              onClick={() => {
+                if (!hasUpload) {
+                  addToast({
+                    type: 'error',
+                    message: 'Upload files or link an existing data source before continuing.',
+                  });
+                  return;
+                }
+                setStep2View('review');
+              }}
+              aria-disabled={!hasUpload}
+              className={`flex items-center gap-2 px-4 h-9 rounded-md text-white text-[13px] font-semibold transition-colors ${
+                hasUpload
+                  ? 'bg-primary hover:bg-primary-hover cursor-pointer'
+                  : 'bg-primary/40 cursor-not-allowed'
+              }`}
+            >
+              Continue
+              <ArrowRight size={14} />
+            </button>
+          ) : (
+            <button
+              onClick={handleStep2Continue}
+              aria-disabled={!step2CanContinue}
+              className={`flex items-center gap-2 px-4 h-9 rounded-md text-white text-[13px] font-semibold transition-colors ${
+                step2CanContinue
+                  ? 'bg-primary hover:bg-primary-hover cursor-pointer'
+                  : 'bg-primary/40 cursor-not-allowed'
+              }`}
+            >
+              Continue
+              <ArrowRight size={14} />
+            </button>
+          )}
         </div>
         </>
+        ) : (
+        <Step3ReviewExecute
+          auditName={auditName}
+          reviewWorkflows={reviewWorkflows}
+          uploadedCount={uploadedFiles.length}
+          onBack={() => { setStep(2); setStep2View('review'); }}
+          onExecute={handleStep3Execute}
+        />
         )}
       </motion.div>
     </motion.div>
@@ -1749,6 +1934,491 @@ function FetchingFilesLoader({ workflowCount }: { workflowCount: number }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function UploadedFilesPanel({
+  files,
+  selectedIds,
+  allSelected,
+  onToggleAll,
+  onToggleOne,
+  onRemove,
+  onUploadMore,
+  onChooseExisting,
+}: {
+  files: UploadedFile[];
+  selectedIds: Set<string>;
+  allSelected: boolean;
+  onToggleAll: () => void;
+  onToggleOne: (id: string) => void;
+  onRemove: (id: string) => void;
+  onUploadMore: () => void;
+  onChooseExisting: () => void;
+}) {
+  const failed = files.filter(u => u.error).length;
+  const someSelected = selectedIds.size > 0 && !allSelected;
+  return (
+    <div className="rounded-lg border border-border-light bg-white">
+      <div className="flex items-center gap-3 px-3 py-2.5 border-b border-border-light">
+        <button
+          type="button"
+          onClick={onToggleAll}
+          aria-label={allSelected ? 'Deselect all files' : 'Select all files'}
+          className="flex items-center gap-0.5 rounded-md border border-border-light px-1.5 py-1 hover:border-primary/40 hover:bg-surface-2 transition-colors cursor-pointer"
+        >
+          <span className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+            allSelected
+              ? 'border-primary bg-primary text-white'
+              : someSelected
+                ? 'border-primary bg-primary/20 text-primary'
+                : 'border-border bg-white text-transparent'
+          }`}>
+            {allSelected
+              ? <Check size={11} strokeWidth={3} />
+              : someSelected
+                ? <span className="w-1.5 h-0.5 rounded-sm bg-primary" />
+                : <Check size={11} strokeWidth={3} />}
+          </span>
+          <ChevronDown size={12} className="text-text-muted" />
+        </button>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="text-[13px] font-semibold text-text">Files Uploaded</span>
+          {failed > 0 && (
+            <div className="flex items-center gap-1 text-[11.5px] text-risk min-w-0">
+              <AlertTriangle size={12} className="shrink-0" />
+              <span className="truncate">
+                {failed} of {files.length} file{files.length === 1 ? '' : 's'} failed - delete or resolve to continue
+              </span>
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onUploadMore}
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary text-white text-[12px] font-semibold hover:bg-primary/90 transition-colors cursor-pointer"
+        >
+          <Upload size={13} />
+          Upload
+        </button>
+        <button
+          type="button"
+          onClick={onChooseExisting}
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-primary/40 text-primary bg-white text-[12px] font-semibold hover:bg-primary/5 transition-colors cursor-pointer"
+        >
+          <Database size={13} />
+          Choose Existing
+        </button>
+      </div>
+      <div className="divide-y divide-border-light">
+        {files.map(u => {
+          const isSelected = selectedIds.has(u.id);
+          return (
+            <div key={u.id} className="flex items-center gap-3 px-3 py-2.5">
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={isSelected}
+                onClick={() => onToggleOne(u.id)}
+                aria-label={isSelected ? `Deselect ${u.name}` : `Select ${u.name}`}
+                className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                  isSelected ? 'border-primary bg-primary text-white' : 'border-border bg-white text-transparent hover:border-primary/40'
+                }`}
+              >
+                <Check size={11} strokeWidth={3} />
+              </button>
+              <div className="flex-1 min-w-0">
+                <div className="text-[12.5px] font-semibold text-text truncate">{u.name}</div>
+                <div className="text-[11px] text-text-muted">{humanSize(u.size)}</div>
+              </div>
+              {u.error && (
+                <div className="flex items-center gap-1.5 text-[11.5px] text-risk shrink-0">
+                  <AlertTriangle size={12} />
+                  <span>{u.error}</span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => onRemove(u.id)}
+                aria-label={`Remove ${u.name}`}
+                className="p-1 text-text-muted hover:text-risk transition-colors cursor-pointer shrink-0"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ReviewStatusChip({ status }: { status: ReviewWorkflowStatus }) {
+  const base = 'inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10.5px] font-medium tracking-wide shrink-0 border';
+  switch (status) {
+    case 'mapped':
+      return (
+        <span className={`${base} bg-compliant-50 text-compliant-700 border-compliant/25`}>
+          <Check size={10} strokeWidth={3} />
+          Mapped
+        </span>
+      );
+    case 'column':
+      return (
+        <span className={`${base} bg-mitigated-50 text-mitigated-700 border-mitigated/30`}>
+          <AlertTriangle size={10} strokeWidth={2.5} />
+          Column Mismatch
+        </span>
+      );
+    case 'file':
+      return (
+        <span className={`${base} bg-risk/10 text-risk border-risk/30`}>
+          <X size={10} strokeWidth={2.5} />
+          File Mismatch
+        </span>
+      );
+    case 'notmapped':
+      return (
+        <span className={`${base} bg-surface-2 text-text-muted border-border-light`}>
+          <Minus size={10} strokeWidth={2.5} />
+          Not Mapped
+        </span>
+      );
+    case 'dropped':
+      return (
+        <span className={`${base} bg-text text-white border-text`}>
+          Dropped from run
+        </span>
+      );
+  }
+}
+
+function ReviewActionButton({
+  variant,
+  onClick,
+  children,
+}: {
+  variant: 'primary' | 'danger';
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const cls =
+    variant === 'primary'
+      ? 'border-primary/25 text-primary bg-white hover:bg-primary/5'
+      : 'border-border-light text-text-muted bg-white hover:text-risk hover:border-risk/30 hover:bg-risk/5';
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center px-2.5 h-7 rounded-md border text-[11.5px] font-medium transition-colors cursor-pointer ${cls}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ReviewColumnMapper({
+  columns,
+  onUpdate,
+  onConfirm,
+}: {
+  columns: ColumnMapping[];
+  onUpdate: (idx: number, value: string) => void;
+  onConfirm: () => void;
+}) {
+  const resolved = columns.filter(c => c.confidence !== 'missing').length;
+  const missingCount = columns.length - resolved;
+  const allResolved = missingCount === 0;
+  return (
+    <div className="border-t border-dashed border-border-light bg-surface-2/40 px-4 py-3.5">
+      <div className="flex items-start justify-between mb-3 gap-3">
+        <div className="min-w-0">
+          <div className="text-[11.5px] font-semibold text-text">Column Mapping</div>
+          <div className="text-[10.5px] text-text-muted mt-0.5">
+            Map required schema columns to columns found in uploaded file. Fuzzy matches are auto-applied — verify or override.
+          </div>
+        </div>
+        <div className="text-[10.5px] font-mono text-text-muted shrink-0">
+          {resolved}/{columns.length} resolved
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border-light bg-white p-3">
+        <div className="grid grid-cols-[1fr_18px_1fr_60px] gap-3 text-[9.5px] uppercase tracking-wider text-text-muted/80 font-semibold pb-1.5 border-b border-border-light">
+          <div>Required Column</div>
+          <div></div>
+          <div>Source Column</div>
+          <div className="text-right">Match</div>
+        </div>
+        {columns.map((c, idx) => (
+          <div
+            key={`${c.required}-${idx}`}
+            className="grid grid-cols-[1fr_18px_1fr_60px] gap-3 items-center py-2 border-b border-border-light/60 last:border-b-0"
+          >
+            <div className="text-[12px] font-mono text-text truncate">{c.required}</div>
+            <ArrowRight size={12} className="text-text-muted/50" />
+            <select
+              value={c.matched ?? ''}
+              onChange={e => onUpdate(idx, e.target.value)}
+              className={`min-w-0 px-2 h-7 rounded-md border text-[11.5px] font-mono outline-none transition-colors cursor-pointer ${
+                c.confidence === 'missing'
+                  ? 'border-risk/40 bg-risk/5 text-risk'
+                  : 'border-border-light bg-white text-text focus:border-primary/40 focus:ring-2 focus:ring-primary/10'
+              }`}
+            >
+              {c.confidence === 'missing' && <option value="">— Select column —</option>}
+              {AVAILABLE_COLUMNS.map(ac => (
+                <option key={ac} value={ac}>{ac}</option>
+              ))}
+            </select>
+            <div className="flex justify-end">
+              {c.confidence === 'exact' && (
+                <span className="inline-flex items-center px-1.5 h-5 rounded text-[9.5px] font-medium bg-compliant-50 text-compliant-700 border border-compliant/25">
+                  exact
+                </span>
+              )}
+              {c.confidence === 'fuzzy' && (
+                <span className="inline-flex items-center px-1.5 h-5 rounded text-[9.5px] font-medium bg-mitigated-50 text-mitigated-700 border border-mitigated/30">
+                  fuzzy
+                </span>
+              )}
+              {c.confidence === 'missing' && (
+                <span className="inline-flex items-center px-1.5 h-5 rounded text-[9.5px] font-medium bg-risk/10 text-risk border border-risk/30">
+                  missing
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between mt-3 gap-3">
+        <div className="text-[10.5px] flex items-center gap-1.5 min-w-0">
+          {allResolved ? (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-compliant" />
+              <span className="text-text-muted">All required columns mapped — workflow will run with overrides</span>
+            </>
+          ) : (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-risk" />
+              <span className="text-text-muted">
+                {missingCount} column{missingCount === 1 ? '' : 's'} still need mapping to proceed
+              </span>
+            </>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={!allResolved}
+          className={`inline-flex items-center px-2.5 h-7 rounded-md border text-[11.5px] font-medium transition-colors shrink-0 ${
+            allResolved
+              ? 'border-primary/25 text-primary bg-white hover:bg-primary/5 cursor-pointer'
+              : 'border-border-light text-text-muted/50 bg-white cursor-not-allowed'
+          }`}
+        >
+          {allResolved ? 'Confirm Mapping' : 'Apply & Close'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Step3ReviewExecute({
+  auditName,
+  reviewWorkflows,
+  uploadedCount,
+  onBack,
+  onExecute,
+}: {
+  auditName: string;
+  reviewWorkflows: ReviewWorkflow[];
+  uploadedCount: number;
+  onBack: () => void;
+  onExecute: () => void;
+}) {
+  const active = reviewWorkflows.filter(rw => rw.status === 'mapped' || rw.status === 'column');
+  const skipped = reviewWorkflows.filter(rw => rw.status === 'dropped' || rw.status === 'file' || rw.status === 'notmapped');
+  const totalRuntime = active.reduce((s, w) => s + w.runtime, 0);
+  const maxRuntime = active.reduce((m, w) => Math.max(m, w.runtime), 0);
+  const estRuntime = active.length > 0 ? maxRuntime + totalRuntime / 3 : 0;
+  const overrides = reviewWorkflows.filter(rw => rw.hasOverrides && rw.status !== 'dropped');
+  const today = new Date().toISOString().slice(0, 10);
+  const reportName = `${auditName.trim() || 'BulkRun'}_${today}_BulkReport`;
+
+  const skipReason = (rw: ReviewWorkflow) => {
+    if (rw.status === 'dropped') return 'Dropped by user';
+    if (rw.status === 'file') return 'File schema mismatch';
+    if (rw.status === 'notmapped') return 'No file mapped';
+    return '';
+  };
+
+  return (
+    <>
+      <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="mb-5">
+          <div className="text-[10.5px] font-semibold uppercase tracking-wider text-primary mb-1">Final Review</div>
+          <h3 className="text-[16px] font-semibold text-text">
+            Ready to execute <span className="text-primary font-mono">{auditName.trim() || 'BulkRun'}</span>
+          </h3>
+          <p className="text-[12px] text-text-muted mt-1">
+            Review the run summary below. Once executed, audit trail will be locked and results will be available in your engagement dashboard.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-4 gap-3 mb-4">
+          <Step3StatCard label="Workflows Running" value={String(active.length)} />
+          <Step3StatCard label="Source Files" value={String(uploadedCount)} />
+          <Step3StatCard label="Est. Runtime" value={`~${estRuntime.toFixed(1)}`} suffix="min" />
+          <Step3StatCard label="Skipped / Dropped" value={String(skipped.length)} muted={skipped.length > 0} />
+        </div>
+
+        <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 mb-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-primary text-white flex items-center justify-center shrink-0">
+            <FileText size={15} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] font-medium text-text-muted">Final Report</div>
+            <div className="font-mono text-[13px] text-primary font-semibold truncate">{reportName}.xlsx</div>
+            <div className="text-[11px] text-text-muted mt-0.5 truncate">
+              Consolidated report with per-workflow sheets · exceptions flagged · linked back to RACM controls
+            </div>
+          </div>
+          <button
+            type="button"
+            className="inline-flex items-center px-2.5 h-7 rounded-md border border-border-light bg-white text-[11.5px] font-medium text-text hover:bg-surface-2 transition-colors cursor-pointer shrink-0"
+          >
+            Rename
+          </button>
+        </div>
+
+        {overrides.length > 0 && (
+          <details className="mb-4 rounded-xl overflow-hidden border border-mitigated/30 bg-mitigated-50">
+            <summary className="cursor-pointer p-3 flex items-center gap-2 text-[12px] font-medium text-mitigated-700">
+              <AlertTriangle size={13} />
+              <span className="flex-1">
+                {overrides.length} workflow{overrides.length > 1 ? 's have' : ' has'} column overrides applied
+              </span>
+              <ChevronDown size={13} />
+            </summary>
+            <div className="px-3 pb-3 space-y-2 bg-white">
+              {overrides.map(w => (
+                <div key={w.id} className="pt-2.5 border-t border-border-light first:border-t-0">
+                  <div className="text-[12.5px] font-medium text-text mb-1.5">
+                    {w.name}
+                    <span className="font-mono text-[10.5px] text-text-muted ml-1.5">{w.code}</span>
+                  </div>
+                  <div className="space-y-0.5">
+                    {(w.columns ?? []).filter(c => c.confidence !== 'missing').map((c, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-[11px] font-mono">
+                        <span className="text-text w-40 truncate">{c.required}</span>
+                        <ArrowRight size={10} className="text-text-muted/60 shrink-0" />
+                        <span className="text-primary truncate">{c.matched}</span>
+                        <span className={`ml-auto inline-flex items-center px-1.5 h-4 rounded text-[9.5px] font-medium border ${
+                          c.confidence === 'fuzzy'
+                            ? 'bg-mitigated-50 text-mitigated-700 border-mitigated/30'
+                            : 'bg-compliant-50 text-compliant-700 border-compliant/25'
+                        }`}>
+                          {c.confidence}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+
+        <div className="mb-4">
+          <div className="text-[10.5px] font-semibold uppercase tracking-wider text-text-muted mb-2">
+            Running ({active.length})
+          </div>
+          <div className="rounded-xl border border-border-light bg-white divide-y divide-border-light overflow-hidden">
+            {active.map(w => (
+              <div key={w.id} className="flex items-center gap-3 px-4 py-2.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-compliant shrink-0" />
+                <div className="font-mono text-[11px] text-text-muted/70 w-16 shrink-0">{w.code}</div>
+                <div className="flex-1 text-[12.5px] text-text truncate">{w.name}</div>
+                {w.hasOverrides && (
+                  <span className="inline-flex items-center px-1.5 h-5 rounded text-[9.5px] font-medium bg-mitigated-50 text-mitigated-700 border border-mitigated/30 shrink-0">
+                    overrides
+                  </span>
+                )}
+                <div className="text-[11px] text-text-muted font-mono w-16 text-right shrink-0">~{w.runtime.toFixed(1)} min</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {skipped.length > 0 && (
+          <div>
+            <div className="text-[10.5px] font-semibold uppercase tracking-wider text-text-muted mb-2">
+              Skipped ({skipped.length})
+            </div>
+            <div className="rounded-xl border border-border-light bg-surface-2/40 divide-y divide-border-light/60 overflow-hidden">
+              {skipped.map(w => (
+                <div key={w.id} className="flex items-center gap-3 px-4 py-2.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-text-muted/60 shrink-0" />
+                  <div className="font-mono text-[11px] text-text-muted/70 w-16 shrink-0">{w.code}</div>
+                  <div className="flex-1 text-[12.5px] text-text-muted line-through truncate">{w.name}</div>
+                  <div className="text-[11px] text-text-muted italic shrink-0">{skipReason(w)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="px-6 py-4 border-t border-border-light flex items-center justify-between shrink-0">
+        <div className="text-[11.5px] text-text-muted">
+          Ready · {active.length} workflow{active.length === 1 ? '' : 's'} · ~{estRuntime.toFixed(1)} min
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onBack}
+            className="px-4 h-9 rounded-md bg-white text-text border border-border text-[13px] font-semibold hover:bg-surface-2 transition-colors cursor-pointer"
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            onClick={onExecute}
+            disabled={active.length === 0}
+            className={`flex items-center gap-2 px-4 h-9 rounded-md text-white text-[13px] font-semibold transition-colors ${
+              active.length > 0 ? 'bg-primary hover:bg-primary-hover cursor-pointer' : 'bg-primary/40 cursor-not-allowed'
+            }`}
+          >
+            Execute Bulk Run
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Step3StatCard({
+  label,
+  value,
+  suffix,
+  muted,
+}: {
+  label: string;
+  value: string;
+  suffix?: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-border-light bg-white p-4">
+      <div className={`font-mono text-[26px] font-medium leading-none tracking-tight ${muted ? 'text-text-muted' : 'text-text'}`}>
+        {value}
+        {suffix && <span className="text-[13px] text-text-muted ml-1 font-medium">{suffix}</span>}
+      </div>
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-text-muted mt-2">{label}</div>
     </div>
   );
 }
