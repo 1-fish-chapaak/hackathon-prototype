@@ -300,8 +300,6 @@ export default function ManageExceptionsView({ role, setRole, onBack }: ManageEx
             key="bulk-modal"
             bulkId={bulkModalId}
             onClose={() => setBulkModalId(null)}
-            onAcceptAll={() => setBulkModalId(null)}
-            onRejectAll={() => setBulkModalId(null)}
           />
         )}
         {sampleModalOpen && (
