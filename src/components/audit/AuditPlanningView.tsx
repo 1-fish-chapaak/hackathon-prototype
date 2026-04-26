@@ -6,7 +6,7 @@ import {
   X, ChevronDown, Plus, Edit3, AlertTriangle,
   DollarSign, BarChart3, Clock, Zap, ArrowRight,
   Play, FileCheck, Eye, Copy, Upload, Search,
-  XCircle, Activity, ChevronRight
+  XCircle, Activity, ChevronRight, Info
 } from 'lucide-react';
 import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
@@ -211,6 +211,32 @@ const SIGNOFF_LOG = [
 ];
 
 const SIGNERS = ['Karan Mehta', 'Sneha Desai', 'Abhinav S'];
+
+function getRacmLabel(versionId: string): string {
+  const found = RACM_VERSIONS.find(r => r.id === versionId);
+  return found ? found.label.replace(/\s*\(.*\)/, '') : versionId;
+}
+
+function getScopeLabel(eng: { businessProcess: ProcessType; auditType: AuditType }): string {
+  if (eng.businessProcess === 'Cross') return 'P2P + O2C + R2R + ITGC';
+  if (eng.auditType === 'SOX' || eng.auditType === 'IFC') return `${eng.businessProcess} + ITGC`;
+  return eng.businessProcess;
+}
+
+function getRacmDisplayName(eng: { businessProcess: ProcessType; auditType: AuditType; sourceRacmVersionId: string }): string {
+  const prefix = eng.businessProcess === 'Cross' ? 'Cross-Process' : eng.businessProcess;
+  const type = eng.auditType;
+  const ver = getRacmLabel(eng.sourceRacmVersionId);
+  return `${prefix} ${type} ${ver}`;
+}
+
+const PROCESS_BADGE_COLORS: Record<ProcessType, string> = {
+  P2P: 'bg-[#6a12cd]/10 text-[#6a12cd] border-[#6a12cd]/20',
+  O2C: 'bg-[#0284c7]/10 text-[#0284c7] border-[#0284c7]/20',
+  R2R: 'bg-[#d97706]/10 text-[#d97706] border-[#d97706]/20',
+  S2C: 'bg-[#059669]/10 text-[#059669] border-[#059669]/20',
+  Cross: 'bg-[#7c3aed]/10 text-[#7c3aed] border-[#7c3aed]/20',
+};
 
 function getCurrentMonth(): number { return 11; }
 
@@ -817,30 +843,7 @@ function EngagementDrawer({
               </div>
             </div>
 
-            {/* Priority & Risk Score */}
-            <div className="grid grid-cols-2 gap-3">
-              <Dropdown<PriorityLevel>
-                label="Priority"
-                value={form.priority}
-                options={PRIORITIES}
-                onChange={(v) => update('priority', v)}
-                disabled={readOnly || isInExecution}
-                renderOption={(opt) => (
-                  <span className={`font-semibold ${
-                    opt === 'Critical' ? 'text-risk-700' : opt === 'High' ? 'text-high-700' :
-                    opt === 'Medium' ? 'text-mitigated-700' : 'text-compliant-700'
-                  }`}>{opt}</span>
-                )}
-              />
-              <div className="mb-3">
-                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Risk Score (1-100)</label>
-                <input type="number" min={1} max={100} value={form.riskScore}
-                  onChange={(e) => update('riskScore', Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                  disabled={readOnly || isInExecution}
-                  className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${(readOnly || isInExecution) ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'}`}
-                />
-              </div>
-            </div>
+            {/* Priority & Risk Score — hidden from create form */}
 
             {/* Description */}
             <div className="mb-3">
@@ -1415,7 +1418,7 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
         {activeTab === 'timeline' && (
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4 mb-4">
             <div className="flex items-center gap-2">
-              <span className="text-[12px] font-bold text-text-muted">Process:</span>
+              <span className="text-[12px] font-bold text-text-muted">Filter by Primary Process:</span>
               <div className="flex gap-1">
                 {processFilterOptions.map(opt => (
                   <button key={opt} onClick={() => setProcessFilter(opt)}
@@ -1455,6 +1458,9 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
             ];
 
             const filteredPlan = plan.filter(eng => {
+              // Process filter
+              if (processFilter !== 'All' && eng.businessProcess !== processFilter) return false;
+              // Status filter
               if (engFilter === 'all') return true;
               if (engFilter === 'active') return isExecutionPhase(eng.status);
               if (engFilter === 'planned') return ['planned', 'frozen', 'signed-off'].includes(eng.status);
@@ -1477,26 +1483,68 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
             return (
               <motion.div key="execution" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
                 {/* Engagement Filters */}
-                <div className="flex items-center gap-1.5 mb-4 flex-wrap">
-                  {filterOptions.map(f => (
-                    <button key={f.key} onClick={() => setEngFilter(f.key)}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
-                        engFilter === f.key ? 'bg-primary text-white' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
-                      }`}>
-                      {f.label}
-                      {f.count > 0 && <span className={`ml-1 text-[10px] tabular-nums ${engFilter === f.key ? 'text-white/80' : 'text-text-muted/60'}`}>{f.count}</span>}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-4 mb-4 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {filterOptions.map(f => (
+                      <button key={f.key} onClick={() => setEngFilter(f.key)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
+                          engFilter === f.key ? 'bg-primary text-white' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
+                        }`}>
+                        {f.label}
+                        {f.count > 0 && <span className={`ml-1 text-[10px] tabular-nums ${engFilter === f.key ? 'text-white/80' : 'text-text-muted/60'}`}>{f.count}</span>}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="w-px h-5 bg-border-light" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-text-muted">Filter by Primary Process:</span>
+                    {processFilterOptions.map(opt => (
+                      <button key={opt} onClick={() => setProcessFilter(opt)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
+                          processFilter === opt ? 'bg-evidence-700 text-white' : 'bg-surface-2 text-text-muted hover:bg-evidence-50 hover:text-evidence-700'
+                        }`}>{opt}</button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Engagement Execution Table */}
+                {filteredPlan.length === 0 ? (
+                  <div className="glass-card rounded-xl p-12 text-center">
+                    <ClipboardList size={32} className="text-text-muted mx-auto mb-3" />
+                    <p className="text-[14px] font-semibold text-text mb-1">No engagements found</p>
+                    <p className="text-[12px] text-text-muted max-w-sm mx-auto">
+                      {plan.length === 0
+                        ? 'No engagements yet. Create your first engagement by selecting a business process and RACM.'
+                        : 'No engagements match the selected filters. Try adjusting your filters above.'}
+                    </p>
+                  </div>
+                ) : (
+                <>
+                {/* Explanatory line */}
+                <div className="flex items-start gap-2 mb-3 px-1">
+                  <Info size={13} className="text-primary/60 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-text-muted leading-relaxed">
+                    Engagements are organized by <span className="font-semibold text-text-secondary">Primary Business Process</span>. Execution scope still comes from the linked RACM snapshot.
+                  </p>
+                </div>
+
                 <div className="glass-card rounded-xl overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-[12px]">
                       <thead>
                         <tr className="border-b border-border bg-surface-2/50">
-                          {['Engagement', 'Type', 'Process', 'Owner', 'Progress', 'Effective', 'Failed', 'Pending', 'Remaining', 'Status', 'Action'].map(h => (
-                            <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide whitespace-nowrap">{h}</th>
+                          {['Engagement', 'Type', 'Primary Process', 'Owner', 'Progress', 'Effective', 'Failed', 'Pending', 'Remaining', 'Status', 'Action'].map(h => (
+                            <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide whitespace-nowrap">
+                              {h === 'Primary Process' ? (
+                                <span className="group relative inline-flex items-center gap-1 cursor-help">
+                                  {h}
+                                  <Info size={10} className="text-text-muted/50" />
+                                  <span className="absolute left-0 top-full mt-1.5 z-50 hidden group-hover:block w-[220px] px-2.5 py-2 rounded-lg bg-ink-900 text-white text-[10px] font-normal normal-case tracking-normal leading-snug shadow-lg">
+                                    Used for planning, filtering, and ownership. Does not limit RACM execution scope.
+                                  </span>
+                                </span>
+                              ) : h}
+                            </th>
                           ))}
                         </tr>
                       </thead>
@@ -1516,14 +1564,25 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
                               <td className="px-3 py-2.5">
                                 <div className="flex items-center gap-2">
                                   <div className="w-2 h-2 rounded-full shrink-0" style={{ background: eng.color, opacity: isActive ? 1 : 0.4 }} />
-                                  <span className="text-[12px] font-medium text-text max-w-[160px] truncate">{eng.name}</span>
-                                  {eng.isOverdue && <span className="px-1 h-4 rounded text-[8px] font-bold bg-risk-50 text-risk-700 inline-flex items-center animate-pulse">OD</span>}
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[12px] font-semibold text-text truncate">{eng.name}</span>
+                                      {eng.isOverdue && <span className="px-1 h-4 rounded text-[8px] font-bold bg-risk-50 text-risk-700 inline-flex items-center animate-pulse shrink-0">OD</span>}
+                                    </div>
+                                    <div className="text-[10px] text-text-muted mt-0.5 truncate max-w-[220px]">
+                                      RACM: {getRacmDisplayName(eng)} · Scope: {getScopeLabel(eng)}
+                                    </div>
+                                  </div>
                                 </div>
                               </td>
                               <td className="px-3 py-2.5">
                                 <span className="px-2 h-5 rounded-full text-[9px] font-semibold bg-brand-50 text-brand-700 inline-flex items-center">{eng.auditType}</span>
                               </td>
-                              <td className="px-3 py-2.5"><span className="text-[11px] text-text-secondary">{eng.businessProcess}</span></td>
+                              <td className="px-3 py-2.5">
+                                <span className={`px-2.5 h-5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 ${PROCESS_BADGE_COLORS[eng.businessProcess]}`}>
+                                  {eng.businessProcess === 'Cross' ? 'Cross-Process' : eng.businessProcess}
+                                </span>
+                              </td>
                               <td className="px-3 py-2.5"><span className="text-[11px] text-text-secondary">{eng.owner.split(' ')[0]}</span></td>
                               <td className="px-3 py-2.5">
                                 {isActive ? (
@@ -1565,6 +1624,8 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
                     <span className="text-[11px] text-text-muted">{filteredPlan.length} of {plan.length} engagements</span>
                   </div>
                 </div>
+                </>
+                )}
               </motion.div>
             );
           })()}

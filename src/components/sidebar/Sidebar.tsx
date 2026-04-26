@@ -6,7 +6,7 @@ import {
   AlertTriangle, Sparkles, Building2, Home, Calendar,
   Shield, Search as SearchIcon, Settings, Clock, Check,
   Wand2, MoreHorizontal, LogOut, HelpCircle, ExternalLink,
-  ClipboardCheck, FileText, Target
+  ClipboardCheck, FileText, Target, Layers
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
 
@@ -259,9 +259,8 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
           {/* ── PROGRAMS ── */}
           <Divider label="Programs" expanded={isExpanded} />
 
-          <NavItem icon={Calendar} label="Planning" active={view === 'audit-planning'} expanded={isExpanded} onClick={() => setView('audit-planning')} />
-          <NavItem icon={Building2} label="Process Hub" active={view === 'business-processes' || view === 'bp-detail'} expanded={isExpanded} onClick={() => setView('business-processes')} />
-          <NavItem icon={AlertTriangle} label="Risk Register" active={view === 'audit-risk-register'} expanded={isExpanded} onClick={() => setView('audit-risk-register')} badge="14" />
+          <NavItem icon={Layers} label="Programs" active={view === 'programs' || view === 'audit-planning' || view === 'business-processes' || view === 'bp-detail'} expanded={isExpanded} onClick={() => setView('programs')} />
+          <NavItem icon={AlertTriangle} label="Risks" active={view === 'audit-risk-register'} expanded={isExpanded} onClick={() => setView('audit-risk-register')} badge="14" />
           <NavItem icon={Shield} label="Control Library" active={view === 'governance-controls' || view === 'governance-control-detail'} expanded={isExpanded} onClick={() => setView('governance-controls')} />
 
           {/* ── GLOBAL ── */}

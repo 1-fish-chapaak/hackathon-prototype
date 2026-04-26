@@ -97,9 +97,10 @@ interface Props {
 export default function EngagementDetailView({ engagementId, freshActivation, onBack, onOpenControl }: Props) {
   const eng = ENGAGEMENT;
 
-  // Use clean controls for fresh activations, seeded data for demo engagement
+  // Use seeded data only for the demo engagement; all others start fresh
   const isDemoEngagement = engagementId === 'ap-1' || engagementId === 'eng-sox-fy26' || !engagementId;
-  const sourceControls = (freshActivation && !isDemoEngagement) ? resetControlsToClean(CONTROLS) : CONTROLS;
+  const isFreshEngagement = !isDemoEngagement || freshActivation;
+  const sourceControls = isFreshEngagement ? resetControlsToClean(CONTROLS) : CONTROLS;
 
   const [search, setSearch] = useState('');
   const [domainFilter, setDomainFilter] = useState('All');
@@ -141,14 +142,6 @@ export default function EngagementDetailView({ engagementId, freshActivation, on
 
   // Reviewer queue
   const reviewQueue = sourceControls.filter(c => c.status === 'pending-review');
-
-  // Next Best Actions
-  const nextActions: { label: string; desc: string; icon: React.ElementType; cls: string; count: number }[] = [];
-  if (readyControls > 0) nextActions.push({ label: 'Upload Population', desc: `${readyControls} controls awaiting population data`, icon: Upload, cls: 'text-primary border-primary/20 bg-primary/5 hover:bg-primary/10', count: readyControls });
-  if (populationPending > 0) nextActions.push({ label: 'Generate Samples', desc: `${populationPending} controls with population ready`, icon: Database, cls: 'text-brand-700 border-brand/20 bg-brand-50/50 hover:bg-brand-50', count: populationPending });
-  if (wip > 0) nextActions.push({ label: 'Continue Testing', desc: `${wip} controls with testing in progress`, icon: Target, cls: 'text-evidence-700 border-evidence/20 bg-evidence-50/50 hover:bg-evidence-50', count: wip });
-  if (pendingReview > 0) nextActions.push({ label: 'Review Pending', desc: `${pendingReview} controls awaiting reviewer approval`, icon: Eye, cls: 'text-mitigated-700 border-mitigated/20 bg-mitigated-50/50 hover:bg-mitigated-50', count: pendingReview });
-  if (deficient > 0) nextActions.push({ label: 'Address Failures', desc: `${deficient} controls concluded as ineffective`, icon: AlertTriangle, cls: 'text-risk-700 border-risk/20 bg-risk-50/50 hover:bg-risk-50', count: deficient });
 
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
@@ -205,7 +198,7 @@ export default function EngagementDetailView({ engagementId, freshActivation, on
                   <div className="p-2 rounded-xl bg-gradient-to-br from-primary to-primary-medium"><Play size={16} className="text-white" /></div>
                   <div>
                     <h3 className="text-[14px] font-bold text-text">Welcome to Your Audit Workspace</h3>
-                    <p className="text-[12px] text-text-muted mt-0.5">Engagement activated by {eng.activatedBy}. Follow these steps to begin.</p>
+                    <p className="text-[12px] text-text-muted mt-0.5">This engagement has been created from the selected RACM snapshot. Testing has not started yet. Begin by uploading population data for controls.</p>
                   </div>
                 </div>
                 <button onClick={() => setShowOnboarding(false)} className="p-1.5 rounded-lg hover:bg-surface-2 cursor-pointer"><X size={14} className="text-text-muted" /></button>
@@ -239,64 +232,6 @@ export default function EngagementDetailView({ engagementId, freshActivation, on
                 <p className="text-[13px] font-semibold text-high-700">Engagement activated, but controls need configuration</p>
                 <p className="text-[11px] text-high-700/80 mt-0.5">All {sourceControls.length} controls are awaiting population data and workflow configuration before execution can begin. Click any control below to start.</p>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── EXECUTION PROGRESS ── */}
-        <div className="glass-card rounded-xl p-4 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2"><BarChart3 size={14} className="text-primary" /><span className="text-[13px] font-semibold text-text">Execution Progress</span></div>
-            <span className="text-[14px] font-bold text-primary tabular-nums">{progressPct}%</span>
-          </div>
-          <div className="h-2.5 bg-surface-3 rounded-full overflow-hidden mb-3">
-            <motion.div initial={{ width: 0 }} animate={{ width: `${progressPct}%` }} transition={{ duration: 0.8 }} className="h-full rounded-full bg-gradient-to-r from-primary to-primary-medium" />
-          </div>
-          <div className="flex items-center gap-4 text-[11px] flex-wrap">
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-draft" /><span className="text-text-muted">Ready <strong className="text-text">{readyControls}</strong></span></div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-high" /><span className="text-text-muted">Pop. Pending <strong className="text-text">{populationPending}</strong></span></div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-evidence" /><span className="text-text-muted">In Progress <strong className="text-text">{wip}</strong></span></div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-mitigated" /><span className="text-text-muted">Pending Review <strong className="text-text">{pendingReview}</strong></span></div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-compliant" /><span className="text-text-muted">Concluded <strong className="text-text">{concluded}</strong></span></div>
-            {deficient > 0 && <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-risk" /><span className="text-text-muted">Failed <strong className="text-risk-700">{deficient}</strong></span></div>}
-          </div>
-        </div>
-
-        {/* ── EXECUTION KPI CARDS ── */}
-        <div className="grid grid-cols-6 gap-3 mb-6">
-          {[
-            { label: 'Total Controls', value: totalControls, color: 'text-text' },
-            { label: 'Ready', value: readyControls, color: 'text-brand-700' },
-            { label: 'In Progress', value: wip, color: 'text-evidence-700' },
-            { label: 'Pending Review', value: pendingReview, color: 'text-mitigated-700' },
-            { label: 'Concluded', value: concluded, color: 'text-compliant-700' },
-            { label: 'Failed', value: deficient, color: 'text-risk-700' },
-          ].map(kpi => (
-            <div key={kpi.label} className="glass-card rounded-xl p-3 text-center">
-              <div className={`text-xl font-bold tabular-nums ${kpi.color}`}>{kpi.value}</div>
-              <div className="text-[11px] text-text-muted mt-0.5">{kpi.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* ── NEXT BEST ACTIONS ── */}
-        {nextActions.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-[13px] font-semibold text-text mb-3 flex items-center gap-2"><Zap size={14} className="text-primary" />Next Best Actions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {nextActions.map(action => (
-                <div key={action.label} className={`flex items-center gap-3 p-3.5 rounded-xl border transition-colors cursor-pointer ${action.cls}`}>
-                  <div className="p-2 rounded-lg bg-white/60 shrink-0"><action.icon size={16} /></div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-[12px] font-semibold">{action.label}</p>
-                      <span className="text-[10px] font-bold bg-white/60 px-1.5 py-0.5 rounded-full tabular-nums">{action.count}</span>
-                    </div>
-                    <p className="text-[10px] opacity-80 mt-0.5">{action.desc}</p>
-                  </div>
-                  <ArrowRight size={14} className="shrink-0 opacity-50" />
-                </div>
-              ))}
             </div>
           </div>
         )}

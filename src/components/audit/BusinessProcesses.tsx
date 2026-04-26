@@ -747,7 +747,7 @@ function BPDetailView({ bp, onBack }: {
   const [selectedWorkflows, setSelectedWorkflows] = useState<Set<string>>(new Set());
   const [sopVisuals, setSopVisuals] = useState<Record<string, 'flow' | 'map' | null>>({});
   const [racmFilterTag, setRacmFilterTag] = useState<string>('all');
-  const [controlEngagementFilter, setControlEngagementFilter] = useState<string>('all'); // engagement id or 'all'
+  const [controlEngagementFilter, setControlEngagementFilter] = useState<string>('all');
   const [wfRacmFilter, setWfRacmFilter] = useState<string>('all');
   const [wfSopFilter, setWfSopFilter] = useState<string>('all');
   const [wfSpFilter, setWfSpFilter] = useState<string>('all');
@@ -1010,7 +1010,7 @@ function BPDetailView({ bp, onBack }: {
               { l: 'RACMs', v: bpRacms.length, tab: 'racm' as const },
               { l: 'Risks', v: bp.risks, tab: 'risks' as const },
               { l: 'Controls', v: bp.controls, tab: 'racm' as const },
-              { l: 'Engagements', v: bpWfs.length, tab: 'workflows' as const },
+              { l: 'Engagements', v: bpEngagements.length, tab: 'sop' as const },
             ].map((s, i) => (
               <motion.div
                 key={s.l}
@@ -1770,6 +1770,7 @@ function BPDetailView({ bp, onBack }: {
             )}
           </div>
         )}
+
       </div>
     </div>
   );

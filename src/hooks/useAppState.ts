@@ -19,6 +19,7 @@ export type View =
   | 'governance-control-detail'
   | 'audit-risk-register'
   | 'audit-planning'
+  | 'programs'
   // Execution
   | 'audit-execution'
   | 'engagement-detail'
