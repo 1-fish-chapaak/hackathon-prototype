@@ -259,7 +259,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
           {/* ── PROGRAMS ── */}
           <Divider label="Programs" expanded={isExpanded} />
 
-          <NavItem icon={Layers} label="Programs" active={view === 'programs' || view === 'audit-planning' || view === 'business-processes' || view === 'bp-detail'} expanded={isExpanded} onClick={() => setView('programs')} />
+          <NavItem icon={Layers} label="Process Hub" active={view === 'programs' || view === 'audit-planning' || view === 'business-processes' || view === 'bp-detail'} expanded={isExpanded} onClick={() => setView('programs')} />
           <NavItem icon={AlertTriangle} label="Risks" active={view === 'audit-risk-register'} expanded={isExpanded} onClick={() => setView('audit-risk-register')} badge="14" />
           <NavItem icon={Shield} label="Control Library" active={view === 'governance-controls' || view === 'governance-control-detail'} expanded={isExpanded} onClick={() => setView('governance-controls')} />
 
