@@ -2562,9 +2562,19 @@ function FilterPanel({
               <div className="w-1/2 border-r border-canvas-border overflow-y-auto px-4 py-4 space-y-4">
                 {/* Filters on Page */}
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="size-2 rounded-full bg-brand-600" />
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-ink-500">Filters on Page</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="size-2 rounded-full bg-brand-600" />
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-ink-500">Filters on Page</span>
+                    </div>
+                    {pageFilterFields.length > 0 && (
+                      <button
+                        onClick={() => onPageFilterFieldsChange([])}
+                        className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 cursor-pointer"
+                      >
+                        Clear all
+                      </button>
+                    )}
                   </div>
                   <div
                     className={`rounded-xl border-2 border-dashed p-4 flex flex-col items-center justify-center min-h-[100px] transition-colors ${
@@ -2580,9 +2590,9 @@ function FilterPanel({
                     }}
                   >
                     {pageFilterFields.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5 w-full">
+                      <div className="flex flex-col gap-1.5 w-full">
                         {pageFilterFields.map(fId => (
-                          <span key={fId} className="flex items-center gap-1 bg-brand-50 border border-brand-200 text-brand-700 text-[11px] font-medium px-2 py-1 rounded-md">
+                          <span key={fId} className="flex items-center justify-between gap-1 bg-brand-50 border border-brand-200 text-brand-700 text-[11px] font-medium px-2.5 py-1.5 rounded-md">
                             {getFieldLabel(fId)}
                             <button onClick={() => onPageFilterFieldsChange(pageFilterFields.filter(f => f !== fId))} className="hover:text-brand-900 cursor-pointer"><X size={10} /></button>
                           </span>
@@ -2599,19 +2609,31 @@ function FilterPanel({
 
                 {/* Cross-Data Filters — drop zone */}
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="size-2 rounded-full bg-evidence" />
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-ink-500">Cross-Data Filters</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="size-2 rounded-full bg-evidence" />
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-ink-500">Cross-Data Filters</span>
+                    </div>
+                    {activeCrossFilters.length > 0 && (
+                      <button
+                        onClick={() => onActiveCrossFiltersChange([])}
+                        className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 cursor-pointer"
+                      >
+                        Clear all
+                      </button>
+                    )}
                   </div>
                   {dataLinks.length === 0 ? (
-                    <button
-                      onClick={onManageConnections}
-                      className="w-full rounded-xl border-2 border-dashed border-ink-200 bg-canvas-elevated p-4 flex flex-col items-center justify-center min-h-[80px] hover:border-brand-300 hover:bg-brand-50/30 transition-colors cursor-pointer"
-                    >
-                      <Link2 size={16} className="text-ink-400 mb-1.5" />
-                      <span className="text-[11px] font-semibold text-ink-500">No connections yet</span>
-                      <span className="text-[10px] text-ink-400 mt-0.5">Connect data sources first</span>
-                    </button>
+                    <div className="w-full rounded-xl border-2 border-dashed border-ink-100 bg-ink-50/30 p-5 flex flex-col items-center justify-center min-h-[90px]">
+                      <Link2 size={16} className="text-ink-200 mb-2" />
+                      <span className="text-[11px] font-medium text-ink-300 mb-3">No connections yet</span>
+                      <button
+                        onClick={onManageConnections}
+                        className="px-4 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-[11px] font-semibold rounded-full transition-colors cursor-pointer shadow-sm"
+                      >
+                        Connect Data Sources
+                      </button>
+                    </div>
                   ) : (
                     <div
                       className={`rounded-xl border-2 border-dashed p-4 flex flex-col items-center justify-center min-h-[80px] transition-colors ${
@@ -2627,13 +2649,13 @@ function FilterPanel({
                       }}
                     >
                       {activeCrossFilters.length > 0 ? (
-                        <div className="flex flex-wrap gap-1.5 w-full">
+                        <div className="flex flex-col gap-1.5 w-full">
                           {activeCrossFilters.map(linkId => {
                             const link = dataLinks.find(l => l.id === linkId);
                             if (!link) return null;
                             const label = link.fieldA === link.fieldB ? link.fieldA : `${link.fieldA} · ${link.fieldB}`;
                             return (
-                              <span key={linkId} className="flex items-center gap-1 bg-brand-50 border border-brand-200 text-brand-700 text-[11px] font-medium px-2 py-1 rounded-md">
+                              <span key={linkId} className="flex items-center justify-between gap-1 bg-brand-50 border border-brand-200 text-brand-700 text-[11px] font-medium px-2.5 py-1.5 rounded-md">
                                 {label}
                                 <button onClick={() => onActiveCrossFiltersChange(activeCrossFilters.filter(id => id !== linkId))} className="hover:text-evidence-900 cursor-pointer"><X size={10} /></button>
                               </span>
@@ -5100,16 +5122,6 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                     Add Widget
                   </button>
 
-                  {/* Download */}
-                  <button
-                    onClick={handleExport}
-                    disabled={isExporting}
-                    className="flex items-center justify-center size-9 border border-canvas-border bg-canvas-elevated rounded-lg text-ink-500 hover:text-brand-600 hover:border-brand-200 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                    title="Export as PDF"
-                  >
-                    {isExporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-                  </button>
-
                   {/* Connect Tables */}
                   <button
                     onClick={() => setConnectTablesOpen(true)}
@@ -5144,6 +5156,19 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                         {activeFiltersCount + pageFilterFields.length}
                       </span>
                     )}
+                  </button>
+
+                  {/* Divider */}
+                  <div className="w-px h-5 bg-canvas-border" />
+
+                  {/* Download */}
+                  <button
+                    onClick={handleExport}
+                    disabled={isExporting}
+                    className="flex items-center justify-center size-9 border border-canvas-border bg-canvas-elevated rounded-lg text-ink-500 hover:text-brand-600 hover:border-brand-200 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    title="Export as PDF"
+                  >
+                    {isExporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
                   </button>
 
                   {/* Share */}

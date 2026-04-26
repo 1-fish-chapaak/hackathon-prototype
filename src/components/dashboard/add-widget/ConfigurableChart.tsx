@@ -376,7 +376,7 @@ const BAR_DATA: Record<
 };
 
 /** Data for Pie charts keyed by xAxis */
-const PIE_DATA: Record<
+export const PIE_DATA: Record<
   string,
   Array<{ name: string; value: number; percentage: number }>
 > = {
@@ -732,6 +732,14 @@ export interface ConfigurableChartProps {
   showTarget?: boolean;
   /** Base chart color. Default: brand purple #7C3AED */
   color?: string;
+  /** Per-series color overrides keyed by series label */
+  seriesColors?: Record<string, string>;
+  /** Callback when a legend swatch is clicked to edit color */
+  onSeriesColorChange?: (label: string, color: string) => void;
+  /** Bar spacing percentage (0-50). Only applies to bar/column charts */
+  barSpacing?: string;
+  /** Per-slice distance from center for pie charts */
+  pieSpacingMap?: Record<string, string>;
 }
 
 /* ─── Drill-level → effective time-axis mapping ───────────────────────────── */
@@ -745,6 +753,8 @@ const DRILL_TO_AXIS: Record<DrillLevel, string> = {
 };
 
 /* ─── Main component ─────────────────────────────────────────────────────── */
+const EDITABLE_PALETTE = ['#6a12cd', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316', '#06b6d4'];
+
 export function ConfigurableChart({
   type,
   xAxis = "Month",
@@ -752,6 +762,10 @@ export function ConfigurableChart({
   showLabels = false,
   showTarget = true,
   color,
+  seriesColors,
+  onSeriesColorChange,
+  barSpacing,
+  pieSpacingMap,
 }: ConfigurableChartProps) {
   /* normalise type string */
   const t = (
@@ -809,6 +823,8 @@ export function ConfigurableChart({
     BASE_LIGHT3,
     BASE_LIGHT4,
   ];
+
+  const [legendPickerOpen, setLegendPickerOpen] = useState<string | null>(null);
 
   /* Compute effective xAxis for time-based charts */
   const isTimeBased = TIME_AXES.has(xAxis);
@@ -986,10 +1002,10 @@ export function ConfigurableChart({
             type="monotone"
             dataKey="actual"
             name="Actual Accuracy"
-            stroke={BASE_COLOR}
+            stroke={seriesColors?.["Actual Accuracy"] || BASE_COLOR}
             strokeWidth={2}
             fill={`url(#lgLine-${BASE_COLOR.replace("#", "")})`}
-            dot={{ fill: BASE_COLOR, r: 4, strokeWidth: 0 }}
+            dot={{ fill: seriesColors?.["Actual Accuracy"] || BASE_COLOR, r: 4, strokeWidth: 0 }}
             activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2 }}
           >
             {showLabels && (
@@ -1011,10 +1027,10 @@ export function ConfigurableChart({
               type="monotone"
               dataKey="target"
               name="Target Accuracy"
-              stroke={GRAY}
+              stroke={seriesColors?.["Target Accuracy"] || GRAY}
               strokeWidth={2}
               strokeDasharray="5 5"
-              dot={{ fill: GRAY, r: 3, strokeWidth: 0 }}
+              dot={{ fill: seriesColors?.["Target Accuracy"] || GRAY, r: 3, strokeWidth: 0 }}
               activeDot={{ r: 5 }}
             >
               {showLabels && (
@@ -1251,6 +1267,7 @@ export function ConfigurableChart({
         <BarChart
           data={data}
           margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+          barCategoryGap={barSpacing ? `${barSpacing}%` : undefined}
           onClick={(payload) => {
             if (
               isClickableDrill &&
@@ -1317,7 +1334,7 @@ export function ConfigurableChart({
           <Bar
             dataKey="duplicates"
             name="Total Duplicates"
-            fill={BASE_COLOR}
+            fill={seriesColors?.["Total Duplicates"] || BASE_COLOR}
             radius={[4, 4, 0, 0]}
           >
             {showLabels && (
@@ -1336,7 +1353,7 @@ export function ConfigurableChart({
           <Bar
             dataKey="resolved"
             name="Resolved"
-            fill={BASE_LIGHT1}
+            fill={seriesColors?.["Resolved"] || BASE_LIGHT1}
             radius={[4, 4, 0, 0]}
           >
             {showLabels && (
@@ -1355,7 +1372,7 @@ export function ConfigurableChart({
           <Bar
             dataKey="pending"
             name="Pending"
-            fill={BASE_LIGHT2}
+            fill={seriesColors?.["Pending"] || BASE_LIGHT2}
             radius={[4, 4, 0, 0]}
           >
             {showLabels && (
@@ -1411,51 +1428,124 @@ export function ConfigurableChart({
       );
     };
 
+    const sliceColors = rawPie.map((entry: any, idx: number) =>
+      seriesColors?.[entry.name] || PIE_COLORS[idx % PIE_COLORS.length]
+    );
+
     const renderLegend = ({ payload }: any) => (
       <div className="flex flex-wrap gap-3 justify-center mt-2">
-        {payload.map((e: any, i: number) => (
-          <div key={i} className="flex items-center gap-1.5">
-            <div
-              className="size-2.5 rounded-full"
-              style={{ backgroundColor: e.color }}
-            />
-            <span className="text-[11px] text-gray-600">
-              {e.value}
-            </span>
-          </div>
-        ))}
+        {payload.map((e: any, i: number) => {
+          const entryColor = sliceColors[i] || e.color;
+          const entryName = e.value;
+          return (
+            <div key={i} className="relative flex items-center gap-1.5">
+              <button
+                onClick={(ev) => { ev.stopPropagation(); setLegendPickerOpen(legendPickerOpen === entryName ? null : entryName); }}
+                className="size-3 rounded-full shrink-0 cursor-pointer ring-1 ring-black/10 hover:ring-2 hover:ring-purple-400 transition-all"
+                style={{ backgroundColor: entryColor }}
+                title="Click to change color"
+              />
+              <span className="text-[11px] text-gray-600">{entryName}</span>
+              {legendPickerOpen === entryName && onSeriesColorChange && (
+                <>
+                  <div className="fixed inset-0 z-[60]" onClick={(ev) => { ev.stopPropagation(); setLegendPickerOpen(null); }} />
+                  <div className="absolute left-0 bottom-full mb-1.5 z-[70] bg-white border border-gray-200 rounded-xl shadow-2xl p-2.5 flex flex-wrap gap-1.5 w-[148px]">
+                    {EDITABLE_PALETTE.map(c => (
+                      <button
+                        key={c}
+                        onClick={(ev) => { ev.stopPropagation(); onSeriesColorChange(entryName, c); setLegendPickerOpen(null); }}
+                        className={`size-5 rounded-full cursor-pointer transition-all ${entryColor === c ? 'ring-2 ring-purple-600 ring-offset-1 scale-110' : 'hover:ring-2 hover:ring-gray-300 hover:ring-offset-1 hover:scale-110'}`}
+                        style={{ background: c }}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
 
     return (
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
-          <Pie
-            data={rawPie}
-            cx="50%"
-            cy="45%"
-            outerRadius="58%"
-            labelLine={false}
-            label={showLabels ? renderLabel : false}
-            dataKey="value"
-            onClick={(entry: any) => {
-              if (isClickableDrill && entry?.name) {
-                drillIntoItem(entry.name);
-              }
-            }}
-            style={{
-              cursor: isClickableDrill
-                ? "crosshair"
-                : "default",
-            }}
-          >
-            {rawPie.map((_, i) => (
-              <Cell
-                key={i}
-                fill={PIE_COLORS[i % PIE_COLORS.length]}
-              />
-            ))}
-          </Pie>
+          {(() => {
+            const total = rawPie.reduce((a: number, d: any) => a + d.value, 0);
+            let cumAngle = 0;
+            const sliceMidAngles = rawPie.map((d: any) => {
+              const sliceAngle = (d.value / total) * 360;
+              const mid = cumAngle + sliceAngle / 2;
+              cumAngle += sliceAngle;
+              return mid;
+            });
+
+            // Check if any slice has a non-zero distance
+            const hasExplode = pieSpacingMap && Object.values(pieSpacingMap).some(v => Number(v) > 0);
+
+            if (hasExplode) {
+              return rawPie.map((entry: any, i: number) => {
+                const sliceDistance = pieSpacingMap?.[entry.name] ? Number(pieSpacingMap[entry.name]) * 0.15 : 0;
+                const midRad = (sliceMidAngles[i] - 90) * (Math.PI / 180);
+                const offsetX = Math.cos(midRad) * sliceDistance;
+                const offsetY = Math.sin(midRad) * sliceDistance;
+                let startAngle = 90;
+                for (let j = 0; j < i; j++) {
+                  startAngle -= (rawPie[j].value / total) * 360;
+                }
+                const endAngle = startAngle - (entry.value / total) * 360;
+
+                return (
+                  <Pie
+                    key={i}
+                    data={[entry]}
+                    cx={`${50 + offsetX}%`}
+                    cy={`${45 + offsetY}%`}
+                    outerRadius="52%"
+                    startAngle={startAngle}
+                    endAngle={endAngle}
+                    labelLine={false}
+                    dataKey="value"
+                    onClick={() => {
+                      if (isClickableDrill && entry.name) {
+                        drillIntoItem(entry.name);
+                      } else if (entry.name && onSeriesColorChange) {
+                        setLegendPickerOpen(legendPickerOpen === entry.name ? null : entry.name);
+                      }
+                    }}
+                    style={{ cursor: isClickableDrill ? "crosshair" : onSeriesColorChange ? "pointer" : "default" }}
+                    isAnimationActive={false}
+                  >
+                    <Cell fill={sliceColors[i]} />
+                  </Pie>
+                );
+              });
+            }
+
+            return (
+              <Pie
+                data={rawPie}
+                cx="50%"
+                cy="45%"
+                outerRadius="58%"
+                labelLine={false}
+                label={showLabels ? renderLabel : false}
+                dataKey="value"
+                onClick={(entry: any) => {
+                  if (isClickableDrill && entry?.name) {
+                    drillIntoItem(entry.name);
+                  } else if (entry?.name && onSeriesColorChange) {
+                    setLegendPickerOpen(legendPickerOpen === entry.name ? null : entry.name);
+                  }
+                }}
+                style={{ cursor: isClickableDrill ? "crosshair" : onSeriesColorChange ? "pointer" : "default" }}
+              >
+                {rawPie.map((_: any, i: number) => (
+                  <Cell key={i} fill={sliceColors[i]} />
+                ))}
+              </Pie>
+            );
+          })()}
           <Tooltip content={<PieTooltip />} />
           <Legend content={renderLegend} />
         </PieChart>

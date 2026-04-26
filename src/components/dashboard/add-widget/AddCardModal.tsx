@@ -19,7 +19,7 @@ import {
   ChevronUp, Lightbulb, Edit, Code2, Info,
 } from "lucide-react";
 import { createPortal } from "react-dom";
-import { ConfigurableChart } from "./ConfigurableChart";
+import { ConfigurableChart, PIE_DATA } from "./ConfigurableChart";
 import { ColorPicker } from "./ColorPicker";
 import { WhiteDropdown } from "./WhiteDropdown";
 import TypographySection from "./imports/TypographySection-1760-98";
@@ -145,23 +145,32 @@ interface WidgetDef {
   defaultX: string;
   defaultY: string;
   useFieldBuilder: boolean;
-  dimensionLabels?: { xAxis?: string; yAxis?: string }; // New: dimension labels per chart type
+  /** Dimension slot labels — defines which drop zones to show per chart type */
+  dimensions: Array<{ key: string; label: string }>;
 }
 
 const WIDGETS: WidgetDef[] = [
-  { id: "kpi",              title: "KPI Cards",                      Icon: Hash,          cardType: "KPI",        builderType: "kpi",      defaultX: "Month",       defaultY: "Invoices Scanned",    useFieldBuilder: true, dimensionLabels: { xAxis: "Trend", yAxis: "Value" } },
-  { id: "pie",              title: "Pie Chart",                      Icon: PieChartIcon,  cardType: "Pie Chart",  builderType: "pie",      defaultX: "Status", defaultY: "Duplicate Count",    useFieldBuilder: true,  dimensionLabels: { xAxis: "Legend", yAxis: "Values" } },
-  { id: "line",             title: "Line Chart",                     Icon: LineChartIcon, cardType: "Line Chart", builderType: "line",     defaultX: "Month",  defaultY: "Duplicate Score (%)", useFieldBuilder: true,  dimensionLabels: { xAxis: "X-axis", yAxis: "Y-axis" } },
-  { id: "area",             title: "Area Chart",                     Icon: TrendingUp,    cardType: "Area Chart", builderType: "area",     defaultX: "Month",  defaultY: "Duplicate Score (%)", useFieldBuilder: true,  dimensionLabels: { xAxis: "X-axis", yAxis: "Y-axis" } },
-  { id: "stacked-bar",      title: "Stacked Bar Chart",              Icon: BarChart3,     cardType: "Bar Chart",  builderType: "bar",      defaultX: "Month",  defaultY: "Duplicate Count",    useFieldBuilder: true,  dimensionLabels: { xAxis: "Y-axis", yAxis: "X-axis" } },
-  { id: "clustered-bar",    title: "Clustered Bar Chart",            Icon: BarChart3,     cardType: "Bar Chart",  builderType: "bar",      defaultX: "Month",  defaultY: "Duplicate Count",    useFieldBuilder: true,  dimensionLabels: { xAxis: "Y-axis", yAxis: "X-axis" } },
-  { id: "clustered-column", title: "Clustered Column Chart",         Icon: BarChart3,     cardType: "Bar Chart",  builderType: "bar",      defaultX: "Month",  defaultY: "Duplicate Count",    useFieldBuilder: true,  dimensionLabels: { xAxis: "X-axis", yAxis: "Y-axis" } },
-  { id: "stacked-column",   title: "Stacked Column Chart",           Icon: BarChart3,     cardType: "Bar Chart",  builderType: "bar",      defaultX: "Month",  defaultY: "Duplicate Count",    useFieldBuilder: true,  dimensionLabels: { xAxis: "X-axis", yAxis: "Y-axis" } },
-  { id: "line-clustered",   title: "Line & clustered column chart",  Icon: LineChartIcon, cardType: "Line Chart", builderType: "line",     defaultX: "Month",  defaultY: "Duplicate Score (%)", useFieldBuilder: true,  dimensionLabels: { xAxis: "X-axis", yAxis: "Y-axis" } },
-  { id: "line-stacked",     title: "Line & stacked column chart",    Icon: LineChartIcon, cardType: "Line Chart", builderType: "line",     defaultX: "Month",  defaultY: "Duplicate Score (%)", useFieldBuilder: true,  dimensionLabels: { xAxis: "X-axis", yAxis: "Y-axis" } },
-  { id: "scatter",          title: "Scatter Chart",                  Icon: TrendingUp,    cardType: "Area Chart", builderType: "scatter",  defaultX: "Week",   defaultY: "Invoice Amount (₹)", useFieldBuilder: true,  dimensionLabels: { xAxis: "X-axis", yAxis: "Y-axis" } },
-  { id: "waterfall",        title: "Waterfall Chart",                Icon: TrendingUp,    cardType: "Area Chart", builderType: "area",     defaultX: "Week",   defaultY: "Invoice Amount (₹)", useFieldBuilder: true,  dimensionLabels: { xAxis: "X-axis", yAxis: "Y-axis" } },
-  { id: "table",            title: "Table",                          Icon: TableIcon,     cardType: "Table",      builderType: "table",    defaultX: "",       defaultY: "",                   useFieldBuilder: false, dimensionLabels: { xAxis: "Columns", yAxis: "Columns" } },
+  // 1. KPI — top priority, most used for dashboards
+  { id: "kpi",              title: "KPI Cards",                      Icon: Hash,          cardType: "KPI",        builderType: "kpi",      defaultX: "Month",       defaultY: "Invoices Scanned",    useFieldBuilder: true,  dimensions: [{ key: "yAxis", label: "Value" }, { key: "xAxis", label: "Trend Axis" }] },
+  // 2. Bar charts — most common data comparison
+  { id: "clustered-column", title: "Clustered Column Chart",         Icon: BarChart3,     cardType: "Bar Chart",  builderType: "bar",      defaultX: "Month",  defaultY: "Duplicate Count",     useFieldBuilder: true,  dimensions: [{ key: "xAxis", label: "X-axis" }, { key: "yAxis", label: "Y-axis" }, { key: "secondaryY", label: "Y-axis Index" }, { key: "legend", label: "Legend" }] },
+  { id: "stacked-column",   title: "Stacked Column Chart",           Icon: BarChart3,     cardType: "Bar Chart",  builderType: "bar",      defaultX: "Month",  defaultY: "Duplicate Count",     useFieldBuilder: true,  dimensions: [{ key: "xAxis", label: "X-axis" }, { key: "yAxis", label: "Y-axis" }, { key: "secondaryY", label: "Y-axis Index" }, { key: "legend", label: "Legend" }] },
+  { id: "clustered-bar",    title: "Clustered Bar Chart",            Icon: BarChart3,     cardType: "Bar Chart",  builderType: "bar",      defaultX: "Month",  defaultY: "Duplicate Count",     useFieldBuilder: true,  dimensions: [{ key: "xAxis", label: "X-axis" }, { key: "yAxis", label: "Y-axis" }, { key: "secondaryY", label: "Y-axis Index" }, { key: "legend", label: "Legend" }] },
+  { id: "stacked-bar",      title: "Stacked Bar Chart",              Icon: BarChart3,     cardType: "Bar Chart",  builderType: "bar",      defaultX: "Month",  defaultY: "Duplicate Count",     useFieldBuilder: true,  dimensions: [{ key: "xAxis", label: "X-axis" }, { key: "yAxis", label: "Y-axis" }, { key: "secondaryY", label: "Y-axis Index" }, { key: "legend", label: "Legend" }] },
+  // 3. Line chart — trend analysis
+  { id: "line",             title: "Line Chart",                     Icon: LineChartIcon, cardType: "Line Chart", builderType: "line",     defaultX: "Month",  defaultY: "Duplicate Score (%)", useFieldBuilder: true,  dimensions: [{ key: "xAxis", label: "X-axis" }, { key: "yAxis", label: "Y-axis" }, { key: "secondaryY", label: "Y-axis Index" }, { key: "legend", label: "Legend" }] },
+  // 4. Area chart — volume over time
+  { id: "area",             title: "Area Chart",                     Icon: TrendingUp,    cardType: "Area Chart", builderType: "area",     defaultX: "Month",  defaultY: "Duplicate Score (%)", useFieldBuilder: true,  dimensions: [{ key: "xAxis", label: "X-axis" }, { key: "yAxis", label: "Y-axis" }, { key: "secondaryY", label: "Y-axis Index" }, { key: "legend", label: "Legend" }] },
+  // 5. Pie chart — distribution
+  { id: "pie",              title: "Pie Chart",                      Icon: PieChartIcon,  cardType: "Pie Chart",  builderType: "pie",      defaultX: "Status", defaultY: "Duplicate Count",     useFieldBuilder: true,  dimensions: [{ key: "xAxis", label: "Legend" }, { key: "yAxis", label: "Values" }] },
+  // 6. Combo charts — advanced comparison
+  { id: "line-clustered",   title: "Line & Clustered Column Chart",  Icon: LineChartIcon, cardType: "Line Chart", builderType: "line",     defaultX: "Month",  defaultY: "Duplicate Score (%)", useFieldBuilder: true,  dimensions: [{ key: "xAxis", label: "X-axis" }, { key: "yAxis", label: "Column Y-axis" }, { key: "secondaryY", label: "Line Y-axis" }, { key: "legend", label: "Legend" }] },
+  { id: "line-stacked",     title: "Line & Stacked Column Chart",    Icon: LineChartIcon, cardType: "Line Chart", builderType: "line",     defaultX: "Month",  defaultY: "Duplicate Score (%)", useFieldBuilder: true,  dimensions: [{ key: "xAxis", label: "X-axis" }, { key: "yAxis", label: "Column Y-axis" }, { key: "secondaryY", label: "Line Y-axis" }, { key: "legend", label: "Legend" }] },
+  // 7. Specialized charts
+  { id: "waterfall",        title: "Waterfall Chart",                Icon: TrendingUp,    cardType: "Area Chart", builderType: "area",     defaultX: "Week",   defaultY: "Invoice Amount (₹)",  useFieldBuilder: true,  dimensions: [{ key: "xAxis", label: "Category" }, { key: "legend", label: "Breakdown" }, { key: "yAxis", label: "Y-axis" }] },
+  { id: "scatter",          title: "Scatter Chart",                  Icon: TrendingUp,    cardType: "Area Chart", builderType: "scatter",  defaultX: "Week",   defaultY: "Invoice Amount (₹)",  useFieldBuilder: true,  dimensions: [{ key: "yAxis", label: "Values" }, { key: "xAxis", label: "X-axis" }, { key: "legend", label: "Legend" }, { key: "size", label: "Size" }] },
+  // 8. Table — always last
+  { id: "table",            title: "Table",                          Icon: TableIcon,     cardType: "Table",      builderType: "table",    defaultX: "",       defaultY: "",                    useFieldBuilder: false, dimensions: [{ key: "xAxis", label: "Columns" }] },
 ];
 
 /* ─── Aggregation portal dropdown ─────────────────────────────────────────── */
@@ -298,7 +307,7 @@ function AggDropdown({ value, onChange, fieldId }: { value: string; onChange: (v
 interface AddCardModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectCard: (cardType: string, config?: { xAxis: string; yAxis: string; color: string; name?: string; description?: string }) => void;
+  onSelectCard: (cardType: string, config?: { xAxis: string; yAxis: string; color: string; name?: string; description?: string; seriesColors?: Record<string, string> }) => void;
   mode?: 'add' | 'edit';
   initialXAxis?: string;
   initialYAxis?: string;
@@ -335,10 +344,16 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
   const [xFieldIds, setXFieldIds] = useState<string[]>([]);
   const [yFieldIds, setYFieldIds] = useState<string[]>([]);
   const [yIndexFieldIds, setYIndexFieldIds] = useState<string[]>([]);
+  const [legendFieldIds, setLegendFieldIds] = useState<string[]>([]);
+  const [secondaryYFieldIds, setSecondaryYFieldIds] = useState<string[]>([]);
+  const [sizeFieldIds, setSizeFieldIds] = useState<string[]>([]);
   const [timeFieldIds, setTimeFieldIds] = useState<string[]>([]);
   const [yAggs, setYAggs] = useState<Record<string, string>>({});
   const [chartColor, setChartColor] = useState("#6a12cd");
-  
+  const [seriesColors, setSeriesColors] = useState<Record<string, string>>({});
+  const [barSpacing, setBarSpacing] = useState("0");
+  const [spacingMap, setSpacingMap] = useState<Record<string, string>>({});
+
   // Format options state
   const [generalThemeOpen, setGeneralThemeOpen] = useState(true);
   const [selectedBaseColor, setSelectedBaseColor] = useState("#6a12cd");
@@ -360,6 +375,13 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
   const [yAxisBold, setYAxisBold] = useState(false);
   const [yAxisItalic, setYAxisItalic] = useState(false);
   const [yAxisUnderline, setYAxisUnderline] = useState(false);
+
+  // Y axis Index format section state
+  const [yIndexFormatOpen, setYIndexFormatOpen] = useState(false);
+  const [yIndexTitle, setYIndexTitle] = useState("");
+  const [yIndexBold, setYIndexBold] = useState(false);
+  const [yIndexItalic, setYIndexItalic] = useState(false);
+  const [yIndexUnderline, setYIndexUnderline] = useState(false);
 
   const baseColors = [
     "#6a12cd", // Purple (default)
@@ -428,8 +450,14 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
       setXFieldIds([]);
       setYFieldIds([]);
       setYIndexFieldIds([]);
+      setLegendFieldIds([]);
+      setSecondaryYFieldIds([]);
+      setSizeFieldIds([]);
       setTimeFieldIds([]);
       setYAggs({});
+      setSeriesColors({});
+      setBarSpacing("0");
+      setSpacingMap({});
     }
   }, [open, mode, initialWidgetType, initialXAxis, initialYAxis]);
 
@@ -457,7 +485,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
     if (!selected) return;
     const xAxis = needsFields ? xAxisValue : "";
     const yAxis = needsFields ? yAxisValue : selected.defaultY;
-    onSelectCard(selected.cardType, { xAxis, yAxis, color: chartColor, name: widgetName, description: widgetDescription });
+    onSelectCard(selected.cardType, { xAxis, yAxis, color: chartColor, name: widgetName, description: widgetDescription, seriesColors: Object.keys(seriesColors).length > 0 ? seriesColors : undefined });
     onOpenChange(false);
   };
 
@@ -629,7 +657,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                           <button
                             key={w.id}
                             type="button"
-                            onClick={() => setSelected(w)}
+                            onClick={() => { setSelected(w); setChartTypeCollapsed(true); }}
                             className={`w-full flex items-center gap-3 px-3 py-2 transition-all ${
                               isActive
                                 ? "bg-[#f4f0ff] text-[#6a12cd]"
@@ -1068,6 +1096,64 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                     )}
                   </div>
 
+                  {/* ── Y AXIS INDEX section — only for charts with secondaryY ── */}
+                  {selected && selected.dimensions.some(d => d.key === 'secondaryY') && (
+                  <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm mt-3">
+                    <button
+                      onClick={() => setYIndexFormatOpen(!yIndexFormatOpen)}
+                      className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-[#faf5ff] to-white hover:from-[#f5f0ff] hover:to-[#fefefe] transition-all border-b border-[#f0f0f0]"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="size-[18px] rounded-[4px] flex items-center justify-center">
+                          <MoveVertical className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
+                        </div>
+                        <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">Y Axis Index</span>
+                      </div>
+                      <ChevronDown
+                        className="size-[14px] text-[#6a12cd] transition-transform duration-200"
+                        style={{ transform: yIndexFormatOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                      />
+                    </button>
+                    {yIndexFormatOpen && (
+                      <div className="bg-[#fafafa] p-2.5 space-y-3">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[12px] font-medium text-[#26064a]">Title</label>
+                          <input
+                            type="text"
+                            value={yIndexTitle}
+                            onChange={(e) => setYIndexTitle(e.target.value)}
+                            placeholder="Enter Y Axis Index Title"
+                            className="w-full px-3.5 py-2 text-[12px] bg-white border border-[rgba(38,6,74,0.2)] rounded-[8px] text-[#26064a] placeholder:text-[rgba(38,6,74,0.2)] focus:outline-none focus:border-[#6a12cd] focus:ring-1 focus:ring-[#6a12cd] transition-all shadow-sm"
+                          />
+                        </div>
+                        <div className="flex items-center bg-white rounded-[6px] border border-[#e5e7eb] overflow-hidden">
+                          <button
+                            onClick={() => setYIndexBold(!yIndexBold)}
+                            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border-r border-[#e5e7eb] transition-all duration-200 ${yIndexBold ? "bg-[#6a12cd] text-white" : "bg-white text-[#26064a] hover:bg-[#faf5ff]"}`}
+                          >
+                            <Bold className={`size-[14px] transition-colors ${yIndexBold ? "text-white" : "text-[#6a12cd]"}`} />
+                            <span className="text-[11px] font-medium">Bold</span>
+                          </button>
+                          <button
+                            onClick={() => setYIndexItalic(!yIndexItalic)}
+                            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border-r border-[#e5e7eb] transition-all duration-200 ${yIndexItalic ? "bg-[#6a12cd] text-white" : "bg-white text-[#26064a] hover:bg-[#faf5ff]"}`}
+                          >
+                            <Italic className={`size-[14px] transition-colors ${yIndexItalic ? "text-white" : "text-[#6a12cd]"}`} />
+                            <span className="text-[11px] font-medium">Italic</span>
+                          </button>
+                          <button
+                            onClick={() => setYIndexUnderline(!yIndexUnderline)}
+                            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 transition-all duration-200 ${yIndexUnderline ? "bg-[#6a12cd] text-white" : "bg-white text-[#26064a] hover:bg-[#faf5ff]"}`}
+                          >
+                            <Underline className={`size-[14px] transition-colors ${yIndexUnderline ? "text-white" : "text-[#6a12cd]"}`} />
+                            <span className="text-[11px] font-medium">Underline</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  )}
+
                   {/* ── LEGENDS section ── */}
                   <LegendSection />
 
@@ -1085,7 +1171,37 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
 
                 {/* ── DATA SERIES FORMATTING section ── */}
                 <DataSeriesFormattingSection
-                  series={yFieldIds.map(id => FIELDS.find(f => f.id === id)?.label || id)}
+                  series={(() => {
+                    if (!selected) return [];
+                    const bt = selected.builderType;
+                    if (bt === 'pie') {
+                      const pieData = PIE_DATA[resolvedXAxis] ?? PIE_DATA["Status"];
+                      return pieData.map((d: any) => d.name);
+                    }
+                    if (bt === 'bar') return ['Total Duplicates', 'Resolved', 'Pending'];
+                    if (bt === 'line') return ['Actual Accuracy', 'Target Accuracy'];
+                    if (bt === 'area') {
+                      const yShort = (resolvedYAxis || 'Duplicate Count').replace(/\s*\(.*?\)/, '').trim();
+                      return [`Actual ${yShort}`, `Target ${yShort}`];
+                    }
+                    // Fallback: use Y-axis fields if available, otherwise use resolved axis labels
+                    const yLabels = yFieldIds.map(id => FIELDS.find(f => f.id === id)?.label || id);
+                    if (yLabels.length > 0) return yLabels;
+                    if (resolvedYAxis) return [resolvedYAxis];
+                    return [selected.title];
+                  })()}
+                  seriesColors={seriesColors}
+                  onSeriesColorsChange={setSeriesColors}
+                  spacingType={selected?.builderType === 'bar' ? 'bar' : selected?.builderType === 'pie' ? 'pie' : 'disabled'}
+                  spacingMap={spacingMap}
+                  onSpacingMapChange={(map) => {
+                    setSpacingMap(map);
+                    // For bar charts, use the max spacing value as global barSpacing
+                    if (selected?.builderType === 'bar') {
+                      const vals = Object.values(map).map(Number).filter(n => !isNaN(n));
+                      setBarSpacing(vals.length > 0 ? String(Math.max(...vals)) : "0");
+                    }
+                  }}
                 />
                 </div>
               </div>
@@ -1120,357 +1236,123 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
           {/* ── Main Area ── */}
           <div className="flex-1 flex flex-col overflow-hidden bg-white order-1">
             
-            {/* ── Axis Configuration Rows ── */}
+            {/* ── Axis Configuration Rows — dynamic per chart type ── */}
             {selected && (
               <div className="shrink-0 px-6 py-3 space-y-2 border-b border-[#e5e7eb] bg-white">
-                <>
-                  {selected?.id === "kpi" ? (
-                    <>
-                      {/* Y-AXIS DIMENSION (Value - shown first for KPI) */}
-                      <div className="flex items-center gap-4">
-                        <div className="w-[80px] shrink-0">
-                          <p className="text-[12px] font-semibold text-[#26064a]">
-                            {selected?.dimensionLabels?.yAxis || "Y-Axis Dimensions"}
-                          </p>
-                        </div>
-                        
-                        <div
-                            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              const fieldId = e.dataTransfer.getData("fieldId");
-                              if (fieldId) addFieldToY(fieldId);
-                            }}
-                            className="flex-1 min-h-[40px] bg-white border border-dashed border-[#d1d5db] hover:border-[#6a12cd] hover:bg-[#faf5ff] rounded-[6px] px-2.5 py-2 transition-all duration-200"
-                          >
-                            {yFieldIds.length === 0 ? (
-                              <div className="flex items-center gap-2 h-full">
-                                <GripVertical className="size-[14px] text-[#d1d5db]" />
-                                <span className="text-[12px] text-[#9ca3af]">Drop a field here</span>
-                              </div>
-                            ) : (
-                              <div className="flex flex-wrap gap-1.5 items-center">
-                                {yFieldIds.map((fid) => {
-                                  const field = FIELDS.find(f => f.id === fid);
-                                  if (!field) return null;
-                                  const agg = yAggs[fid] || "count_d";
-                                  return (
-                                    <div
-                                      key={fid}
-                                      className="flex items-center gap-1.5 h-[28px] px-2.5 bg-[#faf5ff] rounded-[4px] border border-[#6a12cd]/30 shrink-0"
-                                    >
-                                      <span className="text-[12px] font-medium text-[#26064a] whitespace-nowrap">{field.label}</span>
-                                      <AggDropdown value={agg} onChange={(v) => changeAgg(fid, v)} fieldId={fid} />
-                                      <button
-                                        onClick={() => removeYField(fid)}
-                                        className="p-0.5 rounded hover:bg-[rgba(38,6,74,0.1)] transition-colors"
-                                      >
-                                        <X className="size-[12px] text-[#6b7280] hover:text-[#ef4444]" strokeWidth={2} />
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
+                {(() => {
+                  const stateMap: Record<string, { ids: string[]; add: (id: string) => void; remove: (id: string) => void; showAgg?: boolean }> = {
+                    xAxis:      { ids: xFieldIds,          add: addFieldToX,     remove: removeXField,      showAgg: true },
+                    yAxis:      { ids: yFieldIds,          add: addFieldToY,     remove: removeYField,      showAgg: true },
+                    legend:     { ids: legendFieldIds,     add: (id) => { if (!legendFieldIds.includes(id)) setLegendFieldIds(p => [...p, id]); }, remove: (id) => setLegendFieldIds(p => p.filter(f => f !== id)) },
+                    secondaryY: { ids: secondaryYFieldIds, add: (id) => { if (!secondaryYFieldIds.includes(id)) setSecondaryYFieldIds(p => [...p, id]); }, remove: (id) => setSecondaryYFieldIds(p => p.filter(f => f !== id)), showAgg: true },
+                    size:       { ids: sizeFieldIds,       add: (id) => { if (!sizeFieldIds.includes(id)) setSizeFieldIds(p => [...p, id]); }, remove: (id) => setSizeFieldIds(p => p.filter(f => f !== id)) },
+                  };
+
+                  const hasSecondaryY = selected.dimensions.some(d => d.key === 'secondaryY');
+
+                  // Render a single drop zone
+                  const renderDropZone = (dim: { key: string; label: string }) => {
+                    const slot = stateMap[dim.key];
+                    if (!slot) return null;
+                    return (
+                      <div
+                        key={dim.key}
+                        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
+                        onDrop={(e) => { e.preventDefault(); const fieldId = e.dataTransfer.getData("fieldId"); if (fieldId) slot.add(fieldId); }}
+                        className="flex-1 min-h-[40px] bg-white border border-dashed border-[#d1d5db] hover:border-[#6a12cd] hover:bg-[#faf5ff] rounded-[6px] px-2.5 py-2 transition-all duration-200"
+                      >
+                        {slot.ids.length === 0 ? (
+                          <div className="flex items-center gap-2 h-full">
+                            <GripVertical className="size-[14px] text-[#d1d5db]" />
+                            <span className="text-[12px] text-[#9ca3af]">{dim.label}</span>
                           </div>
-                      </div>
-
-                      {/* X-AXIS DIMENSION (Trend - shown second for KPI) */}
-                      <div className="flex items-center gap-4">
-                        <div className="w-[80px] shrink-0">
-                          <p className="text-[12px] font-semibold text-[#26064a]">
-                            Trend Axis
-                          </p>
-                        </div>
-                        <div
-                          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            const fieldId = e.dataTransfer.getData("fieldId");
-                            if (fieldId) addFieldToX(fieldId);
-                          }}
-                          className="flex-1 min-h-[40px] bg-white border border-dashed border-[#d1d5db] hover:border-[#6a12cd] hover:bg-[#faf5ff] rounded-[6px] px-2.5 py-2 transition-all duration-200"
-                        >
-                          {xFieldIds.length === 0 ? (
-                            <div className="flex items-center gap-2 h-full">
-                              <GripVertical className="size-[14px] text-[#d1d5db]" />
-                              <span className="text-[12px] text-[#9ca3af]">Drop a field here</span>
-                            </div>
-                          ) : (
-                            <div className="flex flex-wrap gap-1.5 items-center">
-                              {xFieldIds.map((fid) => {
-                                const field = FIELDS.find(f => f.id === fid);
-                                if (!field) return null;
-                                const agg = yAggs[fid] || "count_d";
-                                return (
-                                  <div
-                                    key={fid}
-                                    className="flex items-center gap-1.5 h-[28px] px-2.5 bg-[#faf5ff] rounded-[4px] border border-[#6a12cd]/30 shrink-0"
-                                  >
-                                    <span className="text-[12px] font-medium text-[#26064a] whitespace-nowrap">{field.label}</span>
-                                    <AggDropdown value={agg} onChange={(v) => changeAgg(fid, v)} fieldId={fid} />
-                                    <button
-                                      onClick={() => removeXField(fid)}
-                                      className="p-0.5 rounded hover:bg-[rgba(38,6,74,0.1)] transition-colors"
-                                    >
-                                      <X className="size-[12px] text-[#6b7280] hover:text-[#ef4444]" strokeWidth={2} />
-                                    </button>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {/* X-AXIS DIMENSION */}
-                      <div className="flex items-center gap-4">
-                        <div className="w-[80px] shrink-0">
-                          <p className="text-[12px] font-semibold text-[#26064a]">
-                            {selected?.dimensionLabels?.xAxis || "X-Axis Dimensions"}
-                          </p>
-                        </div>
-                        <div
-                          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            const fieldId = e.dataTransfer.getData("fieldId");
-                            if (fieldId) addFieldToX(fieldId);
-                          }}
-                          className="flex-1 min-h-[40px] bg-white border border-dashed border-[#d1d5db] hover:border-[#6a12cd] hover:bg-[#faf5ff] rounded-[6px] px-2.5 py-2 transition-all duration-200"
-                        >
-                          {xFieldIds.length === 0 ? (
-                            <div className="flex items-center gap-2 h-full">
-                              <GripVertical className="size-[14px] text-[#d1d5db]" />
-                              <span className="text-[12px] text-[#9ca3af]">Drop a field here</span>
-                            </div>
-                          ) : (
-                            <div className="flex flex-wrap gap-1.5 items-center">
-                              {xFieldIds.map((fid) => {
-                                const field = FIELDS.find(f => f.id === fid);
-                                if (!field) return null;
-                                const agg = yAggs[fid] || "count_d";
-                                return (
-                                  <div
-                                    key={fid}
-                                    className="flex items-center gap-1.5 h-[28px] px-2.5 bg-[#faf5ff] rounded-[4px] border border-[#6a12cd]/30 shrink-0"
-                                  >
-                                    <span className="text-[12px] font-medium text-[#26064a] whitespace-nowrap">{field.label}</span>
-                                    <AggDropdown value={agg} onChange={(v) => changeAgg(fid, v)} fieldId={fid} />
-                                    <button
-                                      onClick={() => removeXField(fid)}
-                                      className="p-0.5 rounded hover:bg-[rgba(38,6,74,0.1)] transition-colors"
-                                    >
-                                      <X className="size-[12px] text-[#6b7280] hover:text-[#ef4444]" strokeWidth={2} />
-                                    </button>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Y-AXIS DIMENSION */}
-                      <div className="flex items-center gap-4">
-                        <div className="w-[80px] shrink-0">
-                          <p className="text-[12px] font-semibold text-[#26064a]">
-                            {selected?.dimensionLabels?.yAxis || "Y-Axis Dimensions"}
-                          </p>
-                        </div>
-                        
-                        <div className="flex-1 flex gap-2">
-                          <div
-                            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              const fieldId = e.dataTransfer.getData("fieldId");
-                              if (fieldId) addFieldToY(fieldId);
-                            }}
-                            className="flex-1 min-h-[40px] bg-white border border-dashed border-[#d1d5db] hover:border-[#6a12cd] hover:bg-[#faf5ff] rounded-[6px] px-2.5 py-2 transition-all duration-200"
-                          >
-                            {yFieldIds.length === 0 ? (
-                              <div className="flex items-center gap-2 h-full">
-                                <GripVertical className="size-[14px] text-[#d1d5db]" />
-                                <span className="text-[12px] text-[#9ca3af]">Drop a field here</span>
-                              </div>
-                            ) : (
-                              <div className="flex flex-wrap gap-1.5 items-center">
-                                {yFieldIds.map((fid) => {
-                                  const field = FIELDS.find(f => f.id === fid);
-                                  if (!field) return null;
-                                  const agg = yAggs[fid] || "count_d";
-                                  return (
-                                    <div
-                                      key={fid}
-                                      className="flex items-center gap-1.5 h-[28px] px-2.5 bg-[#faf5ff] rounded-[4px] border border-[#6a12cd]/30 shrink-0"
-                                    >
-                                      <span className="text-[12px] font-medium text-[#26064a] whitespace-nowrap">{field.label}</span>
-                                      <AggDropdown value={agg} onChange={(v) => changeAgg(fid, v)} fieldId={fid} />
-                                      <button
-                                        onClick={() => removeYField(fid)}
-                                        className="p-0.5 rounded hover:bg-[rgba(38,6,74,0.1)] transition-colors"
-                                      >
-                                        <X className="size-[12px] text-[#6b7280] hover:text-[#ef4444]" strokeWidth={2} />
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5 items-center">
+                            {slot.ids.map((fid) => {
+                              const field = FIELDS.find(f => f.id === fid);
+                              if (!field) return null;
+                              const agg = yAggs[fid] || "count_d";
+                              return (
+                                <div key={fid} className="flex items-center gap-1.5 h-[28px] px-2.5 bg-[#faf5ff] rounded-[4px] border border-[#6a12cd]/30 shrink-0">
+                                  <span className="text-[12px] font-medium text-[#26064a] whitespace-nowrap">{field.label}</span>
+                                  {slot.showAgg && <AggDropdown value={agg} onChange={(v) => changeAgg(fid, v)} fieldId={fid} />}
+                                  <button onClick={() => slot.remove(fid)} className="p-0.5 rounded hover:bg-[rgba(38,6,74,0.1)] transition-colors">
+                                    <X className="size-[12px] text-[#6b7280] hover:text-[#ef4444]" strokeWidth={2} />
+                                  </button>
+                                </div>
+                              );
+                            })}
                           </div>
-
-                          {/* Y-AXIS INDEX - Show only for Bar, Line, and Area charts */}
-                          {(selected.id === "clustered-column" || selected.id === "line" || selected.id === "waterfall") && (
-                            <div
-                              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
-                              onDrop={(e) => {
-                                e.preventDefault();
-                                const fieldId = e.dataTransfer.getData("fieldId");
-                                if (fieldId) addFieldToYIndex(fieldId);
-                              }}
-                              className="flex-1 min-h-[40px] bg-white border border-dashed border-[#d1d5db] hover:border-[#6a12cd] hover:bg-[#faf5ff] rounded-[6px] px-2.5 py-2 transition-all duration-200"
-                            >
-                              {yIndexFieldIds.length === 0 ? (
-                                <div className="flex items-center gap-2 h-full">
-                                  <GripVertical className="size-[14px] text-[#d1d5db]" />
-                                  <span className="text-[12px] text-[#9ca3af]">Y-axis Index</span>
-                                </div>
-                              ) : (
-                                <div className="flex flex-wrap gap-1.5 items-center">
-                                  {yIndexFieldIds.map((fid) => {
-                                    const field = FIELDS.find(f => f.id === fid);
-                                    if (!field) return null;
-                                    return (
-                                      <div
-                                        key={fid}
-                                        className="flex items-center gap-1.5 h-[28px] px-2.5 bg-[#faf5ff] rounded-[4px] border border-[#6a12cd]/30 shrink-0"
-                                      >
-                                        <span className="text-[12px] font-medium text-[#26064a] whitespace-nowrap">{field.label}</span>
-                                        <button
-                                          onClick={() => removeYIndexField(fid)}
-                                          className="p-0.5 rounded hover:bg-[rgba(38,6,74,0.1)] transition-colors"
-                                        >
-                                          <X className="size-[12px] text-[#6b7280] hover:text-[#ef4444]" strokeWidth={2} />
-                                        </button>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
-                    </>
-                  )}
+                    );
+                  };
 
-              {/* SUGGESTION BANNER - Show when 2+ Y-axis fields or Y-axis Index has fields */}
-              {(yFieldIds.length >= 2 || yIndexFieldIds.length > 0) && (
-                <div className="flex items-center gap-4 ml-[80px] pl-4">
-                  <div className="flex items-center gap-4 px-4 py-2 bg-[#fafafa] rounded-[4px]">
-                    <div className="flex items-center gap-2">
-                      <Lightbulb className="size-[14px] text-[#6A12CD] bg-[#26064a00]" strokeWidth={2} />
-                      
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          const columnChart = WIDGETS.find(w => w.id === "clustered-column");
-                          if (columnChart) setSelected(columnChart);
-                        }}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-[4px] transition-colors ${
-                          selected?.id === "clustered-column" 
-                            ? "bg-[#6A12CD] text-white" 
-                            : "hover:bg-[#6A12CD]/10 text-[#26064A]"
-                        }`}
-                      >
-                        <BarChart3 className={`size-[12px] ${selected?.id === "clustered-column" ? "text-white" : "text-[#26064A]"}`} strokeWidth={2} />
-                        <span className="text-[12px]">Bar</span>
-                      </button>
-                      <span className="text-[#26064A]">•</span>
-                      <button
-                        onClick={() => {
-                          const lineChart = WIDGETS.find(w => w.id === "line");
-                          if (lineChart) setSelected(lineChart);
-                        }}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-[4px] transition-colors ${
-                          selected?.id === "line" 
-                            ? "bg-[#6A12CD] text-white" 
-                            : "hover:bg-[#6A12CD]/10 text-[#26064A]"
-                        }`}
-                      >
-                        <LineChartIcon className={`size-[12px] ${selected?.id === "line" ? "text-white" : "text-[#26064A]"}`} strokeWidth={2} />
-                        <span className="text-[12px]">Line</span>
-                      </button>
-                      <span className="text-[#26064A]">•</span>
-                      <button
-                        onClick={() => {
-                          const areaChart = WIDGETS.find(w => w.id === "waterfall");
-                          if (areaChart) setSelected(areaChart);
-                        }}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-[4px] transition-colors ${
-                          selected?.id === "waterfall" 
-                            ? "bg-[#6A12CD] text-white" 
-                            : "hover:bg-[#6A12CD]/10 text-[#26064A]"
-                        }`}
-                      >
-                        <TrendingUp className={`size-[12px] ${selected?.id === "waterfall" ? "text-white" : "text-[#26064A]"}`} strokeWidth={1.75} />
-                        <span className="text-[12px]">Area</span>
-                      </button>
+                  // Group dimensions: yAxis + secondaryY go side by side (regardless of position), rest get their own row
+                  const dims = selected.dimensions;
+                  const secondaryYDim = hasSecondaryY ? dims.find(d => d.key === 'secondaryY') : null;
+                  const rows: React.ReactElement[] = [];
+                  let i = 0;
+                  while (i < dims.length) {
+                    const dim = dims[i];
+                    // Skip secondaryY here — it's rendered alongside yAxis
+                    if (dim.key === 'secondaryY' && secondaryYDim) {
+                      i++;
+                      continue;
+                    }
+                    // If this is yAxis and we have secondaryY, render them side by side
+                    if (dim.key === 'yAxis' && secondaryYDim) {
+                      rows.push(
+                        <div key="yAxis-group" className="flex items-center gap-4">
+                          <div className="w-[80px] shrink-0">
+                            <p className="text-[12px] font-semibold text-[#26064a]">{dim.label}</p>
+                          </div>
+                          <div className="flex-1 flex gap-2">
+                            {renderDropZone(dim)}
+                            {renderDropZone(secondaryYDim)}
+                          </div>
+                        </div>
+                      );
+                      i++;
+                    } else {
+                      rows.push(
+                        <div key={dim.key} className="flex items-center gap-4">
+                          <div className="w-[80px] shrink-0">
+                            <p className="text-[12px] font-semibold text-[#26064a]">{dim.label}</p>
+                          </div>
+                          {renderDropZone(dim)}
+                        </div>
+                      );
+                      i++;
+                    }
+                  }
+                  return rows;
+                })()}
+
+                {/* SUGGESTION BANNER - Show when 2+ Y-axis fields */}
+                {yFieldIds.length >= 2 && (
+                  <div className="flex items-center gap-4 ml-[80px] pl-4">
+                    <div className="flex items-center gap-4 px-4 py-2 bg-[#fafafa] rounded-[4px]">
+                      <Lightbulb className="size-[14px] text-[#6A12CD]" strokeWidth={2} />
+                      <div className="flex items-center gap-2">
+                        {[
+                          { id: "clustered-column", Icon: BarChart3, label: "Bar" },
+                          { id: "line", Icon: LineChartIcon, label: "Line" },
+                          { id: "area", Icon: TrendingUp, label: "Area" },
+                        ].map(({ id, Icon, label }) => (
+                          <button
+                            key={id}
+                            onClick={() => { const w = WIDGETS.find(w => w.id === id); if (w) setSelected(w); }}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-[4px] transition-colors ${selected?.id === id ? "bg-[#6A12CD] text-white" : "hover:bg-[#6A12CD]/10 text-[#26064A]"}`}
+                          >
+                            <Icon className={`size-[12px] ${selected?.id === id ? "text-white" : "text-[#26064A]"}`} strokeWidth={2} />
+                            <span className="text-[12px]">{label}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-
-              {/* LEGENDS - Hide for KPI cards */}
-              {selected && selected.id !== "kpi" && (
-                <div className="flex items-center gap-4">
-                  <div className="w-[80px] shrink-0">
-                    <p className="text-[12px] font-semibold text-[#26064a]">Legends</p>
-                  </div>
-                  <div
-                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const fieldId = e.dataTransfer.getData("fieldId");
-                      if (fieldId) addFieldToTime(fieldId);
-                    }}
-                    className="flex-1 min-h-[40px] bg-white border border-dashed border-[#d1d5db] hover:border-[#6a12cd] hover:bg-[#faf5ff] rounded-[6px] px-2.5 py-2 transition-all duration-200"
-                  >
-                    {timeFieldIds.length === 0 ? (
-                      <div className="flex items-center gap-2 h-full">
-                        <GripVertical className="size-[14px] text-[#d1d5db]" />
-                        <span className="text-[12px] text-[#9ca3af]">Drop a field here</span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5 items-center">
-                        {timeFieldIds.map((fid) => {
-                          const field = FIELDS.find(f => f.id === fid);
-                          if (!field) return null;
-                          return (
-                            <div
-                              key={fid}
-                              className="flex items-center gap-1.5 h-[28px] px-2.5 bg-[#faf5ff] rounded-[4px] border border-[#6a12cd]/30 shrink-0"
-                            >
-                              <span className="text-[12px] font-medium text-[#26064a] whitespace-nowrap">{field.label}</span>
-                              <button
-                                onClick={() => removeTimeField(fid)}
-                                className="p-0.5 rounded hover:bg-[rgba(38,6,74,0.1)] transition-colors"
-                              >
-                                <X className="size-[12px] text-[#6b7280] hover:text-[#ef4444]" strokeWidth={2} />
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-                </>
+                )}
               </div>
             )}
 
@@ -1517,6 +1399,10 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                         xAxis={resolvedXAxis}
                         yAxis={resolvedYAxis}
                         color={chartColor}
+                        seriesColors={seriesColors}
+                        onSeriesColorChange={(label, color) => setSeriesColors(prev => ({ ...prev, [label]: color }))}
+                        barSpacing={barSpacing}
+                        pieSpacingMap={selected?.builderType === 'pie' ? spacingMap : undefined}
                       />
                     )}
                   </div>

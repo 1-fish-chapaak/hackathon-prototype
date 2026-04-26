@@ -1,32 +1,60 @@
-import { useState, useRef, useEffect } from "react";
-import { ChevronDown, BarChart3, Check } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronDown, BarChart3 } from "lucide-react";
 import { WhiteDropdown } from "../WhiteDropdown";
 
 interface DataSeriesFormattingSectionProps {
   series?: string[];
+  seriesColors?: Record<string, string>;
+  onSeriesColorsChange?: (colors: Record<string, string>) => void;
+  /** Show spacing control only for bar/column charts */
+  /** Spacing control — 'bar' for bar gap, 'pie' for distance from center, 'disabled' for greyed out */
+  spacingType?: 'bar' | 'pie' | 'disabled' | false;
+  /** Per-series spacing map e.g. { "Approved": "20" } */
+  spacingMap?: Record<string, string>;
+  onSpacingMapChange?: (map: Record<string, string>) => void;
 }
 
-export default function DataSeriesFormattingSection({ 
-  series = [] 
+const DEFAULT_COLORS = [
+  "#6a12cd", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444",
+  "#ec4899", "#8b5cf6", "#14b8a6", "#f97316"
+];
+
+export default function DataSeriesFormattingSection({
+  series = [],
+  seriesColors: controlledColors,
+  onSeriesColorsChange,
+  spacingType = false,
+  spacingMap: controlledSpacingMap,
+  onSpacingMapChange,
 }: DataSeriesFormattingSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedSeries, setSelectedSeries] = useState("");
-  const [selectedColor, setSelectedColor] = useState("purple");
-  const [spacing, setSpacing] = useState("0");
-  const [colorDropdownOpen, setColorDropdownOpen] = useState(false);
-  const colorButtonRef = useRef<HTMLButtonElement>(null);
 
-  const colorOptions = [
-    { value: "purple", label: "Purple", color: "#6a12cd" },
-    { value: "blue", label: "Blue", color: "#0ea5e9" },
-    { value: "green", label: "Green", color: "#10b981" },
-    { value: "orange", label: "Orange", color: "#f59e0b" },
-    { value: "red", label: "Red", color: "#ef4444" },
-    { value: "pink", label: "Pink", color: "#ec4899" },
-    { value: "violet", label: "Violet", color: "#8b5cf6" },
-    { value: "teal", label: "Teal", color: "#14b8a6" },
-    { value: "orangeRed", label: "Orange Red", color: "#f97316" }
-  ];
+  const [internalColors, setInternalColors] = useState<Record<string, string>>({});
+  const colors = controlledColors ?? internalColors;
+  const setColors = (next: Record<string, string>) => {
+    if (onSeriesColorsChange) onSeriesColorsChange(next);
+    else setInternalColors(next);
+  };
+
+  const [internalSpacingMap, setInternalSpacingMap] = useState<Record<string, string>>({});
+  const spacingMap = controlledSpacingMap ?? internalSpacingMap;
+  const setSpacingMap = onSpacingMapChange || setInternalSpacingMap;
+
+  const spacing = selectedSeries ? (spacingMap[selectedSeries] || "0") : "0";
+  const setSpacing = (v: string) => {
+    if (selectedSeries) setSpacingMap({ ...spacingMap, [selectedSeries]: v });
+  };
+
+  useEffect(() => {
+    if (series.length > 0 && (!selectedSeries || !series.includes(selectedSeries))) {
+      setSelectedSeries(series[0]);
+    }
+  }, [series, selectedSeries]);
+
+  const selectedColor = selectedSeries
+    ? (colors[selectedSeries] || DEFAULT_COLORS[series.indexOf(selectedSeries) % DEFAULT_COLORS.length])
+    : DEFAULT_COLORS[0];
 
   const spacingOptions = [
     { value: "0", label: "0%" },
@@ -38,24 +66,6 @@ export default function DataSeriesFormattingSection({
   ];
 
   const seriesOptions = series.map(s => ({ value: s, label: s }));
-  const currentColor = colorOptions.find(c => c.value === selectedColor);
-
-  // Close color dropdown when clicking outside
-  useEffect(() => {
-    if (!colorDropdownOpen) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (colorButtonRef.current && !colorButtonRef.current.contains(event.target as Node)) {
-        // Check if click is on dropdown menu itself
-        const target = event.target as HTMLElement;
-        if (!target.closest('.color-dropdown-menu')) {
-          setColorDropdownOpen(false);
-        }
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [colorDropdownOpen]);
 
   return (
     <div className="bg-white rounded-[8px] border border-[#e5e7eb] shadow-sm mt-3">
@@ -88,23 +98,27 @@ export default function DataSeriesFormattingSection({
             />
           </div>
 
-          {/* Color and Spacing */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Color + Spacing (spacing only for bar charts) */}
+          <div className="grid gap-3 grid-cols-2">
             {/* Color */}
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-semibold text-[#26064a]">Color</label>
               <WhiteDropdown
                 value={selectedColor}
-                onChange={setSelectedColor}
+                onChange={(hex) => {
+                  if (selectedSeries) {
+                    setColors({ ...colors, [selectedSeries]: hex });
+                  }
+                }}
                 mode="colorpicker"
                 placeholder="Select color..."
                 size="sm"
               />
             </div>
 
-            {/* Spacing */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold text-[#26064a]">Spacing</label>
+            {/* Spacing — bar charts / Distance from center — pie charts / disabled for others */}
+            <div className={`flex flex-col gap-1.5 ${spacingType === 'disabled' ? 'opacity-40 pointer-events-none' : ''}`}>
+              <label className="text-[11px] font-semibold text-[#26064a]">{spacingType === 'pie' ? 'Distance from center' : 'Spacing'}</label>
               <WhiteDropdown
                 value={spacing}
                 onChange={setSpacing}
