@@ -1387,9 +1387,12 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                         </div>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <div className="text-center">
-                            <LayoutGrid className="size-16 text-[#e5e7eb] mx-auto mb-4" />
-                            <p className="text-[14px] text-[#9ca3af]">Drag a field to Value to see preview</p>
+                          <div className="text-center max-w-[280px]">
+                            <div className="mx-auto mb-4 size-20 rounded-2xl bg-[#f4f0ff] flex items-center justify-center">
+                              <Hash className="size-10 text-[#6a12cd]/30" strokeWidth={1.5} />
+                            </div>
+                            <p className="text-[15px] font-semibold text-[#26064a] mb-1">Add a Value Field</p>
+                            <p className="text-[13px] text-[#9ca3af] leading-relaxed">Drag a measure field into the Value slot above to see your KPI card.</p>
                           </div>
                         </div>
                       )
@@ -1409,9 +1412,23 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                 )}
                 {(!previewReady || !selected) && (
                   <div className="w-full h-full flex items-center justify-center">
-                    <div className="text-center">
-                      <LayoutGrid className="size-16 text-[#e5e7eb] mx-auto mb-4" />
-                      <p className="text-[14px] text-[#9ca3af]">{!selected ? "Select a chart type to begin" : "Configure axes to see preview"}</p>
+                    <div className="text-center max-w-[280px]">
+                      <div className="mx-auto mb-4 size-20 rounded-2xl bg-[#f4f0ff] flex items-center justify-center">
+                        {!selected ? (
+                          <BarChart3 className="size-10 text-[#6a12cd]/30" strokeWidth={1.5} />
+                        ) : (
+                          <selected.Icon className="size-10 text-[#6a12cd]/30" strokeWidth={1.5} />
+                        )}
+                      </div>
+                      <p className="text-[15px] font-semibold text-[#26064a] mb-1">
+                        {!selected ? "No Chart Selected" : "Almost There"}
+                      </p>
+                      <p className="text-[13px] text-[#9ca3af] leading-relaxed">
+                        {!selected
+                          ? "Select a chart type from the sidebar to start building your visualization."
+                          : "Drag data fields into the axis slots above to generate a preview."
+                        }
+                      </p>
                     </div>
                   </div>
                 )}

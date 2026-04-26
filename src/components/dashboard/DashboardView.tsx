@@ -15,6 +15,7 @@ import {
 import Orb from '../shared/Orb';
 import { useToast, type ToastType } from '../shared/Toast';
 import { AddCardModal } from './add-widget/AddCardModal';
+import { ConfigurableChart } from './add-widget/ConfigurableChart';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -103,14 +104,17 @@ const DASHBOARDS: DashboardDef[] = [
       ],
     },
     table: {
-      title: 'Top 5 Vendors by Spend',
-      headers: ['Vendor', 'Invoices', 'Total Spend', 'Status'],
+      title: 'Invoice Records',
+      headers: ['Invoice ID', 'Vendor', 'Amount', 'Date', 'Status', 'Department', 'Risk', 'Duplicate Match'],
       rows: [
-        { cells: ['Acme Corp', '1,245', '$4.2M', 'Active'] },
-        { cells: ['Global Supplies Inc', '892', '$3.8M', 'Active'] },
-        { cells: ['TechParts Ltd', '634', '$2.1M', 'Review'] },
-        { cells: ['Office Essentials', '521', '$1.7M', 'Active'] },
-        { cells: ['FastShip Logistics', '489', '$1.4M', 'Active'] },
+        { cells: ['INV-005790', 'Acme Global Imaging', '₹11,853', '20-Mar-25', 'Pending Review', 'Operations', 'High', 'INV-005791'] },
+        { cells: ['INV-025832', 'Korean Technologies', '₹4,564', '15-Dec-24', 'Under Review', 'Procurement', 'Medium', 'INV-025831'] },
+        { cells: ['INV-007194', '3tones Letter Co.', '₹3,835', '31-Dec-24', 'Resolved', 'Finance', 'Low', 'None'] },
+        { cells: ['INV-040083', 'Chintamani Paper Products', '₹3,410', '13-Dec-24', 'Pending Review', 'Operations', 'High', 'INV-040082'] },
+        { cells: ['INV-027203', 'M Cargo Logistics', '₹1,457', '12-Jan-25', 'Auto-Resolved', 'Logistics', 'Low', 'None'] },
+        { cells: ['INV-031456', 'TechParts Ltd', '₹8,920', '05-Feb-25', 'Flagged', 'IT', 'Critical', 'INV-031455'] },
+        { cells: ['INV-018927', 'Global Supplies Inc', '₹6,340', '22-Jan-25', 'Resolved', 'Procurement', 'Low', 'INV-018926'] },
+        { cells: ['INV-044521', 'Atlas Manufacturing', '₹15,200', '18-Mar-25', 'Under Review', 'Finance', 'High', 'INV-044520'] },
       ],
     },
   },
@@ -150,14 +154,14 @@ const DASHBOARDS: DashboardDef[] = [
       ],
     },
     table: {
-      title: 'Top Customers by Revenue',
-      headers: ['Customer', 'Orders', 'Revenue', 'DSO'],
+      title: 'Invoice Records',
+      headers: ['Invoice ID', 'Vendor', 'Amount', 'Date', 'Status', 'Department', 'Risk', 'Duplicate Match'],
       rows: [
-        { cells: ['Enterprise Co', '342', '$8.4M', '32d'] },
-        { cells: ['MegaCorp LLC', '278', '$6.2M', '41d'] },
-        { cells: ['Summit Group', '215', '$5.1M', '28d'] },
-        { cells: ['Pinnacle Inc', '198', '$4.3M', '45d'] },
-        { cells: ['Atlas Partners', '167', '$3.7M', '35d'] },
+        { cells: ['INV-009341', 'Pinnacle Inc', '₹9,230', '10-Feb-25', 'Under Review', 'Finance', 'Medium', 'INV-009340'] },
+        { cells: ['INV-012890', 'Summit Group', '₹5,670', '28-Jan-25', 'Resolved', 'Operations', 'Low', 'None'] },
+        { cells: ['INV-017654', 'MegaCorp LLC', '₹12,100', '05-Mar-25', 'Pending Review', 'Procurement', 'High', 'INV-017653'] },
+        { cells: ['INV-021098', 'Enterprise Co', '₹7,450', '18-Feb-25', 'Flagged', 'IT', 'Critical', 'INV-021097'] },
+        { cells: ['INV-033210', 'Atlas Partners', '₹4,890', '22-Mar-25', 'Auto-Resolved', 'Logistics', 'Low', 'None'] },
       ],
     },
   },
@@ -197,14 +201,14 @@ const DASHBOARDS: DashboardDef[] = [
       ],
     },
     table: {
-      title: 'Contracts Expiring Soon',
-      headers: ['Contract', 'Vendor', 'Value', 'Expires'],
+      title: 'Invoice Records',
+      headers: ['Invoice ID', 'Vendor', 'Amount', 'Date', 'Status', 'Department', 'Risk', 'Duplicate Match'],
       rows: [
-        { cells: ['MSA-2024-081', 'TechParts Ltd', '$1.2M', 'Apr 12'] },
-        { cells: ['SOW-2024-156', 'CloudHost Inc', '$890K', 'Apr 18'] },
-        { cells: ['MSA-2023-042', 'DataPipe Co', '$2.4M', 'Apr 30'] },
-        { cells: ['PO-2024-923', 'PrintWorks', '$340K', 'May 05'] },
-        { cells: ['SOW-2024-201', 'SecureNet', '$1.8M', 'May 14'] },
+        { cells: ['INV-045123', 'TechParts Ltd', '₹11,200', '12-Mar-25', 'Pending Review', 'IT', 'High', 'INV-045122'] },
+        { cells: ['INV-038901', 'CloudHost Inc', '₹8,900', '01-Feb-25', 'Under Review', 'Operations', 'Medium', 'INV-038900'] },
+        { cells: ['INV-029876', 'DataPipe Co', '₹24,000', '20-Jan-25', 'Resolved', 'Finance', 'Low', 'None'] },
+        { cells: ['INV-052340', 'PrintWorks', '₹3,400', '15-Mar-25', 'Flagged', 'Procurement', 'Critical', 'INV-052339'] },
+        { cells: ['INV-061201', 'SecureNet', '₹18,500', '28-Mar-25', 'Auto-Resolved', 'IT', 'Low', 'None'] },
       ],
     },
   },
@@ -252,14 +256,14 @@ const DASHBOARDS: DashboardDef[] = [
       ],
     },
     table: {
-      title: 'Recent Risk Items',
-      headers: ['Risk', 'Severity', 'Owner', 'Status'],
+      title: 'Invoice Records',
+      headers: ['Invoice ID', 'Vendor', 'Amount', 'Date', 'Status', 'Department', 'Risk', 'Duplicate Match'],
       rows: [
-        { cells: ['SOD Violation - AP', 'Critical', 'J. Martinez', 'Open'] },
-        { cells: ['Unmatched 3-Way', 'High', 'S. Chen', 'In Review'] },
-        { cells: ['Late Reconciliation', 'High', 'A. Patel', 'Mitigating'] },
-        { cells: ['Access Creep - GL', 'Medium', 'R. Kim', 'Open'] },
-        { cells: ['Manual Journal Entries', 'Medium', 'L. Wong', 'Monitoring'] },
+        { cells: ['INV-071245', 'Acme Global Imaging', '₹15,800', '25-Mar-25', 'Pending Review', 'Operations', 'High', 'INV-071244'] },
+        { cells: ['INV-068903', 'Korean Technologies', '₹6,230', '08-Feb-25', 'Resolved', 'Procurement', 'Low', 'None'] },
+        { cells: ['INV-075432', '3tones Letter Co.', '₹9,100', '19-Mar-25', 'Under Review', 'Finance', 'Medium', 'INV-075431'] },
+        { cells: ['INV-082109', 'M Cargo Logistics', '₹2,870', '02-Apr-25', 'Flagged', 'Logistics', 'Critical', 'INV-082108'] },
+        { cells: ['INV-059876', 'Global Supplies Inc', '₹7,650', '14-Jan-25', 'Auto-Resolved', 'IT', 'Low', 'None'] },
       ],
     },
   },
@@ -2868,6 +2872,93 @@ function ToolbarBtn({ children, onClick, disabled = false, active = false, tip }
   );
 }
 
+// ─── Expanded Chart Scroller — custom always-visible scrollbar ──────────────
+
+function ExpandedChartScroller({ children }: { children: React.ReactNode }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [thumbLeft, setThumbLeft] = useState(0);
+  const [thumbWidth, setThumbWidth] = useState(100);
+  const [dragging, setDragging] = useState(false);
+  const dragStartX = useRef(0);
+  const dragStartScroll = useRef(0);
+
+  const updateThumb = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const ratio = el.clientWidth / el.scrollWidth;
+    setThumbWidth(Math.max(ratio * 100, 10));
+    const scrollRatio = el.scrollLeft / (el.scrollWidth - el.clientWidth || 1);
+    setThumbLeft(scrollRatio * (100 - ratio * 100));
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateThumb();
+    el.addEventListener('scroll', updateThumb);
+    const ro = new ResizeObserver(updateThumb);
+    ro.observe(el);
+    return () => { el.removeEventListener('scroll', updateThumb); ro.disconnect(); };
+  }, [updateThumb]);
+
+  const handleTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = scrollRef.current;
+    const track = e.currentTarget;
+    if (!el || !track) return;
+    const rect = track.getBoundingClientRect();
+    const clickRatio = (e.clientX - rect.left) / rect.width;
+    el.scrollLeft = clickRatio * (el.scrollWidth - el.clientWidth);
+  };
+
+  const handleThumbDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDragging(true);
+    dragStartX.current = e.clientX;
+    dragStartScroll.current = scrollRef.current?.scrollLeft || 0;
+  };
+
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e: MouseEvent) => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const trackEl = el.parentElement?.querySelector('[data-scroll-track]') as HTMLElement;
+      if (!trackEl) return;
+      const trackWidth = trackEl.clientWidth;
+      const delta = e.clientX - dragStartX.current;
+      const scrollDelta = (delta / trackWidth) * el.scrollWidth;
+      el.scrollLeft = dragStartScroll.current + scrollDelta;
+    };
+    const onUp = () => setDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [dragging]);
+
+  return (
+    <div className="flex-1 flex flex-col min-h-[500px] relative">
+      <div ref={scrollRef} className="flex-1 overflow-x-auto overflow-y-hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+        <style>{`.expanded-scroll::-webkit-scrollbar { display: none; }`}</style>
+        <div className="expanded-scroll" style={{ minWidth: '130%', height: '100%' }}>
+          {children}
+        </div>
+      </div>
+      {/* Custom scrollbar — always visible */}
+      <div
+        data-scroll-track
+        className="h-1 mt-2 mx-1 bg-ink-100 rounded-full cursor-pointer relative shrink-0"
+        onClick={handleTrackClick}
+      >
+        <div
+          className={`absolute top-0 h-full rounded-full transition-colors ${dragging ? 'bg-brand-500' : 'bg-ink-300 hover:bg-ink-400'}`}
+          style={{ left: `${thumbLeft}%`, width: `${thumbWidth}%` }}
+          onMouseDown={handleThumbDown}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── Expanded Widget Modal ──────────────────────────────────────────────────
 
 // ─── Expanded Modal Data ─────────────────────────────────────────────────────
@@ -2900,7 +2991,7 @@ const RISK_COLORS: Record<string, string> = {
 
 const TIME_PERIODS = ['Today', '7D', '30D', '3M', '6M', '12M'];
 
-function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit, onDelete, onPrev, onNext, hasPrev, hasNext }: {
+function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit, onDelete, onPrev, onNext, hasPrev, hasNext, isTable }: {
   open: boolean;
   onClose: () => void;
   title: string;
@@ -2912,8 +3003,9 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
   onNext?: () => void;
   hasPrev?: boolean;
   hasNext?: boolean;
+  isTable?: boolean;
 }) {
-  const [activeTab, setActiveTab] = useState<'visualization' | 'records' | 'summary'>('visualization');
+  const [activeTab, setActiveTab] = useState<'visualization' | 'records' | 'summary'>(isTable ? 'records' : 'visualization');
   const [timePeriod, setTimePeriod] = useState('30D');
   const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('bar');
   const [chartTypeOpen, setChartTypeOpen] = useState(false);
@@ -2986,7 +3078,7 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.2 }}
             className="relative bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl flex flex-col overflow-hidden"
-            style={{ width: 'min(1200px, 96vw)', height: 'min(775px, 85vh)' }}
+            style={{ width: '96vw', height: '94vh' }}
             onClick={e => e.stopPropagation()}
           >
             {/* ── Header with tabs ── */}
@@ -2994,7 +3086,7 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
               <div className="flex items-center justify-between px-5 pt-2 pb-0">
                 {/* Tabs left */}
                 <div className="flex items-center gap-0">
-                  {(['visualization', 'records', 'summary'] as const).map(tab => {
+                  {(['visualization', 'records', 'summary'] as const).filter(tab => !(isTable && tab === 'visualization')).map(tab => {
                     const Icon = tabIcons[tab];
                     const isActive = activeTab === tab;
                     return (
@@ -3073,9 +3165,9 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                 </div>
               </div>
 
-              {/* Visualization sub-bar */}
-              {activeTab === 'visualization' && (
-                <div className="flex items-center px-4 py-0 border-t border-canvas-border/50 overflow-visible relative z-10">
+              {/* Sub-bar — shown on all tabs with conditional controls */}
+              {(
+                <div className="flex items-center px-4 py-0.5 border-t border-canvas-border/50 overflow-visible relative z-10 sticky top-0 bg-canvas-elevated">
                   {/* Left — prev/next arrows */}
                   <div className="flex items-center gap-1 shrink-0">
                     <button
@@ -3100,8 +3192,8 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                     </button>
                   </div>
 
-                  {/* Center — title */}
-                  <div className="flex-1 flex items-center justify-center">
+                  {/* Center — title (absolute so it stays centered regardless of left/right content) */}
+                  <div className="absolute left-0 right-0 flex items-center justify-center pointer-events-none">
                     {editingExpandTitle ? (
                       <input
                         autoFocus
@@ -3113,69 +3205,108 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                         style={{ outline: 'none', boxShadow: 'none' }}
                       />
                     ) : (
-                      <span
-                        className="text-[13px] font-semibold text-ink-900 cursor-text hover:text-brand-600 transition-colors"
-                        onClick={() => setEditingExpandTitle(true)}
-                      >{expandTitle}</span>
+                      <span className="flex items-center gap-3 pointer-events-auto">
+                        <span
+                          className="text-[13px] font-semibold text-ink-900 cursor-text hover:text-brand-600 transition-colors"
+                          onClick={() => setEditingExpandTitle(true)}
+                        >{expandTitle}</span>
+                        {(() => {
+                          const t = expandTitle.toLowerCase();
+                          if (t.includes('accuracy') || t.includes('detection')) return (
+                            <span className="flex items-center gap-1 text-[10px] text-ink-400">
+                              <Database size={10} className="text-brand-500" /> SQL
+                            </span>
+                          );
+                          if (t.includes('volume') && t.includes('trend')) return (
+                            <span className="flex items-center gap-1 text-[10px] text-ink-400">
+                              <FileText size={10} className="text-green-600" /> Excel
+                            </span>
+                          );
+                          if (t.includes('monthly') || t.includes('volume')) return (
+                            <span className="flex items-center gap-1 text-[10px] text-ink-400">
+                              <FileText size={10} className="text-blue-500" /> CSV
+                            </span>
+                          );
+                          if (t.includes('status') || t.includes('pie')) return (
+                            <span className="flex items-center gap-1 text-[10px] text-ink-400">
+                              <Database size={10} className="text-amber-500" /> Query
+                            </span>
+                          );
+                          if (t.includes('record') || t.includes('table')) return (
+                            <span className="flex items-center gap-1 text-[10px] text-ink-400">
+                              <Database size={10} className="text-brand-500" /> SQL
+                            </span>
+                          );
+                          return (
+                            <span className="flex items-center gap-1 text-[10px] text-ink-400">
+                              <Database size={10} className="text-brand-500" /> SQL
+                            </span>
+                          );
+                        })()}
+                      </span>
                     )}
                   </div>
 
-                  {/* Right — drill + chart type + filter + settings */}
+                  <div className="flex-1" />
+                  {/* Right — conditional controls per tab */}
                   <div className="flex items-center shrink-0">
-                    {/* Drill up */}
-                    <button onClick={() => addToast({ message: 'Drilled up', type: 'info' })} className="p-2.5 text-ink-400 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer" title="Drill up">
-                      <IconDrillUp />
-                    </button>
-                    {/* Drill down */}
-                    <button onClick={() => addToast({ message: 'Drill down', type: 'info' })} className="p-2.5 text-ink-400 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer" title="Drill down">
-                      <IconDrillDown />
-                    </button>
-                    {/* Double drill */}
-                    <button onClick={() => addToast({ message: 'Double drill', type: 'info' })} className="p-2.5 text-ink-400 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer" title="Double drill">
-                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="size-4">
-                        <path d="M5 3V8" /><path d="M3 6L5 8L7 6" />
-                        <path d="M11 3V8" /><path d="M9 6L11 8L13 6" />
-                        <path d="M4 11h8" />
-                      </svg>
-                    </button>
+                    {/* Drill up/down/double — only on Visualization */}
+                    {activeTab === 'visualization' && (
+                      <>
+                        <button onClick={() => addToast({ message: 'Drilled up', type: 'info' })} className="p-2.5 text-ink-400 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer" title="Drill up">
+                          <IconDrillUp />
+                        </button>
+                        <button onClick={() => addToast({ message: 'Drill down', type: 'info' })} className="p-2.5 text-ink-400 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer" title="Drill down">
+                          <IconDrillDown />
+                        </button>
+                        <button onClick={() => addToast({ message: 'Double drill', type: 'info' })} className="p-2.5 text-ink-400 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer" title="Double drill">
+                          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="size-4">
+                            <path d="M5 3V8" /><path d="M3 6L5 8L7 6" />
+                            <path d="M11 3V8" /><path d="M9 6L11 8L13 6" />
+                            <path d="M4 11h8" />
+                          </svg>
+                        </button>
+                        <div className="w-px h-8 bg-canvas-border mx-2" />
+                      </>
+                    )}
 
-                    {/* Divider */}
-                    <div className="w-px h-8 bg-canvas-border mx-2" />
+                    {/* Chart type dropdown — only on Visualization */}
+                    {activeTab === 'visualization' && (
+                      <>
+                        <div className="relative">
+                          <button
+                            onClick={() => setChartTypeOpen(!chartTypeOpen)}
+                            className="flex items-center gap-2 px-3 py-2.5 text-[13px] font-medium text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer"
+                          >
+                            {chartType === 'line' ? <LineChart size={15} /> : chartType === 'area' ? <AreaChart size={15} /> : <BarChart3 size={15} />}
+                            <span>{chartType === 'line' ? 'Line Chart' : chartType === 'area' ? 'Area Chart' : 'Bar Chart'}</span>
+                            <ChevronDown size={13} className="text-ink-400" />
+                          </button>
+                          {chartTypeOpen && (
+                            <>
+                              <div className="fixed inset-0 z-30" onClick={() => setChartTypeOpen(false)} />
+                              <div className="absolute top-full right-0 mt-1 z-40 bg-canvas-elevated border border-canvas-border rounded-xl shadow-xl py-1 min-w-[150px]">
+                                {([['line', 'Line Chart', LineChart], ['bar', 'Bar Chart', BarChart3], ['area', 'Area Chart', AreaChart]] as const).map(([type, label, Icon]) => (
+                                  <button
+                                    key={type}
+                                    onClick={() => { setChartType(type as any); setChartTypeOpen(false); addToast({ message: `Chart type: ${label}`, type: 'info' }); }}
+                                    className={`w-full flex items-center gap-2.5 px-4 py-2 text-[13px] transition-colors cursor-pointer ${
+                                      chartType === type ? 'text-brand-700 bg-brand-50' : 'text-ink-600 hover:bg-surface-2'
+                                    }`}
+                                  >
+                                    <Icon size={14} /> {label}
+                                  </button>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        <div className="w-px h-8 bg-canvas-border mx-2" />
+                      </>
+                    )}
 
-                    {/* Chart type dropdown */}
-                    <div className="relative">
-                      <button
-                        onClick={() => setChartTypeOpen(!chartTypeOpen)}
-                        className="flex items-center gap-2 px-3 py-2.5 text-[13px] font-medium text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer"
-                      >
-                        {chartType === 'line' ? <LineChart size={15} /> : chartType === 'area' ? <AreaChart size={15} /> : <BarChart3 size={15} />}
-                        <span>{chartType === 'line' ? 'Line Chart' : chartType === 'area' ? 'Area Chart' : 'Bar Chart'}</span>
-                        <ChevronDown size={13} className="text-ink-400" />
-                      </button>
-                      {chartTypeOpen && (
-                        <>
-                          <div className="fixed inset-0 z-30" onClick={() => setChartTypeOpen(false)} />
-                          <div className="absolute top-full right-0 mt-1 z-40 bg-canvas-elevated border border-canvas-border rounded-xl shadow-xl py-1 min-w-[150px]">
-                            {([['line', 'Line Chart', LineChart], ['bar', 'Bar Chart', BarChart3], ['area', 'Area Chart', AreaChart]] as const).map(([type, label, Icon]) => (
-                              <button
-                                key={type}
-                                onClick={() => { setChartType(type as any); setChartTypeOpen(false); addToast({ message: `Chart type: ${label}`, type: 'info' }); }}
-                                className={`w-full flex items-center gap-2.5 px-4 py-2 text-[13px] transition-colors cursor-pointer ${
-                                  chartType === type ? 'text-brand-700 bg-brand-50' : 'text-ink-600 hover:bg-surface-2'
-                                }`}
-                              >
-                                <Icon size={14} /> {label}
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Divider */}
-                    <div className="w-px h-8 bg-canvas-border mx-2" />
-
-                    {/* Filter */}
+                    {/* Filter + Settings — hidden on Summary */}
+                    {activeTab !== 'summary' && (<>
                     <div className="relative">
                       <button
                         ref={vizFilterBtnRef}
@@ -3303,6 +3434,8 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                     <button onClick={() => setShowThresholdModal(true)} className="p-2.5 text-ink-400 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer" title="Set Threshold Alert">
                       <Settings size={16} />
                     </button>
+                    </>
+                    )}
                   </div>
                 </div>
               )}
@@ -3313,16 +3446,22 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
               <AnimatePresence mode="wait">
                 {/* VISUALIZATION */}
                 {activeTab === 'visualization' && (
-                  <motion.div key="viz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-5 h-full">
-                    <div className="bg-canvas-elevated rounded-xl border border-canvas-border p-6 h-full min-h-[500px] flex flex-col">
-                      {children}
-                    </div>
+                  <motion.div key="viz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="px-4 pt-4 pb-2 h-full flex flex-col">
+                    {title.toLowerCase().includes('status') || title.toLowerCase().includes('pie') || title.toLowerCase().includes('distribution') ? (
+                      <div className="flex-1 min-h-[500px]">{children}</div>
+                    ) : (
+                      <ExpandedChartScroller>{children}</ExpandedChartScroller>
+                    )}
                   </motion.div>
                 )}
 
                 {/* RECORDS */}
                 {activeTab === 'records' && (
-                  <motion.div key="records" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-5">
+                  <motion.div key="records" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-5 h-full flex flex-col">
+                    {isTable ? (
+                      <div className="flex-1 overflow-auto chart-scroll">{children}</div>
+                    ) : (
+                    <>
                     {/* Search + Download */}
                     <div className="flex items-center gap-3 mb-4">
                       <div className="relative flex-1">
@@ -3345,7 +3484,7 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                     </div>
 
                     {/* Table */}
-                    <div className="bg-canvas-elevated rounded-xl border border-canvas-border overflow-hidden">
+                    <div className="bg-canvas-elevated rounded-xl border border-canvas-border overflow-auto chart-scroll" style={{ maxHeight: '70vh' }}>
                       <table className="w-full text-left">
                         <thead>
                           <tr className="border-b border-canvas-border bg-surface-2/50">
@@ -3384,6 +3523,8 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                         </tbody>
                       </table>
                     </div>
+                    </>
+                    )}
                   </motion.div>
                 )}
 
@@ -3684,6 +3825,56 @@ function ThresholdAlertModal({ open, onClose, widgetTitle, addToast }: {
   );
 }
 
+// ─── Chart Skeleton ─────────────────────────────────────────────────────────
+
+function ChartSkeleton({ type = 'bar' }: { type?: string }) {
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center gap-3 animate-pulse">
+      {type === 'pie' ? (
+        <div className="size-32 rounded-full border-[12px] border-ink-100" />
+      ) : type === 'table' ? (
+        <div className="w-full space-y-2.5 px-4">
+          <div className="h-3 bg-ink-100 rounded w-full" />
+          <div className="h-3 bg-ink-100 rounded w-[90%]" />
+          <div className="h-3 bg-ink-100 rounded w-[95%]" />
+          <div className="h-3 bg-ink-100 rounded w-[85%]" />
+          <div className="h-3 bg-ink-100 rounded w-[92%]" />
+        </div>
+      ) : type === 'line' ? (
+        <svg width="200" height="80" viewBox="0 0 200 80" className="opacity-30">
+          <polyline points="0,60 30,45 60,55 90,30 120,40 150,20 180,35 200,15" fill="none" stroke="#d1d5db" strokeWidth="2.5" strokeLinecap="round" />
+          <polyline points="0,60 30,45 60,55 90,30 120,40 150,20 180,35 200,15 200,80 0,80" fill="#e5e7eb" fillOpacity="0.3" />
+        </svg>
+      ) : (
+        <div className="flex items-end gap-2 h-32">
+          {[40, 65, 50, 80, 55, 70].map((h, i) => (
+            <div key={i} className="w-6 rounded-t bg-ink-100" style={{ height: `${h}%` }} />
+          ))}
+        </div>
+      )}
+      <div className="flex gap-3">
+        <div className="h-2 w-16 bg-ink-100 rounded" />
+        <div className="h-2 w-12 bg-ink-100 rounded" />
+        <div className="h-2 w-14 bg-ink-100 rounded" />
+      </div>
+    </div>
+  );
+}
+
+function WidgetRefreshOverlay() {
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl" style={{ background: 'rgba(255,255,255,0.6)' }}>
+      <div className="flex flex-col items-center gap-2">
+        <svg className="size-8 animate-spin" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="13" stroke="#e5e7eb" strokeWidth="3" />
+          <path d="M29 16a13 13 0 0 0-13-13" stroke="#7C3AED" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+        <span className="text-[11px] font-medium text-ink-500">Updating...</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Widget Card ────────────────────────────────────────────────────────────
 
 function WidgetCard({
@@ -3704,6 +3895,11 @@ function WidgetCard({
   onChangeSize,
   onMoveUp,
   onMoveDown,
+  loading,
+  isFirstLoad,
+  chartType,
+  hideDrill,
+  dataSourceInfo,
 }: {
   title: string;
   subtitle?: string;
@@ -3722,6 +3918,11 @@ function WidgetCard({
   onChangeSize?: (span: 1 | 2) => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
+  loading?: boolean;
+  isFirstLoad?: boolean;
+  chartType?: string;
+  hideDrill?: boolean;
+  dataSourceInfo?: { type: 'sql' | 'excel' | 'csv' | 'query'; name: string; meta: string };
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -3789,13 +3990,14 @@ function WidgetCard({
 
   return (
     <div
-      className={`glass-card rounded-xl transition-all duration-300 group relative ${colSpan === 2 ? 'lg:col-span-2' : ''} ${hasActivePageFilter ? 'ring-2 ring-brand-400/40 border-brand-200 shadow-[0_0_16px_-4px_rgba(106,18,205,0.12)]' : ''} ${hasPageFiltersButNoMatch ? 'opacity-40' : ''}`}
-      style={{ minHeight: 280, maxHeight: 600 }}
+      className={`glass-card rounded-xl transition-all duration-300 group relative flex flex-col cursor-pointer ${colSpan === 2 ? 'lg:col-span-2' : ''} ${hasActivePageFilter ? 'ring-2 ring-brand-400/40 border-brand-200 shadow-[0_0_16px_-4px_rgba(106,18,205,0.12)]' : ''} ${hasPageFiltersButNoMatch ? 'opacity-40' : ''}`}
+      style={{ minHeight: 260, maxHeight: 800 }}
+      onClick={() => onExpand?.()}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setShowMenu(false); }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-6 pt-6 pb-2">
+      <div className="flex items-center justify-between px-4 pt-2 pb-0">
         {/* Drag handle */}
         {(onMoveUp || onMoveDown) && (
           <div className={`flex flex-col gap-0.5 mr-3 shrink-0 transition-opacity ${hovered ? 'opacity-100' : 'opacity-0'}`}>
@@ -3847,39 +4049,50 @@ function WidgetCard({
               className="text-[12px] text-ink-500 mt-1 w-full bg-transparent border-none outline-none ring-0 shadow-none" style={{ outline: 'none', boxShadow: 'none' }}
             />
           ) : (
-            localSubtitle && (
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-[12px] text-ink-500 truncate">{localSubtitle}</p>
-                {dataLinksFromParent && dataLinksFromParent.length > 0 && (() => {
-                  const widgetLabels = (widgetFields || []).map(id => DRAG_FIELDS.find(f => f.id === id)?.label).filter(Boolean);
-                  const relevantCount = dataLinksFromParent.filter(l => widgetLabels.includes(l.fieldA) || widgetLabels.includes(l.fieldB)).length;
-                  if (relevantCount === 0) return null;
-                  return (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-evidence-50 text-evidence-700 text-[9px] font-semibold shrink-0">
-                      <Link2 size={8} />{relevantCount} linked
-                    </span>
-                  );
-                })()}
-              </div>
-            )
+            <div className="flex items-center gap-2 mt-0.5">
+              {localSubtitle && <p className="text-[11px] text-ink-500 truncate">{localSubtitle}</p>}
+              {localSubtitle && chartType && <span className="text-ink-300 text-[9px]">·</span>}
+              {chartType && (
+                <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0">
+                  {chartType === 'bar' ? <><FileText size={8} className="text-green-600" /> Excel</> :
+                   chartType === 'pie' ? <><FileText size={8} className="text-blue-500" /> CSV</> :
+                   chartType === 'line' ? <><Database size={8} className="text-brand-500" /> SQL</> :
+                   chartType === 'table' ? <><Database size={8} className="text-amber-500" /> Query</> :
+                   <><Database size={8} className="text-brand-500" /> SQL</>}
+                </span>
+              )}
+              {dataLinksFromParent && dataLinksFromParent.length > 0 && (() => {
+                const widgetLabels = (widgetFields || []).map(id => DRAG_FIELDS.find(f => f.id === id)?.label).filter(Boolean);
+                const relevantCount = dataLinksFromParent.filter(l => widgetLabels.includes(l.fieldA) || widgetLabels.includes(l.fieldB)).length;
+                if (relevantCount === 0) return null;
+                return (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-evidence-50 text-evidence-700 text-[9px] font-semibold shrink-0">
+                    <Link2 size={8} />{relevantCount} linked
+                  </span>
+                );
+              })()}
+            </div>
           )}
         </div>
 
         {/* Toolbar — visible on hover */}
         <div
+          onClick={e => e.stopPropagation()}
           className={`flex items-center gap-0.5 bg-canvas-elevated border border-canvas-border rounded-lg px-0.5 py-0.5 transition-opacity duration-150 ${
             hovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
         >
-          {/* Drill Up */}
-          <ToolbarBtn onClick={handleDrillUp} disabled={drillLevel <= 0} tip="Drill up">
-            <IconDrillUp />
-          </ToolbarBtn>
-
-          {/* Drill Down */}
-          <ToolbarBtn onClick={handleDrillDown} active={drillModeActive} disabled={drillLevel >= 2} tip={drillLevel >= 2 ? 'Already at deepest level' : 'Drill down'}>
-            <IconDrillDown />
-          </ToolbarBtn>
+          {/* Drill Up/Down — hidden for tables */}
+          {!hideDrill && (
+            <>
+              <ToolbarBtn onClick={handleDrillUp} disabled={drillLevel <= 0} tip="Drill up">
+                <IconDrillUp />
+              </ToolbarBtn>
+              <ToolbarBtn onClick={handleDrillDown} active={drillModeActive} disabled={drillLevel >= 2} tip={drillLevel >= 2 ? 'Already at deepest level' : 'Drill down'}>
+                <IconDrillDown />
+              </ToolbarBtn>
+            </>
+          )}
 
           {/* Filter */}
           <div className="relative">
@@ -4173,8 +4386,15 @@ function WidgetCard({
       })()}
 
       {/* Chart content */}
-      <div className="px-6 pb-6 flex-1">
-        {children}
+      <div className="relative flex-1 overflow-hidden" style={{ minHeight: 200 }}>
+        {loading && isFirstLoad ? (
+          <ChartSkeleton type={chartType} />
+        ) : (
+          <>
+            {loading && <WidgetRefreshOverlay />}
+            {children}
+          </>
+        )}
       </div>
 
       {/* Delete confirmation */}
@@ -4704,8 +4924,9 @@ function ConnectTablesModal({ open, onClose, addToast, links, setLinks }: { open
               {/* Summary of all links across all pairs */}
               {links.length > 0 && (
                 <div>
-                  <div className="font-mono text-[11px] text-ink-500 uppercase tracking-wide mb-2">
-                    All Active Links ({links.length})
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-mono text-[11px] text-ink-500 uppercase tracking-wide">All Active Links ({links.length})</span>
+                    <button onClick={() => setLinks([])} className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 cursor-pointer">Clear all</button>
                   </div>
                   <div className="space-y-1.5">
                     {links.map((link, i) => {
@@ -4837,8 +5058,9 @@ function ConnectTablesModal({ open, onClose, addToast, links, setLinks }: { open
               {/* Links for this pair */}
               {linkedForPair.length > 0 && (
                 <div>
-                  <div className="font-mono text-[11px] text-ink-500 uppercase tracking-wide mb-2">
-                    Links for this pair ({linkedForPair.length})
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-mono text-[11px] text-ink-500 uppercase tracking-wide">Links for this pair ({linkedForPair.length})</span>
+                    <button onClick={() => setLinks(prev => prev.filter(l => !linkedForPair.some(lp => lp.id === l.id)))} className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 cursor-pointer">Clear all</button>
                   </div>
                   <div className="space-y-1.5">
                     {linkedForPair.map((link, i) => (
@@ -4904,6 +5126,8 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
   const [autoRefreshFrequency, setAutoRefreshFrequency] = useState('Off');
   const [showFrequencyDropdown, setShowFrequencyDropdown] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [widgetLoadingStates, setWidgetLoadingStates] = useState<Record<string, 'loading' | 'loaded' | 'error'>>({});
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [expandedWidget, setExpandedWidget] = useState<{ title: string; subtitle?: string } | null>(null);
@@ -4946,12 +5170,28 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
 
   const handleRefresh = () => {
     setIsRefreshing(true);
+    // Set all widgets to loading
+    const widgetKeys = ['w1', 'w2', 'w3', 'w4', 'table'];
+    const loading: Record<string, 'loading' | 'loaded' | 'error'> = {};
+    widgetKeys.forEach(k => { loading[k] = 'loading'; });
+    setWidgetLoadingStates(loading);
+
+    // Stagger each widget's resolution at random intervals
+    widgetKeys.forEach(k => {
+      const delay = 800 + Math.random() * 2000;
+      setTimeout(() => {
+        setWidgetLoadingStates(prev => ({ ...prev, [k]: 'loaded' }));
+      }, delay);
+    });
+
+    // All done after max time
     setTimeout(() => {
       setIsRefreshing(false);
+      setHasLoadedOnce(true);
       setLastRefreshTime('Just now');
       addToast({ message: 'Dashboard refreshed', type: 'success' });
       setTimeout(() => setLastRefreshTime('1 min ago'), 60000);
-    }, 2000);
+    }, 3000);
   };
 
   const handleExport = () => {
@@ -4982,32 +5222,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
     <div className="h-full flex bg-canvas relative overflow-hidden">
       <Orb hoverIntensity={0.09} rotateOnHover hue={dashboard.accentHue} opacity={0.08} />
 
-      {/* Refresh overlay */}
-      <AnimatePresence>
-        {isRefreshing && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="absolute inset-0 z-[100] flex flex-col items-center justify-center"
-            style={{ backdropFilter: 'blur(8px)', background: 'rgba(255,255,255,0.75)' }}
-          >
-            {/* Spinner */}
-            <div className="relative size-16 mb-5">
-              <svg className="size-16 animate-spin" viewBox="0 0 64 64" fill="none">
-                <circle cx="32" cy="32" r="28" stroke="#e5e7eb" strokeWidth="4" />
-                <path d="M60 32a28 28 0 0 0-28-28" stroke="#7C3AED" strokeWidth="4" strokeLinecap="round" />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="size-2.5 rounded-full bg-brand-500" />
-              </div>
-            </div>
-            <p className="text-[16px] font-semibold text-ink-700">Refreshing Dashboard</p>
-            <p className="text-[13px] text-ink-400 mt-1">Updating all data and charts...</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Per-widget refresh — no full-page overlay */}
 
       {/* Sidebar removed — dashboard switching handled via list page */}
 
@@ -5388,189 +5603,13 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
               className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6"
               style={{ gridAutoRows: 'minmax(420px, auto)' }}
             >
-              {/* Widget 1 — Donut / Distribution */}
-              {dashboard.donut && (
-                <WidgetCard
-                  title={dashboard.donut.title}
-                  subtitle="Distribution breakdown"
-                  addToast={addToast}
-                  onExpand={() => setExpandedWidget({ title: dashboard.donut!.title, subtitle: 'Distribution breakdown' })}
-                  onEdit={() => handleEditDefaultWidget(dashboard.donut!.title, 'pie', 'Distribution breakdown')}
-                  onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
-                  onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
-                  pageFilterFields={pageFilterFields}
-                  widgetFields={['region', 'category', 'department', 'status']}
-                  dataLinks={dataLinks}
-                  onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
-                  onClearPageFilters={() => setPageFilterFields([])}
-                >
-                  <div className="flex items-center gap-10 py-10 px-4">
-                    <div className="relative shrink-0">
-                      <svg width="180" height="180" viewBox="0 0 100 100">
-                        {(() => {
-                          const segs = dashboard.donut!.segments;
-                          const total = segs.reduce((a, s) => a + s.value, 0);
-                          let offset = 0;
-                          return segs.map(s => {
-                            const pct = (s.value / total) * 100;
-                            const dashArray = `${pct * 2.51327} ${251.327 - pct * 2.51327}`;
-                            const dashOffset = -offset * 2.51327;
-                            offset += pct;
-                            return (
-                              <motion.circle
-                                key={s.label} cx="50" cy="50" r="40" fill="none"
-                                stroke={s.color} strokeWidth="10"
-                                strokeDasharray={dashArray} strokeDashoffset={dashOffset}
-                                strokeLinecap="round" transform="rotate(-90 50 50)"
-                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}
-                              />
-                            );
-                          });
-                        })()}
-                        {dashboard.donut!.centerLabel && (
-                          <>
-                            <text x="50" y="46" textAnchor="middle" className="fill-ink-900 font-bold" fontSize="18">{dashboard.donut!.centerLabel}</text>
-                            <text x="50" y="60" textAnchor="middle" className="fill-ink-500" fontSize="9">Total</text>
-                          </>
-                        )}
-                      </svg>
-                    </div>
-                    <div className="space-y-3 flex-1 min-w-0">
-                      {dashboard.donut!.segments.map(s => (
-                        <div key={s.label} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-3 h-3 rounded-full shrink-0" style={{ background: s.color }} />
-                            <span className="text-[13px] text-ink-700">{s.label}</span>
-                          </div>
-                          <span className="text-[14px] font-bold text-ink-900 shrink-0 ml-3">
-                            {dashboard.donut!.segments.reduce((a, s) => a + s.value, 0) > 100 ? s.value : `${s.value}%`}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </WidgetCard>
-              )}
-
-              {/* Widget 2 — Bar Chart */}
-              {dashboard.bars && (
-                <WidgetCard
-                  title={dashboard.bars.title}
-                  subtitle="Trend analysis"
-                  addToast={addToast}
-                  onExpand={() => setExpandedWidget({ title: dashboard.bars!.title, subtitle: 'Trend analysis' })}
-                  onEdit={() => handleEditDefaultWidget(dashboard.bars!.title, 'clustered-col', 'Trend analysis')}
-                  onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
-                  onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
-                  pageFilterFields={pageFilterFields}
-                  widgetFields={['date', 'month', 'vendor', 'region']}
-                  dataLinks={dataLinks}
-                  onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
-                  onClearPageFilters={() => setPageFilterFields([])}
-                >
-                  <div className="flex items-end gap-3 pt-6" style={{ height: '280px' }}>
-                    {dashboard.bars!.data.map((d, i) => {
-                      const max = Math.max(...dashboard.bars!.data.map(dd => dd.value));
-                      const height = (d.value / max) * 100;
-                      return (
-                        <div key={d.label} className="flex-1 flex flex-col items-center gap-1.5">
-                          <span className="text-[12px] text-ink-500 font-medium">
-                            {d.value >= 1000 ? `${(d.value / 1000).toFixed(1)}K` : d.value}
-                          </span>
-                          <motion.div
-                            className="w-full rounded-t-md min-h-[4px]"
-                            style={{ background: dashboard.bars!.color }}
-                            initial={{ height: 0 }}
-                            animate={{ height: `${height}%` }}
-                            transition={{ duration: 0.5, delay: i * 0.06, ease: 'easeOut' }}
-                          />
-                          <span className="text-[12px] text-ink-500">{d.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </WidgetCard>
-              )}
-
-              {/* Widget 3 — Progress / Compliance Rates */}
-              {dashboard.progress ? (
-                <WidgetCard
-                  title={dashboard.progress.title}
-                  subtitle="Completion rates"
-                  addToast={addToast}
-                  onExpand={() => setExpandedWidget({ title: dashboard.progress!.title, subtitle: 'Completion rates' })}
-                  onEdit={() => handleEditDefaultWidget(dashboard.progress!.title, 'stacked-bar', 'Completion rates')}
-                  onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
-                  onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
-                  pageFilterFields={pageFilterFields}
-                  widgetFields={['date', 'status', 'department', 'category']}
-                  dataLinks={dataLinks}
-                  onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
-                  onClearPageFilters={() => setPageFilterFields([])}
-                >
-                  <div className="space-y-5 py-8 px-2">
-                    {dashboard.progress!.data.map((d, i) => (
-                      <div key={d.label}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[13px] text-ink-700">{d.label}</span>
-                          <span className="text-[13px] font-bold text-ink-900">{d.value}%</span>
-                        </div>
-                        <div className="h-2.5 bg-surface-3 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${d.value}%` }}
-                            transition={{ duration: 0.6, delay: 0.15 + i * 0.08 }}
-                            className="h-full rounded-full"
-                            style={{ background: d.color }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </WidgetCard>
-              ) : (
-                <WidgetCard
-                  title="Detection Accuracy"
-                  subtitle="ML model performance vs targets"
-                  addToast={addToast}
-                  onExpand={() => setExpandedWidget({ title: 'Detection Accuracy', subtitle: 'ML model performance vs targets' })}
-                  onEdit={() => handleEditDefaultWidget('Detection Accuracy', 'line', 'ML model performance vs targets')}
-                  onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
-                  onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
-                  pageFilterFields={pageFilterFields}
-                  widgetFields={['date', 'month', 'vendor']}
-                  dataLinks={dataLinks}
-                  onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
-                  onClearPageFilters={() => setPageFilterFields([])}
-                >
-                  <div className="py-8 px-2">
-                    <svg width="100%" height="260" viewBox="0 0 400 260" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="var(--color-brand-500)" stopOpacity="0.15" />
-                          <stop offset="100%" stopColor="var(--color-brand-500)" stopOpacity="0.02" />
-                        </linearGradient>
-                      </defs>
-                      <polyline points="0,260 0,200 57,160 114,180 171,120 228,140 285,80 342,100 400,40 400,260" fill="url(#areaGrad)" />
-                      <polyline points="0,200 57,160 114,180 171,120 228,140 285,80 342,100 400,40" fill="none" stroke="var(--color-brand-500)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                      {[0, 57, 114, 171, 228, 285, 342, 400].map((x, i) => (
-                        <circle key={i} cx={x} cy={[200,160,180,120,140,80,100,40][i]} r="4" fill="var(--color-brand-600)" stroke="white" strokeWidth="2" />
-                      ))}
-                    </svg>
-                    <div className="flex justify-between text-[11px] text-ink-500 mt-2 px-1">
-                      {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'].map(m => <span key={m}>{m}</span>)}
-                    </div>
-                  </div>
-                </WidgetCard>
-              )}
-
-              {/* Widget 4 — Line Trend / Processing Analytics */}
+              {/* Widget 1 — Combo Chart */}
               <WidgetCard
-                title={dashboard.lineTrend?.title || 'Processing Analytics'}
-                subtitle={dashboard.lineTrend ? 'Performance over time' : 'Invoice processing & detection'}
+                title={dashboard.lineTrend?.title || 'Detection Accuracy Goals'}
+                subtitle="Performance over time"
                 addToast={addToast}
-                onExpand={() => setExpandedWidget({ title: dashboard.lineTrend?.title || 'Processing Analytics', subtitle: 'Performance over time' })}
-                onEdit={() => handleEditDefaultWidget(dashboard.lineTrend?.title || 'Processing Analytics', 'line', 'Performance over time')}
+                onExpand={() => setExpandedWidget({ title: dashboard.lineTrend?.title || 'Detection Accuracy Goals', subtitle: 'Performance over time' })}
+                onEdit={() => handleEditDefaultWidget(dashboard.lineTrend?.title || 'Detection Accuracy Goals', 'line', 'Performance over time')}
                 onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                 onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
                 pageFilterFields={pageFilterFields}
@@ -5578,39 +5617,81 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                 dataLinks={dataLinks}
                 onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
                 onClearPageFilters={() => setPageFilterFields([])}
+                loading={widgetLoadingStates['w1'] === 'loading'}
+                isFirstLoad={!hasLoadedOnce}
+                chartType="bar"
               >
-                <div className="py-8 px-2">
-                  {(() => {
-                    const data = dashboard.lineTrend?.data || [85, 78, 92, 88, 95, 91, 87, 93, 89, 96, 94, 98];
-                    const labels = dashboard.lineTrend?.labels || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                    const color = dashboard.lineTrend?.color || 'var(--color-compliant)';
-                    const max = Math.max(...data);
-                    const min = Math.min(...data);
-                    const range = max - min || 1;
-                    const w = 400;
-                    const h = 260;
-                    const points = data.map((v, i) => `${i * (w / (data.length - 1))},${h - ((v - min) / range) * (h - 20) - 10}`).join(' ');
-                    return (
-                      <>
-                        <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-                          <defs>
-                            <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor={color} stopOpacity="0.12" />
-                              <stop offset="100%" stopColor={color} stopOpacity="0.01" />
-                            </linearGradient>
-                          </defs>
-                          <polyline points={`0,${h} ${points} ${w},${h}`} fill="url(#lineGrad)" />
-                          <polyline points={points} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                          {data.map((v, i) => (
-                            <circle key={i} cx={i * (w / (data.length - 1))} cy={h - ((v - min) / range) * (h - 20) - 10} r="3.5" fill={color} stroke="white" strokeWidth="2" />
-                          ))}
-                        </svg>
-                        <div className="flex justify-between text-[11px] text-ink-500 mt-2 px-1">
-                          {labels.map(l => <span key={l}>{l}</span>)}
-                        </div>
-                      </>
-                    );
-                  })()}
+                <div className="w-full h-full">
+                  <ConfigurableChart type={"combo" as any} xAxis="Month" yAxis="Duplicate Count" />
+                </div>
+              </WidgetCard>
+
+              {/* Widget 2 — Area Chart */}
+              <WidgetCard
+                title={'Invoice Volume Trend'}
+                subtitle="Volume over time"
+                addToast={addToast}
+                onExpand={() => setExpandedWidget({ title: 'Invoice Volume Trend', subtitle: 'Volume over time' })}
+                onEdit={() => handleEditDefaultWidget('Invoice Volume Trend', 'area', 'Volume over time')}
+                onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
+                onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                pageFilterFields={pageFilterFields}
+                widgetFields={['date', 'month', 'vendor', 'region']}
+                dataLinks={dataLinks}
+                onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
+                onClearPageFilters={() => setPageFilterFields([])}
+                loading={widgetLoadingStates['w2'] === 'loading'}
+                isFirstLoad={!hasLoadedOnce}
+                chartType="line"
+              >
+                <div className="w-full h-full">
+                  <ConfigurableChart type="area" xAxis="Month" yAxis="Duplicate Count" />
+                </div>
+              </WidgetCard>
+
+              {/* Widget 3 — Bar Chart */}
+              <WidgetCard
+                title={dashboard.bars?.title || 'Monthly Invoice Volume'}
+                subtitle="Trend analysis"
+                addToast={addToast}
+                onExpand={() => setExpandedWidget({ title: dashboard.bars?.title || 'Monthly Invoice Volume', subtitle: 'Trend analysis' })}
+                onEdit={() => handleEditDefaultWidget(dashboard.bars?.title || 'Monthly Invoice Volume', 'clustered-column', 'Trend analysis')}
+                onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
+                onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                pageFilterFields={pageFilterFields}
+                widgetFields={['date', 'month', 'vendor', 'region']}
+                dataLinks={dataLinks}
+                onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
+                onClearPageFilters={() => setPageFilterFields([])}
+                loading={widgetLoadingStates['w3'] === 'loading'}
+                isFirstLoad={!hasLoadedOnce}
+                chartType="bar"
+              >
+                <div className="w-full h-full">
+                  <ConfigurableChart type="bar" xAxis="Month" yAxis="Duplicate Count" showTarget={false} />
+                </div>
+              </WidgetCard>
+
+              {/* Widget 4 — Pie Chart */}
+              <WidgetCard
+                title={dashboard.donut?.title || 'Invoice Status'}
+                subtitle="Distribution breakdown"
+                addToast={addToast}
+                onExpand={() => setExpandedWidget({ title: dashboard.donut?.title || 'Invoice Status', subtitle: 'Distribution breakdown' })}
+                onEdit={() => handleEditDefaultWidget(dashboard.donut?.title || 'Invoice Status', 'pie', 'Distribution breakdown')}
+                onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
+                onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
+                pageFilterFields={pageFilterFields}
+                widgetFields={['region', 'category', 'department', 'status']}
+                dataLinks={dataLinks}
+                onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
+                onClearPageFilters={() => setPageFilterFields([])}
+                loading={widgetLoadingStates['w4'] === 'loading'}
+                isFirstLoad={!hasLoadedOnce}
+                chartType="pie"
+              >
+                <div className="w-full h-full">
+                  <ConfigurableChart type="pie" xAxis="Status" yAxis="Duplicate Count" />
                 </div>
               </WidgetCard>
             </motion.div>
@@ -5620,6 +5701,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.35 }}
+              className="mb-5"
             >
               <WidgetCard
                 title={dashboard.table.title}
@@ -5634,13 +5716,17 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                 dataLinks={dataLinks}
                 onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
                 onClearPageFilters={() => setPageFilterFields([])}
+                loading={widgetLoadingStates['table'] === 'loading'}
+                isFirstLoad={!hasLoadedOnce}
+                chartType="table"
+                hideDrill
               >
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left">
+                  <table className="w-full text-left" style={{ minWidth: 900 }}>
                     <thead>
-                      <tr className="border-b border-canvas-border">
+                      <tr className="border-b border-canvas-border bg-surface-2/50">
                         {dashboard.table.headers.map(h => (
-                          <th key={h} className="text-[12px] text-ink-500 font-medium pb-2 pr-4">{h}</th>
+                          <th key={h} className="text-[11px] font-bold text-ink-500 uppercase tracking-wider px-4 py-3">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -5651,19 +5737,63 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                           initial={{ opacity: 0, y: 4 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.3 + i * 0.04 }}
-                          className="border-b border-canvas-border/50 last:border-0 hover:bg-brand-50/50 transition-colors cursor-pointer"
+                          className="border-b border-canvas-border/50 last:border-0 hover:bg-brand-50/30 transition-colors cursor-pointer"
                         >
-                          {row.cells.map((cell, j) => (
-                            <td key={j} className={`text-[12.5px] py-2.5 pr-4 ${j === 0 ? 'font-medium text-ink-900' : 'text-ink-600'}`}>
-                              {cell}
-                            </td>
-                          ))}
+                          <td className="px-4 py-3 text-[12px] font-semibold text-brand-700">{row.cells[0]}</td>
+                          <td className="px-4 py-3 text-[12px] text-ink-800">{row.cells[1]}</td>
+                          <td className="px-4 py-3 text-[12px] font-medium text-ink-900">{row.cells[2]}</td>
+                          <td className="px-4 py-3 text-[12px] text-ink-600">{row.cells[3]}</td>
+                          <td className="px-4 py-3">
+                            <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${STATUS_COLORS[row.cells[4]] || 'bg-gray-50 text-gray-600'}`}>
+                              {row.cells[4]}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-[12px] text-ink-600">{row.cells[5]}</td>
+                          <td className="px-4 py-3">
+                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${RISK_COLORS[row.cells[6]] || ''}`}>
+                              {row.cells[6]}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-[12px] text-ink-500 font-mono">{row.cells[7]}</td>
                         </motion.tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+                {/* Pagination */}
+                <div className="flex items-center justify-between px-4 py-3 border-t border-canvas-border" onClick={e => e.stopPropagation()}>
+                  <span className="text-[12px] text-ink-400">Showing 1–{dashboard.table.rows.length} of {dashboard.table.rows.length}</span>
+                  <div className="flex items-center gap-1">
+                    <button className="size-7 flex items-center justify-center rounded text-ink-400 hover:bg-surface-2 transition-colors cursor-pointer">
+                      <ChevronDown size={14} className="rotate-90" />
+                    </button>
+                    <button className="size-7 flex items-center justify-center rounded-md bg-brand-600 text-white text-[12px] font-semibold">1</button>
+                    <button className="size-7 flex items-center justify-center rounded-md text-ink-600 text-[12px] font-medium hover:bg-surface-2 transition-colors cursor-pointer">2</button>
+                    <button className="size-7 flex items-center justify-center rounded text-ink-400 hover:bg-surface-2 transition-colors cursor-pointer">
+                      <ChevronDown size={14} className="-rotate-90" />
+                    </button>
+                  </div>
+                </div>
               </WidgetCard>
+            </motion.div>
+
+            {/* Empty Chart Widget — placeholder */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              <div
+                className="glass-card rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-brand-300 hover:shadow-md transition-all group"
+                style={{ minHeight: 280 }}
+                onClick={() => setAddWidgetOpen(true)}
+              >
+                <div className="mx-auto mb-4 size-20 rounded-2xl bg-brand-50 flex items-center justify-center group-hover:bg-brand-100 transition-colors">
+                  <Plus size={32} className="text-brand-400 group-hover:text-brand-600 transition-colors" />
+                </div>
+                <p className="text-[15px] font-semibold text-ink-700 mb-1">Add a New Widget</p>
+                <p className="text-[13px] text-ink-400 max-w-[260px] text-center leading-relaxed">Click here or use the + Add Widget button to create a new chart, KPI, or table.</p>
+              </div>
             </motion.div>
             </>
             )}
@@ -5678,11 +5808,10 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
         if (isCustomDashboard) {
           userWidgets.forEach(w => allWidgetTitles.push({ title: w.title, subtitle: w.yField && w.xField ? `${w.yField} by ${w.xField}` : 'Custom widget' }));
         } else {
-          if (dashboard.donut) allWidgetTitles.push({ title: dashboard.donut.title, subtitle: 'Distribution breakdown' });
-          if (dashboard.bars) allWidgetTitles.push({ title: dashboard.bars.title, subtitle: 'Trend analysis' });
-          if (dashboard.progress) allWidgetTitles.push({ title: dashboard.progress.title, subtitle: 'Completion rates' });
-          else allWidgetTitles.push({ title: 'Detection Accuracy', subtitle: 'ML model performance vs targets' });
-          allWidgetTitles.push({ title: dashboard.lineTrend?.title || 'Processing Analytics', subtitle: 'Performance over time' });
+          allWidgetTitles.push({ title: dashboard.lineTrend?.title || 'Detection Accuracy Goals', subtitle: 'Performance over time' });
+          allWidgetTitles.push({ title: 'Invoice Volume Trend', subtitle: 'Volume over time' });
+          allWidgetTitles.push({ title: dashboard.bars?.title || 'Monthly Invoice Volume', subtitle: 'Trend analysis' });
+          allWidgetTitles.push({ title: dashboard.donut?.title || 'Invoice Status', subtitle: 'Distribution breakdown' });
           allWidgetTitles.push({ title: dashboard.table.title, subtitle: 'Detailed records' });
         }
         const currentIdx = expandedWidget ? allWidgetTitles.findIndex(w => w.title === expandedWidget.title) : -1;
@@ -5692,6 +5821,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
         onClose={() => setExpandedWidget(null)}
         title={expandedWidget?.title ?? ''}
         subtitle={expandedWidget?.subtitle}
+        isTable={expandedWidget?.title === dashboard.table.title}
         hasPrev={currentIdx > 0}
         hasNext={currentIdx < allWidgetTitles.length - 1 && currentIdx >= 0}
         onPrev={() => { if (currentIdx > 0) setExpandedWidget(allWidgetTitles[currentIdx - 1]); }}
@@ -5734,122 +5864,63 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
           addToast({ message: 'Widget deleted', type: 'info' });
         }}
       >
-        {/* Visualization tab content — show the same chart type enlarged */}
-        {expandedWidget && dashboard.bars && expandedWidget.title === dashboard.bars.title && (
-          <div className="flex items-end gap-3 h-64">
-            {dashboard.bars.data.map((d, i) => {
-              const max = Math.max(...dashboard.bars!.data.map(dd => dd.value));
-              const height = (d.value / max) * 100;
-              return (
-                <div key={d.label} className="flex-1 flex flex-col items-center gap-1.5">
-                  <span className="text-[13px] text-ink-500 font-medium">
-                    {d.value >= 1000 ? `${(d.value / 1000).toFixed(1)}K` : d.value}
-                  </span>
-                  <motion.div
-                    className="w-full rounded-t-md min-h-[4px]"
-                    style={{ background: dashboard.bars!.color }}
-                    initial={{ height: 0 }}
-                    animate={{ height: `${height}%` }}
-                    transition={{ duration: 0.5, delay: i * 0.06, ease: 'easeOut' }}
-                  />
-                  <span className="text-[13px] text-ink-500">{d.label}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        {expandedWidget && dashboard.donut && expandedWidget.title === dashboard.donut.title && (
-          <div className="flex items-center justify-center gap-10 py-6">
-            <svg width="200" height="200" viewBox="0 0 100 100">
-              {(() => {
-                const segs = dashboard.donut!.segments;
-                const total = segs.reduce((a, s) => a + s.value, 0);
-                let offset = 0;
-                return segs.map(s => {
-                  const pct = (s.value / total) * 100;
-                  const dashArray = `${pct * 2.51327} ${251.327 - pct * 2.51327}`;
-                  const dashOffset = -offset * 2.51327;
-                  offset += pct;
-                  return (
-                    <motion.circle
-                      key={s.label} cx="50" cy="50" r="40" fill="none"
-                      stroke={s.color} strokeWidth="10"
-                      strokeDasharray={dashArray} strokeDashoffset={dashOffset}
-                      strokeLinecap="round" transform="rotate(-90 50 50)"
-                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}
-                    />
-                  );
-                });
-              })()}
-              {dashboard.donut!.centerLabel && (
-                <>
-                  <text x="50" y="48" textAnchor="middle" className="fill-ink-900 font-bold" fontSize="16">{dashboard.donut!.centerLabel}</text>
-                  <text x="50" y="62" textAnchor="middle" className="fill-ink-500" fontSize="9">Total</text>
-                </>
-              )}
-            </svg>
-            <div className="space-y-3">
-              {dashboard.donut!.segments.map(s => (
-                <div key={s.label} className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full shrink-0" style={{ background: s.color }} />
-                  <span className="text-[13px] text-ink-600">{s.label}</span>
-                  <span className="text-[13px] font-semibold text-ink-900 ml-auto">{s.value}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {expandedWidget && dashboard.progress && expandedWidget.title === dashboard.progress.title && (
-          <div className="space-y-4 py-4">
-            {dashboard.progress.data.map((d, i) => (
-              <div key={d.label}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[13px] text-ink-600">{d.label}</span>
-                  <span className="text-[13px] font-semibold text-ink-900">{d.value}%</span>
-                </div>
-                <div className="h-3 bg-surface-3 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${d.value}%` }}
-                    transition={{ duration: 0.6, delay: i * 0.08 }}
-                    className="h-full rounded-full"
-                    style={{ background: d.color }}
-                  />
-                </div>
+        {/* Visualization tab content — render the matching ConfigurableChart */}
+        {expandedWidget && (() => {
+          const t = expandedWidget.title.toLowerCase();
+          // Match by title keywords to be resilient to title changes
+          let chartConfig: { type: string; xAxis: string; yAxis: string } | null = null;
+          if (t.includes('accuracy') || t.includes('detection') || t.includes('goals')) {
+            chartConfig = { type: 'combo', xAxis: 'Month', yAxis: 'Duplicate Count' };
+          } else if (t.includes('volume') && t.includes('trend')) {
+            chartConfig = { type: 'area', xAxis: 'Month', yAxis: 'Duplicate Count' };
+          } else if (t.includes('volume') || t.includes('monthly')) {
+            chartConfig = { type: 'bar', xAxis: 'Month', yAxis: 'Duplicate Count' } as any;
+            (chartConfig as any).singleSeries = true;
+          } else if (t.includes('status') || t.includes('distribution') || t.includes('pie')) {
+            chartConfig = { type: 'pie', xAxis: 'Status', yAxis: 'Duplicate Count' };
+          }
+          const match = chartConfig as any;
+          if (match) {
+            return (
+              <div className="w-full h-full">
+                <ConfigurableChart type={match.type as any} xAxis={match.xAxis} yAxis={match.yAxis} showTarget={match.singleSeries ? false : undefined} />
               </div>
-            ))}
-          </div>
-        )}
-        {expandedWidget && expandedWidget.title === dashboard.table.title && (
-          <div className="overflow-x-auto py-2">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-canvas-border">
-                  {dashboard.table.headers.map(h => (
-                    <th key={h} className="text-[13px] text-ink-500 font-medium pb-3 pr-4">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {dashboard.table.rows.map((row, i) => (
-                  <motion.tr
-                    key={i}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.03 }}
-                    className="border-b border-canvas-border/50 last:border-0 hover:bg-brand-50/50 transition-colors cursor-pointer"
-                  >
-                    {row.cells.map((cell, j) => (
-                      <td key={j} className={`text-[13px] py-3 pr-4 ${j === 0 ? 'font-medium text-ink-900' : 'text-ink-600'}`}>
-                        {cell}
-                      </td>
+            );
+          }
+          if (t === dashboard.table.title) {
+            return (
+              <div className="overflow-x-auto py-2">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-canvas-border">
+                      {dashboard.table.headers.map(h => (
+                        <th key={h} className="text-[13px] text-ink-500 font-medium pb-3 pr-4">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dashboard.table.rows.map((row, i) => (
+                      <motion.tr
+                        key={i}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.03 }}
+                        className="border-b border-canvas-border/50 last:border-0 hover:bg-brand-50/50 transition-colors cursor-pointer"
+                      >
+                        {row.cells.map((cell, j) => (
+                          <td key={j} className={`text-[13px] py-3 pr-4 ${j === 0 ? 'font-medium text-ink-900' : 'text-ink-600'}`}>
+                            {cell}
+                          </td>
+                        ))}
+                      </motion.tr>
                     ))}
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  </tbody>
+                </table>
+              </div>
+            );
+          }
+          return null;
+        })()}
       </ExpandedWidgetModal>
         );
       })()}

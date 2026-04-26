@@ -32,6 +32,7 @@ import {
   LineChart,
   Line,
   LabelList,
+  ComposedChart,
 } from "recharts";
 import {
   useDrillSafe,
@@ -782,7 +783,7 @@ export function ConfigurableChart({
               : type === "KPI"
                 ? "kpi"
                 : type
-  ) as "kpi" | "line" | "area" | "bar" | "pie" | "table";
+  ) as "kpi" | "line" | "area" | "bar" | "pie" | "table" | "combo";
 
   /* ── Drill context ──────────────────────────────────────────────────── */
   const drillCtx = useDrillSafe();
@@ -924,7 +925,7 @@ export function ConfigurableChart({
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={rawData}
-          margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+          margin={{ top: 12, right: 12, left: 12, bottom: 28 }}
           onClick={(payload: any) => {
             if (
               isClickableDrill &&
@@ -1102,91 +1103,26 @@ export function ConfigurableChart({
     ];
 
     return (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          overflowX: "auto",
-          overflowY: "auto",
-        }}
-      >
+      <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={rawData}
-          width={700}
-          height={300}
-          margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+          margin={{ top: 12, right: 12, left: 12, bottom: 28 }}
           onClick={(payload: any) => {
-            if (
-              isClickableDrill &&
-              payload?.activeLabel
-            ) {
+            if (isClickableDrill && payload?.activeLabel) {
               drillIntoItem(payload.activeLabel);
             }
           }}
-          style={{
-            cursor: isClickableDrill ? "crosshair" : "default",
-          }}
+          style={{ cursor: isClickableDrill ? "crosshair" : "default" }}
         >
           <defs>
-            <linearGradient
-              id={`lgArea-${BASE_COLOR.replace("#", "")}`}
-              x1="0"
-              y1="0"
-              x2="0"
-              y2="1"
-            >
-              <stop
-                offset="5%"
-                stopColor={BASE_COLOR}
-                stopOpacity={0.25}
-              />
-              <stop
-                offset="95%"
-                stopColor={BASE_COLOR}
-                stopOpacity={0.02}
-              />
+            <linearGradient id={`lgArea-${BASE_COLOR.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={BASE_COLOR} stopOpacity={0.25} />
+              <stop offset="95%" stopColor={BASE_COLOR} stopOpacity={0.02} />
             </linearGradient>
           </defs>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="#f0f0f0"
-            vertical={false}
-          />
-          <XAxis
-            dataKey="label"
-            tick={{
-              fontSize: 12,
-              fill: "#6b7280",
-              fontFamily: "Inter, sans-serif",
-            }}
-            axisLine={false}
-            tickLine={false}
-            tickMargin={6}
-          />
-          <YAxis
-            domain={[minVal, maxVal]}
-            tickFormatter={yFmt}
-            tick={{
-              fontSize: 12,
-              fill: "#6b7280",
-              fontFamily: "Inter",
-            }}
-            axisLine={false}
-            tickLine={false}
-            width={80}
-            tickMargin={4}
-            label={{
-              value: yAxis,
-              angle: -90,
-              position: "insideLeft",
-              offset: 16,
-              style: {
-                fontSize: 12,
-                fill: "#9ca3af",
-                fontFamily: "Inter, sans-serif",
-              },
-            }}
-          />
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
+          <YAxis domain={[minVal, maxVal]} tickFormatter={yFmt} tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} width={50} tickMargin={4} label={{ value: yAxis, angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
           <Tooltip content={<TrendTooltip yAxis={yAxis} />} />
           <Area
             type="monotone"
@@ -1243,18 +1179,28 @@ export function ConfigurableChart({
               )}
             </Line>
           )}
-          <Legend
-            iconType="circle"
-            iconSize={8}
-            wrapperStyle={{
-              fontSize: 12,
-              paddingTop: 8,
-              fontFamily: "Inter, sans-serif",
-            }}
-            payload={legendPayload}
-          />
+          <Legend iconType="circle" iconSize={8} verticalAlign="top" align="right" wrapperStyle={{ fontSize: 12, fontFamily: "Inter, sans-serif", paddingBottom: 8 }} payload={legendPayload} />
         </AreaChart>
-      </div>
+      </ResponsiveContainer>
+    );
+  }
+
+  /* ── Combo: Bar + Line chart ─────────────────────────────────────────── */
+  if (t === "combo") {
+    const data = barData ?? BAR_DATA[xAxis] ?? BAR_DATA["Month"];
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={data} margin={{ top: 12, right: 12, left: 12, bottom: 28 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
+          <YAxis tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} width={50} tickMargin={4} label={{ value: "Count", angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
+          <Tooltip content={<BarTooltip />} cursor={false} />
+          <Legend iconType="circle" verticalAlign="top" align="right" wrapperStyle={{ fontSize: 12, fontFamily: "Inter, sans-serif", paddingBottom: 8 }} />
+          <Bar dataKey="duplicates" name="Total Duplicates" fill={seriesColors?.["Total Duplicates"] || BASE_COLOR} radius={[4, 4, 0, 0]} />
+          <Bar dataKey="resolved" name="Resolved" fill={seriesColors?.["Resolved"] || BASE_LIGHT1} radius={[4, 4, 0, 0]} />
+          <Line type="monotone" dataKey="pending" name="Pending" stroke={seriesColors?.["Pending"] || AMBER} strokeWidth={2.5} dot={{ fill: seriesColors?.["Pending"] || AMBER, r: 4, strokeWidth: 0 }} activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2 }} />
+        </ComposedChart>
+      </ResponsiveContainer>
     );
   }
 
@@ -1266,7 +1212,7 @@ export function ConfigurableChart({
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
-          margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+          margin={{ top: 12, right: 12, left: 12, bottom: 28 }}
           barCategoryGap={barSpacing ? `${barSpacing}%` : undefined}
           onClick={(payload) => {
             if (
@@ -1284,53 +1230,10 @@ export function ConfigurableChart({
                 : "default",
           }}
         >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="#e5e7eb"
-            vertical={false}
-          />
-          <XAxis
-            dataKey="label"
-            tick={{
-              fontSize: 12,
-              fill: "#6b7280",
-              fontFamily: "Inter, sans-serif",
-            }}
-            axisLine={false}
-            tickLine={false}
-            tickMargin={6}
-          />
-          <YAxis
-            tick={{
-              fontSize: 12,
-              fill: "#6b7280",
-              fontFamily: "Inter, sans-serif",
-            }}
-            axisLine={false}
-            tickLine={false}
-            width={60}
-            tickMargin={4}
-            label={{
-              value: "Count",
-              angle: -90,
-              position: "insideLeft",
-              offset: 16,
-              style: {
-                fontSize: 12,
-                fill: "#9ca3af",
-                fontFamily: "Inter, sans-serif",
-              },
-            }}
-          />
-          <Tooltip content={<BarTooltip />} />
-          <Legend
-            iconType="circle"
-            wrapperStyle={{
-              fontSize: 12,
-              paddingTop: 8,
-              fontFamily: "Inter, sans-serif",
-            }}
-          />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
+          <YAxis tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} width={50} tickMargin={4} label={{ value: "Count", angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
+          <Tooltip content={<BarTooltip />} cursor={false} />
           <Bar
             dataKey="duplicates"
             name="Total Duplicates"
@@ -1350,44 +1253,48 @@ export function ConfigurableChart({
               />
             )}
           </Bar>
-          <Bar
-            dataKey="resolved"
-            name="Resolved"
-            fill={seriesColors?.["Resolved"] || BASE_LIGHT1}
-            radius={[4, 4, 0, 0]}
-          >
-            {showLabels && (
-              <LabelList
-                dataKey="resolved"
-                position="top"
-                style={{
-                  fontSize: 12,
-                  fill: BASE_LIGHT1,
-                  fontWeight: 600,
-                  fontFamily: "Inter, sans-serif",
-                }}
-              />
-            )}
-          </Bar>
-          <Bar
-            dataKey="pending"
-            name="Pending"
-            fill={seriesColors?.["Pending"] || BASE_LIGHT2}
-            radius={[4, 4, 0, 0]}
-          >
-            {showLabels && (
-              <LabelList
-                dataKey="pending"
-                position="top"
-                style={{
-                  fontSize: 12,
-                  fill: BASE_LIGHT2,
-                  fontWeight: 600,
-                  fontFamily: "Inter",
-                }}
-              />
-            )}
-          </Bar>
+          {showTarget && (
+            <Bar
+              dataKey="resolved"
+              name="Resolved"
+              fill={seriesColors?.["Resolved"] || BASE_LIGHT1}
+              radius={[4, 4, 0, 0]}
+            >
+              {showLabels && (
+                <LabelList
+                  dataKey="resolved"
+                  position="top"
+                  style={{
+                    fontSize: 12,
+                    fill: BASE_LIGHT1,
+                    fontWeight: 600,
+                    fontFamily: "Inter, sans-serif",
+                  }}
+                />
+              )}
+            </Bar>
+          )}
+          {showTarget && (
+            <Bar
+              dataKey="pending"
+              name="Pending"
+              fill={seriesColors?.["Pending"] || BASE_LIGHT2}
+              radius={[4, 4, 0, 0]}
+            >
+              {showLabels && (
+                <LabelList
+                  dataKey="pending"
+                  position="top"
+                  style={{
+                    fontSize: 12,
+                    fill: BASE_LIGHT2,
+                    fontWeight: 600,
+                    fontFamily: "Inter",
+                  }}
+                />
+              )}
+            </Bar>
+          )}
         </BarChart>
       </ResponsiveContainer>
     );
@@ -1469,7 +1376,7 @@ export function ConfigurableChart({
 
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
+        <PieChart margin={{ top: 12, right: 12, left: 12, bottom: 28 }}>
           {(() => {
             const total = rawPie.reduce((a: number, d: any) => a + d.value, 0);
             let cumAngle = 0;
@@ -1553,5 +1460,19 @@ export function ConfigurableChart({
     );
   }
 
-  return null;
+  // Empty state — unknown chart type or no data
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <div className="text-center max-w-[240px]">
+        <div className="mx-auto mb-3 size-16 rounded-2xl bg-gray-50 flex items-center justify-center">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M3 15l4-4 4 4 4-6 6 6" />
+          </svg>
+        </div>
+        <p className="text-[13px] font-medium text-gray-500 mb-1">No Data to Display</p>
+        <p className="text-[11px] text-gray-400 leading-relaxed">Configure data fields to generate this chart.</p>
+      </div>
+    </div>
+  );
 }
