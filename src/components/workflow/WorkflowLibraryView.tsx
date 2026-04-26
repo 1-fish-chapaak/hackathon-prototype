@@ -623,7 +623,11 @@ export default function WorkflowLibraryView({ onCreateWorkflow, onSelectWorkflow
                           <div className="flex items-start gap-2 min-w-0">
                             <span
                               className="group inline cursor-pointer text-[13px] text-text font-medium hover:text-[#6a12cd] hover:underline line-clamp-2 min-w-0"
-                              onClick={() => onSelectWorkflow(wf.id)}
+                              onClick={e => {
+                                e.stopPropagation();
+                                if (bulkMode) toggleSelect(wf.id);
+                                else onSelectWorkflow(wf.id);
+                              }}
                             >
                               {wf.name}
                               <ExternalLink
@@ -1069,7 +1073,9 @@ function BulkExecuteModal({
   const isMultipleBps = uniqueBps.length > 1;
   const hasAuditName = auditName.trim().length > 0;
   const hasWorkflows = activeWorkflows.length > 0;
-  const canContinue = hasWorkflows && hasAuditName && isSingleBp;
+  const needsMonthlyDate = triggerOn === 'Schedule' && frequency === 'Monthly';
+  const monthlyDateOk = !needsMonthlyDate || monthlyDate.trim().length > 0;
+  const canContinue = hasWorkflows && hasAuditName && isSingleBp && monthlyDateOk;
 
   const toggleWorkflow = (id: string) => {
     setModalDeselected(prev => {
