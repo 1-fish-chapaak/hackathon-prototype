@@ -6,7 +6,7 @@ import {
   ChevronRight, ChevronDown, Sparkles, FileSpreadsheet, X, Check,
   ArrowLeft, Shield, Workflow, CheckCircle2,
   ArrowRight, TrendingUp, RefreshCw, GitBranch, Network,
-  Zap, Eye
+  Zap, Eye, Calendar
 } from 'lucide-react';
 import { BUSINESS_PROCESSES, SOPS, RACMS, RISKS, CONTROLS, WORKFLOWS, SOP_FLOWS, SOP_AI_RECOMMENDATIONS } from '../../data/mockData';
 import { StatusBadge, SeverityBadge, FrameworkBadge, TypeBadge, Avatar } from '../shared/StatusBadge';
@@ -473,13 +473,15 @@ function RACMWorkflowPanel({ bpId }: { bpId: string }) {
 function BPDetailView({ bp, onBack }: {
   bp: typeof BUSINESS_PROCESSES[0]; onBack: () => void;
 }) {
-  const [tab, setTab] = useState<'sop' | 'racm' | 'workflows' | 'risks'>('sop');
+  type BPTab = 'sop' | 'racm' | 'workflows' | 'risks' | 'engagements';
+  const [tab, setTab] = useState<BPTab>('sop');
   const [linkModal, setLinkModal] = useState<typeof RISKS[0] | null>(null);
   const [uploadModal, setUploadModal] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedWorkflows, setSelectedWorkflows] = useState<Set<string>>(new Set());
   const [sopVisuals, setSopVisuals] = useState<Record<string, 'flow' | 'map' | null>>({});
   const [racmFilterTag, setRacmFilterTag] = useState<string>('all');
+  const [showCreateEngagement, setShowCreateEngagement] = useState(false);
   const { addToast } = useToast();
 
   const toggleSopVisual = (sopId: string, type: 'flow' | 'map') => {
@@ -512,11 +514,57 @@ function BPDetailView({ bp, onBack }: {
   const bpWfs = WORKFLOWS.filter(w => w.bpId === bp.id);
   const bpRisks = RISKS.filter(r => r.bpId === bp.id);
 
-  const tabs = [
-    { id: 'sop' as const, label: 'SOP', count: bpSops.length },
-    { id: 'racm' as const, label: 'RACM', count: bpRacms.length },
-    { id: 'workflows' as const, label: 'Workflows', count: bpWfs.length },
-    { id: 'risks' as const, label: 'Risks', count: bpRisks.length },
+  // Engagement data for this process
+  type EngStatus = 'draft' | 'planned' | 'active' | 'in-progress' | 'pending-review' | 'closed';
+  interface BPEngagement {
+    id: string; name: string; auditType: string; framework: string;
+    racmVersion: string; auditPeriod: string; owner: string;
+    status: EngStatus; controls: number; controlsTested: number;
+    controlsFailed: number; isOverdue: boolean; color: string;
+  }
+
+  const ALL_BP_ENGAGEMENTS: BPEngagement[] = [
+    { id: 'ap-1', name: 'P2P — SOX Audit', auditType: 'SOX', framework: 'COSO', racmVersion: 'RACM v2.1', auditPeriod: 'Apr 2025 — Mar 2026', owner: 'Tushar Goel', status: 'active', controls: 24, controlsTested: 18, controlsFailed: 2, isOverdue: false, color: '#6a12cd' },
+    { id: 'ap-2', name: 'O2C — SOX Audit', auditType: 'SOX', framework: 'COSO', racmVersion: 'RACM v2.1', auditPeriod: 'Apr 2025 — Mar 2026', owner: 'Neha Joshi', status: 'active', controls: 18, controlsTested: 8, controlsFailed: 0, isOverdue: false, color: '#0284c7' },
+    { id: 'ap-3', name: 'R2R — SOX Audit', auditType: 'SOX', framework: 'COSO', racmVersion: 'RACM v2.1', auditPeriod: 'Apr 2025 — Mar 2026', owner: 'Karan Mehta', status: 'in-progress', controls: 31, controlsTested: 26, controlsFailed: 3, isOverdue: true, color: '#d97706' },
+    { id: 'ap-4', name: 'S2C — Contract Review', auditType: 'Internal', framework: 'Custom', racmVersion: 'RACM v1.8', auditPeriod: 'Apr 2025 — Mar 2026', owner: 'Rohan Patel', status: 'planned', controls: 14, controlsTested: 0, controlsFailed: 0, isOverdue: false, color: '#059669' },
+    { id: 'ap-5', name: 'P2P — IFC Assessment', auditType: 'IFC', framework: 'COBIT', racmVersion: 'RACM v2.0', auditPeriod: 'Apr 2025 — Mar 2026', owner: 'Sneha Desai', status: 'planned', controls: 18, controlsTested: 0, controlsFailed: 0, isOverdue: false, color: '#6a12cd' },
+    { id: 'ap-6', name: 'IT General Controls', auditType: 'ITGC', framework: 'ISO 27001', racmVersion: 'RACM v2.1', auditPeriod: 'Apr 2025 — Mar 2026', owner: 'Deepak Bansal', status: 'active', controls: 15, controlsTested: 9, controlsFailed: 0, isOverdue: false, color: '#7c3aed' },
+    { id: 'ap-7', name: 'Vendor Risk Assessment', auditType: 'Risk', framework: 'NIST', racmVersion: 'RACM v1.9', auditPeriod: 'Apr 2025 — Mar 2026', owner: 'Priya Singh', status: 'draft', controls: 8, controlsTested: 0, controlsFailed: 0, isOverdue: false, color: '#dc2626' },
+    { id: 'ap-8', name: 'Year-End Close Review', auditType: 'SOX', framework: 'COSO', racmVersion: 'RACM v2.1', auditPeriod: 'Apr 2025 — Mar 2026', owner: 'Karan Mehta', status: 'planned', controls: 12, controlsTested: 0, controlsFailed: 0, isOverdue: false, color: '#d97706' },
+  ];
+
+  // Map process id to abbreviation for filtering
+  const BP_ABBR_MAP: Record<string, string> = { p2p: 'P2P', o2c: 'O2C', r2r: 'R2R', s2c: 'S2C' };
+  const bpAbbr = BP_ABBR_MAP[bp.id] || bp.abbr;
+
+  // Engagements where this process is the primary process
+  const ENG_PROCESS_MAP: Record<string, string> = {
+    'ap-1': 'P2P', 'ap-2': 'O2C', 'ap-3': 'R2R', 'ap-4': 'S2C',
+    'ap-5': 'P2P', 'ap-6': 'Cross', 'ap-7': 'P2P', 'ap-8': 'R2R',
+  };
+  const bpEngagements = ALL_BP_ENGAGEMENTS.filter(e => ENG_PROCESS_MAP[e.id] === bpAbbr);
+
+  function engStatusLabel(s: EngStatus): string {
+    return ({ draft: 'Draft', planned: 'Planned', active: 'Active', 'in-progress': 'In Progress', 'pending-review': 'Pending Review', closed: 'Closed' })[s];
+  }
+  function engStatusCls(s: EngStatus): string {
+    return ({
+      draft: 'bg-draft-50 text-draft-700', planned: 'bg-evidence-50 text-evidence-700',
+      active: 'bg-compliant-50 text-compliant-700', 'in-progress': 'bg-evidence-50 text-evidence-700',
+      'pending-review': 'bg-high-50 text-high-700', closed: 'bg-draft-50 text-draft-700',
+    })[s];
+  }
+  function isEngActive(s: EngStatus): boolean {
+    return ['active', 'in-progress', 'pending-review', 'closed'].includes(s);
+  }
+
+  const tabs: { id: BPTab; label: string; count: number }[] = [
+    { id: 'sop', label: 'SOP', count: bpSops.length },
+    { id: 'racm', label: 'RACM', count: bpRacms.length },
+    { id: 'workflows', label: 'Workflows', count: bpWfs.length },
+    { id: 'risks', label: 'Risks', count: bpRisks.length },
+    { id: 'engagements', label: 'Engagements', count: bpEngagements.length },
   ];
 
   return (
@@ -579,7 +627,7 @@ function BPDetailView({ bp, onBack }: {
               { l: 'RACMs', v: bpRacms.length, tab: 'racm' as const },
               { l: 'Risks', v: bp.risks, tab: 'risks' as const },
               { l: 'Controls', v: bp.controls, tab: 'racm' as const },
-              { l: 'Engagements', v: bpWfs.length, tab: 'workflows' as const },
+              { l: 'Engagements', v: bpEngagements.length, tab: 'engagements' as const },
             ].map((s, i) => (
               <motion.div
                 key={s.l}
@@ -1051,6 +1099,293 @@ function BPDetailView({ bp, onBack }: {
             )}
           </div>
         )}
+
+        {/* Engagements Tab */}
+        {tab === 'engagements' && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[13px] text-text-secondary">
+                Related engagements for <span className="font-semibold text-text">{bp.name}</span>
+              </p>
+              <button
+                onClick={() => setShowCreateEngagement(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
+              >
+                <Plus size={13} />
+                Create Engagement
+              </button>
+            </div>
+            <p className="text-[11px] text-text-muted mb-4">Shows engagements where this process is the primary planning context.</p>
+
+            {bpEngagements.length === 0 ? (
+              <div className="bg-white rounded-xl border border-border-light p-10 text-center">
+                <Calendar size={28} className="text-text-muted mx-auto mb-2" />
+                <p className="text-[14px] font-semibold text-text mb-1">No engagements yet</p>
+                <p className="text-[12px] text-text-muted mb-4">Create an engagement to start testing controls for {bp.name}.</p>
+                <button
+                  onClick={() => setShowCreateEngagement(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
+                >
+                  <Plus size={13} />
+                  Create Engagement for {bp.abbr}
+                </button>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-border-light overflow-hidden">
+                <table className="w-full text-[12.5px]">
+                  <thead>
+                    <tr className="bg-surface-2 border-b border-border-light">
+                      <th className="text-left px-4 py-3 font-semibold text-text-secondary">Engagement</th>
+                      <th className="text-left px-3 py-3 font-semibold text-text-secondary">Type / Framework</th>
+                      <th className="text-left px-3 py-3 font-semibold text-text-secondary">Linked RACM</th>
+                      <th className="text-left px-3 py-3 font-semibold text-text-secondary">Audit Period</th>
+                      <th className="text-left px-3 py-3 font-semibold text-text-secondary">Owner</th>
+                      <th className="text-left px-3 py-3 font-semibold text-text-secondary">Progress</th>
+                      <th className="text-left px-3 py-3 font-semibold text-text-secondary">Status</th>
+                      <th className="text-left px-3 py-3 font-semibold text-text-secondary">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bpEngagements.map((eng, i) => {
+                      const active = isEngActive(eng.status);
+                      const progress = eng.controls > 0 ? Math.round((eng.controlsTested / eng.controls) * 100) : 0;
+
+                      return (
+                        <motion.tr
+                          key={eng.id}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: i * 0.04 }}
+                          className={`border-b border-border-light last:border-0 hover:bg-primary-xlight/50 transition-colors cursor-pointer ${eng.isOverdue ? 'border-l-[3px] border-l-risk' : ''}`}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full shrink-0" style={{ background: eng.color, opacity: active ? 1 : 0.4 }} />
+                              <span className="text-[13px] font-medium text-text">{eng.name}</span>
+                              {eng.isOverdue && <span className="px-1 h-4 rounded text-[8px] font-bold bg-risk-50 text-risk-700 inline-flex items-center animate-pulse shrink-0">OD</span>}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-2 h-5 rounded-full text-[9px] font-semibold bg-brand-50 text-brand-700 inline-flex items-center">{eng.auditType}</span>
+                              <span className="text-[10px] text-text-muted">{eng.framework}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className="text-[12px] text-primary font-medium">{eng.racmVersion}</span>
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className="text-[11px] text-text-muted">{eng.auditPeriod}</span>
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className="text-[12px] text-text-secondary">{eng.owner}</span>
+                          </td>
+                          <td className="px-3 py-3">
+                            {active ? (
+                              <div className="flex items-center gap-2 min-w-[80px]">
+                                <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full" style={{ width: `${progress}%`, background: eng.color }} />
+                                </div>
+                                <span className="text-[10px] font-bold tabular-nums text-text-muted w-7 text-right">{progress}%</span>
+                              </div>
+                            ) : <span className="text-ink-300 text-[10px]">—</span>}
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${engStatusCls(eng.status)}`}>
+                              {engStatusLabel(eng.status)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3">
+                            {active ? (
+                              <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/15 cursor-pointer transition-colors inline-flex items-center gap-1">
+                                View <ChevronRight size={9} />
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 rounded-lg text-[10px] font-bold text-brand-700 bg-brand-50 hover:bg-brand-50/80 cursor-pointer transition-colors inline-flex items-center gap-1">
+                                {eng.status === 'draft' ? 'Configure' : 'Activate'} <ChevronRight size={9} />
+                              </span>
+                            )}
+                          </td>
+                        </motion.tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {bpEngagements.length > 0 && (
+              <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-primary-xlight via-white to-primary-xlight border border-primary/10">
+                <div className="flex items-center gap-2 mb-1">
+                  <Sparkles size={13} className="text-primary" />
+                  <span className="text-[12px] font-bold text-text">Scope Reminder</span>
+                </div>
+                <p className="text-[12px] text-text-secondary">
+                  Primary Process is used for planning and filtering. Execution scope comes from the linked RACM snapshot, not the process assignment.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Create Engagement Drawer */}
+        <AnimatePresence>
+          {showCreateEngagement && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm"
+                onClick={() => setShowCreateEngagement(false)}
+              />
+              <motion.div
+                initial={{ x: 440 }}
+                animate={{ x: 0 }}
+                exit={{ x: 440 }}
+                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                className="fixed right-0 top-0 bottom-0 w-[420px] z-50 bg-white border-l border-border-light shadow-2xl overflow-y-auto"
+              >
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-[15px] font-bold text-text">Create Engagement</h3>
+                    <button onClick={() => setShowCreateEngagement(false)} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
+                      <X size={16} className="text-text-muted" />
+                    </button>
+                  </div>
+
+                  {/* Pre-filled process */}
+                  <div className="mb-4">
+                    <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Primary Business Process</label>
+                    <div className="flex items-center gap-2.5 px-3 py-2.5 border border-primary/30 bg-primary-xlight/30 rounded-lg">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px] font-bold" style={{ background: bp.color }}>
+                        {bp.abbr}
+                      </div>
+                      <div>
+                        <div className="text-[13px] font-semibold text-text">{bp.name}</div>
+                        <div className="text-[10px] text-text-muted">Pre-filled from current process</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* RACM Version */}
+                  <div className="mb-4">
+                    <label className="text-[12px] font-semibold text-text-muted block mb-1.5">RACM Version *</label>
+                    <select className="w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text bg-white outline-none focus:border-primary/40 cursor-pointer">
+                      <option value="">Select RACM version...</option>
+                      {bpRacms.map(r => (
+                        <option key={r.id} value={r.id}>{r.name} ({r.fw})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Engagement Name */}
+                  <div className="mb-4">
+                    <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Engagement Name *</label>
+                    <input
+                      type="text"
+                      placeholder={`e.g. ${bp.abbr} — SOX Audit FY27`}
+                      className="w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text placeholder:text-text-muted outline-none focus:border-primary/40"
+                    />
+                  </div>
+
+                  {/* Framework */}
+                  <div className="mb-4">
+                    <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Framework *</label>
+                    <select className="w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text bg-white outline-none focus:border-primary/40 cursor-pointer">
+                      <option value="">Select framework...</option>
+                      <option value="COSO">COSO</option>
+                      <option value="COBIT">COBIT</option>
+                      <option value="ISO 27001">ISO 27001</option>
+                      <option value="NIST">NIST</option>
+                      <option value="Custom">Custom</option>
+                    </select>
+                  </div>
+
+                  {/* Audit Type */}
+                  <div className="mb-4">
+                    <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Audit Type *</label>
+                    <select className="w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text bg-white outline-none focus:border-primary/40 cursor-pointer">
+                      <option value="">Select type...</option>
+                      <option value="SOX">SOX</option>
+                      <option value="IFC">IFC</option>
+                      <option value="ITGC">ITGC</option>
+                      <option value="Internal">Internal</option>
+                      <option value="Risk">Risk</option>
+                    </select>
+                  </div>
+
+                  {/* Audit Period */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                      <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Period Start *</label>
+                      <input type="date" className="w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text outline-none focus:border-primary/40" />
+                    </div>
+                    <div>
+                      <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Period End *</label>
+                      <input type="date" className="w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text outline-none focus:border-primary/40" />
+                    </div>
+                  </div>
+
+                  {/* Owner */}
+                  <div className="mb-4">
+                    <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Owner *</label>
+                    <select className="w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text bg-white outline-none focus:border-primary/40 cursor-pointer">
+                      <option value="">Select owner...</option>
+                      <option>Tushar Goel</option>
+                      <option>Deepak Bansal</option>
+                      <option>Neha Joshi</option>
+                      <option>Karan Mehta</option>
+                      <option>Sneha Desai</option>
+                      <option>Rohan Patel</option>
+                      <option>Priya Singh</option>
+                    </select>
+                  </div>
+
+                  {/* Reviewer */}
+                  <div className="mb-6">
+                    <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Reviewer</label>
+                    <select className="w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text bg-white outline-none focus:border-primary/40 cursor-pointer">
+                      <option value="">Select reviewer...</option>
+                      <option>Tushar Goel</option>
+                      <option>Deepak Bansal</option>
+                      <option>Neha Joshi</option>
+                      <option>Karan Mehta</option>
+                      <option>Sneha Desai</option>
+                      <option>Abhinav S</option>
+                    </select>
+                  </div>
+
+                  {/* Scope note */}
+                  <div className="p-3 rounded-lg bg-surface-2/60 border border-border/50 mb-6">
+                    <p className="text-[11px] text-text-muted leading-relaxed">
+                      Execution scope will come from the selected RACM version. The primary process ({bp.abbr}) is used for planning and filtering only.
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        addToast({ message: `Engagement created for ${bp.name}`, type: 'success' });
+                        setShowCreateEngagement(false);
+                      }}
+                      className="flex-1 px-4 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer"
+                    >
+                      Create Engagement
+                    </button>
+                    <button
+                      onClick={() => setShowCreateEngagement(false)}
+                      className="px-4 py-2.5 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

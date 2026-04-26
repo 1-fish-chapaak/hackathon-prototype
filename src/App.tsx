@@ -24,6 +24,7 @@ import ShareModal from './components/modals/ShareModal';
 import PowerBIImportWizard from './components/modals/PowerBIImportWizard';
 import ReportBuilder from './components/reports/ReportBuilder';
 import AuditPlanningView from './components/audit/AuditPlanningView';
+import ProgramsView from './components/audit/ProgramsView';
 // New pages
 import RACMView from './components/governance/RACMView';
 import ControlLibraryView from './components/governance/ControlLibraryView';
@@ -200,6 +201,18 @@ export default function App() {
           />
         );
 
+      case 'programs':
+        return (
+          <ProgramsView
+            selectedBPId={state.selectedBPId}
+            onSelectBP={setSelectedBP}
+            onNavigateToExecution={(engId) => {
+              openAuditExecution(engId);
+              setView('engagement-detail' as any);
+            }}
+          />
+        );
+
       case 'business-processes':
       case 'bp-detail':
         return (
@@ -212,7 +225,7 @@ export default function App() {
       case 'audit-risk-register':
         return (
           <RiskRegister
-            onRunWorkflow={(id) => setSelectedWorkflow(id)}
+            onNavigate={(v) => setView(v as any)}
           />
         );
 
