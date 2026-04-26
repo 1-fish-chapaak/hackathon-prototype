@@ -7,7 +7,7 @@ import {
   Paperclip, Send, Lock, Zap, CloudUpload, MessageSquare, Copy,
   Upload, Play, Calendar, Filter, BarChart3, Download
 } from 'lucide-react';
-import { getControlById, FINDINGS, ENGAGEMENT, type ControlDetail, type SampleItem, type Finding } from './engagementData';
+import { getControlById, getLinkedWorkflows, getAttributesForWorkflow, FINDINGS, ENGAGEMENT, type ControlDetail, type SampleItem, type Finding, type LinkedWorkflow } from './engagementData';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -95,8 +95,11 @@ function OverviewStep({ ctrl, onGoToStep }: { ctrl: ControlDetail; onGoToStep: (
   const tested = ctrl.samples.filter(s => s.status !== 'not-tested').length;
   const totalAttrs = ctrl.workflowAttributes.length;
   const totalSamples = ctrl.samples.length;
-  const evidenceCount = ctrl.samples.reduce((sum, s) => sum + s.evidenceFiles.length, 0);
   const nextAction = getNextAction(ctrl);
+
+  // Resolve multi-workflow data
+  const workflows = getLinkedWorkflows(ctrl);
+  const hasMultipleWorkflows = workflows.length > 1;
 
   // Compute per-attribute aggregate status
   const attrStats = ctrl.workflowAttributes.map(attr => {
@@ -111,6 +114,27 @@ function OverviewStep({ ctrl, onGoToStep }: { ctrl: ControlDetail; onGoToStep: (
     else status = 'pending';
     return { ...attr, passCount, failCount, testedCount, exceptionCount, status };
   });
+
+  // Legacy single-workflow detection: if only one fallback workflow, all attrs belong to it
+  const isSingleLegacy = workflows.length === 1 && workflows[0].id === 'lw-legacy';
+
+  // Unmapped attributes (no workflowId set — but legacy single-workflow controls are fully mapped)
+  const unmappedAttrs = isSingleLegacy ? [] : ctrl.workflowAttributes.filter(a => !a.workflowId);
+
+  // Collect all unique assertions across all attributes
+  const allAssertions = new Set<string>();
+  ctrl.workflowAttributes.forEach(a => { if (a.assertions) a.assertions.forEach(x => allAssertions.add(x)); });
+
+  // Per-workflow aggregate status
+  function getWorkflowStatus(wf: LinkedWorkflow): 'pass' | 'fail' | 'pending' {
+    const wfAttrs = wf.id === 'lw-legacy'
+      ? attrStats  // legacy: all attrs belong to the single workflow
+      : attrStats.filter(a => a.workflowId === wf.id);
+    if (wfAttrs.length === 0) return 'pending';
+    if (wfAttrs.some(a => a.status === 'fail')) return 'fail';
+    if (wfAttrs.every(a => a.status === 'pass')) return 'pass';
+    return 'pending';
+  }
 
   // Attribute completion %
   const totalAttrTests = totalAttrs * totalSamples;
@@ -143,8 +167,8 @@ function OverviewStep({ ctrl, onGoToStep }: { ctrl: ControlDetail; onGoToStep: (
         <h4 className="text-[11px] font-bold text-text-muted uppercase mb-2">Test Instance Details</h4>
         <div className="glass-card rounded-xl p-4">
           <div className="grid grid-cols-2 gap-3">
-            <div><span className="text-[10px] text-text-muted uppercase">Workflow</span><p className="text-[12px] font-semibold text-brand-700">{ctrl.workflowName} {ctrl.workflowVersion}</p></div>
-            <div><span className="text-[10px] text-text-muted uppercase">Attributes</span><p className="text-[12px] text-text">{totalAttrs} test conditions</p></div>
+            <div><span className="text-[10px] text-text-muted uppercase">Linked Workflows</span><p className="text-[12px] font-semibold text-brand-700">{workflows.length === 1 ? `${ctrl.workflowName} ${ctrl.workflowVersion}` : `${workflows.length} workflows`}</p></div>
+            <div><span className="text-[10px] text-text-muted uppercase">Attributes</span><p className="text-[12px] text-text">{totalAttrs} attributes{workflows.length > 1 ? ` across ${workflows.length} workflows` : ''}</p></div>
             <div><span className="text-[10px] text-text-muted uppercase">Testing Round</span><p className="text-[12px] text-text">{ctrl.testingRound > 0 ? `Round ${ctrl.testingRound}` : 'Not started'}</p></div>
             <div><span className="text-[10px] text-text-muted uppercase">Population Source</span><p className="text-[12px] text-text truncate" title={ctrl.populationSource}>{ctrl.populationSource || '—'}</p></div>
             <div><span className="text-[10px] text-text-muted uppercase">Sampling Method</span><p className="text-[12px] text-text">{ctrl.samplingMethod || '—'}</p></div>
@@ -180,39 +204,107 @@ function OverviewStep({ ctrl, onGoToStep }: { ctrl: ControlDetail; onGoToStep: (
         </div>
       </div>
 
-      {/* ── ATTRIBUTE TABLE (VISIBLE, NOT COLLAPSED) ── */}
+      {/* ── LINKED WORKFLOWS & ATTRIBUTE COVERAGE ── */}
       <div>
-        <h4 className="text-[11px] font-bold text-text-muted uppercase mb-2">Workflow Attributes — Test Conditions</h4>
-        <div className="glass-card rounded-xl overflow-hidden">
-          <table className="w-full text-[11px]">
-            <thead>
-              <tr className="border-b border-border bg-surface-2/50">
-                <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase w-6">#</th>
-                <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase">Attribute</th>
-                <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase w-20">Evidence</th>
-                <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-text-muted uppercase w-16">Status</th>
-                <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-text-muted uppercase w-14">Except.</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attrStats.map((attr, i) => (
-                <tr key={attr.id} className="border-b border-border/40 hover:bg-surface-2/30 transition-colors">
-                  <td className="px-3 py-2 text-[10px] font-mono text-text-muted">{i + 1}</td>
-                  <td className="px-3 py-2">
-                    <div className="text-[11px] font-medium text-text">{attr.name}</div>
-                    <div className="text-[10px] text-text-muted truncate max-w-[280px]">{attr.description}</div>
-                  </td>
-                  <td className="px-3 py-2 text-[10px] text-text-muted">{attr.requiredEvidence ? 'Required' : '—'}</td>
-                  <td className="px-3 py-2 text-center"><AttrResultChip result={attr.status} /></td>
-                  <td className="px-3 py-2 text-center">
-                    {attr.exceptionCount > 0 ? <span className="text-[11px] font-bold text-risk-700">{attr.exceptionCount}</span> : <span className="text-ink-300">—</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <h4 className="text-[11px] font-bold text-text-muted uppercase mb-2">Linked Workflows & Attribute Coverage</h4>
+
+        {/* Summary chips */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className="inline-flex items-center gap-1.5 px-2.5 h-6 rounded-full text-[10px] font-semibold bg-brand-50 text-brand-700">
+            <Workflow size={10} />{workflows.length} linked workflow{workflows.length !== 1 ? 's' : ''}
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 h-6 rounded-full text-[10px] font-semibold bg-evidence-50 text-evidence-700">
+            <Target size={10} />{totalAttrs} attribute{totalAttrs !== 1 ? 's' : ''} covered
+          </span>
+          {unmappedAttrs.length > 0 ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 h-6 rounded-full text-[10px] font-semibold bg-risk-50 text-risk-700">
+              <AlertTriangle size={10} />{unmappedAttrs.length} unmapped
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 h-6 rounded-full text-[10px] font-semibold bg-compliant-50 text-compliant-700">
+              <CheckCircle2 size={10} />0 unmapped
+            </span>
+          )}
         </div>
+
+        {workflows.length === 0 ? (
+          /* Empty state */
+          <div className="glass-card rounded-xl p-6 text-center">
+            <Workflow size={24} className="mx-auto text-ink-300 mb-2" />
+            <p className="text-[12px] font-semibold text-ink-600 mb-0.5">No workflows linked</p>
+            <p className="text-[10px] text-ink-400">Link workflows to test this control's attributes.</p>
+          </div>
+        ) : (
+          /* Workflow ↔ attribute table */
+          <div className="glass-card rounded-xl overflow-hidden">
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr className="border-b border-border bg-surface-2/50">
+                  <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase">Workflow</th>
+                  <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase w-14">Ver.</th>
+                  <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase w-20">Attrs</th>
+                  <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase">Assertions</th>
+                  <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-text-muted uppercase w-16">Status</th>
+                  <th className="px-3 py-2.5 text-center text-[10px] font-semibold text-text-muted uppercase w-14">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {workflows.map((wf, i) => {
+                  const wfAttrs = getAttributesForWorkflow(ctrl, wf.id);
+                  const wfAssertions = new Set<string>();
+                  wfAttrs.forEach(a => { if (a.assertions) a.assertions.forEach(x => wfAssertions.add(x)); });
+                  const wfStatus = getWorkflowStatus(wf);
+
+                  return (
+                    <tr key={wf.id} className={`border-b border-border/40 hover:bg-surface-2/30 transition-colors ${i === 0 ? '' : ''}`}>
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-1.5">
+                          <Workflow size={11} className="text-brand-600 shrink-0" />
+                          <span className="text-[11px] font-medium text-text">{wf.name}</span>
+                          {i === 0 && hasMultipleWorkflows && (
+                            <span className="px-1.5 h-4 rounded text-[8px] font-bold bg-brand-50 text-brand-700 inline-flex items-center shrink-0">PRIMARY</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="text-[10px] font-mono text-text-muted">{wf.version}</span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="text-[11px] text-text">{wfAttrs.length} attr{wfAttrs.length !== 1 ? 's' : ''}</span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex flex-wrap gap-1">
+                          {Array.from(wfAssertions).map(a => (
+                            <span key={a} className="px-1.5 h-4 rounded text-[9px] font-medium bg-brand-50/70 text-brand-700 inline-flex items-center">{a}</span>
+                          ))}
+                          {wfAssertions.size === 0 && <span className="text-[10px] text-ink-300">—</span>}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        <AttrResultChip result={wfStatus} />
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        <button onClick={() => onGoToStep('testing')} className="text-[10px] font-semibold text-brand-600 hover:underline cursor-pointer">View</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Unmapped attributes warning */}
+        {unmappedAttrs.length > 0 && (
+          <div className="mt-2 rounded-lg border border-risk/20 bg-risk-50/50 px-3 py-2 flex items-center gap-2">
+            <AlertTriangle size={12} className="text-risk-700 shrink-0" />
+            <span className="text-[10px] text-risk-700">{unmappedAttrs.length} attribute{unmappedAttrs.length !== 1 ? 's are' : ' is'} not mapped to a workflow.</span>
+          </div>
+        )}
       </div>
+
+      {/* ── ATTRIBUTE DETAIL TABLE ── */}
+      <AttributeConditionsTable attrStats={attrStats} workflows={workflows} onGoToStep={onGoToStep} />
 
       {/* ── CONTROL TEST OVERVIEW ── */}
       <div>
@@ -232,6 +324,174 @@ function OverviewStep({ ctrl, onGoToStep }: { ctrl: ControlDetail; onGoToStep: (
             ))}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ATTRIBUTE CONDITIONS TABLE (used by OverviewStep) ──────────────────────
+
+interface AttrStat {
+  id: string; name: string; description: string; requiredEvidence: string;
+  assertions?: string[]; workflowId?: string;
+  passCount: number; failCount: number; testedCount: number; exceptionCount: number; status: string;
+}
+
+function AttributeConditionsTable({ attrStats, workflows, onGoToStep }: {
+  attrStats: AttrStat[];
+  workflows: LinkedWorkflow[];
+  onGoToStep: (s: TestingStep) => void;
+}) {
+  // Local overrides for workflow mapping (demo only — does not mutate source data)
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const handleRemap = (attrId: string, newWfId: string) => {
+    if (newWfId === '__link_new__') {
+      // Demo placeholder: show toast for "link another workflow"
+      showToast('Open workflow library to link a new workflow…');
+      return;
+    }
+    setOverrides(prev => ({ ...prev, [attrId]: newWfId }));
+    const wf = workflows.find(w => w.id === newWfId);
+    if (wf) showToast(`Attribute mapped to ${wf.name}`);
+  };
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 2400);
+  };
+
+  // For legacy controls (single workflow, no workflowId on attrs), treat all attrs as mapped to that workflow
+  const isSingleLegacy = workflows.length === 1 && workflows[0].id === 'lw-legacy';
+  const resolveWfId = (attr: AttrStat): string | undefined =>
+    overrides[attr.id] ?? attr.workflowId ?? (isSingleLegacy ? 'lw-legacy' : undefined);
+
+  // Coverage calculations (accounting for overrides)
+  const mappedCount = attrStats.filter(a => !!resolveWfId(a)).length;
+  const unmappedCount = attrStats.length - mappedCount;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-[11px] font-bold text-text-muted uppercase">Attributes & Workflow Mapping</h4>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-text-muted">{attrStats.length} total</span>
+          <span className="text-[10px] text-compliant-700 font-medium">{mappedCount} mapped</span>
+          {unmappedCount > 0 && <span className="text-[10px] text-risk-700 font-medium">{unmappedCount} unmapped</span>}
+        </div>
+      </div>
+      <div className="glass-card rounded-xl overflow-hidden relative">
+        <div className="overflow-x-auto">
+          <table className="w-full text-[11px]">
+            <thead>
+              <tr className="border-b border-border bg-surface-2/50">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase w-6">#</th>
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase">Attribute</th>
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase w-[110px]">Assertion</th>
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase w-[140px]">Linked Workflow</th>
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase w-16">Evidence</th>
+                <th className="px-2.5 py-2.5 text-center text-[10px] font-semibold text-text-muted uppercase w-16">Status</th>
+                <th className="px-2.5 py-2.5 text-center text-[10px] font-semibold text-text-muted uppercase w-12">Exc.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {attrStats.map((attr, i) => {
+                const currentWfId = resolveWfId(attr);
+                const ownerWf = currentWfId ? workflows.find(w => w.id === currentWfId) : undefined;
+                const isUnmapped = !currentWfId;
+
+                return (
+                  <tr key={attr.id} className={`border-b border-border/40 transition-colors ${isUnmapped ? 'bg-risk-50/20' : 'hover:bg-surface-2/30'}`}>
+                    {/* # */}
+                    <td className="px-2.5 py-2 text-[10px] font-mono text-text-muted">{i + 1}</td>
+
+                    {/* Attribute */}
+                    <td className="px-2.5 py-2">
+                      <div className="text-[11px] font-medium text-text">{attr.name}</div>
+                      <div className="text-[9.5px] text-text-muted truncate max-w-[180px]">{attr.description}</div>
+                    </td>
+
+                    {/* Assertion badges */}
+                    <td className="px-2.5 py-2">
+                      {attr.assertions && attr.assertions.length > 0 ? (
+                        <div className="flex flex-wrap gap-0.5">
+                          {attr.assertions.map(a => (
+                            <span key={a} className="px-1.5 h-[18px] rounded text-[9px] font-medium bg-brand-50 text-brand-700 inline-flex items-center">{a}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-[9px] text-ink-300">—</span>
+                      )}
+                    </td>
+
+                    {/* Linked Workflow — compact dropdown */}
+                    <td className="px-2.5 py-2">
+                      {isUnmapped ? (
+                        <div className="flex items-center gap-1">
+                          <span className="px-1.5 h-[18px] rounded text-[9px] font-bold bg-risk-50 text-risk-700 inline-flex items-center">Unmapped</span>
+                          <select
+                            value=""
+                            onChange={e => { if (e.target.value) handleRemap(attr.id, e.target.value); }}
+                            className="w-[70px] px-1 py-0.5 rounded border border-risk/30 bg-white text-[9px] text-risk-700 outline-none cursor-pointer focus:border-brand-500/60"
+                          >
+                            <option value="">Link…</option>
+                            {workflows.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                            <option value="__link_new__">+ Link another…</option>
+                          </select>
+                        </div>
+                      ) : (
+                        <select
+                          value={currentWfId}
+                          onChange={e => handleRemap(attr.id, e.target.value)}
+                          className="w-full px-1.5 py-1 rounded border border-border/60 bg-white text-[10px] text-text outline-none cursor-pointer hover:border-brand-500/40 focus:border-brand-500/60 focus:ring-1 focus:ring-brand-500/10 transition-colors"
+                          title={ownerWf ? `${ownerWf.name} ${ownerWf.version}` : ''}
+                        >
+                          {workflows.map(w => <option key={w.id} value={w.id}>{w.name} {w.version}</option>)}
+                          <option value="__link_new__">+ Link another…</option>
+                        </select>
+                      )}
+                    </td>
+
+                    {/* Evidence */}
+                    <td className="px-2.5 py-2 text-[10px] text-text-muted">{attr.requiredEvidence ? 'Required' : '—'}</td>
+
+                    {/* Status */}
+                    <td className="px-2.5 py-2 text-center"><AttrResultChip result={attr.status} /></td>
+
+                    {/* Exceptions */}
+                    <td className="px-2.5 py-2 text-center">
+                      {attr.exceptionCount > 0 ? <span className="text-[11px] font-bold text-risk-700">{attr.exceptionCount}</span> : <span className="text-ink-300">—</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Inline toast */}
+        <AnimatePresence>
+          {toastMsg && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-lg bg-ink-800 text-white text-[11px] font-medium shadow-lg flex items-center gap-2"
+            >
+              <CheckCircle2 size={12} className="text-compliant shrink-0" />
+              {toastMsg}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Governance notice */}
+      <div className="mt-2 rounded-lg border border-border/50 bg-surface-2/50 px-3 py-2 flex items-start gap-2">
+        <Shield size={11} className="text-ink-400 mt-0.5 shrink-0" />
+        <span className="text-[9.5px] text-ink-400 leading-relaxed">
+          Workflow mapping defines how each attribute will be tested. Workflows are not executed until the Testing step.
+        </span>
       </div>
     </div>
   );
