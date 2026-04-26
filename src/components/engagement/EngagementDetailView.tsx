@@ -5,10 +5,10 @@ import {
   Clock, CheckCircle2, XCircle, Search, Workflow,
   FileText, Zap, Eye, Target, Copy, ChevronRight,
   Upload, Database, X, Play, Lock, BarChart3, Paperclip,
-  Settings, ArrowRight
+  Settings, ArrowRight, Link2
 } from 'lucide-react';
 import Orb from '../shared/Orb';
-import { ENGAGEMENT, CONTROLS, FINDINGS, type ControlDetail, type ControlStatus, type Finding } from './engagementData';
+import { ENGAGEMENT, CONTROLS, FINDINGS, getWorkflowSummary, getLinkedWorkflows, type ControlDetail, type ControlStatus, type Finding } from './engagementData';
 
 // ─── Status helpers ──────────────────────────────────────────────────────────
 
@@ -43,7 +43,19 @@ function isConcluded(s: ControlStatus): boolean {
 
 // ─── Action logic per control ────────────────────────────────────────────────
 
+function hasUnmappedAttributes(ctrl: ControlDetail): boolean {
+  // If control has explicit linkedWorkflows, check for unmapped attrs
+  if (ctrl.linkedWorkflows && ctrl.linkedWorkflows.length > 0) {
+    return ctrl.workflowAttributes.some(a => !a.workflowId);
+  }
+  // Legacy single-workflow controls are implicitly fully mapped
+  return false;
+}
+
 function getControlAction(ctrl: ControlDetail): { label: string; icon: React.ElementType; cls: string } {
+  // Workflow mapping readiness takes priority for not-started controls
+  if (hasUnmappedAttributes(ctrl) && (ctrl.status === 'not-started' || ctrl.status === 'population-pending'))
+    return { label: 'Fix Mapping', icon: Link2, cls: 'bg-risk-50 text-risk-700 hover:bg-risk-50/80' };
   if (ctrl.status === 'not-started' && ctrl.populationStatus === 'none')
     return { label: 'Upload Population', icon: Upload, cls: 'bg-primary/10 text-primary hover:bg-primary/20' };
   if (ctrl.status === 'not-started' || ctrl.status === 'population-pending')
@@ -61,6 +73,215 @@ function getControlAction(ctrl: ControlDetail): { label: string; icon: React.Ele
 
 type TabId = 'controls' | 'review-queue' | 'findings';
 type StatusFilter = 'all' | 'not-started' | 'in-progress' | 'pending-review' | 'concluded' | 'failed';
+
+// ─── Workflow Coverage Cell ─────────────────────────────────────────────────
+
+function WorkflowCoverageCell({ control, onOpenDrawer }: { control: ControlDetail; onOpenDrawer: (id: string) => void }) {
+  const summary = getWorkflowSummary(control);
+  const allMapped = summary.unmappedAttributeCount === 0;
+  const noWorkflows = !control.workflowName && (!control.linkedWorkflows || control.linkedWorkflows.length === 0);
+
+  if (noWorkflows) {
+    return (
+      <div className="flex items-center gap-1">
+        <AlertTriangle size={10} className="text-risk-700 shrink-0" />
+        <span className="text-[10px] font-semibold text-risk-700">Missing workflow</span>
+      </div>
+    );
+  }
+
+  return (
+    <div onClick={e => e.stopPropagation()}>
+      <button onClick={() => onOpenDrawer(control.id)} className="text-left cursor-pointer group/wf">
+        <div className="flex items-center gap-1.5">
+          <Workflow size={10} className="text-brand-500 shrink-0" />
+          <span className="text-[10px] font-medium text-brand-700">{summary.displayText}</span>
+        </div>
+        <div className="flex items-center gap-1 mt-0.5">
+          {allMapped ? (
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-medium text-compliant-700"><CheckCircle2 size={8} />All mapped</span>
+          ) : (
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-medium text-risk-700"><AlertTriangle size={8} />{summary.unmappedAttributeCount} unmapped</span>
+          )}
+          <ChevronRight size={8} className="text-ink-300 group-hover/wf:text-brand-500" />
+        </div>
+      </button>
+    </div>
+  );
+}
+
+// ─── Workflow Mapping Drawer ────────────────────────────────────────────────
+
+function WorkflowMappingDrawer({ control, onClose }: { control: ControlDetail; onClose: () => void }) {
+  const workflows = getLinkedWorkflows(control);
+  const summary = getWorkflowSummary(control);
+  const isSingleLegacy = workflows.length === 1 && workflows[0].id === 'lw-legacy';
+
+  // Local overrides for unmapped attribute reassignment
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const showToast = (msg: string) => { setToastMsg(msg); setTimeout(() => setToastMsg(null), 2200); };
+
+  const resolveWfId = (attrWfId?: string, attrId?: string): string | undefined =>
+    (attrId ? overrides[attrId] : undefined) ?? attrWfId ?? (isSingleLegacy ? 'lw-legacy' : undefined);
+
+  // Group attributes by workflow
+  const grouped = new Map<string, typeof control.workflowAttributes>();
+  const unmapped: typeof control.workflowAttributes = [];
+
+  control.workflowAttributes.forEach(attr => {
+    const wfId = resolveWfId(attr.workflowId, attr.id);
+    if (!wfId) { unmapped.push(attr); return; }
+    if (!grouped.has(wfId)) grouped.set(wfId, []);
+    grouped.get(wfId)!.push(attr);
+  });
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+        className="fixed inset-0 bg-ink-900/40 backdrop-blur-[2px] z-40" onClick={onClose} />
+      <motion.aside
+        initial={{ x: 24, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 24, opacity: 0 }}
+        transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+        className="fixed top-0 right-0 bottom-0 w-full max-w-[480px] bg-canvas-elevated shadow-xl border-l border-canvas-border flex flex-col z-50"
+        role="dialog" aria-label="Workflow Mapping"
+      >
+        {/* Header */}
+        <header className="shrink-0 px-6 pt-5 pb-4 border-b border-canvas-border">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Link2 size={18} className="text-brand-600" />
+                <h2 className="font-display text-[18px] font-semibold text-ink-900 tracking-tight">Workflow Mapping</h2>
+              </div>
+              <p className="text-[12px] text-ink-500 mt-1">{control.controlName}</p>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 rounded-full text-ink-500 hover:text-ink-800 hover:bg-[#F4F2F7] flex items-center justify-center cursor-pointer"><X size={16} /></button>
+          </div>
+          {/* Summary chips */}
+          <div className="flex items-center gap-2 mt-3">
+            <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full text-[10px] font-semibold bg-brand-50 text-brand-700">
+              <Workflow size={10} />{summary.linkedWorkflowCount} workflow{summary.linkedWorkflowCount !== 1 ? 's' : ''}
+            </span>
+            <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full text-[10px] font-semibold bg-evidence-50 text-evidence-700">
+              <Target size={10} />{summary.attributeCount} attribute{summary.attributeCount !== 1 ? 's' : ''}
+            </span>
+            {summary.unmappedAttributeCount > 0 ? (
+              <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full text-[10px] font-semibold bg-risk-50 text-risk-700">
+                <AlertTriangle size={10} />{summary.unmappedAttributeCount} unmapped
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 h-6 rounded-full text-[10px] font-semibold bg-compliant-50 text-compliant-700">
+                <CheckCircle2 size={10} />All mapped
+              </span>
+            )}
+          </div>
+        </header>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 relative">
+          {/* Grouped by workflow */}
+          {workflows.map(wf => {
+            const wfAttrs = grouped.get(wf.id) || [];
+            if (wfAttrs.length === 0) return null;
+            return (
+              <div key={wf.id}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Workflow size={13} className="text-brand-600 shrink-0" />
+                  <span className="text-[13px] font-semibold text-ink-800">{wf.name}</span>
+                  <span className="text-[10px] font-mono text-ink-400">{wf.version}</span>
+                </div>
+                <div className="space-y-1.5 ml-5">
+                  {wfAttrs.map(attr => (
+                    <div key={attr.id} className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-canvas-border bg-white">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[12px] font-medium text-ink-800">{attr.name}</div>
+                        {attr.assertions && attr.assertions.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {attr.assertions.map(a => (
+                              <span key={a} className="px-1.5 h-[16px] rounded text-[9px] font-medium bg-brand-50 text-brand-700 inline-flex items-center">{a}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <span className="inline-flex items-center gap-1 px-2 h-5 rounded text-[9px] font-bold bg-compliant-50 text-compliant-700 shrink-0">
+                        <CheckCircle2 size={8} />Mapped
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Unmapped section */}
+          {unmapped.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle size={13} className="text-risk-700 shrink-0" />
+                <span className="text-[13px] font-semibold text-risk-700">Unmapped Attributes</span>
+                <span className="text-[10px] text-risk-700/70">({unmapped.length})</span>
+              </div>
+              <div className="space-y-1.5 ml-5">
+                {unmapped.map(attr => (
+                  <div key={attr.id} className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-risk/20 bg-risk-50/20">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[12px] font-medium text-ink-800">{attr.name}</div>
+                      {attr.assertions && attr.assertions.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {attr.assertions.map(a => (
+                            <span key={a} className="px-1.5 h-[16px] rounded text-[9px] font-medium bg-brand-50 text-brand-700 inline-flex items-center">{a}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <select
+                      value=""
+                      onChange={e => {
+                        if (!e.target.value) return;
+                        setOverrides(prev => ({ ...prev, [attr.id]: e.target.value }));
+                        const wf = workflows.find(w => w.id === e.target.value);
+                        if (wf) showToast(`Attribute mapped to ${wf.name}`);
+                      }}
+                      className="w-[120px] px-2 py-1 rounded border border-risk/30 bg-white text-[10px] text-ink-700 outline-none cursor-pointer focus:border-brand-500/60 shrink-0"
+                    >
+                      <option value="">Assign…</option>
+                      {workflows.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Inline toast */}
+          <AnimatePresence>
+            {toastMsg && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+                className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-ink-800 text-white text-[11px] font-medium shadow-lg flex items-center gap-2">
+                <CheckCircle2 size={12} className="text-compliant shrink-0" />{toastMsg}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Footer */}
+        <footer className="shrink-0 px-6 py-4 border-t border-canvas-border bg-canvas">
+          <div className="rounded-lg border border-canvas-border bg-surface-2/50 px-3 py-2 flex items-start gap-2 mb-3">
+            <Shield size={11} className="text-ink-400 mt-0.5 shrink-0" />
+            <span className="text-[9.5px] text-ink-400 leading-relaxed">
+              Workflow mapping defines how each attribute will be tested. Execution starts after population and sample setup.
+            </span>
+          </div>
+          <button onClick={onClose} className="w-full px-4 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-[13px] font-semibold transition-colors cursor-pointer">
+            Done
+          </button>
+        </footer>
+      </motion.aside>
+    </>
+  );
+}
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -97,9 +318,10 @@ interface Props {
 export default function EngagementDetailView({ engagementId, freshActivation, onBack, onOpenControl }: Props) {
   const eng = ENGAGEMENT;
 
-  // Use clean controls for fresh activations, seeded data for demo engagement
+  // Use seeded data only for the demo engagement; all others start fresh
   const isDemoEngagement = engagementId === 'ap-1' || engagementId === 'eng-sox-fy26' || !engagementId;
-  const sourceControls = (freshActivation && !isDemoEngagement) ? resetControlsToClean(CONTROLS) : CONTROLS;
+  const isFreshEngagement = !isDemoEngagement || freshActivation;
+  const sourceControls = isFreshEngagement ? resetControlsToClean(CONTROLS) : CONTROLS;
 
   const [search, setSearch] = useState('');
   const [domainFilter, setDomainFilter] = useState('All');
@@ -107,6 +329,8 @@ export default function EngagementDetailView({ engagementId, freshActivation, on
   const [activeTab, setActiveTab] = useState<TabId>('controls');
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [mappingDrawerControlId, setMappingDrawerControlId] = useState<string | null>(null);
+  const mappingDrawerControl = mappingDrawerControlId ? sourceControls.find(c => c.id === mappingDrawerControlId) : null;
 
   const domains = ['All', ...Array.from(new Set(sourceControls.map(c => c.domain)))];
 
@@ -141,14 +365,6 @@ export default function EngagementDetailView({ engagementId, freshActivation, on
 
   // Reviewer queue
   const reviewQueue = sourceControls.filter(c => c.status === 'pending-review');
-
-  // Next Best Actions
-  const nextActions: { label: string; desc: string; icon: React.ElementType; cls: string; count: number }[] = [];
-  if (readyControls > 0) nextActions.push({ label: 'Upload Population', desc: `${readyControls} controls awaiting population data`, icon: Upload, cls: 'text-primary border-primary/20 bg-primary/5 hover:bg-primary/10', count: readyControls });
-  if (populationPending > 0) nextActions.push({ label: 'Generate Samples', desc: `${populationPending} controls with population ready`, icon: Database, cls: 'text-brand-700 border-brand/20 bg-brand-50/50 hover:bg-brand-50', count: populationPending });
-  if (wip > 0) nextActions.push({ label: 'Continue Testing', desc: `${wip} controls with testing in progress`, icon: Target, cls: 'text-evidence-700 border-evidence/20 bg-evidence-50/50 hover:bg-evidence-50', count: wip });
-  if (pendingReview > 0) nextActions.push({ label: 'Review Pending', desc: `${pendingReview} controls awaiting reviewer approval`, icon: Eye, cls: 'text-mitigated-700 border-mitigated/20 bg-mitigated-50/50 hover:bg-mitigated-50', count: pendingReview });
-  if (deficient > 0) nextActions.push({ label: 'Address Failures', desc: `${deficient} controls concluded as ineffective`, icon: AlertTriangle, cls: 'text-risk-700 border-risk/20 bg-risk-50/50 hover:bg-risk-50', count: deficient });
 
   return (
     <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
@@ -205,7 +421,7 @@ export default function EngagementDetailView({ engagementId, freshActivation, on
                   <div className="p-2 rounded-xl bg-gradient-to-br from-primary to-primary-medium"><Play size={16} className="text-white" /></div>
                   <div>
                     <h3 className="text-[14px] font-bold text-text">Welcome to Your Audit Workspace</h3>
-                    <p className="text-[12px] text-text-muted mt-0.5">Engagement activated by {eng.activatedBy}. Follow these steps to begin.</p>
+                    <p className="text-[12px] text-text-muted mt-0.5">This engagement has been created from the selected RACM snapshot. Testing has not started yet. Begin by uploading population data for controls.</p>
                   </div>
                 </div>
                 <button onClick={() => setShowOnboarding(false)} className="p-1.5 rounded-lg hover:bg-surface-2 cursor-pointer"><X size={14} className="text-text-muted" /></button>
@@ -243,60 +459,15 @@ export default function EngagementDetailView({ engagementId, freshActivation, on
           </div>
         )}
 
-        {/* ── EXECUTION PROGRESS ── */}
-        <div className="glass-card rounded-xl p-4 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2"><BarChart3 size={14} className="text-primary" /><span className="text-[13px] font-semibold text-text">Execution Progress</span></div>
-            <span className="text-[14px] font-bold text-primary tabular-nums">{progressPct}%</span>
-          </div>
-          <div className="h-2.5 bg-surface-3 rounded-full overflow-hidden mb-3">
-            <motion.div initial={{ width: 0 }} animate={{ width: `${progressPct}%` }} transition={{ duration: 0.8 }} className="h-full rounded-full bg-gradient-to-r from-primary to-primary-medium" />
-          </div>
-          <div className="flex items-center gap-4 text-[11px] flex-wrap">
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-draft" /><span className="text-text-muted">Ready <strong className="text-text">{readyControls}</strong></span></div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-high" /><span className="text-text-muted">Pop. Pending <strong className="text-text">{populationPending}</strong></span></div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-evidence" /><span className="text-text-muted">In Progress <strong className="text-text">{wip}</strong></span></div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-mitigated" /><span className="text-text-muted">Pending Review <strong className="text-text">{pendingReview}</strong></span></div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-compliant" /><span className="text-text-muted">Concluded <strong className="text-text">{concluded}</strong></span></div>
-            {deficient > 0 && <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-risk" /><span className="text-text-muted">Failed <strong className="text-risk-700">{deficient}</strong></span></div>}
-          </div>
-        </div>
-
-        {/* ── EXECUTION KPI CARDS ── */}
-        <div className="grid grid-cols-6 gap-3 mb-6">
-          {[
-            { label: 'Total Controls', value: totalControls, color: 'text-text' },
-            { label: 'Ready', value: readyControls, color: 'text-brand-700' },
-            { label: 'In Progress', value: wip, color: 'text-evidence-700' },
-            { label: 'Pending Review', value: pendingReview, color: 'text-mitigated-700' },
-            { label: 'Concluded', value: concluded, color: 'text-compliant-700' },
-            { label: 'Failed', value: deficient, color: 'text-risk-700' },
-          ].map(kpi => (
-            <div key={kpi.label} className="glass-card rounded-xl p-3 text-center">
-              <div className={`text-xl font-bold tabular-nums ${kpi.color}`}>{kpi.value}</div>
-              <div className="text-[11px] text-text-muted mt-0.5">{kpi.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* ── NEXT BEST ACTIONS ── */}
-        {nextActions.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-[13px] font-semibold text-text mb-3 flex items-center gap-2"><Zap size={14} className="text-primary" />Next Best Actions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {nextActions.map(action => (
-                <div key={action.label} className={`flex items-center gap-3 p-3.5 rounded-xl border transition-colors cursor-pointer ${action.cls}`}>
-                  <div className="p-2 rounded-lg bg-white/60 shrink-0"><action.icon size={16} /></div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-[12px] font-semibold">{action.label}</p>
-                      <span className="text-[10px] font-bold bg-white/60 px-1.5 py-0.5 rounded-full tabular-nums">{action.count}</span>
-                    </div>
-                    <p className="text-[10px] opacity-80 mt-0.5">{action.desc}</p>
-                  </div>
-                  <ArrowRight size={14} className="shrink-0 opacity-50" />
-                </div>
-              ))}
+        {/* ── UNMAPPED ATTRIBUTES WARNING ── */}
+        {sourceControls.some(c => hasUnmappedAttributes(c)) && (
+          <div className="mb-4 rounded-xl border border-risk/20 bg-risk-50/30 px-4 py-3 flex items-center gap-3">
+            <div className="p-1.5 rounded-lg bg-risk-50 shrink-0"><Link2 size={14} className="text-risk-700" /></div>
+            <div>
+              <p className="text-[12px] font-semibold text-risk-700">Workflow mapping incomplete</p>
+              <p className="text-[11px] text-risk-700/70 mt-0.5">
+                {sourceControls.filter(c => hasUnmappedAttributes(c)).length} control{sourceControls.filter(c => hasUnmappedAttributes(c)).length !== 1 ? 's have' : ' has'} attributes not linked to workflows. Complete workflow mapping before execution.
+              </p>
             </div>
           </div>
         )}
@@ -357,7 +528,7 @@ export default function EngagementDetailView({ engagementId, freshActivation, on
                 <table className="w-full text-[12px]">
                   <thead>
                     <tr className="border-b border-border bg-surface-2/50">
-                      {['Control', 'Process', 'Key', 'Workflow', 'Execution Status', 'Population', 'Samples', 'Evidence', 'Reviewer', 'Action'].map(h => (
+                      {['Control', 'Process', 'Key', 'Workflow Coverage', 'Execution Status', 'Population', 'Samples', 'Evidence', 'Reviewer', 'Action'].map(h => (
                         <th key={h} className="px-3 py-3 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide">{h}</th>
                       ))}
                     </tr>
@@ -383,11 +554,7 @@ export default function EngagementDetailView({ engagementId, freshActivation, on
                             {row.isKey ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-mitigated-50 text-mitigated-700 text-[10px] font-bold">K</span> : <span className="text-ink-300">—</span>}
                           </td>
                           <td className="px-3 py-3">
-                            <div className="flex items-center gap-1">
-                              <Workflow size={10} className="text-brand-500 shrink-0" />
-                              <span className="text-[10px] font-medium text-brand-700 truncate max-w-[90px]">{row.workflowName}</span>
-                            </div>
-                            <span className="text-[9px] text-text-muted">{row.workflowVersion} · {row.workflowAttributes.length} attrs</span>
+                            <WorkflowCoverageCell control={row} onOpenDrawer={setMappingDrawerControlId} />
                           </td>
                           <td className="px-3 py-3"><StatusPill status={row.status} /></td>
                           <td className="px-3 py-3"><span className={`text-[11px] font-semibold ${popCls}`}>{popLabel}</span></td>
@@ -407,7 +574,9 @@ export default function EngagementDetailView({ engagementId, freshActivation, on
                                 : <span className="text-ink-300 text-[10px]">—</span>}
                           </td>
                           <td className="px-3 py-3">
-                            <span className={`text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer transition-colors inline-flex items-center gap-1 ${action.cls}`}>
+                            <span
+                              onClick={action.label === 'Fix Mapping' ? (e: React.MouseEvent) => { e.stopPropagation(); setMappingDrawerControlId(row.id); } : undefined}
+                              className={`text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer transition-colors inline-flex items-center gap-1 ${action.cls}`}>
                               <action.icon size={10} />{action.label}
                             </span>
                           </td>
@@ -514,6 +683,13 @@ export default function EngagementDetailView({ engagementId, freshActivation, on
           </div>
         )}
       </div>
+
+      {/* ── WORKFLOW MAPPING DRAWER ── */}
+      <AnimatePresence>
+        {mappingDrawerControl && (
+          <WorkflowMappingDrawer control={mappingDrawerControl} onClose={() => setMappingDrawerControlId(null)} />
+        )}
+      </AnimatePresence>
 
       {/* ── CLOSE ENGAGEMENT MODAL ── */}
       <AnimatePresence>

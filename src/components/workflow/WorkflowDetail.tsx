@@ -333,7 +333,7 @@ export default function WorkflowDetail({ workflowId, onBack, onViewDashboard, on
           <div className="rounded-2xl border border-border-light bg-white p-5">
             <h4 className="text-[11px] font-mono uppercase tracking-tight text-ink-500 mb-3 flex items-center gap-2">
               <Calendar size={13} className="text-primary" />
-              Schedule & Triggers
+              Audit run frequency
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div>

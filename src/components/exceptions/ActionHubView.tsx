@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Clock,
   CheckCircle2,
+  CircleDashed,
   ArrowRight,
   ChevronDown,
   BarChart3,
@@ -18,6 +19,7 @@ import {
   ACTION_HUB_SUMMARY,
   ACTION_HUB_TIMELINE,
   GRC_EXCEPTIONS,
+  GRC_CASE_DETAILS,
   type ActionHubEvent,
   type ActionHubActorRole,
   type GrcException,
@@ -33,12 +35,31 @@ type DrillPreset = {
   ids: string[];
 };
 
+// Implementation status derivation — must mirror ExceptionsTable / ReviewDrawers logic.
+function normaliseActionReview(v: string): 'Pending' | 'Approved' | 'Rejected' {
+  if (v === 'Approved' || v === 'Rejected' || v === 'Pending') return v;
+  if (v === 'Implemented') return 'Approved';
+  return 'Pending';
+}
+type ImplementationStatus = 'Implemented' | 'Partially Implemented' | 'Discrepancy';
+function deriveImplementation(ex: GrcException): ImplementationStatus | null {
+  const actionStatus = GRC_CASE_DETAILS[ex.id]?.actionStatus ?? 'Pending';
+  const norm = normaliseActionReview(ex.actionReview);
+  if (norm === 'Rejected') return 'Discrepancy';
+  if (norm === 'Approved') {
+    if (actionStatus === 'Discrepancy') return 'Discrepancy';
+    if (actionStatus === 'Pending') return 'Implemented';
+    return actionStatus as ImplementationStatus;
+  }
+  return null;
+}
+
 const PRESETS: Record<string, { title: string; subtitle: string; ids: string[] | 'all' | ((ex: GrcException) => boolean) }> = {
   total:             { title: 'Total Exceptions',    subtitle: 'All flagged exceptions',                          ids: 'all' },
   classified:        { title: 'Classified',          subtitle: 'Exceptions with a Risk Owner classification',     ids: ['EXC001','EXC003','EXC004','EXC005','EXC006','EXC008','EXC010','EXC011','EXC012','EXC014'] },
   actionPlans:       { title: 'Action Plans',        subtitle: 'Exceptions with an action plan documented',       ids: ['EXC001','EXC003','EXC004','EXC006','EXC010','EXC012'] },
   underReview:       { title: 'Under Review',        subtitle: 'Awaiting auditor review',                         ids: (ex) => ex.status === 'Under Review' },
-  resolved:          { title: 'Resolved',            subtitle: 'Closed exceptions',                               ids: ['EXC003','EXC006','EXC010'] },
+  resolved:          { title: 'Closed',              subtitle: 'Closed exceptions',                               ids: ['EXC003','EXC006','EXC010'] },
   overdue:           { title: 'Overdue',             subtitle: 'Past action due date, not yet resolved',          ids: (ex) => ex.flags?.includes('Overdue') ?? false },
   // Risk Owner tiles
   roClassifications:   { title: 'Classifications',       subtitle: 'Exceptions classified by Risk Owner',            ids: ['EXC001','EXC003','EXC004','EXC005','EXC006','EXC008','EXC010','EXC011','EXC012','EXC014'] },
@@ -50,6 +71,10 @@ const PRESETS: Record<string, { title: string; subtitle: string; ids: string[] |
   auApproved:          { title: 'Approved / Accepted',   subtitle: 'Action plans approved by Auditor',               ids: ['EXC003','EXC010'] },
   auRejected:          { title: 'Rejected',              subtitle: 'Action plans rejected by Auditor',               ids: ['EXC012'] },
   auCasesClosed:       { title: 'Cases Closed',          subtitle: 'Cases finalized by Auditor',                     ids: ['EXC003','EXC006','EXC010'] },
+  // Implementation outcomes
+  implImplemented:     { title: 'Implemented',           subtitle: 'Action approved and fully implemented',          ids: (ex) => deriveImplementation(ex) === 'Implemented' },
+  implPartial:         { title: 'Partially Implemented', subtitle: 'Action approved but only partially in place',    ids: (ex) => deriveImplementation(ex) === 'Partially Implemented' },
+  implDiscrepancy:     { title: 'Discrepancy',           subtitle: 'Action rejected — case reopened at Risk Owner',  ids: (ex) => deriveImplementation(ex) === 'Discrepancy' },
 };
 
 function resolvePreset(key: string): DrillPreset | null {
@@ -71,6 +96,14 @@ const BREAKDOWN_BAR: Record<BreakdownTone, string> = {
   brand:     'bg-brand-400',
   compliant: 'bg-[#22C55E]',
   draft:     'bg-ink-300',
+};
+
+const BREAKDOWN_HEX: Record<BreakdownTone, string> = {
+  high:      '#C2410C',
+  risk:      '#F07A74',
+  brand:     '#A366F0',
+  compliant: '#22C55E',
+  draft:     '#C2B9CB',
 };
 
 const BREAKDOWN_LABEL: Record<BreakdownTone, string> = {
@@ -282,28 +315,81 @@ function PersonaCard({
   );
 }
 
-function BreakdownBar({
-  row,
-  maxCount,
-}: {
-  row: { label: string; count: number; tone: BreakdownTone; underline?: boolean };
-  maxCount: number;
-}) {
-  const pct = Math.max(6, (row.count / maxCount) * 100);
+function ClassificationDonut({ rows }: { rows: { label: string; count: number; tone: BreakdownTone }[] }) {
+  const total = rows.reduce((sum, r) => sum + r.count, 0);
+  const size = 200;
+  const stroke = 28;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  let offsetDeg = -90; // start at 12 o'clock
+
   return (
-    <button className="group grid grid-cols-[200px_1fr_auto_auto] items-center gap-4 py-2.5 w-full text-left cursor-pointer">
-      <span className={`text-[13px] font-medium ${BREAKDOWN_LABEL[row.tone]} ${row.underline ? 'underline underline-offset-4' : ''}`}>
-        {row.label}
-      </span>
-      <div className="h-2 rounded-full bg-[#EEEEF1] overflow-hidden">
-        <div
-          className={`h-full rounded-full ${BREAKDOWN_BAR[row.tone]}`}
-          style={{ width: `${pct}%` }}
-        />
+    <div className="flex items-center gap-8">
+      {/* Donut */}
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
+          {/* Track */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="#EEEEF1"
+            strokeWidth={stroke}
+          />
+          {/* Segments */}
+          {total > 0 && rows.map((row) => {
+            const pct = row.count / total;
+            const dashLength = pct * circumference;
+            const gap = circumference - dashLength;
+            const seg = (
+              <circle
+                key={row.label}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={BREAKDOWN_HEX[row.tone]}
+                strokeWidth={stroke}
+                strokeLinecap="butt"
+                strokeDasharray={`${dashLength} ${gap}`}
+                strokeDashoffset={-(offsetDeg + 90) / 360 * circumference}
+                transform={`rotate(0 ${size / 2} ${size / 2})`}
+                style={{ transition: 'stroke-dasharray 400ms cubic-bezier(0.2, 0, 0, 1)' }}
+              />
+            );
+            offsetDeg += pct * 360;
+            return seg;
+          })}
+        </svg>
+        {/* Center label */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <div className="text-[28px] leading-none font-semibold text-ink-900 tabular-nums">{total}</div>
+          <div className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-500 mt-1">classified</div>
+        </div>
       </div>
-      <span className="text-[13px] font-semibold text-ink-800 tabular-nums w-4 text-right">{row.count}</span>
-      <ArrowRight size={13} className="text-ink-400 group-hover:text-brand-700" />
-    </button>
+
+      {/* Legend */}
+      <ul className="flex-1 space-y-2.5">
+        {rows.map(row => {
+          const pct = total > 0 ? Math.round((row.count / total) * 100) : 0;
+          return (
+            <li key={row.label} className="group flex items-center gap-3">
+              <span
+                className="w-2.5 h-2.5 rounded-sm shrink-0"
+                style={{ backgroundColor: BREAKDOWN_HEX[row.tone] }}
+                aria-hidden="true"
+              />
+              <span className={`flex-1 text-[12.5px] font-medium truncate ${BREAKDOWN_LABEL[row.tone]}`}>
+                {row.label}
+              </span>
+              <span className="text-[12.5px] font-semibold text-ink-900 tabular-nums w-6 text-right">{row.count}</span>
+              <span className="text-[11.5px] text-ink-500 tabular-nums w-10 text-right">{pct}%</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -349,7 +435,6 @@ function TimelineEntry({ event }: { event: ActionHubEvent }) {
 export default function ActionHubView() {
   const s = ACTION_HUB_SUMMARY;
   const timeline = ACTION_HUB_TIMELINE;
-  const maxBreakdown = useMemo(() => Math.max(...s.classificationBreakdown.rows.map(r => r.count)), [s]);
 
   const [openPresetKey, setOpenPresetKey] = useState<string | null>(null);
   const [atrModalOpen, setAtrModalOpen] = useState(false);
@@ -359,6 +444,16 @@ export default function ActionHubView() {
     [openPreset],
   );
   const openDrawer = useCallback((key: string) => setOpenPresetKey(key), []);
+
+  // Implementation outcome counts derived from live mock data.
+  const implCounts = useMemo(() => {
+    const acc = { Implemented: 0, 'Partially Implemented': 0, Discrepancy: 0 } as Record<ImplementationStatus, number>;
+    GRC_EXCEPTIONS.forEach(ex => {
+      const v = deriveImplementation(ex);
+      if (v) acc[v] += 1;
+    });
+    return acc;
+  }, []);
 
   const roTiles = s.riskOwner.tiles.map((t, i) => ({
     ...t,
@@ -477,8 +572,21 @@ export default function ActionHubView() {
           <StatCard label="Classified"       value={s.counts.classified}   tone="brand"     icon={Tag}            navigable onClick={() => openDrawer('classified')} />
           <StatCard label="Action Plans"     value={s.counts.actionPlans}  tone="evidence"  icon={ClipboardList}  navigable onClick={() => openDrawer('actionPlans')} />
           <StatCard label="Under Review"     value={s.counts.underReview}  tone="mitigated" icon={Clock}          navigable onClick={() => openDrawer('underReview')} />
-          <StatCard label="Resolved"         value={s.counts.resolved}     tone="compliant" icon={CheckCircle2}   navigable onClick={() => openDrawer('resolved')} />
+          <StatCard label="Closed"           value={s.counts.resolved}     tone="compliant" icon={CheckCircle2}   navigable onClick={() => openDrawer('resolved')} />
           <StatCard label="Overdue"          value={s.counts.overdue}      tone="risk"      icon={AlertTriangle}  navigable onClick={() => openDrawer('overdue')} />
+        </div>
+
+        {/* Implementation Outcomes — clickable tiles drill into the case list */}
+        <div className="mb-5">
+          <div className="flex items-baseline justify-between mb-2.5">
+            <h3 className="text-[13px] font-semibold text-ink-800">Implementation Outcomes</h3>
+            <span className="text-[11.5px] text-ink-500">Click any tile to view the underlying cases</span>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <StatCard label="Implemented"           value={implCounts['Implemented']}           tone="compliant" icon={CheckCircle2}   navigable onClick={() => openDrawer('implImplemented')} />
+            <StatCard label="Partially Implemented" value={implCounts['Partially Implemented']} tone="mitigated" icon={CircleDashed}   navigable onClick={() => openDrawer('implPartial')} />
+            <StatCard label="Discrepancy"           value={implCounts['Discrepancy']}           tone="risk"      icon={AlertTriangle}  navigable onClick={() => openDrawer('implDiscrepancy')} />
+          </div>
         </div>
 
         {/* Exception Status Tracker */}
@@ -490,11 +598,7 @@ export default function ActionHubView() {
           title="Classification Breakdown"
           subtitle={`${s.classificationBreakdown.classified} classified · ${s.classificationBreakdown.unclassified} unclassified · ${s.classificationBreakdown.bulk} bulk · ${s.classificationBreakdown.individual} individual`}
         >
-          <div className="divide-y divide-canvas-border">
-            {s.classificationBreakdown.rows.map(row => (
-              <BreakdownBar key={row.label} row={row} maxCount={maxBreakdown} />
-            ))}
-          </div>
+          <ClassificationDonut rows={s.classificationBreakdown.rows} />
         </CollapsibleSection>
 
         {/* Persona split — sits above the Activity Timeline */}
