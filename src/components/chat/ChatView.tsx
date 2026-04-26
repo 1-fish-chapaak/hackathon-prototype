@@ -17,6 +17,7 @@ import BorderGlow from '../shared/BorderGlow';
 import FloatingLines from '../shared/FloatingLines';
 // Persona removed — Rive WebGL crashes in some browsers
 import ClarificationCard from './ClarificationCard';
+import DataPickerModal, { type AttachmentSelection } from './DataPickerModal';
 
 interface ChatMessage {
   id: string;
@@ -803,6 +804,12 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
   const [showSaveAsWfModal, setShowSaveAsWfModal] = useState(false);
   const [lockedAsWorkflow, setLockedAsWorkflow] = useState(false);
 
+  // Data picker modal — replaces the raw file-input click on the upload buttons.
+  // attachedSources are picks from existing data (files / DBs / APIs / cloud / session)
+  // and live alongside the legacy `files` array (raw fresh uploads).
+  const [showDataPicker, setShowDataPicker] = useState(false);
+  const [attachedSources, setAttachedSources] = useState<AttachmentSelection[]>([]);
+
   // Track whether the progressive loader is rendering an audit-query response
   const activeQueryFlowRef = useRef<'audit-query' | null>(null);
 
@@ -1275,7 +1282,11 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     const trimmed = input.trim();
     if (!trimmed && files.length === 0) return;
     let text = trimmed;
-    if (files.length > 0) text += `\n[Attached: ${files.map(f => f.name).join(', ')}]`;
+    const attachmentLabels = [
+      ...attachedSources.map(s => s.kind === 'source' ? s.name : ''),
+      ...files.map(f => f.name),
+    ].filter(Boolean);
+    if (attachmentLabels.length > 0) text += `\n[Attached: ${attachmentLabels.join(', ')}]`;
 
     // If a clarification message is open, route the typed text to its first
     // unanswered question instead of starting a new chat turn.
@@ -1289,6 +1300,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
         updateClarificationAnswer(openClarify.id, firstUnanswered, trimmed);
         setInput('');
         setFiles([]);
+        setAttachedSources([]);
         if (textareaRef.current) textareaRef.current.style.height = 'auto';
         return;
       }
@@ -1297,6 +1309,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'user', text, timestamp: new Date() }]);
     setInput('');
     setFiles([]);
+    setAttachedSources([]);
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     simulateResponse(text);
   };
@@ -1315,6 +1328,20 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+  };
+
+  // Picker → composer: source picks become labelled chips; fresh uploads
+  // become a stub File so the existing `files` chip rendering picks them up.
+  const handleDataPickerConfirm = (selections: AttachmentSelection[]) => {
+    const sources = selections.filter(s => s.kind === 'source');
+    const uploads = selections.filter(s => s.kind === 'upload');
+    if (sources.length > 0) setAttachedSources(prev => [...prev, ...sources]);
+    if (uploads.length > 0) {
+      const stubFiles = uploads.map(u => new File([''], u.name, { type: 'application/octet-stream' }));
+      setFiles(prev => [...prev, ...stubFiles]);
+    }
+    setShowDataPicker(false);
+    addToast({ type: 'success', message: `Attached ${selections.length} ${selections.length === 1 ? 'item' : 'items'}.` });
   };
 
   const handleTextareaInput = () => {
@@ -1394,6 +1421,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
   /* ────────────────────── EMPTY STATE ────────────────────── */
   if (isEmpty) {
     return (
+      <>
       <div style={{ display: 'flex', height: '100%', width: '100%' }}>
         {chatHistoryPanel}
 
@@ -1464,6 +1492,31 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                 Your AI copilot already knows what to look for. Just ask.
               </motion.p>
 
+              {/* Attachment chips — surface picked sources / fresh uploads above the composer */}
+              {(files.length > 0 || attachedSources.length > 0) && (
+                <div className="flex flex-wrap gap-1.5 mb-2 max-w-[680px] mx-auto">
+                  {attachedSources.map((s, i) => (
+                    s.kind === 'source' && (
+                      <div key={`src-${i}`} className="flex items-center gap-1 bg-evidence-50 text-evidence-700 text-[12px] px-2 py-1 rounded-md font-medium border border-evidence-200">
+                        <span className="text-[10px] uppercase font-bold tracking-wide opacity-60">{s.type === 'database' ? 'DB' : s.type === 'api' ? 'API' : s.type === 'cloud' ? 'CLOUD' : s.type === 'session' ? 'SESS' : 'FILE'}</span>
+                        <span className="truncate max-w-[160px]">{s.name}</span>
+                        <button
+                          onClick={() => setAttachedSources(prev => prev.filter((_, j) => j !== i))}
+                          className="hover:text-evidence-700 ml-0.5 cursor-pointer"
+                          aria-label={`Remove ${s.name}`}
+                        ><X size={10} /></button>
+                      </div>
+                    )
+                  ))}
+                  {files.map((f, i) => (
+                    <div key={`file-${i}`} className="flex items-center gap-1 bg-primary-light text-primary text-[12px] px-2 py-1 rounded-md font-medium">
+                      <FileText size={11} />
+                      <span className="truncate max-w-[100px]">{f.name}</span>
+                      <button onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))} className="hover:text-primary-hover ml-0.5 cursor-pointer"><X size={10} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="ai-border" style={{ marginBottom: 24 }}>
                 <div style={{ position: 'relative', background: 'white', borderRadius: 18 }}>
                   <textarea
@@ -1484,15 +1537,19 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                     <button className="p-2 text-text-muted/40 hover:text-primary hover:bg-primary-xlight rounded-lg transition-colors cursor-pointer" aria-label="Voice input">
                       <Mic size={18} />
                     </button>
-                    <label className="cursor-pointer p-2 text-text-muted/40 hover:text-primary hover:bg-primary-xlight rounded-lg transition-colors" aria-label="Attach files">
+                    <button
+                      type="button"
+                      onClick={() => setShowDataPicker(true)}
+                      className="p-2 text-text-muted/40 hover:text-primary hover:bg-primary-xlight rounded-lg transition-colors cursor-pointer"
+                      aria-label="Attach data sources or files"
+                    >
                       <Plus size={18} />
-                      <input type="file" multiple className="hidden" onChange={handleFileUpload} />
-                    </label>
+                    </button>
                   </div>
                   <div style={{ position: 'absolute', right: 12, bottom: 12 }}>
                     <button
                       onClick={handleSend}
-                      disabled={!input.trim() && files.length === 0}
+                      disabled={!input.trim() && files.length === 0 && attachedSources.length === 0}
                       className="px-5 py-2.5 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-[13px] font-semibold transition-all flex items-center gap-2 shadow-sm cursor-pointer"
                     >
                       <Sparkles size={14} />
@@ -1528,6 +1585,14 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           </div>
         </div>
       </div>
+        {/* Modals must mount in this branch too — empty state is the most likely
+            place a user opens the data picker (before sending the first message). */}
+        <DataPickerModal
+          open={showDataPicker}
+          onClose={() => setShowDataPicker(false)}
+          onConfirm={handleDataPickerConfirm}
+        />
+      </>
     );
   }
 
@@ -1546,7 +1611,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { setMessages([]); setInput(''); setShowClarificationCard(false); setShowProgressiveLoader(false); setWorkflowBuildPhase(0); setCurrentWorkflowType(null); setLockedAsWorkflow(false); clearTimers(); }}
+              onClick={() => { setMessages([]); setInput(''); setShowClarificationCard(false); setShowProgressiveLoader(false); setWorkflowBuildPhase(0); setCurrentWorkflowType(null); setLockedAsWorkflow(false); setAttachedSources([]); setFiles([]); clearTimers(); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-light text-[12px] font-medium text-text-secondary hover:bg-white hover:border-primary/20 transition-all cursor-pointer"
             >
               <Plus size={12} />
@@ -1927,14 +1992,31 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                     <Lock size={10} /> Workflow mode
                   </div>
                   <span className="text-[11px] text-text-muted">
-                    Switched at save. Start a <button onClick={() => { setMessages([]); setInput(''); setShowClarificationCard(false); setShowProgressiveLoader(false); setWorkflowBuildPhase(0); setCurrentWorkflowType(null); setLockedAsWorkflow(false); clearTimers(); }} className="underline hover:text-primary cursor-pointer">new chat</button> for a query.
+                    Switched at save. Start a <button onClick={() => { setMessages([]); setInput(''); setShowClarificationCard(false); setShowProgressiveLoader(false); setWorkflowBuildPhase(0); setCurrentWorkflowType(null); setLockedAsWorkflow(false); setAttachedSources([]); setFiles([]); clearTimers(); }} className="underline hover:text-primary cursor-pointer">new chat</button> for a query.
                   </span>
                 </div>
               )}
-              {files.length > 0 && (
+              {(files.length > 0 || attachedSources.length > 0) && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
+                  {/* Source attachments — picked from existing data (DBs / files / APIs / cloud) */}
+                  {attachedSources.map((s, i) => (
+                    <div key={`src-${i}`} className="flex items-center gap-1 bg-evidence-50 text-evidence-700 text-[12px] px-2 py-1 rounded-md font-medium border border-evidence-200">
+                      {s.kind === 'source' && (
+                        <>
+                          <span className="text-[10px] uppercase font-bold tracking-wide opacity-60">{s.type === 'database' ? 'DB' : s.type === 'api' ? 'API' : s.type === 'cloud' ? 'CLOUD' : s.type === 'session' ? 'SESS' : 'FILE'}</span>
+                          <span className="truncate max-w-[160px]">{s.name}</span>
+                        </>
+                      )}
+                      <button
+                        onClick={() => setAttachedSources(prev => prev.filter((_, j) => j !== i))}
+                        className="hover:text-evidence-700 ml-0.5 cursor-pointer"
+                        aria-label={`Remove ${s.kind === 'source' ? s.name : ''}`}
+                      ><X size={10} /></button>
+                    </div>
+                  ))}
+                  {/* Fresh uploads — raw files added via the Upload tab or legacy path */}
                   {files.map((f, i) => (
-                    <div key={i} className="flex items-center gap-1 bg-primary-light text-primary text-[12px] px-2 py-1 rounded-md font-medium">
+                    <div key={`file-${i}`} className="flex items-center gap-1 bg-primary-light text-primary text-[12px] px-2 py-1 rounded-md font-medium">
                       <FileText size={11} />
                       <span className="truncate max-w-[100px]">{f.name}</span>
                       <button onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))} className="hover:text-primary-hover ml-0.5 cursor-pointer"><X size={10} /></button>
@@ -1953,11 +2035,15 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                     rows={1}
                   />
                   <div className="absolute right-2 bottom-2 flex items-center gap-1">
-                    <label className="cursor-pointer p-2 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => setShowDataPicker(true)}
+                      className="p-2 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-lg transition-colors cursor-pointer"
+                      aria-label="Attach data sources or files"
+                    >
                       <Paperclip size={15} />
-                      <input type="file" multiple className="hidden" onChange={handleFileUpload} />
-                    </label>
-                    <button onClick={handleSend} disabled={!input.trim() && files.length === 0} className="p-2 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white rounded-xl transition-all cursor-pointer">
+                    </button>
+                    <button onClick={handleSend} disabled={!input.trim() && files.length === 0 && attachedSources.length === 0} className="p-2 bg-gradient-to-r from-primary to-primary-medium hover:from-primary-hover hover:to-primary disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white rounded-xl transition-all cursor-pointer">
                       <Send size={15} />
                     </button>
                   </div>
@@ -1980,6 +2066,13 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           />
         )}
       </AnimatePresence>
+
+      {/* Data picker modal — attach existing sources or upload fresh files */}
+      <DataPickerModal
+        open={showDataPicker}
+        onClose={() => setShowDataPicker(false)}
+        onConfirm={handleDataPickerConfirm}
+      />
     </div>
   );
 }
