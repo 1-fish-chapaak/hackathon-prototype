@@ -1858,12 +1858,12 @@ function BulkExecuteModal({
                 <div className="flex flex-wrap gap-1.5 pb-3 border-b border-border-light">
                   {([
                     { key: 'all',       label: 'All',           dot: null,             count: reviewCounts.all },
-                    { key: 'mapped',    label: 'Mapped',        dot: 'bg-compliant',   count: reviewCounts.mapped },
+                    { key: 'mapped',    label: 'Mapped',        dot: 'bg-[#047A48]',   count: reviewCounts.mapped },
                     { key: 'column',    label: 'Column Issues', dot: 'bg-mitigated',   count: reviewCounts.column },
                     { key: 'file',      label: 'File Issues',   dot: 'bg-risk',        count: reviewCounts.file },
                     { key: 'notmapped', label: 'Not Mapped',    dot: 'bg-text-muted',  count: reviewCounts.notmapped },
                     ...(reviewCounts.sql > 0
-                      ? [{ key: 'sql' as const, label: 'SQL', dot: 'bg-compliant', count: reviewCounts.sql }]
+                      ? [{ key: 'sql' as const, label: 'SQL', dot: 'bg-[#047A48]', count: reviewCounts.sql }]
                       : []),
                     ...(reviewCounts.dropped > 0
                       ? [{ key: 'dropped' as const, label: 'Dropped', dot: 'bg-text', count: reviewCounts.dropped }]
@@ -2411,7 +2411,7 @@ function ReviewStatusChip({ status }: { status: ReviewWorkflowStatus }) {
   switch (status) {
     case 'mapped':
       return (
-        <span className={`${base} bg-compliant-50 text-compliant-700 border-compliant/25`}>
+        <span className={`${base} border-transparent`} style={{ backgroundColor: '#ECFEF3', color: '#047A48' }}>
           <Check size={10} strokeWidth={3} />
           Mapped
         </span>
@@ -2945,13 +2945,16 @@ function SqlConfigInput({
         {field.label}
         {field.required && <span className="text-risk ml-0.5">*</span>}
       </label>
-      <input
-        type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={field.type === 'date' ? 'DD-MM-YYYY' : ''}
-        className="w-full px-3 py-2.5 rounded-md border border-border-light text-[13px] text-text bg-white outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
-      />
+      {field.type === 'date' ? (
+        <CustomDatePicker value={value} onChange={onChange} />
+      ) : (
+        <input
+          type={field.type === 'number' ? 'number' : 'text'}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="w-full px-3 py-2.5 rounded-md border border-border-light text-[13px] text-text bg-white outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
+        />
+      )}
     </div>
   );
 }
