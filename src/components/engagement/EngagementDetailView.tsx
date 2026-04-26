@@ -150,7 +150,7 @@ export default function EngagementDetailView({ engagementId, freshActivation, on
       <div className="p-8 relative">
         {/* Back */}
         <button onClick={onBack} className="flex items-center gap-1.5 text-[12px] text-text-muted hover:text-primary font-medium mb-4 cursor-pointer transition-colors">
-          <ArrowLeft size={14} />Back to Planning
+          <ArrowLeft size={14} />Back
         </button>
 
         {/* ── HEADER ── */}

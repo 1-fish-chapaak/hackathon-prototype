@@ -12,13 +12,20 @@ import {
   Tag,
   X,
   Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
-import type {
-  GrcException,
-  GrcExceptionSeverity,
-  GrcExceptionStatus,
-  GrcExceptionClassification,
-  GrcReviewStatus,
+import {
+  GRC_CASE_DETAILS,
+  type GrcException,
+  type GrcExceptionSeverity,
+  type GrcExceptionStatus,
+  type GrcExceptionClassification,
+  type GrcReviewStatus,
+  type GrcActionStatus,
 } from '../../data/mockData';
 import type { ExceptionRole } from '../../hooks/useAppState';
 
@@ -47,6 +54,38 @@ const REVIEW_STYLE: Record<GrcReviewStatus, string> = {
   Rejected:    'bg-risk-50 text-risk-700',
   Implemented: 'bg-compliant-50 text-compliant-700',
 };
+
+// Action Review Status — Approved / Rejected / Pending only.
+type ActionReviewStatus = 'Pending' | 'Approved' | 'Rejected';
+const ACTION_REVIEW_STYLE: Record<ActionReviewStatus, string> = {
+  Pending:  'bg-[#EEEEF1] text-ink-600',
+  Approved: 'bg-compliant-50 text-compliant-700',
+  Rejected: 'bg-risk-50 text-risk-700',
+};
+// Legacy mock data sometimes stores 'Implemented' in actionReview — normalise for display.
+function normaliseActionReview(v: string): ActionReviewStatus {
+  if (v === 'Approved' || v === 'Rejected' || v === 'Pending') return v;
+  if (v === 'Implemented') return 'Approved';
+  return 'Pending';
+}
+
+// Implementation status — Implemented / Partially Implemented / Discrepancy.
+type ImplementationStatus = 'Implemented' | 'Partially Implemented' | 'Discrepancy';
+const IMPLEMENTATION_STYLE: Record<ImplementationStatus, string> = {
+  Implemented:            'bg-compliant-50 text-compliant-700',
+  'Partially Implemented':'bg-mitigated-50 text-mitigated-700',
+  Discrepancy:            'bg-risk-50 text-risk-700',
+};
+function deriveImplementation(actionReview: string, actionStatus: GrcActionStatus): ImplementationStatus | null {
+  const norm = normaliseActionReview(actionReview);
+  if (norm === 'Rejected') return 'Discrepancy';
+  if (norm === 'Approved') {
+    if (actionStatus === 'Discrepancy') return 'Discrepancy';
+    if (actionStatus === 'Pending') return 'Implemented';
+    return actionStatus;
+  }
+  return null; // Pending review → no implementation outcome yet
+}
 
 function Pill({ children, className }: { children: React.ReactNode; className: string }) {
   return (
@@ -90,6 +129,7 @@ export type ColumnKey =
   | 'classification'
   | 'classReview'
   | 'actionReview'
+  | 'implementation'
   | 'actionableId'
   | 'lastUpdated'
   | 'classify'
@@ -102,7 +142,8 @@ interface ColumnDef {
   key: ColumnKey;
   label: string;
   alwaysVisible?: boolean;     // cannot be hidden
-  alwaysPinned?: PinSide;      // fixed pin position
+  alwaysPinned?: PinSide;      // fixed pin position (locked, no menu)
+  defaultPin?: PinSide;        // initial pin (user can change via menu)
   draggable?: boolean;
   filterable?: boolean;
   filterOptions?: string[];
@@ -118,8 +159,32 @@ const ALL_CLASSIFICATIONS: GrcExceptionClassification[] = [
   'Unclassified', 'Design Deficiency', 'System Deficiency', 'Procedural Non-Compliance', 'Business as Usual', 'False Positive',
 ];
 const ALL_REVIEWS: GrcReviewStatus[] = ['Pending', 'Approved', 'Rejected', 'Implemented'];
+const ALL_ACTION_REVIEWS: ActionReviewStatus[] = ['Pending', 'Approved', 'Rejected'];
+const ALL_IMPLEMENTATIONS: ImplementationStatus[] = ['Implemented', 'Partially Implemented', 'Discrepancy'];
+
+function implementationAccessor(ex: GrcException): string {
+  const actionStatus = GRC_CASE_DETAILS[ex.id]?.actionStatus ?? 'Pending';
+  return deriveImplementation(ex.actionReview, actionStatus) ?? '';
+}
+
+// Action-state filter options for auditor's Classify / Action columns —
+// reflect what the row-action button actually says.
+const CLASSIFY_AUDIT_OPTIONS  = ['Review Classification', 'View'] as const;
+const ACTION_AUDIT_OPTIONS    = ['Review Action', 'View'] as const;
+
+function classifyAuditAccessor(ex: GrcException): string {
+  return ex.classificationReview === 'Pending' && ex.classification !== 'Unclassified'
+    ? 'Review Classification'
+    : 'View';
+}
+function actionAuditAccessor(ex: GrcException): string {
+  return ex.actionReview === 'Pending' && ex.classification !== 'Unclassified'
+    ? 'Review Action'
+    : 'View';
+}
 
 function buildColumnDefs(role: ExceptionRole, riskCategories: string[]): ColumnDef[] {
+  const isAuditor = role === 'auditor';
   const base: ColumnDef[] = [
     { key: 'select',         label: '',               alwaysVisible: true,  draggable: false, minWidth: 40 },
     { key: 'id',             label: 'Exception ID',   alwaysVisible: true,  draggable: true, filterable: true, filterMode: 'text', accessor: (e) => e.id },
@@ -128,13 +193,22 @@ function buildColumnDefs(role: ExceptionRole, riskCategories: string[]): ColumnD
     { key: 'status',         label: 'Status',         draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_STATUSES, accessor: (e) => e.status },
     { key: 'classification', label: 'Classification', draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_CLASSIFICATIONS, accessor: (e) => e.classification },
     { key: 'classReview',    label: 'Class. Review',  draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_REVIEWS, accessor: (e) => e.classificationReview },
-    { key: 'actionReview',   label: 'Action Review',  draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_REVIEWS, accessor: (e) => e.actionReview },
+    { key: 'actionReview',   label: 'Action Review',  draggable: true, filterable: true, filterMode: 'multi', filterOptions: [...ALL_ACTION_REVIEWS], accessor: (e) => normaliseActionReview(e.actionReview) },
+    { key: 'implementation', label: 'Implementation', draggable: true, filterable: true, filterMode: 'multi', filterOptions: [...ALL_IMPLEMENTATIONS], accessor: implementationAccessor, minWidth: 150 },
     { key: 'actionableId',   label: 'Actionable ID',  draggable: true, filterable: true, filterMode: 'text', accessor: (e) => e.bulkId ?? '', minWidth: 110 },
     { key: 'lastUpdated',    label: 'Last Updated',   draggable: true, filterable: false, accessor: (e) => e.lastUpdated },
-    { key: 'classify',       label: 'Classify',       alwaysVisible: true, alwaysPinned: 'right', draggable: false, align: 'center', minWidth: 150 },
+    isAuditor
+      ? { key: 'classify', label: 'Classify', alwaysVisible: true, defaultPin: 'right', draggable: true, filterable: true, filterMode: 'multi', filterOptions: [...CLASSIFY_AUDIT_OPTIONS], accessor: classifyAuditAccessor, align: 'center', minWidth: 180 }
+      : { key: 'classify', label: 'Classify', alwaysVisible: true, alwaysPinned: 'right',                                                                                                            align: 'center', minWidth: 150 },
   ];
-  if (role === 'auditor') {
-    base.push({ key: 'action', label: 'Action', alwaysVisible: true, alwaysPinned: 'right', draggable: false, align: 'center', minWidth: 150 });
+  if (isAuditor) {
+    base.push({
+      key: 'action', label: 'Action', alwaysVisible: true,
+      defaultPin: 'right', draggable: true,
+      filterable: true, filterMode: 'multi', filterOptions: [...ACTION_AUDIT_OPTIONS],
+      accessor: actionAuditAccessor,
+      align: 'center', minWidth: 150,
+    });
   }
   return base;
 }
@@ -432,8 +506,17 @@ function renderCell(
       return <Pill className={CLASSIFICATION_STYLE[ex.classification]}>{ex.classification}</Pill>;
     case 'classReview':
       return <Pill className={REVIEW_STYLE[ex.classificationReview]}>{ex.classificationReview}</Pill>;
-    case 'actionReview':
-      return <Pill className={REVIEW_STYLE[ex.actionReview]}>{ex.actionReview}</Pill>;
+    case 'actionReview': {
+      const norm = normaliseActionReview(ex.actionReview);
+      return <Pill className={ACTION_REVIEW_STYLE[norm]}>{norm}</Pill>;
+    }
+    case 'implementation': {
+      const actionStatus = GRC_CASE_DETAILS[ex.id]?.actionStatus ?? 'Pending';
+      const impl = deriveImplementation(ex.actionReview, actionStatus);
+      return impl
+        ? <Pill className={IMPLEMENTATION_STYLE[impl]}>{impl}</Pill>
+        : <span className="text-ink-400 text-[12.5px]">—</span>;
+    }
     case 'actionableId':
       return ex.bulkId ? (
         <button
@@ -520,7 +603,7 @@ export default function ExceptionsTable({
   }, [defs]);
   const defaultPins = useMemo(() => {
     const p = {} as PinsMap;
-    defs.forEach(d => { p[d.key] = d.alwaysPinned ?? null; });
+    defs.forEach(d => { p[d.key] = d.alwaysPinned ?? d.defaultPin ?? null; });
     return p;
   }, [defs]);
   const emptyFilters = useMemo(() => {
@@ -551,7 +634,8 @@ export default function ExceptionsTable({
       const next = { ...defaultPins };
       defaultOrder.forEach(k => {
         const def = defByKey[k];
-        next[k] = def.alwaysPinned ?? prev[k] ?? null;
+        // Always-locked wins → user's last choice → column's default → unpinned.
+        next[k] = def.alwaysPinned ?? prev[k] ?? def.defaultPin ?? null;
       });
       return next;
     });
@@ -602,8 +686,10 @@ export default function ExceptionsTable({
       for (const k of defaultOrder) {
         const def = defByKey[k];
         if (!def.filterable) continue;
+        // Mid-role-switch render: filters may not yet include keys newly
+        // introduced by the role change — guard against undefined.
         const value = filters[k];
-        if (!value.length) continue;
+        if (!value || !value.length) continue;
         const actual = def.accessor?.(ex) ?? '';
         if (def.filterMode === 'text') {
           if (!actual.toLowerCase().includes(String(value[0]).toLowerCase())) return false;
@@ -616,7 +702,54 @@ export default function ExceptionsTable({
   }, [exceptions, filters, defByKey, defaultOrder]);
 
   const allIds = useMemo(() => filteredExceptions.map(e => e.id), [filteredExceptions]);
+
+  // Pagination
+  const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSizeMenuOpen, setPageSizeMenuOpen] = useState(false);
+  const totalPages = Math.max(1, Math.ceil(filteredExceptions.length / pageSize));
+
+  // Snap currentPage when filters change or page size shrinks below current page.
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+  useEffect(() => { setCurrentPage(1); }, [filters, pageSize]);
+
+  const pagedExceptions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredExceptions.slice(start, start + pageSize);
+  }, [filteredExceptions, currentPage, pageSize]);
+  const pagedIds = useMemo(() => pagedExceptions.map(e => e.id), [pagedExceptions]);
+
+  const pageSelected = pagedIds.length > 0 && pagedIds.every(id => selected.has(id));
   const allSelected = allIds.length > 0 && allIds.every(id => selected.has(id));
+  const someSelected = pagedIds.some(id => selected.has(id));
+  const showAllOnPageBanner = pageSelected && !allSelected && totalPages > 1;
+
+  // Select-mode dropdown in the header checkbox (All Cases / This Page).
+  const [selectMenuOpen, setSelectMenuOpen] = useState(false);
+
+  const handleHeaderCheckbox = () => {
+    // Parent's onToggleAll: if every passed id is already selected → clears them;
+    // otherwise selects them all. Passing pagedIds gives the right behaviour for
+    // both "nothing selected" and "indeterminate" states.
+    onToggleAll(pagedIds);
+  };
+
+  const selectAllCases = () => {
+    // Add every filtered id that isn't already selected.
+    const missing = allIds.filter(id => !selected.has(id));
+    if (missing.length) onToggleAll(missing);
+    setSelectMenuOpen(false);
+  };
+  const selectThisPage = () => {
+    const missing = pagedIds.filter(id => !selected.has(id));
+    if (missing.length) onToggleAll(missing);
+    setSelectMenuOpen(false);
+  };
+  const selectMenuRef = useOutsideClick<HTMLDivElement>(() => setSelectMenuOpen(false));
+  const pageSizeMenuRef = useOutsideClick<HTMLDivElement>(() => setPageSizeMenuOpen(false));
 
   // Compose render order: left-pinned (in order) → unpinned (in order) → right-pinned (in order).
   const renderOrder = useMemo(() => {
@@ -627,12 +760,37 @@ export default function ExceptionsTable({
     return [...left, ...middle, ...right];
   }, [order, visibility, pins]);
 
+  // Cumulative left/right offsets so multiple pinned columns don't overlap.
+  // Each pinned column sticks at the sum of widths of the pinned columns
+  // closer to the same edge.
+  const pinOffsets = useMemo(() => {
+    const off: Partial<Record<ColumnKey, number>> = {};
+    const fallback = 120;
+    let leftSoFar = 0;
+    for (const k of renderOrder) {
+      if (pins[k] === 'left') {
+        off[k] = leftSoFar;
+        leftSoFar += defByKey[k].minWidth ?? fallback;
+      }
+    }
+    let rightSoFar = 0;
+    for (let i = renderOrder.length - 1; i >= 0; i--) {
+      const k = renderOrder[i];
+      if (pins[k] === 'right') {
+        off[k] = rightSoFar;
+        rightSoFar += defByKey[k].minWidth ?? fallback;
+      }
+    }
+    return off;
+  }, [renderOrder, pins, defByKey]);
+
   const activeFilterCount = useMemo(
     () => Object.values(filters).reduce((sum, v) => sum + (v.length > 0 ? 1 : 0), 0),
     [filters],
   );
 
   return (
+    <div className="space-y-3">
     <div className="bg-canvas-elevated border border-canvas-border rounded-[12px] overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-canvas-border gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -671,19 +829,24 @@ export default function ExceptionsTable({
                 const pinned = pins[key];
                 const isDragTarget = dropTargetKey === key;
                 const isDragging = draggingKey === key;
+                const offset = pinOffsets[key] ?? 0;
                 const stickyStyle: React.CSSProperties = pinned
                   ? {
                       position: 'sticky',
-                      [pinned === 'left' ? 'left' : 'right']: 0,
+                      [pinned === 'left' ? 'left' : 'right']: offset,
                       zIndex: 5,
                       background: '#FAFAFB',
                       boxShadow: pinned === 'left' ? '1px 0 0 var(--color-canvas-border)' : '-1px 0 0 var(--color-canvas-border)',
                     }
                   : {};
+                // Lock pinned columns to their declared width so cumulative offsets stay accurate.
+                const widthStyle: React.CSSProperties = pinned && def.minWidth
+                  ? { width: def.minWidth, minWidth: def.minWidth, maxWidth: def.minWidth }
+                  : { minWidth: def.minWidth };
                 return (
                   <th
                     key={key}
-                    style={{ ...stickyStyle, minWidth: def.minWidth }}
+                    style={{ ...stickyStyle, ...widthStyle }}
                     draggable={def.draggable && !pinned}
                     onDragStart={def.draggable && !pinned ? handleDragStart(key) : undefined}
                     onDragOver={def.draggable && !pinned ? handleDragOver(key) : undefined}
@@ -693,39 +856,87 @@ export default function ExceptionsTable({
                       def.align === 'center' ? 'text-center' : ''
                     } ${isDragTarget ? 'bg-brand-50' : ''} ${isDragging ? 'opacity-50' : ''}`}
                   >
-                    <div className={`flex items-center gap-1 ${def.align === 'center' ? 'justify-center' : ''}`}>
-                      {def.draggable && !pinned && (
-                        <GripVertical size={11} className="text-ink-300 shrink-0 cursor-grab active:cursor-grabbing" />
-                      )}
-                      <span className="whitespace-nowrap">{def.label}</span>
-                      {pinned && (
-                        <Pin size={9} className={`text-brand-600 shrink-0 ${pinned === 'left' ? '-rotate-45' : 'rotate-45'}`} />
-                      )}
-                      {def.filterable || !def.alwaysPinned ? (
-                        <HeaderMenu
-                          col={def}
-                          filterValue={filters[key] ?? []}
-                          onFilterChange={(v) => setFilters(prev => ({ ...prev, [key]: v }))}
-                          pin={pinned}
-                          onPin={(side) => setPins(prev => ({ ...prev, [key]: side }))}
-                        />
-                      ) : null}
-                      {key === 'select' && (
+                    {key === 'select' ? (
+                      <div className="relative inline-flex items-center gap-1" ref={selectMenuRef}>
                         <input
                           type="checkbox"
-                          checked={allSelected}
-                          onChange={() => onToggleAll(allIds)}
+                          checked={pageSelected}
+                          ref={(el) => {
+                            if (el) el.indeterminate = !pageSelected && someSelected;
+                          }}
+                          onChange={handleHeaderCheckbox}
                           className="accent-brand-600 cursor-pointer"
-                          aria-label="Select all"
+                          aria-label="Select rows on this page"
                         />
-                      )}
-                    </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectMenuOpen(o => !o)}
+                          className="w-4 h-4 flex items-center justify-center rounded text-ink-400 hover:text-brand-700 hover:bg-[#F4F2F7] cursor-pointer"
+                          aria-label="Selection menu"
+                        >
+                          <ChevronDown size={12} />
+                        </button>
+                        {selectMenuOpen && (
+                          <div className="absolute z-30 left-0 top-6 w-[140px] bg-canvas-elevated border border-canvas-border rounded-[10px] shadow-xl py-1 normal-case tracking-normal">
+                            <button
+                              type="button"
+                              onClick={selectAllCases}
+                              className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-ink-800 hover:bg-[#FAFAFB] cursor-pointer"
+                            >
+                              All Cases
+                              {allSelected && <Check size={13} className="ml-auto text-brand-700" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={selectThisPage}
+                              className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-ink-800 hover:bg-[#FAFAFB] cursor-pointer"
+                            >
+                              This Page
+                              {pageSelected && !allSelected && <Check size={13} className="ml-auto text-brand-700" />}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className={`flex items-center gap-1 ${def.align === 'center' ? 'justify-center' : ''}`}>
+                        {def.draggable && !pinned && (
+                          <GripVertical size={11} className="text-ink-300 shrink-0 cursor-grab active:cursor-grabbing" />
+                        )}
+                        <span className="whitespace-nowrap">{def.label}</span>
+                        {pinned && (
+                          <Pin size={9} className={`text-brand-600 shrink-0 ${pinned === 'left' ? '-rotate-45' : 'rotate-45'}`} />
+                        )}
+                        {def.filterable || !def.alwaysPinned ? (
+                          <HeaderMenu
+                            col={def}
+                            filterValue={filters[key] ?? []}
+                            onFilterChange={(v) => setFilters(prev => ({ ...prev, [key]: v }))}
+                            pin={pinned}
+                            onPin={(side) => setPins(prev => ({ ...prev, [key]: side }))}
+                          />
+                        ) : null}
+                      </div>
+                    )}
                   </th>
                 );
               })}
             </tr>
           </thead>
           <tbody>
+            {showAllOnPageBanner && (
+              <tr className="bg-brand-50/40 border-b border-canvas-border">
+                <td colSpan={renderOrder.length} className="px-5 py-2.5 text-center text-[12.5px] text-ink-700">
+                  All <span className="font-semibold">{pagedIds.length}</span> Cases on this page are selected.{' '}
+                  <button
+                    type="button"
+                    onClick={selectAllCases}
+                    className="text-brand-700 font-semibold underline hover:text-brand-600 cursor-pointer"
+                  >
+                    Select all {filteredExceptions.length} Cases.
+                  </button>
+                </td>
+              </tr>
+            )}
             {filteredExceptions.length === 0 ? (
               <tr>
                 <td colSpan={renderOrder.length} className="px-6 py-10 text-center text-[13px] text-ink-500">
@@ -733,7 +944,7 @@ export default function ExceptionsTable({
                 </td>
               </tr>
             ) : (
-              filteredExceptions.map((ex) => {
+              pagedExceptions.map((ex) => {
                 const isOverdue = ex.flags?.includes('Overdue');
                 const sel = selected.has(ex.id);
                 const rowBg = isOverdue ? 'bg-risk-50/40' : sel ? 'bg-brand-50/60' : 'hover:bg-[#FAFAFB]';
@@ -743,19 +954,23 @@ export default function ExceptionsTable({
                     {renderOrder.map((key) => {
                       const def = defByKey[key];
                       const pinned = pins[key];
+                      const offset = pinOffsets[key] ?? 0;
                       const stickyStyle: React.CSSProperties = pinned
                         ? {
                             position: 'sticky',
-                            [pinned === 'left' ? 'left' : 'right']: 0,
+                            [pinned === 'left' ? 'left' : 'right']: offset,
                             zIndex: 4,
                             background: rowBgForPin,
                             boxShadow: pinned === 'left' ? '1px 0 0 var(--color-canvas-border)' : '-1px 0 0 var(--color-canvas-border)',
                           }
                         : {};
+                      const widthStyle: React.CSSProperties = pinned && def.minWidth
+                        ? { width: def.minWidth, minWidth: def.minWidth, maxWidth: def.minWidth }
+                        : { minWidth: def.minWidth };
                       return (
                         <td
                           key={key}
-                          style={{ ...stickyStyle, minWidth: def.minWidth }}
+                          style={{ ...stickyStyle, ...widthStyle }}
                           className={`px-3 py-3 align-middle ${def.align === 'center' ? 'text-center' : ''} ${key === 'id' ? 'align-top' : ''}`}
                         >
                           {renderCell(
@@ -777,6 +992,79 @@ export default function ExceptionsTable({
             )}
           </tbody>
         </table>
+      </div>
+    </div>
+
+      {/* Pagination footer — sticks to the bottom of the viewport while scrolling */}
+      <div className="sticky bottom-0 z-20 flex items-center justify-end gap-5 px-5 py-3 bg-canvas-elevated border border-canvas-border rounded-[12px] shadow-[0_-4px_12px_rgba(15,15,30,0.04)] text-[12.5px] text-ink-700">
+        <div className="flex items-center gap-2 relative" ref={pageSizeMenuRef}>
+          <span className="text-brand-700 font-medium">Rows per page :</span>
+          <button
+            type="button"
+            onClick={() => setPageSizeMenuOpen(o => !o)}
+            className="inline-flex items-center justify-between gap-1.5 h-7 w-[64px] px-2 bg-canvas-elevated border border-canvas-border rounded-[6px] hover:border-brand-200 cursor-pointer tabular-nums"
+          >
+            {pageSize}
+            <ChevronDown size={12} className="text-ink-500" />
+          </button>
+          {pageSizeMenuOpen && (
+            <div className="absolute z-20 left-[calc(100%-64px)] bottom-full mb-1 w-[64px] bg-canvas-elevated border border-canvas-border rounded-[8px] shadow-xl py-1">
+              {PAGE_SIZE_OPTIONS.map(n => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => { setPageSize(n); setPageSizeMenuOpen(false); }}
+                  className={`block w-full text-left px-3 py-1.5 text-[12.5px] tabular-nums hover:bg-[#FAFAFB] cursor-pointer ${
+                    n === pageSize ? 'text-brand-700 font-medium bg-brand-50/40' : 'text-ink-800'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <span className="tabular-nums">
+          Page {currentPage} of {totalPages}
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="w-7 h-7 flex items-center justify-center rounded-[6px] text-ink-500 hover:bg-[#F4F2F7] hover:text-brand-700 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-500 disabled:cursor-not-allowed cursor-pointer"
+            aria-label="First page"
+          >
+            <ChevronsLeft size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="w-7 h-7 flex items-center justify-center rounded-[6px] text-ink-500 hover:bg-[#F4F2F7] hover:text-brand-700 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-500 disabled:cursor-not-allowed cursor-pointer"
+            aria-label="Previous page"
+          >
+            <ChevronLeft size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="w-7 h-7 flex items-center justify-center rounded-[6px] text-ink-500 hover:bg-[#F4F2F7] hover:text-brand-700 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-500 disabled:cursor-not-allowed cursor-pointer"
+            aria-label="Next page"
+          >
+            <ChevronRight size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="w-7 h-7 flex items-center justify-center rounded-[6px] text-ink-500 hover:bg-[#F4F2F7] hover:text-brand-700 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-500 disabled:cursor-not-allowed cursor-pointer"
+            aria-label="Last page"
+          >
+            <ChevronsRight size={15} />
+          </button>
+        </div>
       </div>
     </div>
   );

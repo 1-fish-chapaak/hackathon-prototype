@@ -1,7 +1,19 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Paperclip, Send, Sparkles, ArrowLeft, Link2, X, Check, Info, SlidersHorizontal, DollarSign, Play, RotateCcw, Loader2 } from 'lucide-react';
+import { Paperclip, Send, Sparkles, ArrowLeft, Link2, Check, Info, SlidersHorizontal, DollarSign, Play, RotateCcw, Loader2 } from 'lucide-react';
 import type { JourneyStep } from './Stepper';
+import StepUploadFiles from './StepUploadFiles';
+import StepMapData from './StepMapData';
+import StepReviewRun from './StepReviewRun';
+import StepOutputView from './StepOutputView';
+import type {
+  InputSpec,
+  JourneyAlignments,
+  JourneyFiles,
+  JourneyMappings,
+  RunResult,
+  WorkflowDraft,
+} from './types';
 
 export type EventTone = 'link' | 'info' | 'success';
 
@@ -26,7 +38,43 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'event' | 'card';
   text: string;
   tone?: EventTone;
-  cardType?: 'tolerance';
+  cardType?: 'tolerance' | 'upload' | 'map' | 'review' | 'output';
+}
+
+export interface UploadCardProps {
+  workflow: WorkflowDraft;
+  files: JourneyFiles;
+  setFiles: (f: JourneyFiles) => void;
+  onLinkSource?: (sourceName: string, inputName: string) => void;
+  onFocusInput?: (input: InputSpec) => void;
+  focusedInputId?: string | null;
+}
+
+export interface MapCardProps {
+  workflow: WorkflowDraft;
+  files: JourneyFiles;
+  setFiles: (f: JourneyFiles) => void;
+  alignments: JourneyAlignments;
+  expandedInputId?: string | null;
+  onToggleExpand?: (inputId: string) => void;
+}
+
+export interface ReviewCardProps {
+  workflow: WorkflowDraft;
+  setWorkflow: Dispatch<SetStateAction<WorkflowDraft | null>>;
+  files: JourneyFiles;
+  mappings: JourneyMappings;
+  setMappings: Dispatch<SetStateAction<JourneyMappings>>;
+  running: boolean;
+  result: RunResult | null;
+  expandedSource?: string | null;
+  setExpandedSource?: Dispatch<SetStateAction<string | null>>;
+}
+
+export interface OutputCardProps {
+  workflow: WorkflowDraft;
+  result: RunResult | null;
+  running: boolean;
 }
 
 export interface QuickReply {
@@ -68,6 +116,10 @@ interface Props {
   onBack?: () => void;
   isTyping?: boolean;
   toleranceCard?: ToleranceCardProps;
+  uploadCard?: UploadCardProps;
+  mapCard?: MapCardProps;
+  reviewCard?: ReviewCardProps;
+  outputCard?: OutputCardProps;
 }
 
 const STEPS: { id: JourneyStep; label: string }[] = [
@@ -94,6 +146,10 @@ export default function AIAssistantPanel({
   onBack,
   isTyping,
   toleranceCard,
+  uploadCard,
+  mapCard,
+  reviewCard,
+  outputCard,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -228,6 +284,90 @@ export default function AIAssistantPanel({
               );
             }
 
+            if (m.role === 'card' && m.cardType === 'upload' && uploadCard) {
+              return (
+                <motion.div
+                  key={m.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                  className={`flex justify-start ${topGap}`}
+                >
+                  <div className="max-w-[96%] min-w-0 w-full">
+                    {isFirstOfRun && (
+                      <div className="mb-1 font-mono text-[10.5px] text-ink-400 uppercase tracking-[0.14em]">
+                        Ira
+                      </div>
+                    )}
+                    <StepUploadFiles {...uploadCard} />
+                  </div>
+                </motion.div>
+              );
+            }
+
+            if (m.role === 'card' && m.cardType === 'map' && mapCard) {
+              return (
+                <motion.div
+                  key={m.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                  className={`flex justify-start ${topGap}`}
+                >
+                  <div className="max-w-[96%] min-w-0 w-full">
+                    {isFirstOfRun && (
+                      <div className="mb-1 font-mono text-[10.5px] text-ink-400 uppercase tracking-[0.14em]">
+                        Ira
+                      </div>
+                    )}
+                    <StepMapData {...mapCard} />
+                  </div>
+                </motion.div>
+              );
+            }
+
+            if (m.role === 'card' && m.cardType === 'review' && reviewCard) {
+              return (
+                <motion.div
+                  key={m.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                  className={`flex justify-start ${topGap}`}
+                >
+                  <div className="max-w-[96%] min-w-0 w-full">
+                    {isFirstOfRun && (
+                      <div className="mb-1 font-mono text-[10.5px] text-ink-400 uppercase tracking-[0.14em]">
+                        Ira
+                      </div>
+                    )}
+                    <StepReviewRun {...reviewCard} />
+                  </div>
+                </motion.div>
+              );
+            }
+
+            if (m.role === 'card' && m.cardType === 'output' && outputCard) {
+              return (
+                <motion.div
+                  key={m.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                  className={`flex justify-start ${topGap}`}
+                >
+                  <div className="max-w-[96%] min-w-0 w-full">
+                    {isFirstOfRun && (
+                      <div className="mb-1 font-mono text-[10.5px] text-ink-400 uppercase tracking-[0.14em]">
+                        Ira
+                      </div>
+                    )}
+                    <StepOutputView {...outputCard} />
+                  </div>
+                </motion.div>
+              );
+            }
+
             if (m.role === 'event') {
               const Icon =
                 m.tone === 'success' ? Check : m.tone === 'info' ? Info : Link2;
@@ -340,6 +480,7 @@ export default function AIAssistantPanel({
 
       {/* Composer */}
       <div className="p-3 border-t border-canvas-border shrink-0">
+        {/* Context chip (e.g. "Match invoice to PO") — hidden for now; may reuse later.
         <AnimatePresence initial={false}>
           {contextChip && (
             <motion.div
@@ -374,6 +515,7 @@ export default function AIAssistantPanel({
             </motion.div>
           )}
         </AnimatePresence>
+        */}
         {/* Contextual prompt suggestions — outline pills tied to the focused entity */}
         {contextChip && quickReplies && quickReplies.some((r) => r.emphasis !== 'filled') && (
           <div className="mb-2 flex flex-wrap gap-1.5">
@@ -389,6 +531,29 @@ export default function AIAssistantPanel({
                   {r.label}
                 </button>
               ))}
+          </div>
+        )}
+        {primaryAction && (
+          <div className="mb-3">
+            <button
+              type="button"
+              onClick={primaryAction.onClick}
+              disabled={!primaryAction.enabled}
+              className={[
+                'w-full inline-flex items-center justify-center gap-2 rounded-xl text-[13px] font-semibold px-4 py-3 transition-all',
+                primaryAction.enabled
+                  ? 'bg-gradient-to-br from-brand-600 to-fuchsia-600 hover:from-brand-500 hover:to-fuchsia-500 text-white cursor-pointer shadow-[0_1px_0_rgba(106,18,205,0.08),0_8px_20px_-8px_rgba(106,18,205,0.45)]'
+                  : 'bg-brand-100 text-brand-300 cursor-not-allowed',
+              ].join(' ')}
+            >
+              {primaryAction.icon}
+              {primaryAction.label}
+            </button>
+            {primaryAction.hint && !primaryAction.enabled && (
+              <div className="mt-1.5 text-[11.5px] text-ink-400 text-center">
+                {primaryAction.hint}
+              </div>
+            )}
           </div>
         )}
         <div className="ai-border">
@@ -445,29 +610,6 @@ export default function AIAssistantPanel({
             </div>
           </div>
         </div>
-        {primaryAction && (
-          <div className="mt-3">
-            <button
-              type="button"
-              onClick={primaryAction.onClick}
-              disabled={!primaryAction.enabled}
-              className={[
-                'w-full inline-flex items-center justify-center gap-2 rounded-xl text-[13px] font-semibold px-4 py-3 transition-all',
-                primaryAction.enabled
-                  ? 'bg-gradient-to-br from-brand-600 to-fuchsia-600 hover:from-brand-500 hover:to-fuchsia-500 text-white cursor-pointer shadow-[0_1px_0_rgba(106,18,205,0.08),0_8px_20px_-8px_rgba(106,18,205,0.45)]'
-                  : 'bg-brand-100 text-brand-300 cursor-not-allowed',
-              ].join(' ')}
-            >
-              {primaryAction.icon}
-              {primaryAction.label}
-            </button>
-            {primaryAction.hint && !primaryAction.enabled && (
-              <div className="mt-1.5 text-[11.5px] text-ink-400 text-center">
-                {primaryAction.hint}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </aside>
   );

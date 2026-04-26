@@ -275,7 +275,7 @@ export interface GrcActivityEntry {
   comment?: string;
   attachment?: { name: string };
 }
-export type GrcActionStatus = 'Implemented' | 'Partially Implemented' | 'Pending';
+export type GrcActionStatus = 'Implemented' | 'Partially Implemented' | 'Pending' | 'Discrepancy';
 export interface GrcCaseDetail {
   classificationJustification: string;
   actionTitle: string;

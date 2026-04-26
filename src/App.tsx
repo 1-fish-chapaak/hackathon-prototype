@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Sparkles } from 'lucide-react';
 import { useAppState } from './hooks/useAppState';
 import { ToastProvider } from './components/shared/Toast';
+import { BulkRunProgressProvider } from './components/shared/BulkRunProgress';
 import Sidebar from './components/sidebar/Sidebar';
 import ChatView from './components/chat/ChatView';
 import ArtifactPanel from './components/artifacts/ArtifactPanel';
@@ -14,6 +15,7 @@ import BusinessProcesses from './components/audit/BusinessProcesses';
 import RiskRegister from './components/audit/RiskRegister';
 import AuditExecution from './components/audit/AuditExecution';
 import DashboardView from './components/dashboard/DashboardView';
+import DashboardListPage from './components/dashboard/DashboardListPage';
 import ReportsView from './components/reports/ReportsView';
 import HomeView from './components/home/HomeView';
 import RecentsView from './components/recents/RecentsView';
@@ -68,6 +70,10 @@ export default function App() {
     openWorkflowExecutor,
     openChat,
     setSelectedChatId,
+    openDashboard,
+    saveDashboardWidgets,
+    addCreatedDashboard,
+    deleteCreatedDashboard,
     openExecutionPanel,
     closeExecutionPanel,
     setExceptionRole,
@@ -76,6 +82,7 @@ export default function App() {
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [viewLoading, setViewLoading] = useState(false);
   const [controlDrawerId, setControlDrawerId] = useState<string | null>(null);
+  const [engagementBackView, setEngagementBackView] = useState<'audit-planning' | 'business-processes'>('audit-planning');
 
   useEffect(() => {
     if (mainScrollRef.current) {
@@ -219,6 +226,11 @@ export default function App() {
           <BusinessProcesses
             selectedBPId={state.selectedBPId}
             onSelectBP={setSelectedBP}
+            onOpenEngagement={(engId) => {
+              setEngagementBackView('business-processes');
+              openAuditExecution(engId);
+              setView('engagement-detail' as any);
+            }}
           />
         );
 
@@ -236,16 +248,33 @@ export default function App() {
         return (
           <EngagementDetailView
             engagementId={state.selectedEngagementId ?? undefined}
-            onBack={() => setView('audit-planning')}
+            onBack={() => setView(engagementBackView)}
             onOpenControl={(controlId) => setControlDrawerId(controlId)}
           />
         );
 
       case 'dashboards':
         return (
-          <DashboardView
+          <DashboardListPage
+            onDashboardClick={(id, customFields) => openDashboard(id, customFields)}
             onImportPowerBI={() => setShowPowerBIWizard(true)}
-            onShare={() => setShowShareModal(true, { type: 'dashboard', id: 'dash-1' })}
+            createdDashboards={state.createdDashboards}
+            onCreateDashboard={addCreatedDashboard}
+            onDeleteDashboard={deleteCreatedDashboard}
+          />
+        );
+
+      case 'dashboard-detail':
+        return (
+          <DashboardView
+            initialDashboardId={state.selectedDashboardId}
+            initialDashboardName={state.createdDashboards.find(d => d.id === state.selectedDashboardId)?.name}
+            initialCustomFields={state.dashboardCustomFields}
+            savedWidgets={state.dashboardWidgets[state.selectedDashboardId || ''] || []}
+            onSaveWidgets={(widgets) => saveDashboardWidgets(state.selectedDashboardId || '', widgets)}
+            onBack={() => setView('dashboards')}
+            onImportPowerBI={() => setShowPowerBIWizard(true)}
+            onShare={() => setShowShareModal(true, { type: 'dashboard', id: state.selectedDashboardId || 'dash-1' })}
           />
         );
 
@@ -278,6 +307,7 @@ export default function App() {
 
       case 'audit-planning':
         return <AuditPlanningView onNavigateToExecution={(engId) => {
+          setEngagementBackView('audit-planning');
           openAuditExecution(engId);
           setView('engagement-detail' as any);
         }} />;
@@ -366,6 +396,7 @@ export default function App() {
 
   return (
     <ToastProvider>
+      <BulkRunProgressProvider>
       <div className="flex h-screen w-full bg-canvas overflow-hidden">
         <Sidebar
           view={state.view}
@@ -450,6 +481,7 @@ export default function App() {
           )}
         </AnimatePresence>
       </div>
+      </BulkRunProgressProvider>
     </ToastProvider>
   );
 }
