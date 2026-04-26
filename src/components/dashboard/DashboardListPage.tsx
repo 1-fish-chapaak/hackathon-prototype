@@ -674,15 +674,6 @@ export default function DashboardListPage({ onDashboardClick, onImportPowerBI, c
               <p className="text-[13px] text-ink-500 mt-1">Manage and access all analytics dashboards</p>
             </div>
             <div className="flex items-center gap-2">
-              {onImportPowerBI && (
-                <button
-                  onClick={onImportPowerBI}
-                  className="flex items-center gap-2 px-3 h-10 border border-canvas-border bg-canvas-elevated rounded-md text-[13px] text-ink-700 hover:border-brand-200 transition-colors cursor-pointer"
-                >
-                  <Download size={14} />
-                  Import Power BI
-                </button>
-              )}
               <button
                 onClick={() => setCreateModalOpen(true)}
                 className="flex items-center gap-2 px-4 h-10 bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white rounded-md text-[13px] font-semibold transition-colors cursor-pointer"

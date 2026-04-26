@@ -9,10 +9,12 @@ import {
   Send, X, Mail, Copy, CheckCircle2, ArrowLeft,
   Download, Filter, Share2, Loader2,
   MoreVertical, Edit, Trash2, ChevronUp, Eye, EyeOff,
-  Search, LineChart, AreaChart, ListChecks
+  Search, LineChart, AreaChart, ListChecks,
+  Database, Link2, Zap, ArrowRight, Unlink
 } from 'lucide-react';
 import Orb from '../shared/Orb';
 import { useToast, type ToastType } from '../shared/Toast';
+import { AddCardModal } from './add-widget/AddCardModal';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -323,76 +325,8 @@ const SHARE_EMAIL_TEMPLATES: Record<DashboardId, { subject: string; body: string
 // ─── Alerts Panel Component ─────────────────────────────────────────────────
 
 function IRAInlineSummary({ dashboardId }: { dashboardId: DashboardId }) {
-  const [summary, setSummary] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedText, setEditedText] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
+  const summary = AI_SUMMARIES[dashboardId];
 
-  const handleGenerate = () => {
-    setIsGenerating(true);
-    setTimeout(() => {
-      const text = AI_SUMMARIES[dashboardId];
-      setSummary(text);
-      setEditedText(text);
-      setIsGenerating(false);
-    }, 1500);
-  };
-
-  const handleTextClick = () => {
-    if (!isGenerating) {
-      setIsEditing(true);
-    }
-  };
-
-  const handleBlur = () => {
-    setIsEditing(false);
-    if (editedText !== summary) {
-      setSummary(editedText);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleBlur(); }
-    if (e.key === 'Escape') { setEditedText(summary); setIsEditing(false); }
-  };
-
-  // Empty / generate state
-  if (!summary && !isGenerating) {
-    return (
-      <div className="px-5 pt-4 pb-3">
-        <div className="p-4 rounded-xl border border-brand-100 bg-canvas-elevated">
-          <button
-            onClick={handleGenerate}
-            className="flex items-center gap-2 text-brand-600 hover:text-brand-700 transition-colors cursor-pointer text-[13px] font-medium"
-          >
-            <Sparkles size={14} className="text-brand-500" />
-            Generate AI Summary
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Generating state
-  if (isGenerating) {
-    return (
-      <div className="px-5 pt-4 pb-3">
-        <div className="p-4 rounded-xl border border-brand-200 bg-canvas-elevated">
-          <div className="flex items-center gap-3">
-            <Sparkles size={14} className="text-brand-500 animate-pulse" />
-            <div className="flex items-center gap-2">
-              <div className="h-1 w-32 bg-brand-100 rounded-full overflow-hidden">
-                <motion.div className="h-full bg-brand-500 rounded-full" initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ duration: 1.5, ease: 'easeInOut' }} />
-              </div>
-              <span className="text-[12px] text-ink-500">Generating summary...</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Generated — IRA SUMMARY card
   return (
     <div className="px-5 pt-4 pb-3">
       <div className="p-5 rounded-xl border border-brand-200 bg-canvas-elevated">
@@ -403,25 +337,11 @@ function IRAInlineSummary({ dashboardId }: { dashboardId: DashboardId }) {
             </div>
             <span className="text-[12px] font-bold text-brand-700 uppercase tracking-wide">IRA Summary</span>
           </div>
-          <button onClick={handleGenerate} className="p-1.5 rounded-lg hover:bg-brand-50 transition-colors cursor-pointer" title="Regenerate">
-            <Sparkles size={13} className="text-brand-500" />
-          </button>
+          <Sparkles size={13} className="text-brand-500" />
         </div>
-        {isEditing ? (
-          <textarea
-            value={editedText}
-            onChange={(e) => setEditedText(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            autoFocus
-            className="w-full text-[13px] leading-[1.65] text-ink-800 bg-transparent border border-brand-200 rounded-lg p-2 resize-none outline-none focus:border-brand-400 transition-colors"
-            rows={3}
-          />
-        ) : (
-          <p onClick={handleTextClick} className="text-[13px] leading-[1.65] text-ink-800 cursor-text hover:bg-brand-50/50 rounded-lg transition-colors">
-            {summary}
-          </p>
-        )}
+        <p className="text-[13px] leading-[1.65] text-ink-800">
+          {summary}
+        </p>
       </div>
     </div>
   );
@@ -720,61 +640,54 @@ function DropZone({ label, placeholder, active, onDragOver, onDragLeave, onDrop,
 }) {
   return (
     <div
-      className={`rounded-xl border-2 border-dashed p-3 transition-colors ${
-        active ? 'border-brand-400 bg-brand-50' : 'border-canvas-border bg-canvas-elevated'
+      className={`rounded-md border border-dashed px-2.5 py-2 transition-all duration-200 min-h-[40px] flex items-center ${
+        active ? 'border-brand-600 bg-brand-50' : 'border-ink-300 bg-white hover:border-brand-600 hover:bg-brand-50/30'
       } ${className || ''}`}
       onDragOver={e => { e.preventDefault(); onDragOver(); }}
       onDragLeave={onDragLeave}
       onDrop={e => { e.preventDefault(); onDrop(e); }}
     >
-      {label && <div className="text-[11px] font-bold uppercase tracking-wider text-ink-500 mb-2">{label}</div>}
       {fields.length === 0 ? (
-        <div className="flex items-center gap-2 min-h-[32px]">
-          <svg className="size-3.5 text-ink-300" viewBox="0 0 12 12" fill="currentColor">
-            <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
-            <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
-            <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
-          </svg>
-          <span className="text-[11px] text-ink-400">{placeholder}</span>
+        <div className="flex items-center gap-2">
+          <svg className="size-3.5 text-ink-300 shrink-0" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1"><line x1="4" y1="3" x2="4" y2="3.01" strokeLinecap="round" /><line x1="7" y1="3" x2="7" y2="3.01" strokeLinecap="round" /><line x1="4" y1="7" x2="4" y2="7.01" strokeLinecap="round" /><line x1="7" y1="7" x2="7" y2="7.01" strokeLinecap="round" /><line x1="4" y1="11" x2="4" y2="11.01" strokeLinecap="round" /><line x1="7" y1="11" x2="7" y2="11.01" strokeLinecap="round" /></svg>
+          <span className="text-[12px] text-ink-400">{placeholder}</span>
         </div>
       ) : (
-        <div className="space-y-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {fields.map(id => (
-            <div key={id} className="flex items-center justify-between bg-brand-50 border border-brand-200 rounded-md px-2.5 py-1.5">
-              <span className="text-[12px] font-medium text-brand-700">{getLabel(id)}</span>
-              <div className="flex items-center gap-1.5">
-                {showAgg && yAggs && setAggDropdownOpen && setYAggs && (
-                  <div className="relative">
-                    <button
-                      onClick={() => setAggDropdownOpen(aggDropdownOpen === id ? null : id)}
-                      className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-brand-200 text-[10px] font-bold text-brand-600 cursor-pointer hover:bg-brand-50"
-                    >
-                      {AGG_OPTIONS.find(a => a.value === (yAggs[id] || 'count_d'))?.symbol || '#'}
-                      <ChevronDown size={9} />
-                    </button>
-                    {aggDropdownOpen === id && (
-                      <>
-                        <div className="fixed inset-0 z-30" onClick={() => setAggDropdownOpen(null)} />
-                        <div className="absolute top-full right-0 mt-1 z-40 bg-canvas-elevated border border-canvas-border rounded-lg shadow-xl py-1 min-w-[120px]">
-                          {AGG_OPTIONS.map(a => (
-                            <button
-                              key={a.value}
-                              onClick={() => { setYAggs(prev => ({ ...prev, [id]: a.value })); setAggDropdownOpen(null); }}
-                              className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] transition-colors cursor-pointer ${
-                                yAggs[id] === a.value ? 'text-brand-700 bg-brand-50' : 'text-ink-600 hover:bg-surface-2'
-                              }`}
-                            >
-                              <span className="w-4 text-center font-bold">{a.symbol}</span>
-                              {a.label}
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-                <button onClick={() => onRemove(id)} className="text-ink-400 hover:text-red-500 cursor-pointer"><X size={12} /></button>
-              </div>
+            <div key={id} className="inline-flex items-center h-[28px] bg-brand-50 border border-brand-600/30 rounded px-2.5 gap-1.5 shrink-0">
+              <span className="text-[12px] font-medium text-ink-900 whitespace-nowrap">{getLabel(id)}</span>
+              {showAgg && yAggs && setAggDropdownOpen && setYAggs && (
+                <div className="relative">
+                  <button
+                    onClick={() => setAggDropdownOpen(aggDropdownOpen === id ? null : id)}
+                    className="inline-flex items-center gap-0.5 px-1.5 h-[20px] rounded bg-brand-100 border border-brand-200 text-[10px] font-bold text-brand-700 cursor-pointer hover:bg-brand-200/50 transition-colors"
+                  >
+                    {AGG_OPTIONS.find(a => a.value === (yAggs[id] || 'count_d'))?.symbol || '#'} {AGG_OPTIONS.find(a => a.value === (yAggs[id] || 'count_d'))?.label || 'Count Distinct'}
+                    <ChevronDown size={9} />
+                  </button>
+                  {aggDropdownOpen === id && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setAggDropdownOpen(null)} />
+                      <div className="absolute top-full right-0 mt-1 z-40 bg-white border border-canvas-border rounded-lg shadow-xl py-1 min-w-[130px]">
+                        {AGG_OPTIONS.map(a => (
+                          <button
+                            key={a.value}
+                            onClick={() => { setYAggs(prev => ({ ...prev, [id]: a.value })); setAggDropdownOpen(null); }}
+                            className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] transition-colors cursor-pointer ${
+                              yAggs[id] === a.value ? 'text-brand-700 bg-brand-50' : 'text-ink-600 hover:bg-brand-50/50'
+                            }`}
+                          >
+                            <span className="w-4 text-center font-bold">{a.symbol}</span>
+                            {a.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              <button onClick={() => onRemove(id)} className="p-0.5 rounded hover:bg-ink-900/10 transition-colors cursor-pointer"><X size={12} className="text-ink-500 hover:text-red-500" /></button>
             </div>
           ))}
         </div>
@@ -789,21 +702,21 @@ function FmtSection({ title, icon, open, onToggle, children }: {
   title: string; icon: React.ReactNode; open: boolean; onToggle: () => void; children: React.ReactNode;
 }) {
   return (
-    <div className="bg-canvas-elevated rounded-lg border border-canvas-border overflow-hidden">
+    <div className="bg-white rounded-lg border border-canvas-border overflow-hidden shadow-sm">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-3 py-2.5 bg-brand-50/30 border-b border-canvas-border/50 hover:bg-brand-50 transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-brand-50 to-white border-b border-canvas-border/50 hover:from-brand-100/50 hover:to-white transition-all cursor-pointer"
       >
         <div className="flex items-center gap-2">
           <span className="text-brand-600">{icon}</span>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-ink-700">{title}</span>
+          <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-ink-900">{title}</span>
         </div>
-        <ChevronDown size={14} className={`text-brand-600 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={14} className={`text-brand-600 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
       <AnimatePresence>
         {open && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }} className="overflow-hidden">
-            <div className="p-3 bg-surface-2/30">{children}</div>
+            <div className="p-2.5 bg-canvas">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -929,6 +842,8 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
   const [selectedQuery, setSelectedQuery] = useState<string | null>(null);
   // Customize tab state
   const [selectedBaseColor, setSelectedBaseColor] = useState('#6a12cd');
+  const [seriesColors, setSeriesColors] = useState<Record<string, string>>({});
+  const [editingSeriesField, setEditingSeriesField] = useState<string | null>(null);
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [isUnderline, setIsUnderline] = useState(false);
@@ -1157,10 +1072,14 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
   const renderPreview = () => {
     if (!selectedChart) {
       return (
-        <div className="flex flex-col items-center justify-center h-full text-ink-400">
-          <BarChart3 size={48} className="mb-3 opacity-30" />
-          <p className="text-[14px] font-medium">Select a chart type to preview</p>
-          <p className="text-[12px] mt-1">Drag fields to X and Y axes to configure</p>
+        <div className="flex flex-col items-center justify-center h-full text-ink-300">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="mb-4 text-ink-200">
+            <rect x="4" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="2" />
+            <rect x="26" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="2" />
+            <rect x="4" y="26" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="2" />
+            <rect x="26" y="26" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="2" />
+          </svg>
+          <p className="text-[14px] text-ink-400">Select a chart type to begin</p>
         </div>
       );
     }
@@ -1496,8 +1415,8 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 10 }}
             transition={{ duration: 0.2 }}
-            className="relative bg-canvas-elevated rounded-xl border border-canvas-border shadow-2xl flex flex-col overflow-hidden"
-            style={{ width: 'min(1200px, 96vw)', height: 'min(775px, 92vh)' }}
+            className="relative bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl flex flex-col overflow-hidden"
+            style={{ width: 'min(1200px, 96vw)', height: 'min(775px, 85vh)' }}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -1516,9 +1435,9 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
             {/* Body — two columns */}
             <div className="flex flex-1 overflow-hidden min-h-0">
               {/* Left — Drop Zones + Preview */}
-              <div className="flex-1 flex flex-col bg-surface-2/30 p-5 min-w-0 order-1 overflow-y-auto">
-                {/* Drop Zones — row layout with left labels */}
-                <div className="space-y-3 mb-4">
+              <div className="flex-1 flex flex-col bg-white min-w-0 order-1 overflow-hidden">
+                {/* Drop Zones — only when chart type selected */}
+                {selectedChart && <div className="shrink-0 px-6 py-3 space-y-2 border-b border-canvas-border bg-white">
                   {/* Row 1: X-Axis */}
                   <div className="flex items-center gap-4">
                     <div className="w-[70px] shrink-0">
@@ -1622,41 +1541,40 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
                       />
                     </div>
                   )}
-                </div>
+                </div>}
 
                 {/* Preview */}
-                <div className="flex-1 bg-canvas-elevated rounded-xl border border-canvas-border overflow-hidden flex flex-col min-h-[300px]">
-                  <div className="px-5 py-3 border-b border-canvas-border/50 flex items-center justify-between">
-                    <span className="text-[12px] font-semibold text-ink-500 uppercase tracking-wider">Preview</span>
-                    {selectedChart && <span className="text-[12px] text-brand-600 font-medium">{selectedChart.title}</span>}
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="py-2 px-6 border-t border-b border-canvas-border shrink-0">
+                    <span className="text-[12px] font-medium uppercase tracking-[1px] text-ink-900">Preview</span>
                   </div>
-                  <div className="flex-1 p-4">
+                  <div className="flex-1 overflow-auto flex items-center justify-center p-6">
                     {renderPreview()}
                   </div>
                 </div>
               </div>
 
               {/* Right — Sidebar config */}
-              <div className="w-[340px] shrink-0 border-l border-canvas-border flex flex-col overflow-hidden order-2 bg-surface-2/20">
+              <div className="w-[340px] shrink-0 border-l border-canvas-border flex flex-col overflow-hidden order-2" style={{ background: 'rgba(249,250,251,0.5)' }}>
                 {/* Tab switcher */}
-                <div className="shrink-0 border-b border-canvas-border px-3 py-1.5">
+                <div className="shrink-0 bg-white border-b border-canvas-border px-3 py-[2px]">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setActiveTab('data')}
-                      className={`flex-1 flex items-center justify-center gap-2 font-medium rounded-md px-4 py-1.5 text-[13px] transition-colors cursor-pointer ${
-                        activeTab === 'data' ? 'text-brand-700 bg-brand-50' : 'text-ink-600 hover:bg-surface-2'
+                      className={`flex-1 flex items-center justify-center gap-2 font-medium rounded-md px-4 py-1 text-[14px] transition-all cursor-pointer ${
+                        activeTab === 'data' ? 'text-brand-700 bg-brand-50' : 'text-ink-900 hover:text-brand-700 hover:bg-canvas'
                       }`}
                     >
-                      <Settings size={14} />
+                      <Database size={16} strokeWidth={2.5} />
                       Data Source
                     </button>
                     <button
                       onClick={() => setActiveTab('format')}
-                      className={`flex-1 flex items-center justify-center gap-2 font-medium rounded-md px-4 py-1.5 text-[13px] transition-colors cursor-pointer ${
-                        activeTab === 'format' ? 'text-brand-700 bg-brand-50' : 'text-ink-600 hover:bg-surface-2'
+                      className={`flex-1 flex items-center justify-center gap-2 font-medium rounded-md px-4 py-1 text-[14px] transition-all cursor-pointer ${
+                        activeTab === 'format' ? 'text-brand-700 bg-brand-50' : 'text-ink-900 hover:text-brand-700 hover:bg-canvas'
                       }`}
                     >
-                      <Settings size={14} />
+                      <Settings size={16} strokeWidth={2.5} />
                       Customize
                     </button>
                   </div>
@@ -1667,32 +1585,32 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
                   {activeTab === 'data' && (
                     <>
                       {/* Chart Type Section */}
-                      <div className="bg-canvas-elevated rounded-lg border border-canvas-border overflow-hidden">
+                      <div className="bg-white rounded-lg border border-canvas-border overflow-hidden shadow-sm">
                         <button
                           onClick={() => setChartTypeCollapsed(!chartTypeCollapsed)}
-                          className="w-full flex items-center justify-between px-3 py-2.5 bg-brand-50/50 border-b border-canvas-border/50 hover:bg-brand-50 transition-colors cursor-pointer"
+                          className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-brand-50 to-white border-b border-canvas-border/50 hover:from-brand-100/50 hover:to-white transition-all cursor-pointer"
                         >
                           <div className="flex items-center gap-2">
                             <BarChart3 size={12} className="text-brand-600" />
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-700">
+                            <span className="text-[12px] font-bold uppercase tracking-[0.8px] text-ink-900 truncate w-[180px] text-left">
                               {selectedChart ? selectedChart.title : 'Chart Type'}
                             </span>
                           </div>
-                          <ChevronDown size={14} className={`text-brand-600 transition-transform ${chartTypeCollapsed ? '' : 'rotate-180'}`} />
+                          <ChevronDown size={14} className={`text-brand-600 transition-transform duration-200 ${chartTypeCollapsed ? '' : 'rotate-180'}`} />
                         </button>
                         {!chartTypeCollapsed && (
-                          <div className="max-h-[280px] overflow-y-auto py-1">
+                          <div className="max-h-[300px] overflow-y-auto py-1">
                             {CHART_TYPES.map(ct => (
                               <button
                                 key={ct.id}
                                 onClick={() => setSelectedChart(ct)}
-                                className={`w-full flex items-center gap-2.5 px-3 py-2 text-[12px] transition-colors cursor-pointer ${
-                                  selectedChart?.id === ct.id ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-ink-700 hover:bg-surface-2'
+                                className={`w-full flex items-center gap-3 px-3 py-2 text-[12px] transition-all cursor-pointer ${
+                                  selectedChart?.id === ct.id ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-ink-900 hover:bg-canvas'
                                 }`}
                               >
-                                <ct.icon size={14} className={selectedChart?.id === ct.id ? 'text-brand-600' : 'text-ink-400'} />
-                                {ct.title}
-                                {selectedChart?.id === ct.id && <CheckCircle2 size={13} className="ml-auto text-brand-600" />}
+                                <ct.icon size={16} className="text-brand-600 shrink-0" strokeWidth={1.5} />
+                                <span className="font-medium whitespace-nowrap">{ct.title}</span>
+                                {selectedChart?.id === ct.id && <CheckCircle2 size={14} className="ml-auto text-brand-600" />}
                               </button>
                             ))}
                           </div>
@@ -1700,11 +1618,11 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
                       </div>
 
                       {/* Data Source Section */}
-                      <div className="bg-canvas-elevated rounded-lg border border-canvas-border overflow-hidden">
-                        <div className="flex items-center justify-between px-3 py-2.5 bg-brand-50/50 border-b border-canvas-border/50">
+                      <div className="bg-white rounded-lg border border-canvas-border overflow-hidden shadow-sm">
+                        <div className="flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-brand-50 to-white border-b border-canvas-border/50">
                           <div className="flex items-center gap-2">
-                            <FileText size={12} className="text-brand-600" />
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-700">Data Source</span>
+                            <Database size={12} className="text-brand-600" />
+                            <span className="text-[12px] font-bold uppercase tracking-[0.8px] text-ink-900">Data Source</span>
                           </div>
                           <div className="relative">
                             <button
@@ -1804,7 +1722,7 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
                         <div className="mx-2.5 mb-2 bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
                           <button
                             onClick={() => setFile1Open(!file1Open)}
-                            className="w-full flex items-center justify-between px-2.5 py-2 bg-brand-50/30 border-b border-canvas-border/50 hover:bg-brand-50 transition-colors cursor-pointer"
+                            className="w-full flex items-center justify-between px-2.5 py-2 bg-gradient-to-r from-brand-50 to-white border-b border-canvas-border hover:from-brand-100/50 hover:to-white transition-all cursor-pointer"
                           >
                             <div className="flex items-center gap-1.5">
                               <FileText size={12} className="text-brand-600" />
@@ -1837,7 +1755,7 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
                         <div className="mx-2.5 mb-2.5 bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
                           <button
                             onClick={() => setFile2Open(!file2Open)}
-                            className="w-full flex items-center justify-between px-2.5 py-2 bg-brand-50/30 border-b border-canvas-border/50 hover:bg-brand-50 transition-colors cursor-pointer"
+                            className="w-full flex items-center justify-between px-2.5 py-2 bg-gradient-to-r from-brand-50 to-white border-b border-canvas-border hover:from-brand-100/50 hover:to-white transition-all cursor-pointer"
                           >
                             <div className="flex items-center gap-1.5">
                               <FileText size={12} className="text-brand-600" />
@@ -2144,53 +2062,90 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
                         </div>
                       </FmtSection>
 
-                      {/* 8. Customize Data Colors */}
+                      {/* 8. Customize Data Colors — card-based like Conditional Formatting */}
                       <FmtSection title="Customize Data Colors" icon={<BarChart3 size={12} />} open={seriesFmtOpen} onToggle={() => setSeriesFmtOpen(!seriesFmtOpen)}>
                         <div className="space-y-3">
-                          {/* Categories dropdown */}
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[12px] font-semibold text-ink-700">Categories</label>
-                            <select className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 outline-none focus:border-brand-400 cursor-pointer appearance-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
-                              <option value="">{yFields.length > 0 ? 'Select a series...' : 'No series available'}</option>
-                              {yFields.map(f => <option key={f} value={f}>{getFieldLabel(f)}</option>)}
-                            </select>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[12px] font-bold text-brand-700">Series</span>
+                            <span className="text-[11px] text-ink-500">{Object.keys(seriesColors).length || yFields.length} configured</span>
                           </div>
-                          {/* Color + Spacing */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[11px] font-semibold text-ink-700">Color</label>
-                              <div className="flex items-center gap-2 px-3 py-1.5 bg-canvas-elevated border border-canvas-border rounded-lg cursor-pointer">
-                                <div className="size-5 rounded shrink-0 border border-canvas-border" style={{ background: selectedBaseColor }} />
-                                <span className="text-[11px] font-medium text-ink-700 flex-1">
-                                  {{'#6a12cd':'Purple','#0ea5e9':'Blue','#10b981':'Green','#f59e0b':'Orange','#ef4444':'Red','#ec4899':'Pink','#8b5cf6':'Violet','#14b8a6':'Teal','#f97316':'Orange Red'}[selectedBaseColor] || 'Purple'}
-                                </span>
-                                <ChevronDown size={12} className="text-ink-400" />
+
+                          {(yFields.length > 0 ? yFields : Object.keys(seriesColors)).map((fId, idx) => {
+                            const label = getFieldLabel(fId);
+                            const defaultColors = ['#6a12cd', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316'];
+                            const color = seriesColors[fId] || defaultColors[idx % defaultColors.length];
+                            const spacing = (seriesColors[`${fId}_spacing`] as unknown as string) || '0';
+                            return (
+                              <div key={fId} className="bg-canvas-elevated border border-canvas-border rounded-xl p-3.5 space-y-3 relative">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[12px] font-bold text-ink-800">Series {idx + 1}</span>
+                                  <button onClick={() => setSeriesColors(prev => { const n = { ...prev }; delete n[fId]; delete n[`${fId}_spacing`]; return n; })} className="p-1 rounded hover:bg-red-50 cursor-pointer"><X size={12} className="text-ink-400 hover:text-red-500" /></button>
+                                </div>
+
+                                {/* Field */}
+                                <div className="space-y-1.5">
+                                  <label className="text-[11px] font-bold text-ink-700">Field</label>
+                                  <select value={fId} disabled className="w-full px-3 py-2 text-[12px] bg-surface-2/50 border border-canvas-border rounded-lg text-ink-800 outline-none cursor-default appearance-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
+                                    <option value={fId}>{label}</option>
+                                  </select>
+                                </div>
+
+                                {/* Color + Spacing */}
+                                <div className="grid grid-cols-2 gap-2.5">
+                                  <div className="space-y-1.5">
+                                    <label className="text-[11px] font-bold text-ink-700">Color</label>
+                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-2/50 border border-canvas-border rounded-lg">
+                                      <div className="size-5 rounded shrink-0 border border-canvas-border" style={{ background: color }} />
+                                      <span className="text-[11px] font-medium text-ink-700 uppercase flex-1">{color}</span>
+                                      <ChevronDown size={12} className="text-ink-400" />
+                                    </div>
+                                    <div className="flex gap-1.5 mt-1.5">
+                                      {defaultColors.map(c => (
+                                        <button
+                                          key={c}
+                                          onClick={() => setSeriesColors(prev => ({ ...prev, [fId]: c }))}
+                                          className={`size-5 rounded-full flex items-center justify-center cursor-pointer transition-all shrink-0 ${color === c ? 'ring-2 ring-brand-600 ring-offset-1' : 'hover:ring-2 hover:ring-ink-300 hover:ring-offset-1'}`}
+                                          style={{ background: c }}
+                                        >
+                                          {color === c && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-[11px] font-bold text-ink-700">Spacing</label>
+                                    <select
+                                      value={spacing}
+                                      onChange={e => setSeriesColors(prev => ({ ...prev, [`${fId}_spacing`]: e.target.value as any }))}
+                                      className="w-full px-3 py-2 text-[12px] bg-surface-2/50 border border-canvas-border rounded-lg text-ink-800 outline-none focus:border-brand-400 cursor-pointer appearance-none"
+                                      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
+                                    >
+                                      <option value="0">0%</option>
+                                      <option value="10">10%</option>
+                                      <option value="20">20%</option>
+                                      <option value="30">30%</option>
+                                      <option value="40">40%</option>
+                                      <option value="50">50%</option>
+                                    </select>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex gap-1.5 mt-1">
-                                {[{c:'#6a12cd',n:'Purple'},{c:'#0ea5e9',n:'Blue'},{c:'#10b981',n:'Green'},{c:'#f59e0b',n:'Orange'},{c:'#ef4444',n:'Red'},{c:'#ec4899',n:'Pink'},{c:'#8b5cf6',n:'Violet'},{c:'#14b8a6',n:'Teal'},{c:'#f97316',n:'OrangeRed'}].map(({c}) => (
-                                  <button
-                                    key={c}
-                                    onClick={() => setSelectedBaseColor(c)}
-                                    className={`size-5 rounded-full flex items-center justify-center cursor-pointer transition-all shrink-0 ${selectedBaseColor === c ? 'ring-2 ring-brand-600 ring-offset-1' : 'hover:ring-2 hover:ring-ink-300 hover:ring-offset-1'}`}
-                                    style={{ background: c }}
-                                  >
-                                    {selectedBaseColor === c && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[11px] font-semibold text-ink-700">Spacing</label>
-                              <select className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 outline-none focus:border-brand-400 cursor-pointer appearance-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
-                                <option value="0">0%</option>
-                                <option value="10">10%</option>
-                                <option value="20">20%</option>
-                                <option value="30">30%</option>
-                                <option value="40">40%</option>
-                                <option value="50">50%</option>
-                              </select>
-                            </div>
-                          </div>
+                            );
+                          })}
+
+                          <button
+                            onClick={() => {
+                              const allFields = DRAG_FIELDS.filter(f => f.kind === 'measure');
+                              const unused = allFields.find(f => !yFields.includes(f.id) && !seriesColors[f.id]);
+                              if (unused) {
+                                const defaultColors = ['#6a12cd', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316'];
+                                setSeriesColors(prev => ({ ...prev, [unused.id]: defaultColors[Object.keys(prev).filter(k => !k.includes('_')).length % defaultColors.length] }));
+                              }
+                            }}
+                            className="w-full flex items-center justify-center gap-2 px-3 py-3 border-2 border-dashed border-brand-300 rounded-xl text-[12px] font-semibold text-brand-600 hover:bg-brand-50 transition-colors cursor-pointer"
+                          >
+                            <Plus size={14} /> Add Series
+                          </button>
                         </div>
                       </FmtSection>
                     </div>
@@ -2219,7 +2174,7 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
       <>
         <div className="fixed inset-0 z-[10000] bg-black/30 backdrop-blur-sm" onClick={() => setShowUploadModal(false)} />
         <div className="fixed inset-0 z-[10000] flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto bg-white rounded-2xl shadow-2xl w-[560px] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="pointer-events-auto bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[560px] max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-canvas-border/40 shrink-0">
               <div>
@@ -2330,7 +2285,7 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
       <>
         <div className="fixed inset-0 z-[10000] bg-black/30 backdrop-blur-sm" onClick={() => setShowQueryModal(false)} />
         <div className="fixed inset-0 z-[10000] flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto bg-white rounded-2xl shadow-2xl w-[580px] max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="pointer-events-auto bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[580px] max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-canvas-border/40 shrink-0">
               <div className="flex items-center gap-3">
@@ -2525,6 +2480,7 @@ function FilterPanel({
   department, onDepartmentChange,
   onResetAll,
   pageFilterFields, onPageFilterFieldsChange,
+  dataLinks, activeCrossFilters, onActiveCrossFiltersChange, onManageConnections,
 }: {
   open: boolean;
   onClose: () => void;
@@ -2539,13 +2495,20 @@ function FilterPanel({
   onResetAll: () => void;
   pageFilterFields: string[];
   onPageFilterFieldsChange: (v: string[]) => void;
+  dataLinks: FieldLink[];
+  activeCrossFilters: string[];
+  onActiveCrossFiltersChange: (v: string[]) => void;
+  onManageConnections: () => void;
 }) {
   const toggleItem = (arr: string[], item: string) =>
     arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item];
   const [fpPageDragOver, setFpPageDragOver] = useState(false);
+  const [fpCrossDragOver, setFpCrossDragOver] = useState(false);
   const [fpFieldSearch, setFpFieldSearch] = useState('');
   const [fpFile1Open, setFpFile1Open] = useState(true);
   const [fpFile2Open, setFpFile2Open] = useState(false);
+  const [fpCrossOpen, setFpCrossOpen] = useState(true);
+  const [fpCrossSearch, setFpCrossSearch] = useState('');
 
   const fpFilteredDimensions = DRAG_FIELDS.filter(f => f.kind === 'dimension' && f.label.toLowerCase().includes(fpFieldSearch.toLowerCase()));
   const fpFilteredMeasures = DRAG_FIELDS.filter(f => f.kind === 'measure' && f.label.toLowerCase().includes(fpFieldSearch.toLowerCase()));
@@ -2633,6 +2596,59 @@ function FilterPanel({
                     )}
                   </div>
                 </div>
+
+                {/* Cross-Data Filters — drop zone */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="size-2 rounded-full bg-evidence" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-ink-500">Cross-Data Filters</span>
+                  </div>
+                  {dataLinks.length === 0 ? (
+                    <button
+                      onClick={onManageConnections}
+                      className="w-full rounded-xl border-2 border-dashed border-ink-200 bg-canvas-elevated p-4 flex flex-col items-center justify-center min-h-[80px] hover:border-brand-300 hover:bg-brand-50/30 transition-colors cursor-pointer"
+                    >
+                      <Link2 size={16} className="text-ink-400 mb-1.5" />
+                      <span className="text-[11px] font-semibold text-ink-500">No connections yet</span>
+                      <span className="text-[10px] text-ink-400 mt-0.5">Connect data sources first</span>
+                    </button>
+                  ) : (
+                    <div
+                      className={`rounded-xl border-2 border-dashed p-4 flex flex-col items-center justify-center min-h-[80px] transition-colors ${
+                        fpCrossDragOver ? 'border-brand-400 bg-brand-50/50' : 'border-ink-200 bg-canvas-elevated'
+                      }`}
+                      onDragOver={e => { e.preventDefault(); if (e.dataTransfer.types.includes('crossLinkId')) setFpCrossDragOver(true); }}
+                      onDragLeave={() => setFpCrossDragOver(false)}
+                      onDrop={e => {
+                        e.preventDefault();
+                        setFpCrossDragOver(false);
+                        const linkId = e.dataTransfer.getData('crossLinkId');
+                        if (linkId && !activeCrossFilters.includes(linkId)) onActiveCrossFiltersChange([...activeCrossFilters, linkId]);
+                      }}
+                    >
+                      {activeCrossFilters.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 w-full">
+                          {activeCrossFilters.map(linkId => {
+                            const link = dataLinks.find(l => l.id === linkId);
+                            if (!link) return null;
+                            const label = link.fieldA === link.fieldB ? link.fieldA : `${link.fieldA} · ${link.fieldB}`;
+                            return (
+                              <span key={linkId} className="flex items-center gap-1 bg-brand-50 border border-brand-200 text-brand-700 text-[11px] font-medium px-2 py-1 rounded-md">
+                                {label}
+                                <button onClick={() => onActiveCrossFiltersChange(activeCrossFilters.filter(id => id !== linkId))} className="hover:text-evidence-900 cursor-pointer"><X size={10} /></button>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <>
+                          <span className="text-[12px] font-semibold text-ink-400">DROP LINKS HERE</span>
+                          <span className="text-[11px] text-ink-300 mt-0.5">Drag from Cross-Data Links</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Right column — Data fields */}
@@ -2655,7 +2671,7 @@ function FilterPanel({
                 <div className="bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
                   <button
                     onClick={() => setFpFile1Open(!fpFile1Open)}
-                    className="w-full flex items-center justify-between px-2.5 py-2 bg-brand-50/30 border-b border-canvas-border/50 hover:bg-brand-50 transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-between px-2.5 py-2 bg-gradient-to-r from-brand-50 to-white border-b border-canvas-border hover:from-brand-100/50 hover:to-white transition-all cursor-pointer"
                   >
                     <div className="flex items-center gap-1.5">
                       <FileText size={12} className="text-brand-600" />
@@ -2688,7 +2704,7 @@ function FilterPanel({
                 <div className="bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
                   <button
                     onClick={() => setFpFile2Open(!fpFile2Open)}
-                    className="w-full flex items-center justify-between px-2.5 py-2 bg-brand-50/30 border-b border-canvas-border/50 hover:bg-brand-50 transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-between px-2.5 py-2 bg-gradient-to-r from-brand-50 to-white border-b border-canvas-border hover:from-brand-100/50 hover:to-white transition-all cursor-pointer"
                   >
                     <div className="flex items-center gap-1.5">
                       <FileText size={12} className="text-brand-600" />
@@ -2716,6 +2732,70 @@ function FilterPanel({
                     </div>
                   )}
                 </div>
+
+                {/* Cross-Data section */}
+                {dataLinks.length > 0 && (<>
+                  <div className="text-[15px] font-semibold text-ink-900 px-1 pt-2 border-t border-canvas-border">Cross-Data</div>
+                  <div className="relative">
+                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" />
+                    <input
+                      type="text"
+                      placeholder="Search"
+                      value={fpCrossSearch}
+                      onChange={e => setFpCrossSearch(e.target.value)}
+                      className="w-full h-9 pl-8 pr-3 bg-canvas-elevated border border-canvas-border rounded-lg text-[12px] text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
+                    />
+                  </div>
+                </>)}
+                {dataLinks.length > 0 && (
+                  <div className="bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
+                    <button
+                      onClick={() => setFpCrossOpen(!fpCrossOpen)}
+                      className="w-full flex items-center justify-between px-2.5 py-2 bg-gradient-to-r from-brand-50 to-white border-b border-canvas-border hover:from-brand-100/50 hover:to-white transition-all cursor-pointer"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Link2 size={12} className="text-brand-600" />
+                        <span className="text-[11px] font-semibold text-ink-800">Cross-Data Links</span>
+                        <span className="text-[10px] text-ink-400">{dataLinks.length}</span>
+                      </div>
+                      <ChevronDown size={12} className={`text-brand-600 transition-transform ${fpCrossOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {fpCrossOpen && (
+                      <div className="px-1.5 py-1">
+                        {dataLinks.filter(link => {
+                          if (!fpCrossSearch) return true;
+                          const q = fpCrossSearch.toLowerCase();
+                          return link.fieldA.toLowerCase().includes(q) || link.fieldB.toLowerCase().includes(q);
+                        }).map(link => {
+                          const label = link.fieldA === link.fieldB ? link.fieldA : `${link.fieldA} · ${link.fieldB}`;
+                          const sA = FILE_SOURCES.find(s => s.id === link.sourceA);
+                          const sB = FILE_SOURCES.find(s => s.id === link.sourceB);
+                          const isActive = activeCrossFilters.includes(link.id);
+                          return (
+                            <div
+                              key={link.id}
+                              draggable
+                              onDragStart={e => { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('crossLinkId', link.id); }}
+                              className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-grab transition-colors active:cursor-grabbing ${
+                                isActive ? 'bg-brand-50/50' : 'hover:bg-brand-50/50'
+                              }`}
+                            >
+                              <svg className="shrink-0 size-3 text-ink-300" viewBox="0 0 12 12" fill="currentColor">
+                                <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
+                                <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
+                                <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
+                              </svg>
+                              <div className="min-w-0">
+                                <div className="text-[12px] text-ink-700 truncate">{label}</div>
+                                <div className="text-[9px] text-ink-400 truncate">{sA?.name?.split('.')[0]} ↔ {sB?.name?.split('.')[0]}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
@@ -2884,7 +2964,7 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.2 }}
             className="relative bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl flex flex-col overflow-hidden"
-            style={{ width: 'calc(100vw - 64px)', height: 'calc(100vh - 64px)' }}
+            style={{ width: 'min(1200px, 96vw)', height: 'min(775px, 85vh)' }}
             onClick={e => e.stopPropagation()}
           >
             {/* ── Header with tabs ── */}
@@ -3364,7 +3444,7 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
       <>
         <div className="fixed inset-0 z-[10000] bg-black/30 backdrop-blur-sm" onClick={() => setShowExpandDeleteConfirm(false)} />
         <div className="fixed inset-0 z-[10000] flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto bg-white rounded-2xl shadow-2xl w-[360px] p-6" onClick={e => e.stopPropagation()}>
+          <div className="pointer-events-auto bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[360px] p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-3">
               <div className="size-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
                 <Trash2 size={18} className="text-red-500" />
@@ -3404,7 +3484,7 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
         <div className="fixed inset-0 z-[9999] bg-black/30 backdrop-blur-sm" onClick={() => setShowAlertNotifications(false)} />
         <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
           <div
-            className="pointer-events-auto bg-white rounded-3xl shadow-2xl w-[520px] overflow-hidden"
+            className="pointer-events-auto bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[520px] max-h-[85vh] overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -3484,7 +3564,7 @@ function ThresholdAlertModal({ open, onClose, widgetTitle, addToast }: {
       <div className="fixed inset-0 z-[9999] bg-black/30 backdrop-blur-sm" onClick={onClose} />
       <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
         <div
-          className="pointer-events-auto bg-white rounded-3xl shadow-2xl w-[460px] overflow-hidden"
+          className="pointer-events-auto bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[460px] max-h-[85vh] overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
           {/* Content */}
@@ -3594,6 +3674,8 @@ function WidgetCard({
   onFilter,
   addToast,
   pageFilterFields,
+  widgetFields,
+  dataLinks: dataLinksFromParent,
   onRemovePageFilter,
   onClearPageFilters,
   colSpan = 1,
@@ -3610,6 +3692,8 @@ function WidgetCard({
   onFilter?: () => void;
   addToast: (t: { message: string; type: ToastType }) => void;
   pageFilterFields?: string[];
+  widgetFields?: string[];
+  dataLinks?: FieldLink[];
   onRemovePageFilter?: (id: string) => void;
   onClearPageFilters?: () => void;
   colSpan?: 1 | 2;
@@ -3675,9 +3759,15 @@ function WidgetCard({
     }
   };
 
+  const matchingPageFilters = pageFilterFields && widgetFields
+    ? pageFilterFields.filter(f => widgetFields.includes(f))
+    : [];
+  const hasActivePageFilter = matchingPageFilters.length > 0;
+  const hasPageFiltersButNoMatch = pageFilterFields && pageFilterFields.length > 0 && !hasActivePageFilter;
+
   return (
     <div
-      className={`glass-card rounded-xl transition-all duration-150 group relative ${colSpan === 2 ? 'lg:col-span-2' : ''}`}
+      className={`glass-card rounded-xl transition-all duration-300 group relative ${colSpan === 2 ? 'lg:col-span-2' : ''} ${hasActivePageFilter ? 'ring-2 ring-brand-400/40 border-brand-200 shadow-[0_0_16px_-4px_rgba(106,18,205,0.12)]' : ''} ${hasPageFiltersButNoMatch ? 'opacity-40' : ''}`}
       style={{ minHeight: 280, maxHeight: 600 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setShowMenu(false); }}
@@ -3736,7 +3826,19 @@ function WidgetCard({
             />
           ) : (
             localSubtitle && (
-              <p className="text-[12px] text-ink-500 mt-1 truncate">{localSubtitle}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-[12px] text-ink-500 truncate">{localSubtitle}</p>
+                {dataLinksFromParent && dataLinksFromParent.length > 0 && (() => {
+                  const widgetLabels = (widgetFields || []).map(id => DRAG_FIELDS.find(f => f.id === id)?.label).filter(Boolean);
+                  const relevantCount = dataLinksFromParent.filter(l => widgetLabels.includes(l.fieldA) || widgetLabels.includes(l.fieldB)).length;
+                  if (relevantCount === 0) return null;
+                  return (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-evidence-50 text-evidence-700 text-[9px] font-semibold shrink-0">
+                      <Link2 size={8} />{relevantCount} linked
+                    </span>
+                  );
+                })()}
+              </div>
             )
           )}
         </div>
@@ -3852,6 +3954,95 @@ function WidgetCard({
                         </div>
                       );
                     })}
+
+                    {/* Cross-Data Filters section */}
+                    {dataLinksFromParent && dataLinksFromParent.length > 0 && (() => {
+                      const widgetLabels = (widgetFields || []).map(id => DRAG_FIELDS.find(f => f.id === id)?.label).filter(Boolean);
+                      const relevant = dataLinksFromParent.filter(l => widgetLabels.includes(l.fieldA) || widgetLabels.includes(l.fieldB));
+                      if (relevant.length === 0) return null;
+                      return (<><div className="border-t border-canvas-border/30 px-3.5 py-2 bg-surface-2/40">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-400">Cross-Data Filters</span>
+                          </div>{relevant.map(link => {
+                        const linkLabel = `${link.fieldA} ↔ ${link.fieldB}`;
+                        const isActive = widgetFilterSelections[`xlink-${link.id}`]?.length > 0;
+                        const isOpen = widgetFilterOpen[`xlink-${link.id}`] ?? false;
+                        const sA = FILE_SOURCES.find(s => s.id === link.sourceA);
+                        const sB = FILE_SOURCES.find(s => s.id === link.sourceB);
+                        // Values come from whichever side matches this widget
+                        const matchesSideA = widgetLabels.includes(link.fieldA);
+                        const sampleValues = matchesSideA
+                          ? getFilterValues(DRAG_FIELDS.find(f => f.label === link.fieldA)?.id || '')
+                          : getFilterValues(DRAG_FIELDS.find(f => f.label === link.fieldB)?.id || '');
+                        const selected = widgetFilterSelections[`xlink-${link.id}`] || [];
+                        const search = widgetFilterSearch[`xlink-${link.id}`] || '';
+                        const filtered = sampleValues.filter(v => v.toLowerCase().includes(search.toLowerCase()));
+                        const allSelected = filtered.length > 0 && filtered.every(v => selected.includes(v));
+                        return (
+                          <div key={link.id} className="border-b border-canvas-border/30 last:border-0">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setWidgetFilterOpen(prev => ({ ...prev, [`xlink-${link.id}`]: !isOpen })); }}
+                              className="w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-evidence-50/40 transition-colors cursor-pointer"
+                            >
+                              <span className={`text-[11px] font-bold uppercase tracking-wide truncate ${isActive ? 'text-brand-700' : 'text-ink-500'}`}>
+                                {link.fieldA === link.fieldB ? link.fieldA : `${link.fieldA} · ${link.fieldB}`}
+                              </span>
+                              <ChevronDown size={14} className={`text-ink-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            {isOpen && (
+                              <div className="px-3.5 pb-3">
+                                <div className="flex items-center gap-1.5 mb-2 text-[9px] text-ink-400">
+                                  <span>{sA?.name?.split('.')[0]}</span>
+                                  <Link2 size={7} />
+                                  <span>{sB?.name?.split('.')[0]}</span>
+                                </div>
+                                <div className="relative mb-2">
+                                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" />
+                                  <input
+                                    type="text"
+                                    placeholder={`Search...`}
+                                    value={search}
+                                    onChange={e => setWidgetFilterSearch(prev => ({ ...prev, [`xlink-${link.id}`]: e.target.value }))}
+                                    onClick={e => e.stopPropagation()}
+                                    className="w-full h-8 pl-8 pr-2 bg-ink-50 rounded-lg text-[11px] text-ink-800 placeholder:text-ink-400 outline-none focus:bg-white focus:ring-1 focus:ring-evidence-200 transition-all"
+                                  />
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (allSelected) setWidgetFilterSelections(prev => ({ ...prev, [`xlink-${link.id}`]: selected.filter(s => !filtered.includes(s)) }));
+                                    else setWidgetFilterSelections(prev => ({ ...prev, [`xlink-${link.id}`]: [...new Set([...selected, ...filtered])] }));
+                                  }}
+                                  className="w-full flex items-center gap-2 py-1.5 cursor-pointer text-left"
+                                >
+                                  <div className={`size-4 rounded border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${allSelected ? 'border-evidence bg-evidence' : 'border-ink-300'}`}>
+                                    {allSelected && <svg viewBox="0 0 12 12" fill="none" className="size-2"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                  </div>
+                                  <span className="text-[11px] font-semibold text-ink-800">Select All</span>
+                                </button>
+                                {filtered.map(val => (
+                                  <button
+                                    key={val}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setWidgetFilterSelections(prev => {
+                                        const cur = prev[`xlink-${link.id}`] || [];
+                                        return { ...prev, [`xlink-${link.id}`]: cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val] };
+                                      });
+                                    }}
+                                    className="w-full flex items-center gap-2 py-1.5 cursor-pointer text-left"
+                                  >
+                                    <div className={`size-4 rounded border-[1.5px] flex items-center justify-center shrink-0 transition-colors ${selected.includes(val) ? 'border-evidence bg-evidence' : 'border-ink-300'}`}>
+                                      {selected.includes(val) && <svg viewBox="0 0 12 12" fill="none" className="size-2"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                    </div>
+                                    <span className={`text-[11px] ${selected.includes(val) ? 'text-ink-900 font-medium' : 'text-ink-600'}`}>{val}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}</>);
+                    })()}
                   </div>
                 </div>
               </>
@@ -3913,24 +4104,51 @@ function WidgetCard({
         </div>
       </div>
 
-      {/* Page filter pills on widget + active widget filter selections */}
-      {((pageFilterFields && pageFilterFields.length > 0) || activeFilterCount > 0) && (
-        <div className="flex items-center gap-1.5 flex-wrap px-6 pb-2">
-          {/* Page filter field pills */}
-          {pageFilterFields?.map(fId => {
-            const label = DRAG_FIELDS.find(f => f.id === fId)?.label || fId;
-            const selected = widgetFilterSelections[fId] || [];
-            return (
-              <span key={fId} className={`flex items-center gap-1 border text-[11px] font-medium px-2 py-0.5 rounded-full ${
-                selected.length > 0 ? 'bg-brand-100 border-brand-300 text-brand-800' : 'bg-brand-50 border-brand-200 text-brand-700'
-              }`}>
-                <Filter size={9} />
-                {label}{selected.length > 0 && ` (${selected.length})`}
+
+      {/* Applied filter chips on widget — max 3 visible, then +N */}
+      {activeFilterCount > 0 && (() => {
+        const allChips: { fieldId: string; fieldLabel: string; val: string }[] = [];
+        Object.entries(widgetFilterSelections).forEach(([fieldId, values]) => {
+          if (values.length === 0) return;
+          const fieldLabel = DRAG_FIELDS.find(f => f.id === fieldId)?.label || fieldId;
+          values.forEach(val => allChips.push({ fieldId, fieldLabel, val }));
+        });
+        const visible = allChips.slice(0, 3);
+        const remaining = allChips.length - 3;
+        return (
+          <div className="flex items-center gap-1.5 px-6 pb-2">
+            <Filter size={10} className="text-brand-500 shrink-0" />
+            {visible.map(chip => (
+              <span key={`${chip.fieldId}-${chip.val}`} className="inline-flex items-center gap-1 bg-brand-50 border border-brand-200 text-brand-700 text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                {chip.fieldLabel}: {chip.val}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setWidgetFilterSelections(prev => ({
+                      ...prev,
+                      [chip.fieldId]: prev[chip.fieldId].filter(v => v !== chip.val),
+                    }));
+                  }}
+                  className="hover:text-brand-900 cursor-pointer"
+                >
+                  <X size={9} />
+                </button>
               </span>
-            );
-          })}
-        </div>
-      )}
+            ))}
+            {remaining > 0 && (
+              <span className="inline-flex items-center bg-brand-100 border border-brand-200 text-brand-700 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                +{remaining} more
+              </span>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); setWidgetFilterSelections({}); }}
+              className="text-[10px] font-medium text-brand-500 hover:text-brand-700 cursor-pointer shrink-0"
+            >
+              Clear
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Chart content */}
       <div className="px-6 pb-6 flex-1">
@@ -3942,7 +4160,7 @@ function WidgetCard({
         <>
           <div className="fixed inset-0 z-[9999] bg-black/30 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
           <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
-            <div className="pointer-events-auto bg-white rounded-2xl shadow-2xl w-[360px] p-6" onClick={e => e.stopPropagation()}>
+            <div className="pointer-events-auto bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[360px] p-6" onClick={e => e.stopPropagation()}>
               <div className="flex items-center gap-3 mb-3">
                 <div className="size-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
                   <Trash2 size={18} className="text-red-500" />
@@ -4217,6 +4435,437 @@ interface DashboardProps {
   onShare?: () => void;
 }
 
+// ─── Connect Tables Modal ────────────────────────────────────────────────────
+// Uses the real DRAG_FIELDS from this dashboard, split into the two actual
+// uploaded file sources that the user connected during dashboard creation.
+
+interface FieldLink {
+  id: string;
+  sourceA: string;
+  fieldA: string;
+  sourceB: string;
+  fieldB: string;
+}
+
+// Real uploaded file sources — derived from the DRAG_FIELDS already in this dashboard
+const FILE_SOURCES = [
+  {
+    id: 'invoice-master',
+    name: 'Invoice_Master.xlsx',
+    fields: DRAG_FIELDS.filter(f => f.kind === 'dimension').map(f => f.label),
+  },
+  {
+    id: 'vendor-finance',
+    name: 'Vendor_Finance.xlsx',
+    fields: DRAG_FIELDS.filter(f => f.kind === 'measure').map(f => f.label),
+  },
+  {
+    id: 'audit-controls',
+    name: 'Audit_Controls.csv',
+    fields: ['Control ID', 'Department', 'Owner', 'Risk Rating', 'Test Status', 'Last Tested', 'Region'],
+  },
+  {
+    id: 'payment-ledger',
+    name: 'Payment_Ledger.xlsx',
+    fields: ['Payment ID', 'Invoice ID', 'Vendor Name', 'Date', 'Amount', 'Method', 'Status'],
+  },
+  {
+    id: 'po-register',
+    name: 'PO_Register.csv',
+    fields: ['PO Number', 'Vendor Name', 'Date', 'Amount', 'Department', 'Category', 'Approval Status'],
+  },
+  {
+    id: 'gl-journal',
+    name: 'GL_Journal_Entries.xlsx',
+    fields: ['Entry ID', 'Date', 'Account', 'Debit', 'Credit', 'Department', 'Description'],
+  },
+  {
+    id: 'employee-master',
+    name: 'Employee_Master.csv',
+    fields: ['Employee ID', 'Name', 'Department', 'Role', 'Region', 'Manager', 'Status'],
+  },
+];
+
+function ConnectTablesModal({ open, onClose, addToast, links, setLinks }: { open: boolean; onClose: () => void; addToast: (t: { message: string; type: ToastType }) => void; links: FieldLink[]; setLinks: React.Dispatch<React.SetStateAction<FieldLink[]>> }) {
+  const [pickedA, setPickedA] = useState<string | null>(null);
+  const [pickedB, setPickedB] = useState<string | null>(null);
+  const [selectingField, setSelectingField] = useState<{ side: 'A' | 'B'; field: string } | null>(null);
+  const [detecting, setDetecting] = useState(false);
+
+  const srcA = FILE_SOURCES.find(s => s.id === pickedA);
+  const srcB = FILE_SOURCES.find(s => s.id === pickedB);
+  const inFieldMode = pickedA && pickedB && srcA && srcB;
+
+  const linkedForPair = links.filter(l =>
+    (l.sourceA === pickedA && l.sourceB === pickedB) ||
+    (l.sourceA === pickedB && l.sourceB === pickedA)
+  );
+  const linkedFieldsA = new Set(linkedForPair.map(l => l.sourceA === pickedA ? l.fieldA : l.fieldB));
+  const linkedFieldsB = new Set(linkedForPair.map(l => l.sourceB === pickedB ? l.fieldB : l.fieldA));
+
+  // Count links per source pair
+  const getLinkCount = (aId: string, bId: string) =>
+    links.filter(l => (l.sourceA === aId && l.sourceB === bId) || (l.sourceA === bId && l.sourceB === aId)).length;
+
+  const handleFieldClick = (side: 'A' | 'B', field: string) => {
+    if (!selectingField) {
+      setSelectingField({ side, field });
+      return;
+    }
+    // If clicking same side, swap selection
+    if (selectingField.side === side) {
+      setSelectingField(selectingField.field === field ? null : { side, field });
+      return;
+    }
+    // Clicking opposite side — create link
+    const fA = side === 'A' ? field : selectingField.field;
+    const fB = side === 'B' ? field : selectingField.field;
+    const sA = pickedA!;
+    const sB = pickedB!;
+    const exists = links.some(l => l.sourceA === sA && l.fieldA === fA && l.sourceB === sB && l.fieldB === fB);
+    if (!exists) {
+      setLinks(prev => [...prev, { id: `l-${Date.now()}`, sourceA: sA, fieldA: fA, sourceB: sB, fieldB: fB }]);
+      addToast({ message: `Linked ${fA} → ${fB}`, type: 'success' });
+    }
+    setSelectingField(null);
+  };
+
+  const handleAutoDetect = () => {
+    setDetecting(true);
+    setTimeout(() => {
+      const auto: FieldLink[] = [];
+      // For each pair of sources, find fields with matching names
+      for (let i = 0; i < FILE_SOURCES.length; i++) {
+        for (let j = i + 1; j < FILE_SOURCES.length; j++) {
+          const a = FILE_SOURCES[i], b = FILE_SOURCES[j];
+          a.fields.forEach(fA => {
+            b.fields.forEach(fB => {
+              if (fA.toLowerCase() === fB.toLowerCase()) {
+                auto.push({ id: `auto-${a.id}-${b.id}-${fA}`, sourceA: a.id, fieldA: fA, sourceB: b.id, fieldB: fB });
+              }
+            });
+          });
+        }
+      }
+      // Also add some semantic matches
+      auto.push({ id: 'auto-sem-1', sourceA: 'invoice-master', fieldA: 'Date', sourceB: 'vendor-finance', fieldB: 'Processing Time (d)' });
+      auto.push({ id: 'auto-sem-2', sourceA: 'invoice-master', fieldA: 'Vendor Name', sourceB: 'vendor-finance', fieldB: 'Invoice Amount (₹)' });
+      setLinks(prev => {
+        const existing = new Set(prev.map(l => `${l.sourceA}|${l.fieldA}|${l.sourceB}|${l.fieldB}`));
+        return [...prev, ...auto.filter(a => !existing.has(`${a.sourceA}|${a.fieldA}|${a.sourceB}|${a.fieldB}`))];
+      });
+      setDetecting(false);
+      addToast({ message: `${auto.length} field mappings detected`, type: 'success' });
+    }, 2000);
+  };
+
+  if (!open) return null;
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/40 z-[200]" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: -8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97 }}
+        transition={{ duration: 0.15, ease: [0.22, 0.68, 0, 1] }}
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl z-[201] flex flex-col overflow-hidden"
+        style={{ width: 'min(1200px, 96vw)', height: 'min(775px, 85vh)' }}
+        role="dialog" aria-modal="true" aria-label="Connect Tables"
+      >
+        {/* Header */}
+        <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b border-canvas-border">
+          <div className="flex items-center gap-2.5">
+            <div className="bg-brand-50 rounded-lg size-7 flex items-center justify-center">
+              <Database size={14} className="text-brand-600" />
+            </div>
+            {inFieldMode ? (
+              <div className="flex items-center gap-2">
+                <button onClick={() => { setPickedA(null); setPickedB(null); setSelectingField(null); }} className="text-[13px] text-ink-500 hover:text-brand-600 transition-colors cursor-pointer">
+                  All Sources
+                </button>
+                <ChevronDown size={12} className="text-ink-400 -rotate-90" />
+                <span className="text-[15px] font-semibold text-ink-900">{srcA.name} ↔ {srcB.name}</span>
+              </div>
+            ) : (
+              <span className="text-[15px] font-semibold text-ink-900">Connect Data Sources</span>
+            )}
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer" aria-label="Close">
+            <X size={18} className="text-ink-500" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+
+          {/* Auto-detect banner */}
+          <div className="flex items-center justify-between p-4 rounded-xl bg-brand-50/60 border border-brand-100">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-brand-600"><Zap size={15} className="text-white" /></div>
+              <div>
+                <div className="text-[13px] font-bold text-ink-900">Smart Link</div>
+                <div className="text-[12px] text-ink-500">Let IRA auto-detect field mappings across all files</div>
+              </div>
+            </div>
+            <button
+              onClick={handleAutoDetect}
+              disabled={detecting}
+              className="flex items-center gap-2 px-4 h-9 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer disabled:opacity-60"
+            >
+              {detecting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {detecting ? 'Scanning...' : 'Auto Detect'}
+            </button>
+          </div>
+
+          {/* Step 1: File picker (when no pair selected) */}
+          {!inFieldMode && (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[11px] text-ink-500 uppercase tracking-wide">Choose two files to connect</span>
+                <span className="text-[12px] text-ink-400">{FILE_SOURCES.length} data sources available</span>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 max-h-[320px] overflow-y-scroll pr-1">
+                {FILE_SOURCES.map(src => {
+                  const isA = pickedA === src.id;
+                  const isB = pickedB === src.id;
+                  const isPicked = isA || isB;
+                  const totalLinks = FILE_SOURCES.filter(s => s.id !== src.id).reduce((sum, other) => sum + getLinkCount(src.id, other.id), 0);
+                  return (
+                    <button
+                      key={src.id}
+                      onClick={() => {
+                        if (isPicked) {
+                          if (isA) setPickedA(null);
+                          else setPickedB(null);
+                        } else if (!pickedA) setPickedA(src.id);
+                        else if (!pickedB) setPickedB(src.id);
+                      }}
+                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg border transition-all cursor-pointer text-left ${
+                        isPicked
+                          ? 'border-brand-400 bg-brand-50/50'
+                          : 'border-canvas-border bg-canvas hover:border-brand-200'
+                      }`}
+                    >
+                      <div className={`p-1.5 rounded-lg ${isPicked ? 'bg-brand-600' : 'bg-canvas-elevated border border-canvas-border'}`}>
+                        <FileText size={13} className={isPicked ? 'text-white' : 'text-ink-500'} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-semibold text-ink-900">{src.name}</div>
+                        <div className="text-[11px] text-ink-500">{src.fields.length} columns</div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {totalLinks > 0 && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-compliant-50 text-compliant-700 text-[10px] font-semibold">
+                            <Link2 size={9} />{totalLinks}
+                          </span>
+                        )}
+                        {isPicked && (
+                          <span className="w-5 h-5 rounded-full bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center">
+                            {isA ? '1' : '2'}
+                          </span>
+                        )}
+                        <ChevronDown size={12} className="text-ink-400 -rotate-90" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {pickedA && !pickedB && (
+                <div className="flex items-center gap-2 text-[12px] text-brand-600 justify-center py-1 bg-brand-50 rounded-lg px-3">
+                  <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
+                  Now select a second file to connect with {FILE_SOURCES.find(s => s.id === pickedA)?.name}
+                </div>
+              )}
+
+              {/* Summary of all links across all pairs */}
+              {links.length > 0 && (
+                <div>
+                  <div className="font-mono text-[11px] text-ink-500 uppercase tracking-wide mb-2">
+                    All Active Links ({links.length})
+                  </div>
+                  <div className="space-y-1.5">
+                    {links.map((link, i) => {
+                      const sA = FILE_SOURCES.find(s => s.id === link.sourceA);
+                      const sB = FILE_SOURCES.find(s => s.id === link.sourceB);
+                      return (
+                        <motion.div
+                          key={link.id}
+                          initial={{ opacity: 0, x: -6 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.02 }}
+                          className="flex items-center p-2.5 rounded-lg bg-canvas border border-canvas-border group hover:border-brand-200 transition-colors"
+                        >
+                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                            <span className="text-[10px] text-ink-400 shrink-0">{sA?.name?.split('.')[0]}</span>
+                            <span className="text-[12px] font-medium text-ink-800">{link.fieldA}</span>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0 mx-2">
+                            <div className="w-3 h-px bg-brand-200" />
+                            <Link2 size={10} className="text-brand-500" />
+                            <div className="w-3 h-px bg-brand-200" />
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                            <span className="text-[10px] text-ink-400 shrink-0">{sB?.name?.split('.')[0]}</span>
+                            <span className="text-[12px] font-medium text-ink-800">{link.fieldB}</span>
+                          </div>
+                          <button
+                            onClick={() => { setLinks(prev => prev.filter(l => l.id !== link.id)); addToast({ message: 'Link removed', type: 'info' }); }}
+                            className="p-1 rounded text-ink-300 hover:text-risk-700 hover:bg-risk-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0 ml-2"
+                            aria-label="Remove link"
+                          ><X size={11} /></button>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Step 2: Field-level linking (when pair selected) */}
+          {inFieldMode && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Source A fields */}
+                <div className="rounded-xl border border-canvas-border bg-canvas overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3 bg-canvas-elevated border-b border-canvas-border">
+                    <FileText size={14} className="text-brand-600" />
+                    <span className="text-[13px] font-bold text-ink-900">{srcA.name}</span>
+                    <span className="text-[11px] text-ink-400 ml-auto">{srcA.fields.length} cols</span>
+                  </div>
+                  <div className="divide-y divide-canvas-border max-h-[320px] overflow-y-scroll">
+                    {srcA.fields.map(field => {
+                      const isLinked = linkedFieldsA.has(field);
+                      const isSelected = selectingField?.side === 'A' && selectingField.field === field;
+                      return (
+                        <button
+                          key={field}
+                          onClick={() => handleFieldClick('A', field)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors cursor-pointer ${
+                            isSelected ? 'bg-brand-50 text-brand-700' :
+                            isLinked ? 'bg-compliant-50/30' :
+                            'hover:bg-brand-50/30 text-ink-700'
+                          }`}
+                        >
+                          <svg width="8" height="12" viewBox="0 0 8 12" className="text-ink-300 shrink-0">
+                            <circle cx="2" cy="3" r="1" fill="currentColor" /><circle cx="6" cy="3" r="1" fill="currentColor" />
+                            <circle cx="2" cy="6" r="1" fill="currentColor" /><circle cx="6" cy="6" r="1" fill="currentColor" />
+                            <circle cx="2" cy="9" r="1" fill="currentColor" /><circle cx="6" cy="9" r="1" fill="currentColor" />
+                          </svg>
+                          <span className={`text-[13px] ${isSelected ? 'font-semibold' : isLinked ? 'font-medium' : ''}`}>{field}</span>
+                          {isLinked && <CheckCircle2 size={12} className="text-compliant ml-auto shrink-0" />}
+                          {isSelected && <div className="ml-auto w-2 h-2 rounded-full bg-brand-500 animate-pulse shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Source B fields */}
+                <div className="rounded-xl border border-canvas-border bg-canvas overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3 bg-canvas-elevated border-b border-canvas-border">
+                    <FileText size={14} className="text-brand-600" />
+                    <span className="text-[13px] font-bold text-ink-900">{srcB.name}</span>
+                    <span className="text-[11px] text-ink-400 ml-auto">{srcB.fields.length} cols</span>
+                  </div>
+                  <div className="divide-y divide-canvas-border max-h-[320px] overflow-y-scroll">
+                    {srcB.fields.map(field => {
+                      const isLinked = linkedFieldsB.has(field);
+                      const isSelected = selectingField?.side === 'B' && selectingField.field === field;
+                      return (
+                        <button
+                          key={field}
+                          onClick={() => handleFieldClick('B', field)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors cursor-pointer ${
+                            isSelected ? 'bg-brand-50 text-brand-700' :
+                            isLinked ? 'bg-compliant-50/30' :
+                            'hover:bg-brand-50/30 text-ink-700'
+                          }`}
+                        >
+                          <svg width="8" height="12" viewBox="0 0 8 12" className="text-ink-300 shrink-0">
+                            <circle cx="2" cy="3" r="1" fill="currentColor" /><circle cx="6" cy="3" r="1" fill="currentColor" />
+                            <circle cx="2" cy="6" r="1" fill="currentColor" /><circle cx="6" cy="6" r="1" fill="currentColor" />
+                            <circle cx="2" cy="9" r="1" fill="currentColor" /><circle cx="6" cy="9" r="1" fill="currentColor" />
+                          </svg>
+                          <span className={`text-[13px] ${isSelected ? 'font-semibold' : isLinked ? 'font-medium' : ''}`}>{field}</span>
+                          {isLinked && <CheckCircle2 size={12} className="text-compliant ml-auto shrink-0" />}
+                          {isSelected && <div className="ml-auto w-2 h-2 rounded-full bg-brand-500 animate-pulse shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Hint */}
+              {selectingField ? (
+                <div className="flex items-center gap-2 text-[12px] text-brand-600 justify-center py-2 bg-brand-50 rounded-lg px-3">
+                  <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
+                  Selected &ldquo;{selectingField.field}&rdquo; — now click a field in {selectingField.side === 'A' ? srcB.name : srcA.name}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-[12px] text-ink-400 justify-center py-1">
+                  <Sparkles size={12} className="text-brand-400" />
+                  Click a field on either side to start linking
+                </div>
+              )}
+
+              {/* Links for this pair */}
+              {linkedForPair.length > 0 && (
+                <div>
+                  <div className="font-mono text-[11px] text-ink-500 uppercase tracking-wide mb-2">
+                    Links for this pair ({linkedForPair.length})
+                  </div>
+                  <div className="space-y-1.5">
+                    {linkedForPair.map((link, i) => (
+                      <motion.div
+                        key={link.id}
+                        initial={{ opacity: 0, x: -6 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.03 }}
+                        className="flex items-center p-2.5 rounded-lg bg-canvas border border-canvas-border group hover:border-brand-200 transition-colors"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <FileText size={11} className="text-brand-600 shrink-0" />
+                          <span className="text-[12px] font-medium text-ink-800">{link.sourceA === pickedA ? link.fieldA : link.fieldB}</span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0 mx-2">
+                          <div className="w-3 h-px bg-brand-200" /><Link2 size={10} className="text-brand-500" /><div className="w-3 h-px bg-brand-200" />
+                        </div>
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <FileText size={11} className="text-brand-600 shrink-0" />
+                          <span className="text-[12px] font-medium text-ink-800">{link.sourceB === pickedB ? link.fieldB : link.fieldA}</span>
+                        </div>
+                        <button
+                          onClick={() => { setLinks(prev => prev.filter(l => l.id !== link.id)); addToast({ message: 'Link removed', type: 'info' }); }}
+                          className="p-1 rounded text-ink-300 hover:text-risk-700 hover:bg-risk-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0 ml-2"
+                          aria-label="Remove link"
+                        ><X size={11} /></button>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-3.5 border-t border-canvas-border bg-canvas shrink-0">
+          <p className="text-[11px] text-ink-400 leading-relaxed max-w-[420px]">
+            Linked fields share filter context — filtering by Region on one widget updates all connected widgets.
+          </p>
+          <button onClick={onClose} className="px-5 h-9 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
+            Done
+          </button>
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
 export default function DashboardView({ initialDashboardId, initialDashboardName, initialCustomFields, savedWidgets = [], onSaveWidgets, onBack, onImportPowerBI, onShare }: DashboardProps = {}) {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -4250,6 +4899,9 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
   const [editingDashName, setEditingDashName] = useState(false);
   const [dashName, setDashName] = useState(isCustomDashboard ? (initialDashboardName || 'Custom Dashboard') : (initialDashboardName || ''));
   const [widgetSizes, setWidgetSizes] = useState<Record<number, 1 | 2>>({});
+  const [connectTablesOpen, setConnectTablesOpen] = useState(false);
+  const [dataLinks, setDataLinks] = useState<FieldLink[]>([]);
+  const [activeCrossFilters, setActiveCrossFilters] = useState<string[]>([]);
   const [activeFiltersCount, setActiveFiltersCount] = useState(0);
 
   const handleEditDefaultWidget = (widgetTitle: string, chartType: string, subtitle?: string) => {
@@ -4458,18 +5110,40 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                     {isExporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
                   </button>
 
+                  {/* Connect Tables */}
+                  <button
+                    onClick={() => setConnectTablesOpen(true)}
+                    className={`relative flex items-center justify-center size-9 rounded-lg transition-colors cursor-pointer border ${
+                      dataLinks.length > 0
+                        ? 'border-brand-200 bg-brand-50 text-brand-700'
+                        : 'border-canvas-border bg-canvas-elevated text-ink-500 hover:text-brand-600 hover:border-brand-200'
+                    }`}
+                    title="Connect Data Sources"
+                  >
+                    <Link2 size={15} />
+                    {dataLinks.length > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-brand-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 tabular-nums">
+                        {dataLinks.length}
+                      </span>
+                    )}
+                  </button>
+
                   {/* Filter */}
                   <button
                     onClick={() => setFiltersOpen(!filtersOpen)}
-                    className={`flex items-center gap-1.5 px-2.5 h-9 rounded-lg text-[12px] font-medium transition-colors cursor-pointer border ${
-                      activeFiltersCount > 0
+                    className={`relative flex items-center gap-1.5 px-2.5 h-9 rounded-lg text-[12px] font-medium transition-colors cursor-pointer border ${
+                      activeFiltersCount > 0 || pageFilterFields.length > 0
                         ? 'border-brand-200 bg-brand-50 text-brand-700'
                         : 'border-canvas-border bg-canvas-elevated text-ink-500 hover:text-brand-600 hover:border-brand-200'
                     }`}
                     title="Filters"
                   >
                     <Filter size={15} />
-                    {activeFiltersCount > 0 && <span className="tabular-nums">{activeFiltersCount}</span>}
+                    {(activeFiltersCount + pageFilterFields.length) > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-brand-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 tabular-nums">
+                        {activeFiltersCount + pageFilterFields.length}
+                      </span>
+                    )}
                   </button>
 
                   {/* Share */}
@@ -4510,6 +5184,39 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
             {/* Alerts & Daily Digest */}
             {!isCustomDashboard && <AlertsPanel dashboardId={activeId} />}
             {isCustomDashboard && <EmptyAlertsPanel />}
+
+            {/* Page-level filter strip */}
+            {(pageFilterFields.length > 0 || activeCrossFilters.length > 0) && (
+              <div className="flex items-center gap-2 flex-wrap px-5 py-3 mb-4 rounded-xl bg-brand-50/50 border border-brand-100">
+                <Filter size={13} className="text-brand-600 shrink-0" />
+                {pageFilterFields.map(fId => {
+                  const label = DRAG_FIELDS.find(f => f.id === fId)?.label || fId;
+                  return (
+                    <span key={fId} className="flex items-center gap-1.5 bg-brand-100 border border-brand-200 text-brand-800 text-[12px] font-medium px-2.5 py-1 rounded-lg">
+                      {label}
+                      <button onClick={() => setPageFilterFields(pageFilterFields.filter(f => f !== fId))} className="hover:text-brand-900 cursor-pointer"><X size={11} /></button>
+                    </span>
+                  );
+                })}
+                {activeCrossFilters.map(linkId => {
+                  const link = dataLinks.find(l => l.id === linkId);
+                  if (!link) return null;
+                  const label = link.fieldA === link.fieldB ? link.fieldA : `${link.fieldA} · ${link.fieldB}`;
+                  return (
+                    <span key={linkId} className="flex items-center gap-1.5 bg-brand-100 border border-brand-200 text-brand-800 text-[12px] font-medium px-2.5 py-1 rounded-lg">
+                      {label}
+                      <button onClick={() => setActiveCrossFilters(activeCrossFilters.filter(id => id !== linkId))} className="hover:text-brand-900 cursor-pointer"><X size={11} /></button>
+                    </span>
+                  );
+                })}
+                <button
+                  onClick={() => { setPageFilterFields([]); setActiveCrossFilters([]); }}
+                  className="text-[11px] font-medium text-brand-600 hover:text-brand-800 ml-auto cursor-pointer transition-colors"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
 
             {/* Empty state for custom dashboards with no widgets */}
             {isCustomDashboard && userWidgets.length === 0 && (
@@ -4570,6 +5277,8 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                     onDelete={() => { const next = userWidgets.filter((_, j) => j !== i); setUserWidgets(next); onSaveWidgets?.(next); addToast({ message: 'Widget removed', type: 'info' }); }}
                     onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
                     pageFilterFields={pageFilterFields}
+                    widgetFields={[w.xField, w.yField].filter(Boolean)}
+                    dataLinks={dataLinks}
                     onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
                     onClearPageFilters={() => setPageFilterFields([])}
                   >
@@ -4665,6 +5374,8 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                   onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                   onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
                   pageFilterFields={pageFilterFields}
+                  widgetFields={['region', 'category', 'department', 'status']}
+                  dataLinks={dataLinks}
                   onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
                   onClearPageFilters={() => setPageFilterFields([])}
                 >
@@ -4727,6 +5438,8 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                   onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                   onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
                   pageFilterFields={pageFilterFields}
+                  widgetFields={['date', 'month', 'vendor', 'region']}
+                  dataLinks={dataLinks}
                   onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
                   onClearPageFilters={() => setPageFilterFields([])}
                 >
@@ -4765,6 +5478,8 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                   onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                   onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
                   pageFilterFields={pageFilterFields}
+                  widgetFields={['date', 'status', 'department', 'category']}
+                  dataLinks={dataLinks}
                   onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
                   onClearPageFilters={() => setPageFilterFields([])}
                 >
@@ -4798,6 +5513,8 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                   onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                   onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
                   pageFilterFields={pageFilterFields}
+                  widgetFields={['date', 'month', 'vendor']}
+                  dataLinks={dataLinks}
                   onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
                   onClearPageFilters={() => setPageFilterFields([])}
                 >
@@ -4832,6 +5549,8 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                 onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                 onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
                 pageFilterFields={pageFilterFields}
+                widgetFields={['date', 'month', 'region', 'status']}
+                dataLinks={dataLinks}
                 onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
                 onClearPageFilters={() => setPageFilterFields([])}
               >
@@ -4886,6 +5605,8 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                 onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                 onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
                 pageFilterFields={pageFilterFields}
+                widgetFields={['date', 'month', 'region', 'vendor', 'status', 'category', 'department']}
+                dataLinks={dataLinks}
                 onRemovePageFilter={(id) => setPageFilterFields(pageFilterFields.filter(f => f !== id))}
                 onClearPageFilters={() => setPageFilterFields([])}
               >
@@ -5128,34 +5849,55 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
         }}
         pageFilterFields={pageFilterFields}
         onPageFilterFieldsChange={setPageFilterFields}
+        dataLinks={dataLinks}
+        activeCrossFilters={activeCrossFilters}
+        onActiveCrossFiltersChange={setActiveCrossFilters}
+        onManageConnections={() => { setFiltersOpen(false); setConnectTablesOpen(true); }}
       />
 
+      {/* Connect Tables Modal */}
+      <AnimatePresence>
+        {connectTablesOpen && (
+          <ConnectTablesModal open={connectTablesOpen} onClose={() => setConnectTablesOpen(false)} addToast={addToast} links={dataLinks} setLinks={setDataLinks} />
+        )}
+      </AnimatePresence>
+
       {/* Add Widget Modal */}
-      <AddWidgetModal
+      <AddCardModal
         open={addWidgetOpen}
-        onClose={(widgetAdded) => {
-          setAddWidgetOpen(false);
-          setEditingWidget(null);
-          // If this was auto-opened from create flow and no widgets added, go back
-          if (!widgetAdded && initialCustomFields?.length && userWidgets.length === 0 && onBack) onBack();
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setAddWidgetOpen(false);
+            setEditingWidget(null);
+            if (initialCustomFields?.length && userWidgets.length === 0 && onBack) onBack();
+          }
         }}
-        addToast={addToast}
-        customFields={customFields}
-        editData={editingWidget?.data}
-        onAddWidget={(widget) => {
+        mode={editingWidget ? 'edit' : 'add'}
+        initialWidgetType={editingWidget?.data?.chartType}
+        initialXAxis={editingWidget?.data?.xField}
+        initialYAxis={editingWidget?.data?.yField}
+        onSelectCard={(cardType, config) => {
+          const widget = {
+            chartType: cardType,
+            title: config?.name || cardType,
+            xField: config?.xAxis || '',
+            yField: config?.yAxis || '',
+          };
           if (editingWidget !== null && editingWidget.index >= 0) {
-            // Update existing custom widget
             const next = userWidgets.map((w, i) => i === editingWidget.index ? widget : w);
             setUserWidgets(next);
             onSaveWidgets?.(next);
             setEditingWidget(null);
           } else {
-            // Add new widget
             const next = [...userWidgets, widget];
             setUserWidgets(next);
             onSaveWidgets?.(next);
           }
+          setAddWidgetOpen(false);
+          addToast({ message: editingWidget ? 'Widget updated' : 'Widget added', type: 'success' });
         }}
+        onOpenExcelUpload={() => addToast({ message: 'Upload Excel', type: 'info' })}
+        onOpenQueryModal={() => addToast({ message: 'Open Query', type: 'info' })}
       />
     </div>
   );
