@@ -4,10 +4,10 @@ import {
   Send, Paperclip, Sparkles, History, X, FileText,
   Workflow, ShieldCheck, BarChart3, ChevronDown, ChevronRight,
   MessageSquare, ArrowRight, Mic, Plus, Lightbulb,
-  Save, CheckCircle, Maximize2,
+  Save, CheckCircle, Maximize2, Lock,
   ExternalLink, Download, MoreHorizontal, Pencil, CornerDownLeft, ArrowUpRight,
 } from 'lucide-react';
-import { CHAT_HISTORY, CHAT_CONVERSATIONS, CLARIFICATION_STEPS } from '../../data/mockData';
+import { CHAT_HISTORY, CHAT_CONVERSATIONS, CLARIFICATION_STEPS, BUSINESS_PROCESSES, SOPS } from '../../data/mockData';
 import { useToast } from '../shared/Toast';
 import type { WorkflowTypeId } from '../../data/mockData';
 import type { ArtifactTab } from '../../hooks/useAppState';
@@ -28,7 +28,7 @@ interface ChatMessage {
   followUps?: string[];
   timestamp: Date;
   // Rich inline components
-  richType?: 'summary-kpi' | 'audit-result' | 'audit-loading' | 'clarification' | 'save-workflow-prompt';
+  richType?: 'summary-kpi' | 'audit-result' | 'audit-loading' | 'clarification' | 'save-workflow-prompt' | 'workflow-checkpoint';
   richData?: Record<string, unknown>;
 }
 
@@ -349,57 +349,6 @@ function ResultsTable({
   );
 }
 
-// ─── Actions dropdown ────────────────────────────────────────────────────────
-
-function ActionsMenu({ onPick }: { onPick: (action: 'workflow' | 'report' | 'dashboard') => void }) {
-  const [open, setOpen] = useState(false);
-  const items: { id: 'workflow' | 'report' | 'dashboard'; label: string; icon: React.ElementType }[] = [
-    { id: 'workflow', label: 'Save as workflow', icon: Workflow },
-    { id: 'report', label: 'Add to report', icon: FileText },
-    { id: 'dashboard', label: 'Add to dashboard', icon: BarChart3 },
-  ];
-  return (
-    <div className="relative inline-block">
-      <button
-        onClick={() => setOpen(p => !p)}
-        className="inline-flex items-center gap-2 h-9 px-3 rounded-md bg-canvas-elevated border border-canvas-border text-[12px] font-semibold text-ink-700 hover:border-brand-200 hover:text-ink-800 transition-colors cursor-pointer"
-      >
-        <MoreHorizontal size={14} />
-        Actions
-        <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.12 }}
-              className="absolute left-0 top-full mt-1 w-56 z-20 bg-canvas-elevated border border-canvas-border rounded-md py-1 shadow-md"
-            >
-              {items.map(item => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => { onPick(item.id); setOpen(false); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-ink-700 hover:bg-brand-50 hover:text-brand-700 transition-colors cursor-pointer"
-                  >
-                    <Icon size={14} className="text-ink-500" />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 // ─── Collapsible thinking trail (one per IRA message) ───────────────────────
 
 function ThinkingTrail({ summary, steps, defaultOpen = false }: {
@@ -677,6 +626,161 @@ function SaveWorkflowButton() {
   );
 }
 
+// ─── Save-as-Workflow Modal ─────────────────────────────────────────────────
+// Path 3 commit moment: turning a query thread into a workflow thread is
+// irreversible per PRD, so the modal captures metadata (name, BP, sub-process,
+// description) and surfaces the warning copy before flipping artifactMode.
+
+interface SaveAsWorkflowModalProps {
+  open: boolean;
+  defaultName: string;
+  defaultDescription: string;
+  onCancel: () => void;
+  onConfirm: (data: { name: string; bpId: string; subProcessId: string; description: string }) => void;
+}
+
+function SaveAsWorkflowModal({ open, defaultName, defaultDescription, onCancel, onConfirm }: SaveAsWorkflowModalProps) {
+  const [name, setName] = useState(defaultName);
+  const [description, setDescription] = useState(defaultDescription);
+  const [bpId, setBpId] = useState<string>('');
+  const [subProcessId, setSubProcessId] = useState<string>('');
+
+  // Reset form when modal opens with fresh defaults
+  useEffect(() => {
+    if (open) {
+      setName(defaultName);
+      setDescription(defaultDescription);
+      setBpId('');
+      setSubProcessId('');
+    }
+  }, [open, defaultName, defaultDescription]);
+
+  // Sub-process options derived from SOPs filtered by selected BP
+  const subProcessOptions = bpId ? SOPS.filter(s => s.bpId === bpId) : [];
+
+  const canConfirm = name.trim() && bpId && subProcessId;
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="save-as-wf-title">
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-ink-900/40 backdrop-blur-[4px]"
+        onClick={onCancel}
+      />
+      {/* Modal */}
+      <motion.div
+        initial={{ opacity: 0, y: 8, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+        className="relative bg-white rounded-2xl shadow-2xl border border-border-light w-[560px] max-w-[92vw] max-h-[88vh] overflow-hidden flex flex-col"
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 pt-5 pb-3">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary-xlight flex items-center justify-center shrink-0">
+              <Save size={16} className="text-primary" />
+            </div>
+            <div>
+              <h2 id="save-as-wf-title" className="text-[15px] font-semibold text-text">Save as workflow</h2>
+              <p className="text-[12px] text-text-muted mt-0.5">Turn this query result into a re-runnable workflow.</p>
+            </div>
+          </div>
+          <button onClick={onCancel} className="p-1.5 text-text-muted hover:text-text-secondary rounded-md hover:bg-paper-50 transition-colors cursor-pointer" aria-label="Close">
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Warning */}
+        <div className="mx-6 mb-4 px-3 py-2.5 rounded-lg bg-mitigated-50 border border-mitigated-200 flex gap-2 items-start">
+          <Lightbulb size={13} className="text-mitigated-700 mt-0.5 shrink-0" />
+          <p className="text-[12px] leading-relaxed text-mitigated-700">
+            This chat will switch to <strong>workflow mode</strong>. You won't be able to switch back to query mode in this chat — start a new chat for that.
+          </p>
+        </div>
+
+        {/* Form */}
+        <div className="px-6 pb-5 flex-1 overflow-y-auto space-y-4">
+          {/* Workflow name */}
+          <div>
+            <label className="block text-[12px] font-semibold text-text mb-1.5">Workflow name <span className="text-risk">*</span></label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full h-10 px-3 text-[13px] text-text border border-border-light rounded-lg bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+              placeholder="e.g., Duplicate Invoice Detection — Q1 ±3 days"
+            />
+            <p className="text-[11px] text-text-muted mt-1">IRA pre-filled this from your query. Edit if needed.</p>
+          </div>
+
+          {/* Two-column row: BP + Sub-process */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[12px] font-semibold text-text mb-1.5">Business process <span className="text-risk">*</span></label>
+              <select
+                value={bpId}
+                onChange={e => { setBpId(e.target.value); setSubProcessId(''); }}
+                className="w-full h-10 px-3 text-[13px] text-text border border-border-light rounded-lg bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer"
+              >
+                <option value="">Select…</option>
+                {BUSINESS_PROCESSES.map(bp => (
+                  <option key={bp.id} value={bp.id}>{bp.name} ({bp.abbr})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[12px] font-semibold text-text mb-1.5">Sub-process <span className="text-risk">*</span></label>
+              <select
+                value={subProcessId}
+                onChange={e => setSubProcessId(e.target.value)}
+                disabled={!bpId}
+                className="w-full h-10 px-3 text-[13px] text-text border border-border-light rounded-lg bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer disabled:bg-paper-50 disabled:text-text-muted disabled:cursor-not-allowed"
+              >
+                <option value="">{bpId ? 'Select…' : 'Pick a business process first'}</option>
+                {subProcessOptions.map(sp => (
+                  <option key={sp.id} value={sp.id}>{sp.name.replace(/\s*SOP$/i, '').trim()}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-[12px] font-semibold text-text mb-1.5">Description</label>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 text-[13px] text-text border border-border-light rounded-lg bg-white focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all resize-none"
+              placeholder="One-line summary of what this workflow does."
+            />
+            <p className="text-[11px] text-text-muted mt-1">Optional. IRA pre-filled this from your query.</p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-border-light px-6 py-3 flex items-center justify-end gap-2 bg-paper-50/40">
+          <button onClick={onCancel} className="px-4 py-2 text-[12px] font-semibold text-text-muted hover:text-text-secondary hover:bg-white rounded-lg transition-colors cursor-pointer">
+            Cancel
+          </button>
+          <button
+            onClick={() => canConfirm && onConfirm({ name: name.trim(), bpId, subProcessId, description: description.trim() })}
+            disabled={!canConfirm}
+            className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-paper-200 disabled:text-text-muted disabled:cursor-not-allowed text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
+          >
+            <Save size={12} /> Save & switch to workflow
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowType, initialQuery, onInitialQueryProcessed, selectedChatId, onChatLoaded, setView }: ChatViewProps) {
   const { addToast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -694,6 +798,10 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
   // Workflow build flow state
   const [workflowBuildPhase, setWorkflowBuildPhase] = useState(0); // 0=idle, 1=asking-files, 2=asking-logic, 3=confirming, 4=input-config, 5=freeze-confirm, 6=output-config, 7=save
   const [currentWorkflowType, setCurrentWorkflowType] = useState<WorkflowTypeId | null>(null);
+
+  // Save-as-workflow flow state (Path 3 — query → workflow flip)
+  const [showSaveAsWfModal, setShowSaveAsWfModal] = useState(false);
+  const [lockedAsWorkflow, setLockedAsWorkflow] = useState(false);
 
   // Track whether the progressive loader is rendering an audit-query response
   const activeQueryFlowRef = useRef<'audit-query' | null>(null);
@@ -764,6 +872,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     setThinkingSteps([]);
     setWorkflowBuildPhase(0);
     setCurrentWorkflowType(null);
+    setLockedAsWorkflow(false);
     clearTimers();
     return true;
   }, []);
@@ -1057,6 +1166,90 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     setTimeout(() => {
       addToast({ type: 'success', message: labels[action].done });
     }, 1200);
+  };
+
+  // Path 3 entry — open the Save-as-Workflow modal from the audit-result action bar.
+  const openSaveAsWorkflowModal = () => setShowSaveAsWfModal(true);
+
+  // Path 3 commit — modal confirmed. Lock the thread into workflow mode,
+  // swap the IRA Workspace canvas (parent App.tsx handles the Y-spin), and
+  // post the inline checkpoint message asking which params to make configurable.
+  const handleSaveAsWorkflowConfirm = (data: { name: string; bpId: string; subProcessId: string; description: string }) => {
+    setShowSaveAsWfModal(false);
+
+    // Lock the composer pill — visual signal that mode is irreversible per thread.
+    setLockedAsWorkflow(true);
+
+    // Toast the save intent immediately so the user sees commit feedback
+    // independently of the canvas-flip animation.
+    addToast({ type: 'success', message: `Workflow draft "${data.name}" created.` });
+
+    // Flip the right pane to workflow mode. App.tsx wraps the canvas in an
+    // AnimatePresence Y-spin keyed on artifactMode, so this triggers the rotation.
+    setArtifactMode('workflow');
+    setWorkflowType?.('detection'); // duplicate-invoice query → detection workflow
+    setShowArtifacts(true);
+
+    // Inject IRA's checkpoint message inline in the same thread. Configurable
+    // params are seeded from the existing AUDIT_RESULT context (date / threshold
+    // / vendor / amount). User can multi-select via chips.
+    schedule(() => {
+      setMessages(prev => [...prev, {
+        id: `msg-wf-checkpoint-${Date.now()}`,
+        role: 'assistant',
+        text: '',
+        richType: 'workflow-checkpoint',
+        richData: {
+          intro: `I'll turn this into a workflow under **${BUSINESS_PROCESSES.find(b => b.id === data.bpId)?.name ?? 'the selected process'}**. Which parameters should be configurable when someone runs this later?`,
+          options: [
+            { id: 'date', label: 'Date range', detail: 'currently Q1 2026 — switch to rolling window at run time' },
+            { id: 'threshold', label: 'Match threshold', detail: 'currently 90% — adjustable per run' },
+            { id: 'vendor', label: 'Vendor scope', detail: 'currently all — filter to specific vendors' },
+            { id: 'amount', label: 'Amount threshold', detail: 'currently any — filter to >X' },
+          ],
+          selected: [] as string[],
+          status: 'open' as 'open' | 'submitted',
+        },
+        timestamp: new Date(),
+      }]);
+    }, 800);
+  };
+
+  // Toggle a checkpoint chip selection (multi-select).
+  const toggleCheckpointParam = (msgId: string, paramId: string) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id !== msgId || m.richType !== 'workflow-checkpoint') return m;
+      const data = m.richData as { selected: string[] };
+      const isSelected = data.selected.includes(paramId);
+      return {
+        ...m,
+        richData: {
+          ...m.richData,
+          selected: isSelected ? data.selected.filter(p => p !== paramId) : [...data.selected, paramId],
+        },
+      };
+    }));
+  };
+
+  // Confirm checkpoint selections — freeze the chip group + post follow-up.
+  const submitCheckpoint = (msgId: string) => {
+    let pickedLabels: string[] = [];
+    setMessages(prev => prev.map(m => {
+      if (m.id !== msgId || m.richType !== 'workflow-checkpoint') return m;
+      const data = m.richData as { selected: string[]; options: { id: string; label: string }[] };
+      pickedLabels = data.options.filter(o => data.selected.includes(o.id)).map(o => o.label);
+      return { ...m, richData: { ...m.richData, status: 'submitted' as const } };
+    }));
+    schedule(() => {
+      setMessages(prev => [...prev, {
+        id: `msg-wf-config-update-${Date.now()}`,
+        role: 'assistant',
+        text: pickedLabels.length
+          ? `Got it — I've marked **${pickedLabels.join(', ')}** as configurable. Review the input + output config in the IRA Workspace, then click **'Save to Library'** when ready.`
+          : `Okay — keeping all parameters fixed for this workflow. Review the input + output config in the IRA Workspace, then click **'Save to Library'** when ready.`,
+        timestamp: new Date(),
+      }]);
+    }, 600);
   };
 
   const simulateResponse = (userMsg: string) => {
@@ -1353,7 +1546,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { setMessages([]); setInput(''); setShowClarificationCard(false); setShowProgressiveLoader(false); setWorkflowBuildPhase(0); setCurrentWorkflowType(null); clearTimers(); }}
+              onClick={() => { setMessages([]); setInput(''); setShowClarificationCard(false); setShowProgressiveLoader(false); setWorkflowBuildPhase(0); setCurrentWorkflowType(null); setLockedAsWorkflow(false); clearTimers(); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-light text-[12px] font-medium text-text-secondary hover:bg-white hover:border-primary/20 transition-all cursor-pointer"
             >
               <Plus size={12} />
@@ -1457,9 +1650,35 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                           onDownload={() => addToast({ type: 'success', message: 'CSV download started.' })}
                         />
 
-                        {/* Actions dropdown */}
-                        <div className="flex items-center gap-2">
-                          <ActionsMenu onPick={handleAuditAction} />
+                        {/* Action bar — explicit row of actions per PRD action-bar spec.
+                            Save as workflow opens the metadata modal; the others stub via toast. */}
+                        <div className="flex items-center gap-2 pt-3 border-t border-canvas-border">
+                          <button
+                            onClick={() => addToast({ type: 'success', message: 'CSV download started.' })}
+                            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-canvas-elevated border border-canvas-border text-[12px] font-semibold text-ink-700 hover:border-brand-200 hover:text-ink-800 transition-colors cursor-pointer"
+                          >
+                            <Download size={13} /> Export
+                          </button>
+                          <button
+                            onClick={() => handleAuditAction('dashboard')}
+                            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-canvas-elevated border border-canvas-border text-[12px] font-semibold text-ink-700 hover:border-brand-200 hover:text-ink-800 transition-colors cursor-pointer"
+                          >
+                            <BarChart3 size={13} /> Dashboard
+                          </button>
+                          <button
+                            onClick={() => handleAuditAction('report')}
+                            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-canvas-elevated border border-canvas-border text-[12px] font-semibold text-ink-700 hover:border-brand-200 hover:text-ink-800 transition-colors cursor-pointer"
+                          >
+                            <FileText size={13} /> Reports
+                          </button>
+                          <div className="ml-auto">
+                            <button
+                              onClick={openSaveAsWorkflowModal}
+                              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-primary hover:bg-primary-hover text-white text-[12px] font-semibold transition-colors cursor-pointer"
+                            >
+                              <Workflow size={13} /> Save as workflow
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ) : msg.richType === 'summary-kpi' ? (
@@ -1473,6 +1692,75 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                           </motion.div>
                         ))}
                       </div>
+                    ) : msg.richType === 'workflow-checkpoint' ? (
+                      // Path 3 inline checkpoint: IRA asks which params to make
+                      // configurable for the saved workflow. Multi-select chips,
+                      // freeze on submit, then post a follow-up message.
+                      (() => {
+                        const data = msg.richData as {
+                          intro: string;
+                          options: { id: string; label: string; detail: string }[];
+                          selected: string[];
+                          status: 'open' | 'submitted';
+                        };
+                        return (
+                          <div className="ml-7">
+                            <div className="text-[15px] leading-[1.65] text-ink-800 max-w-[66ch]">
+                              {data.intro.split('**').map((part, i) =>
+                                i % 2 === 1 ? <strong key={i} className="font-semibold text-text">{part}</strong> : part
+                              )}
+                            </div>
+                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-[66ch]">
+                              {data.options.map(opt => {
+                                const isSelected = data.selected.includes(opt.id);
+                                const disabled = data.status === 'submitted';
+                                return (
+                                  <button
+                                    key={opt.id}
+                                    onClick={() => !disabled && toggleCheckpointParam(msg.id, opt.id)}
+                                    disabled={disabled}
+                                    className={`text-left rounded-xl border px-3 py-2.5 transition-all ${
+                                      isSelected
+                                        ? 'bg-primary-xlight border-primary text-primary'
+                                        : 'bg-white border-border-light text-text hover:border-primary/40 hover:bg-paper-50'
+                                    } ${disabled ? 'opacity-70 cursor-default' : 'cursor-pointer'}`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-all ${
+                                        isSelected ? 'bg-primary border-primary' : 'bg-white border-border-light'
+                                      }`}>
+                                        {isSelected && <CheckCircle size={10} className="text-white" />}
+                                      </div>
+                                      <span className="text-[12.5px] font-semibold">{opt.label}</span>
+                                    </div>
+                                    <p className={`text-[11.5px] mt-1 ml-6 ${isSelected ? 'text-primary/80' : 'text-text-muted'}`}>{opt.detail}</p>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {data.status === 'open' ? (
+                              <div className="mt-3 flex items-center gap-2">
+                                <button
+                                  onClick={() => submitCheckpoint(msg.id)}
+                                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-primary hover:bg-primary-hover text-white text-[12px] font-semibold transition-colors cursor-pointer"
+                                >
+                                  <CheckCircle size={13} /> Confirm parameters
+                                </button>
+                                <button
+                                  onClick={() => submitCheckpoint(msg.id)}
+                                  className="text-[12px] font-medium text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
+                                >
+                                  Skip — keep all fixed
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="mt-3 inline-flex items-center gap-1.5 text-[11.5px] text-text-muted">
+                                <CheckCircle size={11} className="text-compliant" /> Parameters confirmed
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()
                     ) : msg.richType === 'save-workflow-prompt' ? (
                       <div className="ml-12 mt-1">
                         <div className="glass-card rounded-xl p-4 border border-primary/10 max-w-md">
@@ -1630,6 +1918,19 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
             />
           ) : (
             <>
+              {/* Locked Workflow-mode pill — appears once Path 3 has flipped the
+                  thread. Non-clickable on purpose: PRD says toggle is irreversible
+                  per thread. To do a query again, user starts + New chat. */}
+              {lockedAsWorkflow && (
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-xlight text-primary text-[11.5px] font-semibold cursor-default select-none">
+                    <Lock size={10} /> Workflow mode
+                  </div>
+                  <span className="text-[11px] text-text-muted">
+                    Switched at save. Start a <button onClick={() => { setMessages([]); setInput(''); setShowClarificationCard(false); setShowProgressiveLoader(false); setWorkflowBuildPhase(0); setCurrentWorkflowType(null); setLockedAsWorkflow(false); clearTimers(); }} className="underline hover:text-primary cursor-pointer">new chat</button> for a query.
+                  </span>
+                </div>
+              )}
               {files.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {files.map((f, i) => (
@@ -1666,6 +1967,19 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           )}
         </div>
       </div>
+
+      {/* Save-as-Workflow modal — Path 3 commit step */}
+      <AnimatePresence>
+        {showSaveAsWfModal && (
+          <SaveAsWorkflowModal
+            open={showSaveAsWfModal}
+            defaultName="Duplicate Invoice Detection — Q1 ±3 days"
+            defaultDescription="Detects duplicate invoices in Q1 2026 with same vendor, amount, and date within ±3 days at 90% match threshold."
+            onCancel={() => setShowSaveAsWfModal(false)}
+            onConfirm={handleSaveAsWorkflowConfirm}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
