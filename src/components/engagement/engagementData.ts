@@ -15,6 +15,29 @@ export interface WorkflowAttribute {
   name: string;
   description: string;
   requiredEvidence: string;
+  /** New: which assertions this attribute covers */
+  assertions?: string[];
+  /** New: aggregate status across samples */
+  testStatus?: 'pass' | 'fail' | 'pending' | 'not-tested';
+  /** New: number of exceptions found for this attribute */
+  exceptions?: number;
+  /** New: which workflow owns this attribute */
+  workflowId?: string;
+}
+
+/** A workflow linked to a control test instance */
+export interface LinkedWorkflow {
+  id: string;
+  name: string;
+  version: string;
+  status: 'active' | 'draft' | 'archived';
+  owner: string;
+  /** Attribute IDs covered by this workflow */
+  attributeIds: string[];
+  /** Derived/denormalized count of attributes */
+  attributesCount: number;
+  /** Which assertions this workflow's attributes cover */
+  assertionCoverage: string[];
 }
 
 export interface SampleItem {
@@ -89,9 +112,12 @@ export interface ControlDetail {
   frequency: string;
   controlOwner: string;
   assertions: string[];
+  /** Legacy single-workflow fields — kept for backward compatibility */
   workflowName: string;
   workflowVersion: string;
   workflowAttributes: WorkflowAttribute[];
+  /** New: multiple workflows linked to this control instance */
+  linkedWorkflows?: LinkedWorkflow[];
   populationRequired: boolean;
   populationStatus: 'none' | 'uploaded' | 'snapshot-created';
   populationSize: number;
@@ -166,13 +192,18 @@ export const CONTROLS: ControlDetail[] = [
     description: 'Automated matching of PO, GRN, and Invoice with tolerance-based escalation. Mismatches are flagged and routed to AP supervisor for manual review before payment release.',
     frequency: 'Per transaction', controlOwner: 'Rajiv Sharma (AP Manager)',
     assertions: ['Completeness', 'Accuracy', 'Authorization', 'Valuation'],
-    workflowName: 'Three-Way PO Match', workflowVersion: 'v2.0',
+    workflowName: 'PO Validation Workflow', workflowVersion: 'v2.0',
     workflowAttributes: [
-      { id: 'attr-1', name: 'PO Existence', description: 'Verify a valid, approved Purchase Order exists for the invoice', requiredEvidence: 'PO document or ERP screenshot' },
-      { id: 'attr-2', name: 'GRN Match', description: 'Confirm goods receipt quantity and description match PO line items', requiredEvidence: 'GRN document' },
-      { id: 'attr-3', name: 'Invoice Amount Match', description: 'Validate invoice amount matches PO and GRN within tolerance ($500 / 2%)', requiredEvidence: 'Invoice document' },
-      { id: 'attr-4', name: 'Tolerance Verification', description: 'Verify any variance is within the approved threshold and properly documented', requiredEvidence: 'Tolerance exception report' },
-      { id: 'attr-5', name: 'Payment Approval', description: 'Confirm appropriate authorization for payment release per delegation matrix', requiredEvidence: 'Approval email or system workflow log' },
+      { id: 'attr-1', name: 'PO Existence', description: 'Verify a valid, approved Purchase Order exists for the invoice', requiredEvidence: 'PO document or ERP screenshot', assertions: ['Existence', 'Authorization'], testStatus: 'pass', exceptions: 0, workflowId: 'lw-001' },
+      { id: 'attr-2', name: 'GRN Match', description: 'Confirm goods receipt quantity and description match PO line items', requiredEvidence: 'GRN document', assertions: ['Completeness', 'Accuracy'], testStatus: 'pass', exceptions: 0, workflowId: 'lw-002' },
+      { id: 'attr-3', name: 'Invoice Amount Match', description: 'Validate invoice amount matches PO and GRN within tolerance ($500 / 2%)', requiredEvidence: 'Invoice document', assertions: ['Accuracy'], testStatus: 'pass', exceptions: 0, workflowId: 'lw-003' },
+      { id: 'attr-4', name: 'Tolerance Verification', description: 'Verify any variance is within the approved threshold and properly documented', requiredEvidence: 'Tolerance exception report', assertions: ['Valuation', 'Accuracy'], testStatus: 'pass', exceptions: 0, workflowId: 'lw-003' },
+      { id: 'attr-5', name: 'Payment Approval', description: 'Confirm appropriate authorization for payment release per delegation matrix', requiredEvidence: 'Approval email or system workflow log', assertions: ['Authorization'], testStatus: 'pass', exceptions: 0, workflowId: 'lw-001' },
+    ],
+    linkedWorkflows: [
+      { id: 'lw-001', name: 'PO Validation Workflow', version: 'v2.0', status: 'active', owner: 'Tushar Goel', attributeIds: ['attr-1', 'attr-5'], attributesCount: 2, assertionCoverage: ['Existence', 'Authorization'] },
+      { id: 'lw-002', name: 'GRN Matching Workflow', version: 'v1.6', status: 'active', owner: 'Deepak Bansal', attributeIds: ['attr-2'], attributesCount: 1, assertionCoverage: ['Completeness', 'Accuracy'] },
+      { id: 'lw-003', name: 'Invoice Match Workflow', version: 'v2.3', status: 'active', owner: 'Neha Joshi', attributeIds: ['attr-3', 'attr-4'], attributesCount: 2, assertionCoverage: ['Accuracy', 'Valuation'] },
     ],
     populationRequired: true, populationStatus: 'snapshot-created', populationSize: 3891,
     populationSource: 'SAP ERP — AP Transactions Q1-Q3 FY26',
@@ -189,7 +220,7 @@ export const CONTROLS: ControlDetail[] = [
     sampleCount: 5, samplesTested: 5, exceptions: 0, evidenceCount: 15, lastUpdated: 'Apr 12, 2026',
     workingPaper: {
       testInstanceId: 'TI-001', controlId: 'CTR-003', controlName: 'Three-way PO/GRN/Invoice matching',
-      workflowName: 'Three-Way PO Match', workflowVersion: 'v2.0',
+      workflowName: 'PO Validation Workflow', workflowVersion: 'v2.0',
       rounds: [{
         round: 1, date: 'Apr 10, 2026', tester: 'Tushar Goel', status: 'complete',
         populationSize: 3891, sampleSize: 5,
@@ -231,10 +262,15 @@ export const CONTROLS: ControlDetail[] = [
     assertions: ['Completeness', 'Occurrence', 'Accuracy'],
     workflowName: 'Duplicate Invoice Detector', workflowVersion: 'v1.4',
     workflowAttributes: [
-      { id: 'attr-d1', name: 'Duplicate Flag Active', description: 'Verify the duplicate detection system was active and scanning for the transaction', requiredEvidence: 'System configuration screenshot' },
-      { id: 'attr-d2', name: 'Match Rule Coverage', description: 'Confirm matching rules cover vendor, amount, date, and invoice number fields', requiredEvidence: 'Rule configuration export' },
-      { id: 'attr-d3', name: 'Override Authorization', description: 'If override was used, verify supervisor-level approval was documented', requiredEvidence: 'Override approval log' },
-      { id: 'attr-d4', name: 'Timeliness', description: 'Confirm detection occurred before payment release', requiredEvidence: 'System timestamp comparison' },
+      { id: 'attr-d1', name: 'Duplicate Flag Active', description: 'Verify the duplicate detection system was active and scanning for the transaction', requiredEvidence: 'System configuration screenshot', assertions: ['Completeness', 'Occurrence'], testStatus: 'pass', exceptions: 0, workflowId: 'lw-d01' },
+      { id: 'attr-d2', name: 'Match Rule Coverage', description: 'Confirm matching rules cover vendor, amount, date, and invoice number fields', requiredEvidence: 'Rule configuration export', assertions: ['Accuracy', 'Completeness'], testStatus: 'fail', exceptions: 1, workflowId: 'lw-d01' },
+      { id: 'attr-d3', name: 'Override Authorization', description: 'If override was used, verify supervisor-level approval was documented', requiredEvidence: 'Override approval log', assertions: ['Authorization'], testStatus: 'fail', exceptions: 2, workflowId: 'lw-d02' },
+      { id: 'attr-d4', name: 'Timeliness', description: 'Confirm detection occurred before payment release', requiredEvidence: 'System timestamp comparison', assertions: ['Occurrence'], testStatus: 'pass', exceptions: 0, workflowId: 'lw-d03' },
+    ],
+    linkedWorkflows: [
+      { id: 'lw-d01', name: 'Duplicate Invoice Detector', version: 'v1.4', status: 'active', owner: 'Deepak Bansal', attributeIds: ['attr-d1', 'attr-d2'], attributesCount: 2, assertionCoverage: ['Completeness', 'Occurrence', 'Accuracy'] },
+      { id: 'lw-d02', name: 'Override Monitor', version: 'v1.2', status: 'active', owner: 'Sneha Desai', attributeIds: ['attr-d3'], attributesCount: 1, assertionCoverage: ['Authorization'] },
+      { id: 'lw-d03', name: 'SLA Checker', version: 'v1.0', status: 'active', owner: 'Tushar Goel', attributeIds: ['attr-d4'], attributesCount: 1, assertionCoverage: ['Occurrence'] },
     ],
     populationRequired: true, populationStatus: 'snapshot-created', populationSize: 12450,
     populationSource: 'SAP ERP — All invoices processed Q1-Q3 FY26',
@@ -489,8 +525,80 @@ export const FINDINGS: Finding[] = [
   },
 ];
 
-// ─── Helper to get control by ID ─────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 export function getControlById(id: string): ControlDetail | undefined {
   return CONTROLS.find(c => c.id === id);
+}
+
+/** Get the primary (first) linked workflow, falling back to legacy fields */
+export function getPrimaryWorkflow(ctrl: ControlDetail): LinkedWorkflow {
+  if (ctrl.linkedWorkflows && ctrl.linkedWorkflows.length > 0) {
+    return ctrl.linkedWorkflows[0];
+  }
+  // Fallback: synthesize from legacy single-workflow fields
+  const allAssertions = new Set<string>();
+  ctrl.workflowAttributes.forEach(a => { if (a.assertions) a.assertions.forEach(x => allAssertions.add(x)); });
+  return {
+    id: 'lw-legacy',
+    name: ctrl.workflowName,
+    version: ctrl.workflowVersion,
+    status: 'active',
+    owner: ctrl.assignee,
+    attributeIds: ctrl.workflowAttributes.map(a => a.id),
+    attributesCount: ctrl.workflowAttributes.length,
+    assertionCoverage: Array.from(allAssertions),
+  };
+}
+
+/** Summary of workflow coverage for a control */
+export interface WorkflowSummary {
+  linkedWorkflowCount: number;
+  attributeCount: number;
+  unmappedAttributeCount: number;
+  displayText: string;
+}
+
+/** Get a compact summary of workflow ↔ attribute coverage */
+export function getWorkflowSummary(ctrl: ControlDetail): WorkflowSummary {
+  const workflows = getLinkedWorkflows(ctrl);
+  const totalAttrs = ctrl.workflowAttributes.length;
+  const isSingleLegacy = workflows.length === 1 && workflows[0].id === 'lw-legacy';
+  const unmapped = isSingleLegacy ? 0 : ctrl.workflowAttributes.filter(a => !a.workflowId).length;
+  const wfCount = workflows.length;
+
+  return {
+    linkedWorkflowCount: wfCount,
+    attributeCount: totalAttrs,
+    unmappedAttributeCount: unmapped,
+    displayText: `${wfCount} workflow${wfCount !== 1 ? 's' : ''} · ${totalAttrs} attribute${totalAttrs !== 1 ? 's' : ''}`,
+  };
+}
+
+/** Get all linked workflows for a control (with legacy fallback) */
+export function getLinkedWorkflows(ctrl: ControlDetail): LinkedWorkflow[] {
+  if (ctrl.linkedWorkflows && ctrl.linkedWorkflows.length > 0) {
+    return ctrl.linkedWorkflows;
+  }
+  return [getPrimaryWorkflow(ctrl)];
+}
+
+/** Get attributes belonging to a specific workflow.
+ *  For legacy controls (no workflowId on attrs), if workflowId matches
+ *  the fallback 'lw-legacy', return all attributes. */
+export function getAttributesForWorkflow(ctrl: ControlDetail, workflowId: string): WorkflowAttribute[] {
+  const matched = ctrl.workflowAttributes.filter(a => a.workflowId === workflowId);
+  if (matched.length > 0) return matched;
+  // Legacy fallback: if asking for 'lw-legacy' (synthesized) and no attrs have workflowId, return all
+  if (workflowId === 'lw-legacy' && ctrl.workflowAttributes.every(a => !a.workflowId)) {
+    return ctrl.workflowAttributes;
+  }
+  return [];
+}
+
+/** Get the workflow that owns a specific attribute */
+export function getWorkflowForAttribute(ctrl: ControlDetail, attrId: string): LinkedWorkflow | undefined {
+  const attr = ctrl.workflowAttributes.find(a => a.id === attrId);
+  if (!attr?.workflowId) return getPrimaryWorkflow(ctrl);
+  return getLinkedWorkflows(ctrl).find(w => w.id === attr.workflowId);
 }
