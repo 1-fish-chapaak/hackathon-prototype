@@ -17,7 +17,7 @@ see the [Appendix](#appendix--paste-this-into-a-fresh-claude-code-session).
 - **Repo:** https://github.com/tech-irame/hackathon-prototype
 - **Live URL:** https://hackathon-demo-ujihgyhrpa-uc.a.run.app
 - **Branch model:** **direct push to `main`**. Every push auto-deploys to Cloud Run in ~2 min.
-- **Don't touch:** the upstream `1-fish-chapaak/auditify-copilot`, and the production stack at `auditify.platform.irame.ai`.
+- **Don't touch:** the production stack at `auditify.platform.irame.ai`.
 
 ---
 
