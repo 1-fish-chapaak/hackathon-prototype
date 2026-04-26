@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Search,
@@ -24,6 +24,8 @@ import {
   AlertTriangle,
   Upload,
   Minus,
+  ExternalLink,
+  Clock,
 } from 'lucide-react';
 import { DATA_SOURCES } from '../../data/mockData';
 import { useToast } from '../shared/Toast';
@@ -37,6 +39,9 @@ type Trigger = typeof TRIGGERS[number];
 
 const RETRIES = ['Off', '1x', '3x', '5x'] as const;
 type Retry = typeof RETRIES[number];
+
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+type Weekday = typeof WEEKDAYS[number];
 
 // Mock "backend" response — required files for the bulk run
 const REQUIRED_FILES = [
@@ -75,7 +80,15 @@ type ColumnMapping = {
   confidence: ColumnMatchConfidence;
 };
 
-type ReviewWorkflowStatus = 'mapped' | 'column' | 'file' | 'notmapped' | 'dropped';
+type ReviewWorkflowStatus = 'mapped' | 'column' | 'file' | 'notmapped' | 'sql' | 'dropped';
+
+type SqlConfigField = {
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'date';
+  defaultValue: string;
+  required?: boolean;
+};
 
 type ReviewWorkflow = {
   id: string;
@@ -89,6 +102,10 @@ type ReviewWorkflow = {
   missingFiles?: string[];
   columns?: ColumnMapping[];
   hasOverrides?: boolean;
+  // SQL-specific (only when status === 'sql')
+  sqlFields?: SqlConfigField[];
+  sqlUseDefaults?: boolean;
+  sqlCustomValues?: Record<string, string>;
 };
 
 const DEMO_REVIEW_WORKFLOWS: ReviewWorkflow[] = [
@@ -168,6 +185,32 @@ const DEMO_REVIEW_WORKFLOWS: ReviewWorkflow[] = [
     runtime: 1.8,
     missingFiles: ['Accrual Schedule'],
   },
+  {
+    id: 'rw-9',
+    code: 'O2C-021',
+    name: 'Customer Tier Revenue Concentration',
+    status: 'sql',
+    runtime: 1.6,
+    sqlUseDefaults: true,
+    sqlFields: [
+      { key: 'membership', label: 'Filter by Customer Membership (Gold, Silver, Bronze)', type: 'text', defaultValue: 'Gold', required: true },
+      { key: 'periodStart', label: 'Start of the analysis period', type: 'date', defaultValue: '', required: true },
+      { key: 'periodEnd', label: 'End of the analysis period', type: 'date', defaultValue: '', required: true },
+      { key: 'minRevenue', label: 'Minimum total revenue threshold for the category', type: 'number', defaultValue: '100', required: true },
+    ],
+  },
+  {
+    id: 'rw-10',
+    code: 'GL-022',
+    name: 'Journal Entry Threshold Alert',
+    status: 'sql',
+    runtime: 1.2,
+    sqlUseDefaults: true,
+    sqlFields: [
+      { key: 'minAmount', label: 'Minimum journal entry amount to flag', type: 'number', defaultValue: '50000', required: true },
+      { key: 'fiscalYear', label: 'Fiscal year', type: 'text', defaultValue: 'FY2026', required: true },
+    ],
+  },
 ];
 
 type UploadedFile = {
@@ -214,6 +257,7 @@ export type LibraryWorkflow = {
   tags: string[];
   businessProcess: string;
   controlId: string;
+  live?: boolean;
 };
 
 export const LIBRARY_WORKFLOWS: LibraryWorkflow[] = [
@@ -224,6 +268,7 @@ export const LIBRARY_WORKFLOWS: LibraryWorkflow[] = [
     tags: ['p2p', 'pay to procure'],
     businessProcess: 'P2P',
     controlId: 'CTRL-001',
+    live: true,
   },
   {
     id: 'lw-002',
@@ -240,6 +285,7 @@ export const LIBRARY_WORKFLOWS: LibraryWorkflow[] = [
     tags: ['INV'],
     businessProcess: 'Apollo Types',
     controlId: 'CTRL-002',
+    live: true,
   },
   {
     id: 'lw-004',
@@ -264,6 +310,7 @@ export const LIBRARY_WORKFLOWS: LibraryWorkflow[] = [
     tags: ['P2P'],
     businessProcess: 'Finance',
     controlId: 'CTRL-003',
+    live: true,
   },
   {
     id: 'lw-007',
@@ -296,6 +343,7 @@ export const LIBRARY_WORKFLOWS: LibraryWorkflow[] = [
     tags: ['P2P', 'fraud'],
     businessProcess: 'Finance',
     controlId: 'CTRL-006',
+    live: true,
   },
 ];
 
@@ -427,6 +475,11 @@ export default function WorkflowLibraryView({ onCreateWorkflow, onSelectWorkflow
 
       {/* Search + Create */}
       <div className=" pb-5 flex items-center gap-3">
+          {bulkMode && (
+            <span className="text-[13px] text-text-secondary">
+              <span className="font-semibold text-text">{selectedIds.size}</span> selected
+            </span>
+          )}
           <div className="relative w-[400px]">
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
             <input
@@ -436,21 +489,7 @@ export default function WorkflowLibraryView({ onCreateWorkflow, onSelectWorkflow
               className="w-full pl-10 pr-4 h-10 rounded-md border border-border bg-white text-[13px] outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
             />
           </div>
-          {bulkMode && (
-            <span className="text-[13px] text-text-secondary">
-              <span className="font-semibold text-text">{selectedIds.size}</span> selected
-            </span>
-          )}
           <div className="ml-auto flex items-center gap-3">
-            {!bulkMode && (
-              <button
-                onClick={enterBulkMode}
-                className="flex items-center gap-2 px-4 h-10 rounded-md bg-white text-text border border-border text-[13px] font-semibold hover:bg-surface-2 transition-colors cursor-pointer"
-              >
-                <Play size={14} />
-                Bulk Run
-              </button>
-            )}
             <button
               onClick={onCreateWorkflow}
               className="flex items-center gap-2 px-4 h-10 rounded-md bg-primary-xlight text-primary border border-primary/15 text-[13px] font-semibold hover:bg-primary/10 transition-colors cursor-pointer"
@@ -458,6 +497,22 @@ export default function WorkflowLibraryView({ onCreateWorkflow, onSelectWorkflow
               <Sparkles size={14} />
               Create Workflow
             </button>
+            {bulkMode ? (
+              <button
+                onClick={exitBulkMode}
+                className="flex items-center gap-2 px-4 h-10 rounded-md bg-white text-text border border-border text-[13px] font-semibold hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            ) : (
+              <button
+                onClick={enterBulkMode}
+                className="flex items-center gap-2 px-4 h-10 rounded-md bg-white text-text border border-border text-[13px] font-semibold transition-colors cursor-pointer hover:bg-[#6a12cd] hover:text-white hover:border-[#6a12cd]"
+              >
+                <Play size={14} />
+                Bulk Run
+              </button>
+            )}
           </div>
         </div>
 
@@ -565,7 +620,31 @@ export default function WorkflowLibraryView({ onCreateWorkflow, onSelectWorkflow
                       )}
                       <td className="px-4 py-4 align-top w-[320px]">
                         <div className="flex flex-col gap-1.5 w-full min-w-0">
-                          <span className="text-[13px] text-text font-medium line-clamp-2">{wf.name}</span>
+                          <div className="flex items-start gap-2 min-w-0">
+                            <span
+                              className="group inline cursor-pointer text-[13px] text-text font-medium hover:text-[#6a12cd] hover:underline line-clamp-2 min-w-0"
+                              onClick={e => {
+                                e.stopPropagation();
+                                if (bulkMode) toggleSelect(wf.id);
+                                else onSelectWorkflow(wf.id);
+                              }}
+                            >
+                              {wf.name}
+                              <ExternalLink
+                                size={12}
+                                className="inline ml-1 opacity-0 group-hover:opacity-100 align-middle text-[#6a12cd]"
+                              />
+                            </span>
+                            {wf.live && (
+                              <span
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 mt-0.5"
+                                style={{ backgroundColor: '#ECFEF3', color: '#047A48' }}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#047A48' }} />
+                                Live
+                              </span>
+                            )}
+                          </div>
                           {/* ORIG: <span className="inline-flex items-center self-start px-2 py-0.5 rounded-md bg-surface-2 border border-border-light text-ink-700 text-[11px] font-mono font-semibold tracking-tight"> */}
                           <span className="self-start text-[11px] font-mono text-ink-500 tracking-tight">
                             {wf.controlId}
@@ -630,14 +709,8 @@ export default function WorkflowLibraryView({ onCreateWorkflow, onSelectWorkflow
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.16 }}
-          className="flex items-center justify-between py-3 px-4 border-t border-border-light bg-white"
+          className="flex items-center justify-end py-3 px-4 border-t border-border-light bg-white"
         >
-          <button
-            onClick={exitBulkMode}
-            className="px-4 h-9 rounded-md bg-white text-text border border-border text-[13px] font-semibold hover:bg-surface-2 transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
           <button
             onClick={handleContinue}
             disabled={selectedIds.size === 0}
@@ -910,19 +983,24 @@ function Pill({
   active,
   onClick,
   children,
+  disabled = false,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`px-3.5 h-8 rounded-lg text-[12.5px] font-semibold transition-colors cursor-pointer ${
-        active
-          ? 'bg-primary text-white hover:bg-primary-hover'
-          : 'bg-white text-text-muted border border-border-light hover:border-primary/30 hover:text-text'
+      disabled={disabled}
+      className={`px-3.5 h-8 rounded-lg text-[12.5px] font-semibold transition-colors ${
+        disabled
+          ? 'bg-surface-2 text-text-muted/50 border border-border-light cursor-not-allowed'
+          : active
+            ? 'bg-primary text-white hover:bg-primary-hover cursor-pointer'
+            : 'bg-white text-text-muted border border-border-light hover:border-primary/30 hover:text-text cursor-pointer'
       }`}
     >
       {children}
@@ -956,10 +1034,13 @@ function BulkExecuteModal({
   const [triggerOn, setTriggerOn] = useState<Trigger>('Schedule');
   const [runTime, setRunTime] = useState('06:00');
   const [retry, setRetry] = useState<Retry>('3x');
+  const [weekday, setWeekday] = useState<Weekday>('Mon');
+  const [monthlyDate, setMonthlyDate] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   // Step 2 state
   const [requiredFilesOpen, setRequiredFilesOpen] = useState(false);
+  const [selectedListOpen, setSelectedListOpen] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(true);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>(SEED_UPLOADED_FILES);
   const [selectedUploadIds, setSelectedUploadIds] = useState<Set<string>>(new Set());
@@ -974,6 +1055,9 @@ function BulkExecuteModal({
   const [reviewFilter, setReviewFilter] = useState<'all' | ReviewWorkflowStatus>('all');
   const [reviewWorkflows, setReviewWorkflows] = useState<ReviewWorkflow[]>(DEMO_REVIEW_WORKFLOWS);
   const [expandedReviewId, setExpandedReviewId] = useState<string | null>(null);
+  // SQL config modal
+  const [configModalWorkflowId, setConfigModalWorkflowId] = useState<string | null>(null);
+  const [configDraft, setConfigDraft] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -989,7 +1073,9 @@ function BulkExecuteModal({
   const isMultipleBps = uniqueBps.length > 1;
   const hasAuditName = auditName.trim().length > 0;
   const hasWorkflows = activeWorkflows.length > 0;
-  const canContinue = hasWorkflows && hasAuditName && isSingleBp;
+  const needsMonthlyDate = triggerOn === 'Schedule' && frequency === 'Monthly';
+  const monthlyDateOk = !needsMonthlyDate || monthlyDate.trim().length > 0;
+  const canContinue = hasWorkflows && hasAuditName && isSingleBp && monthlyDateOk;
 
   const toggleWorkflow = (id: string) => {
     setModalDeselected(prev => {
@@ -1046,7 +1132,11 @@ function BulkExecuteModal({
 
   const handleStep3Execute = () => {
     const activeRunWorkflows = reviewWorkflows
-      .filter(rw => rw.status === 'mapped' || rw.status === 'column')
+      .filter(rw =>
+        rw.status === 'mapped' ||
+        rw.status === 'column' ||
+        (rw.status === 'sql' && (rw.sqlUseDefaults || rw.sqlCustomValues))
+      )
       .map(rw => ({ id: rw.id, name: rw.name }));
     startBulkRun({
       name: auditName.trim() || 'Bulk Run',
@@ -1144,12 +1234,14 @@ function BulkExecuteModal({
       column: 0,
       file: 0,
       notmapped: 0,
+      sql: 0,
       dropped: 0,
       active: 0,
     };
     for (const rw of reviewWorkflows) {
       base[rw.status] += 1;
       if (rw.status === 'mapped' || rw.status === 'column') base.active += 1;
+      if (rw.status === 'sql' && (rw.sqlUseDefaults || rw.sqlCustomValues)) base.active += 1;
     }
     return base;
   }, [reviewWorkflows]);
@@ -1178,6 +1270,45 @@ function BulkExecuteModal({
           : rw
       )
     );
+  };
+
+  const toggleSqlUseDefaults = (id: string) => {
+    setReviewWorkflows(prev =>
+      prev.map(rw =>
+        rw.id === id && rw.status === 'sql'
+          ? { ...rw, sqlUseDefaults: !rw.sqlUseDefaults }
+          : rw
+      )
+    );
+  };
+
+  const openConfigModal = (id: string) => {
+    const wf = reviewWorkflows.find(rw => rw.id === id);
+    if (!wf || !wf.sqlFields) return;
+    const initial: Record<string, string> = {};
+    wf.sqlFields.forEach(f => {
+      initial[f.key] = wf.sqlCustomValues?.[f.key] ?? f.defaultValue;
+    });
+    setConfigDraft(initial);
+    setConfigModalWorkflowId(id);
+  };
+
+  const saveConfigModal = () => {
+    if (!configModalWorkflowId) return;
+    setReviewWorkflows(prev =>
+      prev.map(rw =>
+        rw.id === configModalWorkflowId
+          ? { ...rw, sqlCustomValues: configDraft, sqlUseDefaults: false }
+          : rw
+      )
+    );
+    setConfigModalWorkflowId(null);
+    setConfigDraft({});
+  };
+
+  const closeConfigModal = () => {
+    setConfigModalWorkflowId(null);
+    setConfigDraft({});
   };
 
   const updateReviewColumn = (wfId: string, idx: number, value: string) => {
@@ -1244,7 +1375,7 @@ function BulkExecuteModal({
         role="dialog"
         aria-modal="true"
         aria-label="Bulk Execute"
-        className="relative bg-white rounded-2xl shadow-2xl w-[720px] h-[680px] max-h-[90vh] overflow-hidden flex flex-col"
+        className="relative bg-white rounded-2xl shadow-2xl w-[800px] h-[700px] max-h-[90vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -1257,10 +1388,10 @@ function BulkExecuteModal({
 
         {/* Stepper — hidden while the loader is shown */}
         {!isFetching && (
-        <div className="px-6 py-4 border-b border-border-light shrink-0 flex items-center gap-4">
+        <div className="px-6 py-4 border-b border-border-light shrink-0 flex items-center w-full">
           {STEPS.map((s, idx) => (
-            <div key={s.n} className="flex items-center gap-4 flex-1">
-              <div className="flex items-center gap-2.5">
+            <Fragment key={s.n}>
+              <div className="flex items-center gap-2.5 shrink-0">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold ${
                   s.state === 'active'
                     ? 'bg-primary text-white'
@@ -1276,8 +1407,8 @@ function BulkExecuteModal({
                   {s.label}
                 </span>
               </div>
-              {idx < STEPS.length - 1 && <div className="flex-1 h-px bg-border-light" />}
-            </div>
+              {idx < STEPS.length - 1 && <div className="flex-1 h-px bg-border-light mx-4" />}
+            </Fragment>
           ))}
         </div>
         )}
@@ -1310,8 +1441,13 @@ function BulkExecuteModal({
 
           {/* Selected Workflows */}
           <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <label className="text-[12px] font-semibold text-text">Selected Workflows</label>
+            <button
+              type="button"
+              onClick={() => setSelectedListOpen(p => !p)}
+              className="w-full flex items-center gap-2 mb-1.5 cursor-pointer"
+              aria-expanded={selectedListOpen}
+            >
+              <label className="text-[12px] font-semibold text-text cursor-pointer">Selected Workflows</label>
               <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-white text-[11px] font-semibold">
                 {activeWorkflows.length}
               </span>
@@ -1320,7 +1456,11 @@ function BulkExecuteModal({
                   ({selectedWorkflows.length - activeWorkflows.length} deselected)
                 </span>
               )}
-            </div>
+              <span className="ml-auto text-text-muted">
+                {selectedListOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </span>
+            </button>
+            {selectedListOpen && (
             <div className="border border-border-light rounded-md divide-y divide-border-light overflow-hidden max-h-[240px] overflow-y-auto">
               {selectedWorkflows.map(w => {
                 const checked = !modalDeselected.has(w.id);
@@ -1348,6 +1488,7 @@ function BulkExecuteModal({
                 );
               })}
             </div>
+            )}
           </div>
 
           {/* Audit Details */}
@@ -1378,16 +1519,16 @@ function BulkExecuteModal({
             </div>
           </div>
 
-          {/* Schedule & Triggers */}
+          {/* Audit run frequency */}
           <div className="rounded-lg border border-border-light bg-surface-2/40 p-4">
             <div className="flex items-center gap-2 mb-4">
               <Calendar size={14} className="text-primary" />
               <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
-                Schedule &amp; Triggers
+                Audit run frequency
               </span>
             </div>
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              {/* Frequency */}
+              {/* Frequency — only meaningful for Schedule trigger */}
               <div>
                 <label className="block text-[12px] font-semibold text-text mb-2">Frequency</label>
                 <div className="flex flex-wrap gap-2">
@@ -1395,6 +1536,7 @@ function BulkExecuteModal({
                     <Pill
                       key={f}
                       active={frequency === f}
+                      disabled={triggerOn !== 'Schedule'}
                       onClick={() => setFrequency(f)}
                     >
                       {f}
@@ -1402,17 +1544,43 @@ function BulkExecuteModal({
                   ))}
                 </div>
               </div>
-              {/* Run Time */}
+              {/* Run Time — only meaningful for Schedule trigger */}
               <div>
                 <label className="block text-[12px] font-semibold text-text mb-2">Run Time</label>
                 <input
                   type="time"
                   value={runTime}
                   onChange={e => setRunTime(e.target.value)}
-                  disabled={triggerOn === 'Manual'}
-                  className="w-full px-3 py-2 rounded-md border border-border-light text-[13px] text-text bg-white outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={triggerOn !== 'Schedule'}
+                  className="w-full px-3 py-2 rounded-md border border-border-light text-[13px] text-text bg-white outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-surface-2"
                 />
               </div>
+              {/* Day of week — only for Weekly + Schedule */}
+              {frequency === 'Weekly' && triggerOn === 'Schedule' && (
+                <div className="col-span-2">
+                  <label className="block text-[12px] font-semibold text-text mb-2">Select day of the week</label>
+                  <div className="flex flex-wrap gap-2">
+                    {WEEKDAYS.map(d => (
+                      <Pill
+                        key={d}
+                        active={weekday === d}
+                        onClick={() => setWeekday(d)}
+                      >
+                        {d}
+                      </Pill>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Date picker — only for Monthly + Schedule */}
+              {frequency === 'Monthly' && triggerOn === 'Schedule' && (
+                <div className="col-span-2 grid grid-cols-2 gap-x-6">
+                  <div>
+                    <label className="block text-[12px] font-semibold text-text mb-2">Select date</label>
+                    <CustomDatePicker value={monthlyDate} onChange={setMonthlyDate} />
+                  </div>
+                </div>
+              )}
               {/* Trigger On */}
               <div>
                 <label className="block text-[12px] font-semibold text-text mb-2">Trigger On</label>
@@ -1550,7 +1718,7 @@ function BulkExecuteModal({
 
                 {uploadedFiles.length === 0 ? (
                   <div>
-                    {/* Mode tabs */}
+                    {/* Mode tabs + (existing-only) search */}
                     <div className="flex items-center gap-2 mb-3">
                       <button
                         type="button"
@@ -1576,6 +1744,17 @@ function BulkExecuteModal({
                         <Database size={13} />
                         Choose Existing
                       </button>
+                      {uploadModeTab === 'existing' && (
+                        <div className="relative ml-auto w-[260px]">
+                          <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                          <input
+                            value={dsSearch}
+                            onChange={e => setDsSearch(e.target.value)}
+                            placeholder="Search data sources..."
+                            className="w-full pl-8 pr-3 h-9 rounded-md border border-border-light text-[12px] text-text bg-white outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {uploadModeTab === 'upload' ? (
@@ -1602,52 +1781,45 @@ function BulkExecuteModal({
                         </div>
                       </div>
                     ) : (
-                      <div className="rounded-lg border border-border-light bg-white p-3 flex flex-col min-h-[220px]">
-                        <div className="relative mb-2">
-                          <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                          <input
-                            value={dsSearch}
-                            onChange={e => setDsSearch(e.target.value)}
-                            placeholder="Search data sources..."
-                            className="w-full pl-8 pr-3 h-8 rounded-md border border-border-light text-[12px] text-text bg-white outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
-                          />
-                        </div>
-                        <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
+                      <div className="flex flex-col min-h-[220px]">
+                        <div className="flex-1 overflow-y-auto pr-1">
                           {filteredDataSources.length === 0 ? (
                             <div className="text-[12px] text-text-muted text-center py-4">No data sources match.</div>
                           ) : (
-                            filteredDataSources.map(ds => {
-                              const isLinked = linkedSourceIds.has(ds.id);
-                              return (
-                                <button
-                                  key={ds.id}
-                                  type="button"
-                                  role="checkbox"
-                                  aria-checked={isLinked}
-                                  onClick={() => toggleDataSource(ds.id)}
-                                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md border transition-colors cursor-pointer text-left ${
-                                    isLinked
-                                      ? 'border-primary bg-primary/5'
-                                      : 'border-border-light hover:border-primary/30 hover:bg-surface-2'
-                                  }`}
-                                >
-                                  <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-                                    <Database size={13} className="text-primary" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-[12.5px] font-semibold text-text truncate">{ds.name}</div>
-                                    <div className="text-[11px] text-text-muted truncate">
-                                      {ds.records} records · last sync {ds.lastSync}
+                            <div className="grid grid-cols-2 gap-2">
+                              {filteredDataSources.map(ds => {
+                                const isLinked = linkedSourceIds.has(ds.id);
+                                return (
+                                  <button
+                                    key={ds.id}
+                                    type="button"
+                                    role="checkbox"
+                                    aria-checked={isLinked}
+                                    onClick={() => toggleDataSource(ds.id)}
+                                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md border transition-colors cursor-pointer text-left ${
+                                      isLinked
+                                        ? 'border-primary bg-primary/5'
+                                        : 'border-border-light hover:border-primary/30 hover:bg-surface-2'
+                                    }`}
+                                  >
+                                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                                      <Database size={13} className="text-primary" />
                                     </div>
-                                  </div>
-                                  <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                                    isLinked ? 'border-primary bg-primary text-white' : 'border-border bg-white text-transparent'
-                                  }`}>
-                                    <Check size={11} strokeWidth={3} />
-                                  </span>
-                                </button>
-                              );
-                            })
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-[12.5px] font-semibold text-text truncate">{ds.name}</div>
+                                      <div className="text-[11px] text-text-muted truncate">
+                                        {ds.records} records · last sync {ds.lastSync}
+                                      </div>
+                                    </div>
+                                    <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                                      isLinked ? 'border-primary bg-primary text-white' : 'border-border bg-white text-transparent'
+                                    }`}>
+                                      <Check size={11} strokeWidth={3} />
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1674,8 +1846,7 @@ function BulkExecuteModal({
 
           {/* Workflow Mapping — Step 2b, appears after user hits Continue on upload view */}
           {step2View === 'review' && (
-            <div className="rounded-lg border border-border-light bg-white">
-              {/* Header */}
+            <div /* commented out outer box: className="rounded-lg border border-border-light bg-white" */>
               <div className="px-4 pt-4 pb-3">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0">
@@ -1690,14 +1861,16 @@ function BulkExecuteModal({
                   </div>
                 </div>
 
-                {/* Filter chips */}
                 <div className="flex flex-wrap gap-1.5 pb-3 border-b border-border-light">
                   {([
                     { key: 'all',       label: 'All',           dot: null,             count: reviewCounts.all },
-                    { key: 'mapped',    label: 'Mapped',        dot: 'bg-compliant',   count: reviewCounts.mapped },
+                    { key: 'mapped',    label: 'Mapped',        dot: 'bg-[#047A48]',   count: reviewCounts.mapped },
                     { key: 'column',    label: 'Column Issues', dot: 'bg-mitigated',   count: reviewCounts.column },
                     { key: 'file',      label: 'File Issues',   dot: 'bg-risk',        count: reviewCounts.file },
                     { key: 'notmapped', label: 'Not Mapped',    dot: 'bg-text-muted',  count: reviewCounts.notmapped },
+                    ...(reviewCounts.sql > 0
+                      ? [{ key: 'sql' as const, label: 'SQL', dot: 'bg-[#047A48]', count: reviewCounts.sql }]
+                      : []),
                     ...(reviewCounts.dropped > 0
                       ? [{ key: 'dropped' as const, label: 'Dropped', dot: 'bg-text', count: reviewCounts.dropped }]
                       : []),
@@ -1725,7 +1898,6 @@ function BulkExecuteModal({
                 </div>
               </div>
 
-              {/* Workflow rows */}
               <div className="px-4 pb-4 space-y-2">
                 {filteredReviewWorkflows.length === 0 ? (
                   <div className="text-[12px] text-text-muted text-center py-12">
@@ -1765,44 +1937,54 @@ function BulkExecuteModal({
                                 <span className="italic">Excluded from this run</span>
                               ) : null}
                             </div>
+                            {rw.status === 'sql' && (
+                              <label className="inline-flex items-center gap-1.5 text-[11.5px] text-text-muted cursor-pointer select-none mt-1.5">
+                                <input
+                                  type="checkbox"
+                                  checked={!!rw.sqlUseDefaults}
+                                  onChange={() => toggleSqlUseDefaults(rw.id)}
+                                  style={{ accentColor: '#6a12cd' }}
+                                  className="w-3.5 h-3.5 rounded cursor-pointer"
+                                />
+                                Use default configuration
+                              </label>
+                            )}
                           </div>
 
-                          {/* Action buttons */}
                           <div className="flex items-center gap-1.5 shrink-0">
                             {isDropped ? (
                               <ReviewActionButton variant="primary" onClick={() => restoreReviewWorkflow(rw.id)}>
                                 Restore
                               </ReviewActionButton>
                             ) : rw.status === 'mapped' ? (
-                              <ReviewActionButton variant="danger" onClick={() => dropReviewWorkflow(rw.id)}>
-                                Drop
-                              </ReviewActionButton>
+                              <ReviewIconButton onClick={() => dropReviewWorkflow(rw.id)} label="Drop" />
                             ) : rw.status === 'column' ? (
                               <>
                                 <ReviewActionButton variant="primary" onClick={() => toggleReviewExpand(rw.id)}>
                                   {isExpanded ? 'Collapse' : hasMissing ? 'Fix Columns' : 'Review Columns'}
                                 </ReviewActionButton>
-                                <ReviewActionButton variant="danger" onClick={() => dropReviewWorkflow(rw.id)}>
-                                  Drop
-                                </ReviewActionButton>
+                                <ReviewIconButton onClick={() => dropReviewWorkflow(rw.id)} label="Drop" />
                               </>
                             ) : rw.status === 'file' ? (
                               <>
                                 <ReviewActionButton variant="primary" onClick={() => setStep2View('upload')}>
                                   Re-upload
                                 </ReviewActionButton>
-                                <ReviewActionButton variant="danger" onClick={() => dropReviewWorkflow(rw.id)}>
-                                  Drop
-                                </ReviewActionButton>
+                                <ReviewIconButton onClick={() => dropReviewWorkflow(rw.id)} label="Drop" />
                               </>
                             ) : rw.status === 'notmapped' ? (
                               <>
                                 <ReviewActionButton variant="primary" onClick={() => setStep2View('upload')}>
                                   Upload
                                 </ReviewActionButton>
-                                <ReviewActionButton variant="danger" onClick={() => dropReviewWorkflow(rw.id)}>
-                                  Drop
+                                <ReviewIconButton onClick={() => dropReviewWorkflow(rw.id)} label="Drop" />
+                              </>
+                            ) : rw.status === 'sql' ? (
+                              <>
+                                <ReviewActionButton variant="primary" onClick={() => openConfigModal(rw.id)}>
+                                  Edit Configuration
                                 </ReviewActionButton>
+                                <ReviewIconButton onClick={() => dropReviewWorkflow(rw.id)} label="Drop" />
                               </>
                             ) : null}
                           </div>
@@ -1822,6 +2004,167 @@ function BulkExecuteModal({
               </div>
             </div>
           )}
+
+          {/* NEW Workflow Mapping — commented out (user reverted to old design). Restore by uncommenting and gating old block off.
+          {step2View_NEW === 'review' && (
+            <div>
+              <div className="px-4 pt-4 pb-3">
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="text-[13px] font-semibold text-text">Workflow Mapping</div>
+                    <span className="inline-flex items-center gap-1 text-[10.5px] font-medium text-primary bg-primary/8 px-1.5 py-0.5 rounded-full">
+                      <Sparkles size={10} />
+                      Auto-mapping complete
+                    </span>
+                  </div>
+                </div>
+                <div className="text-[11.5px] text-text-muted mb-3">
+                  Auto-mapped {reviewCounts.mapped} of {reviewCounts.all} · Review issues, fix mappings, or drop workflows.
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 pb-3 border-b border-border-light">
+                  {([
+                    { key: 'all',       label: 'All',           dot: null,             count: reviewCounts.all },
+                    { key: 'mapped',    label: 'Mapped',        dot: 'bg-compliant',   count: reviewCounts.mapped },
+                    { key: 'column',    label: 'Column Issues', dot: 'bg-mitigated',   count: reviewCounts.column },
+                    { key: 'file',      label: 'File Issues',   dot: 'bg-risk',        count: reviewCounts.file },
+                    { key: 'notmapped', label: 'Not Mapped',    dot: 'bg-text-muted',  count: reviewCounts.notmapped },
+                    ...(reviewCounts.sql > 0
+                      ? [{ key: 'sql' as const, label: 'SQL', dot: 'bg-compliant', count: reviewCounts.sql }]
+                      : []),
+                    ...(reviewCounts.dropped > 0
+                      ? [{ key: 'dropped' as const, label: 'Dropped', dot: 'bg-text', count: reviewCounts.dropped }]
+                      : []),
+                  ] as const).map(chip => {
+                    const active = reviewFilter === chip.key;
+                    return (
+                      <button
+                        key={chip.key}
+                        type="button"
+                        onClick={() => setReviewFilter(chip.key)}
+                        className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full border text-[11px] font-medium transition-colors cursor-pointer ${
+                          active
+                            ? 'border-text bg-text text-white'
+                            : 'border-border-light bg-white text-text-muted hover:border-border hover:text-text'
+                        }`}
+                      >
+                        {chip.dot && <span className={`w-1.5 h-1.5 rounded-full ${chip.dot}`} />}
+                        {chip.label}
+                        <span className={`font-mono text-[10px] ${active ? 'opacity-70' : 'opacity-60'}`}>
+                          {chip.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="px-4 pb-4">
+                {filteredReviewWorkflows.length === 0 ? (
+                  <div className="text-[12px] text-text-muted text-center py-12 rounded-xl border border-border-light bg-white">
+                    No workflows match this filter.
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-border-light bg-white overflow-hidden divide-y divide-border-light">
+                    {filteredReviewWorkflows.map(rw => {
+                      const isExpanded = expandedReviewId === rw.id;
+                      const isDropped = rw.status === 'dropped';
+                      const hasMissing = rw.columns?.some(c => c.confidence === 'missing') ?? false;
+                      return (
+                        <div
+                          key={rw.id}
+                          className={`transition-colors ${
+                            isDropped ? 'bg-surface-2/60 opacity-60' : 'bg-white hover:bg-surface-2/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 px-3.5 py-2.5">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                <span className="font-mono text-[10.5px] text-text-muted/70 shrink-0">{rw.code}</span>
+                                <span className={`text-[12.5px] font-medium truncate ${isDropped ? 'text-text-muted line-through' : 'text-text'}`}>
+                                  {rw.name}
+                                </span>
+                                <ReviewStatusChip status={rw.status} />
+                              </div>
+                              <div className="text-[11px] text-text-muted truncate">
+                                {(rw.status === 'mapped' || rw.status === 'column') && rw.mappedFiles && rw.mappedFiles.length > 0 ? (
+                                  <span className="font-mono">{rw.mappedFiles.join(' · ')}</span>
+                                ) : rw.status === 'file' ? (
+                                  <span className="text-risk">{rw.fileError}</span>
+                                ) : rw.status === 'notmapped' ? (
+                                  <span>Missing: {(rw.missingFiles ?? []).join(', ')}</span>
+                                ) : isDropped ? (
+                                  <span className="italic">Excluded from this run</span>
+                                ) : rw.status === 'sql' ? (
+                                  <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                                    <input
+                                      type="checkbox"
+                                      checked={!!rw.sqlUseDefaults}
+                                      onChange={() => toggleSqlUseDefaults(rw.id)}
+                                      style={{ accentColor: '#6a12cd' }}
+                                      className="w-3.5 h-3.5 rounded cursor-pointer"
+                                    />
+                                    Use default configuration
+                                  </label>
+                                ) : null}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              {isDropped ? (
+                                <ReviewActionButton variant="primary" onClick={() => restoreReviewWorkflow(rw.id)}>
+                                  Restore
+                                </ReviewActionButton>
+                              ) : rw.status === 'mapped' ? (
+                                <ReviewIconButton onClick={() => dropReviewWorkflow(rw.id)} label="Drop" />
+                              ) : rw.status === 'column' ? (
+                                <>
+                                  <ReviewActionButton variant="primary" onClick={() => toggleReviewExpand(rw.id)}>
+                                    {isExpanded ? 'Collapse' : hasMissing ? 'Fix Columns' : 'Review Columns'}
+                                  </ReviewActionButton>
+                                  <ReviewIconButton onClick={() => dropReviewWorkflow(rw.id)} label="Drop" />
+                                </>
+                              ) : rw.status === 'file' ? (
+                                <>
+                                  <ReviewActionButton variant="primary" onClick={() => setStep2View('upload')}>
+                                    Re-upload
+                                  </ReviewActionButton>
+                                  <ReviewIconButton onClick={() => dropReviewWorkflow(rw.id)} label="Drop" />
+                                </>
+                              ) : rw.status === 'notmapped' ? (
+                                <>
+                                  <ReviewActionButton variant="primary" onClick={() => setStep2View('upload')}>
+                                    Upload
+                                  </ReviewActionButton>
+                                  <ReviewIconButton onClick={() => dropReviewWorkflow(rw.id)} label="Drop" />
+                                </>
+                              ) : rw.status === 'sql' ? (
+                                <>
+                                  <ReviewActionButton variant="primary" onClick={() => openConfigModal(rw.id)}>
+                                    Edit Configuration
+                                  </ReviewActionButton>
+                                  <ReviewIconButton onClick={() => dropReviewWorkflow(rw.id)} label="Drop" />
+                                </>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          {isExpanded && rw.status === 'column' && rw.columns && (
+                            <ReviewColumnMapper
+                              columns={rw.columns}
+                              onUpdate={(idx, value) => updateReviewColumn(rw.id, idx, value)}
+                              onConfirm={() => confirmReviewColumns(rw.id)}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          end of NEW Workflow Mapping commented-out block */}
         </div>
 
         {/* Footer — Step 2 */}
@@ -1883,6 +2226,21 @@ function BulkExecuteModal({
         />
         )}
       </motion.div>
+
+      {/* SQL Configuration Details modal — layered above the bulk execute modal */}
+      {configModalWorkflowId && (() => {
+        const wf = reviewWorkflows.find(rw => rw.id === configModalWorkflowId);
+        if (!wf || !wf.sqlFields) return null;
+        return (
+          <SqlConfigModal
+            workflow={wf}
+            draft={configDraft}
+            onChange={(key, value) => setConfigDraft(prev => ({ ...prev, [key]: value }))}
+            onCancel={closeConfigModal}
+            onSave={saveConfigModal}
+          />
+        );
+      })()}
     </motion.div>
   );
 }
@@ -2059,7 +2417,7 @@ function ReviewStatusChip({ status }: { status: ReviewWorkflowStatus }) {
   switch (status) {
     case 'mapped':
       return (
-        <span className={`${base} bg-compliant-50 text-compliant-700 border-compliant/25`}>
+        <span className={`${base} border-transparent`} style={{ backgroundColor: '#ECFEF3', color: '#047A48' }}>
           <Check size={10} strokeWidth={3} />
           Mapped
         </span>
@@ -2083,6 +2441,13 @@ function ReviewStatusChip({ status }: { status: ReviewWorkflowStatus }) {
         <span className={`${base} bg-surface-2 text-text-muted border-border-light`}>
           <Minus size={10} strokeWidth={2.5} />
           Not Mapped
+        </span>
+      );
+    case 'sql':
+      return (
+        <span className={`${base} border-transparent`} style={{ backgroundColor: '#ECFEF3', color: '#047A48' }}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#047A48' }} />
+          SQL
         </span>
       );
     case 'dropped':
@@ -2114,6 +2479,20 @@ function ReviewActionButton({
       className={`inline-flex items-center px-2.5 h-7 rounded-md border text-[11.5px] font-medium transition-colors cursor-pointer ${cls}`}
     >
       {children}
+    </button>
+  );
+}
+
+function ReviewIconButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-border-light text-text-muted bg-white hover:text-risk hover:border-risk/30 hover:bg-risk/5 transition-colors cursor-pointer"
+    >
+      <Trash2 size={13} />
     </button>
   );
 }
@@ -2239,8 +2618,17 @@ function Step3ReviewExecute({
   onBack: () => void;
   onExecute: () => void;
 }) {
-  const active = reviewWorkflows.filter(rw => rw.status === 'mapped' || rw.status === 'column');
-  const skipped = reviewWorkflows.filter(rw => rw.status === 'dropped' || rw.status === 'file' || rw.status === 'notmapped');
+  const active = reviewWorkflows.filter(rw =>
+    rw.status === 'mapped' ||
+    rw.status === 'column' ||
+    (rw.status === 'sql' && (rw.sqlUseDefaults || rw.sqlCustomValues))
+  );
+  const skipped = reviewWorkflows.filter(rw =>
+    rw.status === 'dropped' ||
+    rw.status === 'file' ||
+    rw.status === 'notmapped' ||
+    (rw.status === 'sql' && !rw.sqlUseDefaults && !rw.sqlCustomValues)
+  );
   const totalRuntime = active.reduce((s, w) => s + w.runtime, 0);
   const maxRuntime = active.reduce((m, w) => Math.max(m, w.runtime), 0);
   const estRuntime = active.length > 0 ? maxRuntime + totalRuntime / 3 : 0;
@@ -2252,6 +2640,7 @@ function Step3ReviewExecute({
     if (rw.status === 'dropped') return 'Dropped by user';
     if (rw.status === 'file') return 'File schema mismatch';
     if (rw.status === 'notmapped') return 'No file mapped';
+    if (rw.status === 'sql') return 'Configuration required';
     return '';
   };
 
@@ -2259,10 +2648,17 @@ function Step3ReviewExecute({
     <>
       <div className="flex-1 overflow-y-auto px-6 py-5">
         <div className="mb-5">
-          <div className="text-[10.5px] font-semibold uppercase tracking-wider text-primary mb-1">Final Review</div>
-          <h3 className="text-[16px] font-semibold text-text">
-            Ready to execute <span className="text-primary font-mono">{auditName.trim() || 'BulkRun'}</span>
-          </h3>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-[10.5px] font-semibold uppercase tracking-wider text-primary mb-1">Final Review</div>
+              <h3 className="text-[16px] font-semibold text-text">
+                Ready to execute <span className="text-primary font-mono">{auditName.trim() || 'BulkRun'}</span>
+              </h3>
+            </div>
+            <div className="text-[11.5px] text-text-muted shrink-0 pt-1 whitespace-nowrap">
+              Ready · {active.length} workflow{active.length === 1 ? '' : 's'} · ~{estRuntime.toFixed(1)} min
+            </div>
+          </div>
           <p className="text-[12px] text-text-muted mt-1">
             Review the run summary below. Once executed, audit trail will be locked and results will be available in your engagement dashboard.
           </p>
@@ -2373,17 +2769,14 @@ function Step3ReviewExecute({
       </div>
 
       <div className="px-6 py-4 border-t border-border-light flex items-center justify-between shrink-0">
-        <div className="text-[11.5px] text-text-muted">
-          Ready · {active.length} workflow{active.length === 1 ? '' : 's'} · ~{estRuntime.toFixed(1)} min
-        </div>
+        <button
+          type="button"
+          onClick={onBack}
+          className="px-4 h-9 rounded-md bg-white text-text border border-border text-[13px] font-semibold hover:bg-surface-2 transition-colors cursor-pointer"
+        >
+          Back
+        </button>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="px-4 h-9 rounded-md bg-white text-text border border-border text-[13px] font-semibold hover:bg-surface-2 transition-colors cursor-pointer"
-          >
-            Back
-          </button>
           <button
             type="button"
             onClick={onExecute}
@@ -2419,6 +2812,344 @@ function Step3StatCard({
         {suffix && <span className="text-[13px] text-text-muted ml-1 font-medium">{suffix}</span>}
       </div>
       <div className="text-[10px] font-semibold uppercase tracking-wider text-text-muted mt-2">{label}</div>
+    </div>
+  );
+}
+
+function SqlConfigModal({
+  workflow,
+  draft,
+  onChange,
+  onCancel,
+  onSave,
+}: {
+  workflow: ReviewWorkflow;
+  draft: Record<string, string>;
+  onChange: (key: string, value: string) => void;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  const fields = workflow.sqlFields ?? [];
+  // Pair consecutive date fields into a 2-column row
+  const rows: { fields: SqlConfigField[] }[] = [];
+  let i = 0;
+  while (i < fields.length) {
+    const f = fields[i];
+    const next = fields[i + 1];
+    if (f.type === 'date' && next?.type === 'date') {
+      rows.push({ fields: [f, next] });
+      i += 2;
+    } else {
+      rows.push({ fields: [f] });
+      i += 1;
+    }
+  }
+
+  const allRequiredFilled = fields
+    .filter(f => f.required)
+    .every(f => (draft[f.key] ?? '').trim() !== '');
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[60] flex items-center justify-center"
+      onClick={onCancel}
+    >
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 16 }}
+        transition={{ duration: 0.18 }}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Configuration Details"
+        className="relative bg-white rounded-2xl shadow-2xl w-[640px] max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-border-light flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Clock size={15} className="text-primary" />
+            </div>
+            <h3 className="text-[16px] font-semibold text-text">Configuration Details</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="p-1.5 hover:bg-surface-2 rounded-md transition-colors cursor-pointer"
+            aria-label="Close"
+          >
+            <X size={16} className="text-text-muted" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+          <div className="text-[11.5px] text-text-muted">
+            <span className="font-mono">{workflow.code}</span> · {workflow.name}
+          </div>
+          {rows.map((row, rIdx) => (
+            <div
+              key={rIdx}
+              className={row.fields.length === 2 ? 'grid grid-cols-2 gap-4' : ''}
+            >
+              {row.fields.map(f => (
+                <SqlConfigInput
+                  key={f.key}
+                  field={f}
+                  value={draft[f.key] ?? ''}
+                  onChange={value => onChange(f.key, value)}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-border-light bg-surface-2/40 flex items-center justify-end gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 h-9 rounded-md bg-white text-text border border-border text-[13px] font-semibold hover:bg-surface-2 transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={!allRequiredFilled}
+            className={`px-4 h-9 rounded-md text-white text-[13px] font-semibold transition-colors ${
+              allRequiredFilled
+                ? 'bg-primary hover:bg-primary-hover cursor-pointer'
+                : 'bg-primary/40 cursor-not-allowed'
+            }`}
+          >
+            Save Changes
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function SqlConfigInput({
+  field,
+  value,
+  onChange,
+}: {
+  field: SqlConfigField;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-[12px] font-semibold text-text mb-1.5">
+        {field.label}
+        {field.required && <span className="text-risk ml-0.5">*</span>}
+      </label>
+      {field.type === 'date' ? (
+        <CustomDatePicker value={value} onChange={onChange} />
+      ) : (
+        <input
+          type={field.type === 'number' ? 'number' : 'text'}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="w-full px-3 py-2.5 rounded-md border border-border-light text-[13px] text-text bg-white outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
+        />
+      )}
+    </div>
+  );
+}
+
+// Custom date picker that matches the app's design tokens.
+// `value` and `onChange` use ISO format (YYYY-MM-DD) so it stays compatible with native input behavior.
+function CustomDatePicker({
+  value,
+  onChange,
+  placeholder = 'dd/mm/yyyy',
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const today = new Date();
+  const parsed = value ? new Date(value + 'T00:00:00') : null;
+  const [viewYear, setViewYear] = useState(parsed ? parsed.getFullYear() : today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(parsed ? parsed.getMonth() : today.getMonth());
+
+  useEffect(() => {
+    if (!open) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const formatDisplay = (d: Date) => {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+  const toISO = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const monthName = new Date(viewYear, viewMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  // Build 6-week grid starting Sunday
+  const firstOfMonth = new Date(viewYear, viewMonth, 1);
+  const startWeekday = firstOfMonth.getDay(); // 0=Sun
+  const gridStart = new Date(viewYear, viewMonth, 1 - startWeekday);
+  const cells: Date[] = [];
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(gridStart);
+    d.setDate(gridStart.getDate() + i);
+    cells.push(d);
+  }
+
+  const goPrevMonth = () => {
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear(y => y - 1);
+    } else setViewMonth(m => m - 1);
+  };
+  const goNextMonth = () => {
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear(y => y + 1);
+    } else setViewMonth(m => m + 1);
+  };
+  const selectDate = (d: Date) => {
+    onChange(toISO(d));
+    setViewYear(d.getFullYear());
+    setViewMonth(d.getMonth());
+    setOpen(false);
+  };
+  const goToday = () => {
+    setViewYear(today.getFullYear());
+    setViewMonth(today.getMonth());
+    selectDate(today);
+  };
+  const clearDate = () => {
+    onChange('');
+    setOpen(false);
+  };
+
+  const isSameDay = (a: Date, b: Date | null) =>
+    !!b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(p => !p)}
+        className="w-full flex items-center justify-between px-3 py-2 rounded-md border border-border-light bg-white text-[13px] text-text hover:border-primary/30 focus:border-primary/40 focus:ring-2 focus:ring-primary/10 outline-none transition-all cursor-pointer"
+      >
+        <span className={parsed ? 'text-text' : 'text-text-muted/70'}>
+          {parsed ? formatDisplay(parsed) : placeholder}
+        </span>
+        <Calendar size={14} className="text-text-muted shrink-0" />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 bottom-full mb-1.5 z-30 w-[300px] rounded-lg border border-border-light bg-white shadow-lg p-3">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[13px] font-semibold text-text">{monthName}</div>
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={goPrevMonth}
+                className="w-7 h-7 rounded-md hover:bg-surface-2 flex items-center justify-center text-text-muted hover:text-text cursor-pointer transition-colors"
+                aria-label="Previous month"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={goNextMonth}
+                className="w-7 h-7 rounded-md hover:bg-surface-2 flex items-center justify-center text-text-muted hover:text-text cursor-pointer transition-colors"
+                aria-label="Next month"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+
+          {/* Weekday header */}
+          <div className="grid grid-cols-7 gap-0.5 mb-1">
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+              <div key={i} className="h-7 flex items-center justify-center text-[11px] font-semibold text-text-muted">
+                {d}
+              </div>
+            ))}
+          </div>
+
+          {/* Day cells */}
+          <div className="grid grid-cols-7 gap-0.5">
+            {cells.map((d, i) => {
+              const inMonth = d.getMonth() === viewMonth;
+              const isToday = isSameDay(d, today);
+              const isSelected = isSameDay(d, parsed);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => selectDate(d)}
+                  className={`h-8 rounded-md text-[12px] font-medium transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'bg-primary text-white hover:bg-primary-hover'
+                      : isToday
+                        ? 'border border-primary text-primary hover:bg-primary/5'
+                        : inMonth
+                          ? 'text-text hover:bg-surface-2'
+                          : 'text-text-muted/40 hover:bg-surface-2'
+                  }`}
+                >
+                  {d.getDate()}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-border-light">
+            <button
+              type="button"
+              onClick={clearDate}
+              className="text-[12px] font-semibold text-primary hover:text-primary-hover cursor-pointer"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={goToday}
+              className="text-[12px] font-semibold text-primary hover:text-primary-hover cursor-pointer"
+            >
+              Today
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
