@@ -1,10 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Database, FileText, Globe, Cloud, MessageSquare, Layers,
-  Search, Upload, MoreHorizontal, ArrowUpDown, ChevronDown, Plus,
+  Search, Upload, MoreHorizontal, ChevronDown, Plus,
+  Calendar, X,
 } from 'lucide-react';
 import { useToast } from '../shared/Toast';
+import DataSourceDetailView from './DataSourceDetailView';
 
 // ─── Source shape & seed data ────────────────────────────────────────────────
 
@@ -25,6 +27,9 @@ const dayOffset = (n: number) => {
   d.setDate(d.getDate() - n);
   return d.toISOString().slice(0, 10);
 };
+
+// Mutable copy — supports inline rename without forcing a parent-level state lift.
+let SOURCES_STATE: DataSource[] | null = null;
 
 const SEED: DataSource[] = [
   // ── Files (manual uploads) ──
@@ -116,11 +121,12 @@ function formatDate(iso: string): string {
 
 // ─── Source card ─────────────────────────────────────────────────────────────
 
-function SourceCard({ source, onMenu }: { source: DataSource; onMenu: () => void }) {
+function SourceCard({ source, onOpen, onMenu }: { source: DataSource; onOpen: () => void; onMenu: () => void }) {
   const { icon: Icon, tone } = TYPE_META[source.type];
   return (
     <button
       type="button"
+      onClick={onOpen}
       className="group flex items-center gap-3 px-4 h-16 rounded-lg bg-canvas-elevated border border-canvas-border hover:border-brand-200 hover:bg-brand-50/30 transition-colors cursor-pointer text-left"
     >
       <div className={`w-9 h-9 rounded-md flex items-center justify-center shrink-0 ${tone}`}>
@@ -144,36 +150,252 @@ function SourceCard({ source, onMenu }: { source: DataSource; onMenu: () => void
   );
 }
 
+// ─── Filter chip ─────────────────────────────────────────────────────────────
+// Small dismissible chip used in the active-filters bar. Clear-on-X removes
+// just that one filter dimension without touching the others.
+
+function FilterChip({ label, onClear }: { label: React.ReactNode; onClear: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 pl-2.5 pr-1 h-7 rounded-full bg-brand-50 border border-brand-200 text-[12px] text-brand-700">
+      {label}
+      <button
+        onClick={onClear}
+        className="p-0.5 rounded-full hover:bg-brand-100 cursor-pointer"
+        aria-label="Clear this filter"
+      >
+        <X size={11} />
+      </button>
+    </span>
+  );
+}
+
+// ─── Date filter picker ─────────────────────────────────────────────────────
+// Combined popover: preset shortcuts at top + custom from/to inputs below.
+// Active state (anything other than "All time") tints the trigger brand-50.
+
+interface DateFilterPickerProps {
+  filter: DateFilter;
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  onApply: (filter: DateFilter) => void;
+}
+
+function DateFilterPicker({ filter, open, onToggle, onClose, onApply }: DateFilterPickerProps) {
+  const active = isDateFilterActive(filter);
+  const label = dateFilterLabel(filter);
+
+  // Local draft state for custom inputs — only applied on click of "Apply".
+  const todayIso = TODAY.toISOString().slice(0, 10);
+  const [from, setFrom] = useState<string>(filter.kind === 'custom' ? filter.from : '');
+  const [to, setTo] = useState<string>(filter.kind === 'custom' ? filter.to : todayIso);
+
+  // Sync drafts when the picker opens with the current filter.
+  useEffect(() => {
+    if (open) {
+      setFrom(filter.kind === 'custom' ? filter.from : '');
+      setTo(filter.kind === 'custom' ? filter.to : todayIso);
+    }
+  }, [open, filter, todayIso]);
+
+  const canApplyCustom = from !== '' && to !== '' && new Date(from) <= new Date(to);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={onToggle}
+        className={`flex items-center gap-1.5 px-3 h-9 rounded-md border text-[12px] font-medium transition-colors cursor-pointer ${
+          active
+            ? 'border-brand-300 bg-brand-50 text-brand-700 hover:bg-brand-100'
+            : 'border-canvas-border bg-canvas-elevated text-ink-700 hover:border-brand-200'
+        }`}
+      >
+        <Calendar size={12} />
+        {label}
+        <ChevronDown size={12} className={`text-ink-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={onClose} />
+          <div className="absolute right-0 top-full mt-1 w-[280px] z-20 bg-canvas-elevated border border-canvas-border rounded-lg py-2 shadow-lg">
+            {/* Preset shortcuts */}
+            <div className="px-1.5 py-1">
+              {DATE_PRESETS.map(p => {
+                const isCurrent = filter.kind === 'preset' && filter.id === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => onApply({ kind: 'preset', id: p.id })}
+                    className={`w-full flex items-center justify-between text-left px-2.5 py-1.5 rounded-md text-[12.5px] cursor-pointer transition-colors ${
+                      isCurrent ? 'text-brand-700 font-semibold bg-brand-50' : 'text-ink-700 hover:bg-paper-50'
+                    }`}
+                  >
+                    <span>{p.label}</span>
+                    {isCurrent && <span className="text-[10px] font-semibold uppercase tracking-wide">Active</span>}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Divider + custom range */}
+            <div className="border-t border-canvas-border my-1" />
+            <div className="px-3 pt-2 pb-1">
+              <div className="text-[10.5px] font-semibold uppercase tracking-wide text-ink-500 mb-2">Custom range</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10.5px] font-medium text-ink-500 mb-1">From</label>
+                  <input
+                    type="date"
+                    value={from}
+                    max={to || todayIso}
+                    onChange={(e) => setFrom(e.target.value)}
+                    className="w-full h-8 px-2 rounded-md border border-canvas-border bg-canvas-elevated text-[12px] text-ink-900 focus:outline-none focus:border-brand-600 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10.5px] font-medium text-ink-500 mb-1">To</label>
+                  <input
+                    type="date"
+                    value={to}
+                    min={from || undefined}
+                    max={todayIso}
+                    onChange={(e) => setTo(e.target.value)}
+                    className="w-full h-8 px-2 rounded-md border border-canvas-border bg-canvas-elevated text-[12px] text-ink-900 focus:outline-none focus:border-brand-600 transition-colors"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => canApplyCustom && onApply({ kind: 'custom', from, to })}
+                disabled={!canApplyCustom}
+                className="w-full mt-3 h-8 rounded-md bg-brand-600 hover:bg-brand-500 disabled:bg-paper-200 disabled:text-ink-400 disabled:cursor-not-allowed text-white text-[12px] font-semibold transition-colors cursor-pointer"
+              >
+                Apply custom range
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── DataSourcesView ─────────────────────────────────────────────────────────
 
-type SortDir = 'newest' | 'oldest';
+// ─── Date filter (preset windows + custom range) ─────────────────────────────
+// Presets read against TODAY (the seed-data anchor) for deterministic mock filtering.
+
+type DateFilter =
+  | { kind: 'preset'; id: 'all' | 'today' | '7d' | '30d' | '90d' }
+  | { kind: 'custom'; from: string; to: string }; // ISO dates (yyyy-mm-dd)
+
+interface DatePreset { id: 'all' | 'today' | '7d' | '30d' | '90d'; label: string; days: number | null }
+
+const DATE_PRESETS: DatePreset[] = [
+  { id: 'all',    label: 'All time',     days: null },
+  { id: 'today',  label: 'Today',        days: 0 },
+  { id: '7d',     label: 'Last 7 days',  days: 7 },
+  { id: '30d',    label: 'Last 30 days', days: 30 },
+  { id: '90d',    label: 'Last 90 days', days: 90 },
+];
+
+const DEFAULT_DATE_FILTER: DateFilter = { kind: 'preset', id: 'all' };
+
+function dateInFilter(iso: string, filter: DateFilter): boolean {
+  if (filter.kind === 'preset') {
+    if (filter.id === 'all') return true;
+    const created = new Date(iso);
+    if (filter.id === 'today') return created.toDateString() === TODAY.toDateString();
+    const preset = DATE_PRESETS.find(r => r.id === filter.id);
+    if (!preset?.days) return true;
+    const ageMs = TODAY.getTime() - created.getTime();
+    return ageMs < preset.days * DAY_MS;
+  }
+  // custom: inclusive of both endpoints, day-precision
+  const created = new Date(iso);
+  const from = new Date(filter.from);
+  const to = new Date(filter.to);
+  to.setHours(23, 59, 59, 999); // include the entire 'to' day
+  return created.getTime() >= from.getTime() && created.getTime() <= to.getTime();
+}
+
+function isDateFilterActive(filter: DateFilter): boolean {
+  return filter.kind !== 'preset' || filter.id !== 'all';
+}
+
+function formatShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function dateFilterLabel(filter: DateFilter): string {
+  if (filter.kind === 'preset') return DATE_PRESETS.find(p => p.id === filter.id)?.label ?? 'All time';
+  return `${formatShortDate(filter.from)} – ${formatShortDate(filter.to)}`;
+}
 
 export default function DataSourcesView() {
   const { addToast } = useToast();
   const [tab, setTab] = useState<TabId>('all');
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState<SortDir>('newest');
-  const [sortOpen, setSortOpen] = useState(false);
+  const [dateFilter, setDateFilter] = useState<DateFilter>(DEFAULT_DATE_FILTER);
+  const [dateOpen, setDateOpen] = useState(false);
+  const [activeSource, setActiveSource] = useState<DataSource | null>(null);
+  // Local sources state — supports inline rename. Initialised from module-level
+  // cache so renames persist across remounts within a session.
+  const [sources, setSources] = useState<DataSource[]>(() => SOURCES_STATE ?? SEED);
 
   const tabCounts = useMemo<Record<TabId, number>>(() => ({
-    all:        SEED.length,
-    file:       SEED.filter(d => d.type === 'file').length,
-    integrated: SEED.filter(d => INTEGRATED_TYPES.includes(d.type)).length,
-  }), []);
+    all:        sources.length,
+    file:       sources.filter(d => d.type === 'file').length,
+    integrated: sources.filter(d => INTEGRATED_TYPES.includes(d.type)).length,
+  }), [sources]);
+
+  // Total count within the active tab — used to show "X of N" when filtered.
+  const tabTotal = useMemo(() => {
+    if (tab === 'all') return sources.length;
+    if (tab === 'file') return sources.filter(d => d.type === 'file').length;
+    return sources.filter(d => INTEGRATED_TYPES.includes(d.type)).length;
+  }, [sources, tab]);
 
   const visible = useMemo(() => {
-    const filtered = SEED
+    return sources
       .filter(d => {
         if (tab === 'all') return true;
         if (tab === 'file') return d.type === 'file';
         return INTEGRATED_TYPES.includes(d.type);
       })
-      .filter(d => !search || d.name.toLowerCase().includes(search.toLowerCase()) || d.subtype.toLowerCase().includes(search.toLowerCase()));
-    const dir = sort === 'newest' ? -1 : 1;
-    return filtered.sort((a, b) => dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
-  }, [tab, search, sort]);
+      .filter(d => !search || d.name.toLowerCase().includes(search.toLowerCase()) || d.subtype.toLowerCase().includes(search.toLowerCase()))
+      .filter(d => dateInFilter(d.createdAt, dateFilter))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [sources, tab, search, dateFilter]);
 
-  const buckets = sort === 'newest' ? bucketByDate(visible) : null;
+  const dateActive = isDateFilterActive(dateFilter);
+  const isFiltered = search.trim() !== '' || dateActive;
+  const dateLabel = dateFilterLabel(dateFilter);
+  const clearAllFilters = () => { setSearch(''); setDateFilter(DEFAULT_DATE_FILTER); };
+
+  const renameSource = (id: string, newName: string) => {
+    setSources(prev => {
+      const next = prev.map(s => s.id === id ? { ...s, name: newName } : s);
+      SOURCES_STATE = next;
+      return next;
+    });
+    setActiveSource(curr => curr && curr.id === id ? { ...curr, name: newName } : curr);
+  };
+
+  // Always group by relative-date buckets (Today / Last 7 days / Earlier).
+  // Sort is implicit: newest-first within and across buckets.
+  const buckets = bucketByDate(visible);
+
+  // Full-page detail replaces the grid when a source is active.
+  if (activeSource) {
+    return (
+      <DataSourceDetailView
+        source={activeSource}
+        onBack={() => setActiveSource(null)}
+        onRename={(newName) => renameSource(activeSource.id, newName)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -232,40 +454,49 @@ export default function DataSourcesView() {
           />
         </div>
 
-        <div className="relative">
-          <button
-            onClick={() => setSortOpen(p => !p)}
-            className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-canvas-border bg-canvas-elevated text-[12px] font-medium text-ink-700 hover:border-brand-200 transition-colors cursor-pointer"
-          >
-            <ArrowUpDown size={12} />
-            {sort === 'newest' ? 'Newest first' : 'Oldest first'}
-            <ChevronDown size={12} className={`text-ink-400 transition-transform ${sortOpen ? 'rotate-180' : ''}`} />
-          </button>
-          {sortOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setSortOpen(false)} />
-              <div className="absolute right-0 top-full mt-1 w-40 z-20 bg-canvas-elevated border border-canvas-border rounded-md py-1 shadow-md">
-                {(['newest', 'oldest'] as SortDir[]).map(s => (
-                  <button
-                    key={s}
-                    onClick={() => { setSort(s); setSortOpen(false); }}
-                    className={`w-full text-left px-3 py-1.5 text-[13px] cursor-pointer transition-colors ${
-                      s === sort ? 'text-brand-700 font-semibold bg-brand-50' : 'text-ink-700 hover:bg-paper-50'
-                    }`}
-                  >
-                    {s === 'newest' ? 'Newest first' : 'Oldest first'}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        <DateFilterPicker
+          filter={dateFilter}
+          open={dateOpen}
+          onToggle={() => setDateOpen(p => !p)}
+          onClose={() => setDateOpen(false)}
+          onApply={(next) => { setDateFilter(next); setDateOpen(false); }}
+        />
       </div>
+
+      {/* ── Active filters bar ── */}
+      {/* Surfaces what's currently filtering the list + a clear-all escape.
+          Result count tells the user "X of N" so the impact of filters is explicit. */}
+      {isFiltered && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[12px] text-ink-500 tabular-nums">
+            <span className="font-semibold text-ink-700">{visible.length}</span> of {tabTotal} {tabTotal === 1 ? 'source' : 'sources'}
+          </span>
+          <span className="text-[12px] text-ink-400">·</span>
+          {search.trim() && (
+            <FilterChip
+              label={<>Search: <span className="font-semibold">"{search.trim()}"</span></>}
+              onClear={() => setSearch('')}
+            />
+          )}
+          {dateActive && (
+            <FilterChip
+              label={<>Date: <span className="font-semibold">{dateLabel}</span></>}
+              onClear={() => setDateFilter(DEFAULT_DATE_FILTER)}
+            />
+          )}
+          <button
+            onClick={clearAllFilters}
+            className="text-[12px] font-medium text-brand-700 hover:text-brand-800 hover:underline cursor-pointer ml-1"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
 
       {/* ── Body ── */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={tab + sort + (search ? '+search' : '')}
+          key={tab + (search ? '+s' : '') + (dateActive ? '+d' : '')}
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -4 }}
@@ -274,33 +505,61 @@ export default function DataSourcesView() {
         >
           {visible.length === 0 && (
             <div className="text-center py-16 rounded-xl border border-dashed border-canvas-border bg-canvas-elevated">
-              <Database size={28} className="mx-auto text-ink-400 mb-3" />
-              <p className="text-[14px] text-ink-500">
-                {search ? `No sources match "${search}".` : 'No sources connected yet.'}
-              </p>
+              {isFiltered ? (
+                <>
+                  <Search size={28} className="mx-auto text-ink-400 mb-3" />
+                  <p className="text-[14px] text-ink-700 font-medium">No sources match your filters.</p>
+                  <p className="text-[12px] text-ink-500 mt-1">
+                    {search.trim() && <>Search "<span className="font-semibold">{search.trim()}</span>" · </>}
+                    {dateActive && <>Date "<span className="font-semibold">{dateLabel}</span>" · </>}
+                    Try widening the range or clearing filters.
+                  </p>
+                  <button
+                    onClick={clearAllFilters}
+                    className="inline-flex items-center gap-2 mt-4 px-3 h-9 rounded-md border border-brand-300 bg-brand-50 text-brand-700 text-[12.5px] font-semibold hover:bg-brand-100 transition-colors cursor-pointer"
+                  >
+                    <X size={13} />
+                    Clear filters
+                  </button>
+                </>
+              ) : tab === 'integrated' ? (
+                <>
+                  <Database size={28} className="mx-auto text-ink-400 mb-3" />
+                  <p className="text-[14px] text-ink-700 font-medium">No integrated databases yet.</p>
+                  <p className="text-[12px] text-ink-500 mt-1 max-w-md mx-auto">
+                    IRA can connect to databases, APIs, cloud storage, and chat-attached files. Request an integration and IT will set it up.
+                  </p>
+                  <a
+                    href="mailto:support@irame.ai?subject=Database%20integration%20request"
+                    onClick={() => addToast({ type: 'info', message: 'Opening email…' })}
+                    className="inline-flex items-center gap-2 mt-4 px-4 h-9 rounded-md bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white text-[13px] font-semibold transition-colors cursor-pointer"
+                  >
+                    <Plus size={13} />
+                    Request a DB integration
+                  </a>
+                </>
+              ) : (
+                <>
+                  <Upload size={28} className="mx-auto text-ink-400 mb-3" />
+                  <p className="text-[14px] text-ink-700 font-medium">No sources connected yet.</p>
+                  <p className="text-[12px] text-ink-500 mt-1">Upload a file or connect a source to get started.</p>
+                </>
+              )}
             </div>
           )}
 
-          {buckets ? (
-            buckets.map(b => (
-              <div key={b.id}>
-                <div className="text-[12px] font-medium text-ink-500 mb-2 tabular-nums">
-                  {b.label} <span className="text-ink-400">· {b.items.length}</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {b.items.map(d => (
-                    <SourceCard key={d.id} source={d} onMenu={() => addToast({ message: `Actions for "${d.name}".`, type: 'info' })} />
-                  ))}
-                </div>
+          {buckets.map(b => (
+            <div key={b.id}>
+              <div className="text-[12px] font-medium text-ink-500 mb-2 tabular-nums">
+                {b.label} <span className="text-ink-400">· {b.items.length}</span>
               </div>
-            ))
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {visible.map(d => (
-                <SourceCard key={d.id} source={d} onMenu={() => addToast({ message: `Actions for "${d.name}".`, type: 'info' })} />
-              ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {b.items.map(d => (
+                  <SourceCard key={d.id} source={d} onOpen={() => setActiveSource(d)} onMenu={() => addToast({ message: `Actions for "${d.name}".`, type: 'info' })} />
+                ))}
+              </div>
             </div>
-          )}
+          ))}
         </motion.div>
       </AnimatePresence>
     </div>
