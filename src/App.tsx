@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Sparkles } from 'lucide-react';
 import { useAppState } from './hooks/useAppState';
 import { ToastProvider } from './components/shared/Toast';
+import { BulkRunProgressProvider } from './components/shared/BulkRunProgress';
 import Sidebar from './components/sidebar/Sidebar';
 import ChatView from './components/chat/ChatView';
 import ArtifactPanel from './components/artifacts/ArtifactPanel';
@@ -382,6 +383,7 @@ export default function App() {
 
   return (
     <ToastProvider>
+      <BulkRunProgressProvider>
       <div className="flex h-screen w-full bg-canvas overflow-hidden">
         <Sidebar
           view={state.view}
@@ -466,6 +468,7 @@ export default function App() {
           )}
         </AnimatePresence>
       </div>
+      </BulkRunProgressProvider>
     </ToastProvider>
   );
 }
