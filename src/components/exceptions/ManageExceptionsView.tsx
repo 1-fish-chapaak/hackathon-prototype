@@ -11,8 +11,10 @@ import {
   FlaskConical,
   FileBarChart,
   Layers,
+  ChevronDown,
 } from 'lucide-react';
 import { GRC_EXCEPTIONS } from '../../data/mockData';
+import { REPORT_QUERIES_ATR } from '../../data/reportQueries';
 import type { ExceptionRole } from '../../hooks/useAppState';
 import {
   ReviewClassificationDrawer,
@@ -35,6 +37,7 @@ interface ManageExceptionsViewProps {
   role: ExceptionRole;
   setRole: (role: ExceptionRole) => void;
   onBack: () => void;
+  embedded?: boolean;
 }
 
 function StatCard({
@@ -82,6 +85,46 @@ function StatCard({
   );
 }
 
+function InlineStatTile({
+  label,
+  value,
+  icon: Icon,
+  tone,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  icon: React.ElementType;
+  tone: 'default' | 'info' | 'warning' | 'alert';
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  const toneStyles = {
+    default: { iconBg: 'bg-[#F4F2F7]',     iconColor: 'text-ink-500',       valueColor: 'text-ink-900' },
+    info:    { iconBg: 'bg-brand-100',     iconColor: 'text-brand-700',     valueColor: 'text-brand-700' },
+    warning: { iconBg: 'bg-mitigated-50',  iconColor: 'text-mitigated-700', valueColor: 'text-mitigated-700' },
+    alert:   { iconBg: 'bg-high-50',       iconColor: 'text-high-700',      valueColor: 'text-high-700' },
+  }[tone];
+  const activeRing = active ? 'ring-2 ring-brand-600 ring-offset-1' : '';
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center gap-3 p-2 rounded-[10px] text-left cursor-pointer hover:bg-[#F4F2F7] transition-colors ${activeRing}`}
+      aria-pressed={!!active}
+    >
+      <div className={`w-9 h-9 ${toneStyles.iconBg} ${toneStyles.iconColor} rounded-full flex items-center justify-center shrink-0`}>
+        <Icon size={16} strokeWidth={1.75} />
+      </div>
+      <div>
+        <div className={`text-[22px] leading-none font-semibold tabular-nums ${toneStyles.valueColor} mb-1`}>{value}</div>
+        <div className="text-[11px] text-ink-500 tracking-wide">{label}</div>
+      </div>
+    </button>
+  );
+}
+
 function RoleToggle({ role, setRole }: { role: ExceptionRole; setRole: (r: ExceptionRole) => void }) {
   return (
     <div className="flex items-center gap-1 p-1 bg-canvas-elevated border border-canvas-border rounded-full">
@@ -107,7 +150,7 @@ function RoleToggle({ role, setRole }: { role: ExceptionRole; setRole: (r: Excep
   );
 }
 
-export default function ManageExceptionsView({ role, setRole, onBack }: ManageExceptionsViewProps) {
+export default function ManageExceptionsView({ role, setRole, onBack, embedded = false }: ManageExceptionsViewProps) {
   const [activeNav, setActiveNav] = useState<'exceptions' | 'action-hub'>('exceptions');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [drawer, setDrawer] = useState<DrawerState>(null);
@@ -116,6 +159,14 @@ export default function ManageExceptionsView({ role, setRole, onBack }: ManageEx
   const [sampleCountLeft, setSampleCountLeft] = useState(5);
   const [bulkClassifyOpen, setBulkClassifyOpen] = useState(false);
   const [nextActionableNum, setNextActionableNum] = useState(2);
+  const [atrExpanded, setAtrExpanded] = useState(true);
+
+  const sourceQuery = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const fromId = new URLSearchParams(window.location.search).get('from');
+    if (!fromId) return null;
+    return REPORT_QUERIES_ATR[fromId] ? { id: fromId, ...REPORT_QUERIES_ATR[fromId] } : null;
+  }, []);
 
   const exceptions = GRC_EXCEPTIONS;
 
@@ -160,14 +211,16 @@ export default function ManageExceptionsView({ role, setRole, onBack }: ManageEx
     <div className="h-full w-full flex flex-col overflow-hidden bg-canvas">
       {/* Top chrome — own header for Case Mgmt sub-app */}
       <header className="shrink-0 h-[60px] px-6 flex items-center gap-4 bg-canvas-elevated border-b border-canvas-border">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-[12px] text-ink-500 hover:text-brand-700 transition-colors cursor-pointer pr-2 border-r border-canvas-border mr-1"
-          aria-label="Back to reports"
-        >
-          <ArrowLeft size={14} />
-          Back
-        </button>
+        {!embedded && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-[12px] text-ink-500 hover:text-brand-700 transition-colors cursor-pointer pr-2 border-r border-canvas-border mr-1"
+            aria-label="Back to reports"
+          >
+            <ArrowLeft size={14} />
+            Back
+          </button>
+        )}
 
         <nav className="flex items-center gap-1">
           <button
@@ -221,13 +274,84 @@ export default function ManageExceptionsView({ role, setRole, onBack }: ManageEx
               <h1 className="font-display text-[26px] text-ink-900 font-semibold tracking-tight">Manage Exceptions</h1>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-4 gap-4 mb-6">
-              <StatCard label="Total Exceptions"        value={stats.total}                tone="default" icon={AlertTriangle} active={kpiFilter === null}                onClick={() => setKpiFilter(null)} />
-              <StatCard label="Exceptions Classified"   value={stats.classified}           tone="info"    icon={Tag}            active={kpiFilter === 'classified'}          onClick={() => toggleKpiFilter('classified')} />
-              <StatCard label="Unclassified Exceptions" value={stats.unclassified}         tone="warning" icon={Clock}          active={kpiFilter === 'unclassified'}        onClick={() => toggleKpiFilter('unclassified')} />
-              <StatCard label="Action Review Pending"   value={stats.actionReviewPending}  tone="alert"   icon={CheckCircle2}   active={kpiFilter === 'actionReviewPending'} onClick={() => toggleKpiFilter('actionReviewPending')} />
-            </div>
+            {sourceQuery ? (
+              <div className="mb-6 bg-canvas-elevated border border-canvas-border rounded-[10px] overflow-hidden">
+                {/* KPI strip */}
+                <div className="grid grid-cols-4 gap-3 px-6 py-5">
+                  <InlineStatTile label="Total Exceptions"        value={stats.total}                tone="default" icon={AlertTriangle} active={kpiFilter === null}                onClick={() => setKpiFilter(null)} />
+                  <InlineStatTile label="Exceptions Classified"   value={stats.classified}           tone="info"    icon={Tag}            active={kpiFilter === 'classified'}          onClick={() => toggleKpiFilter('classified')} />
+                  <InlineStatTile label="Unclassified Exceptions" value={stats.unclassified}         tone="warning" icon={Clock}          active={kpiFilter === 'unclassified'}        onClick={() => toggleKpiFilter('unclassified')} />
+                  <InlineStatTile label="Action Review Pending"   value={stats.actionReviewPending}  tone="alert"   icon={CheckCircle2}   active={kpiFilter === 'actionReviewPending'} onClick={() => toggleKpiFilter('actionReviewPending')} />
+                </div>
+                {/* Divider + source query ATR */}
+                <div className="px-6 py-5 border-t border-canvas-border">
+                  <div className="flex items-center gap-2 mb-3 text-[11px]">
+                    <span className="font-bold text-brand-700 uppercase tracking-wider">Query · {sourceQuery.id}</span>
+                  </div>
+                  <button
+                    onClick={() => setAtrExpanded(p => !p)}
+                    className="flex items-start gap-2 text-left w-full mb-4 cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 group"
+                  >
+                    <motion.span
+                      animate={{ rotate: atrExpanded ? 0 : -90 }}
+                      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                      className="inline-flex mt-1 text-brand-700"
+                    >
+                      <ChevronDown size={14} />
+                    </motion.span>
+                    <p className="text-[14px] text-ink-700 leading-relaxed transition-colors group-hover:text-ink-900">
+                      {sourceQuery.title}
+                    </p>
+                  </button>
+                  <p className="text-[13px] text-ink-500 leading-relaxed">{sourceQuery.summary}</p>
+                </div>
+                <AnimatePresence initial={false}>
+                  {atrExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-6 pb-6 border-t border-canvas-border pt-5">
+                        <div className="space-y-6">
+                          {[
+                            { title: 'Findings', items: sourceQuery.findings },
+                            { title: 'Observations', items: sourceQuery.observations },
+                          ].map(section => (
+                            <div key={section.title}>
+                              <h4 className="text-[11px] font-bold text-ink-500 uppercase tracking-wider mb-3">{section.title}</h4>
+                              <ul className="space-y-2.5">
+                                {section.items.map((item, i) => (
+                                  <motion.li
+                                    key={i}
+                                    initial={{ opacity: 0, x: -4 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.08 + i * 0.05, duration: 0.3 }}
+                                    className="flex gap-2.5 text-[13px] text-ink-700 leading-relaxed"
+                                  >
+                                    <div className="w-1 h-1 rounded-full mt-2 shrink-0 bg-brand-600/60" />
+                                    {item}
+                                  </motion.li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <StatCard label="Total Exceptions"        value={stats.total}                tone="default" icon={AlertTriangle} active={kpiFilter === null}                onClick={() => setKpiFilter(null)} />
+                <StatCard label="Exceptions Classified"   value={stats.classified}           tone="info"    icon={Tag}            active={kpiFilter === 'classified'}          onClick={() => toggleKpiFilter('classified')} />
+                <StatCard label="Unclassified Exceptions" value={stats.unclassified}         tone="warning" icon={Clock}          active={kpiFilter === 'unclassified'}        onClick={() => toggleKpiFilter('unclassified')} />
+                <StatCard label="Action Review Pending"   value={stats.actionReviewPending}  tone="alert"   icon={CheckCircle2}   active={kpiFilter === 'actionReviewPending'} onClick={() => toggleKpiFilter('actionReviewPending')} />
+              </div>
+            )}
 
             {/* Table card */}
             <ExceptionsTable
