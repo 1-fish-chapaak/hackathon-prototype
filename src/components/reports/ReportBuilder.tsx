@@ -9,9 +9,20 @@ import {
 import { EXCEPTION_DATA, ACTION_TAKEN_DATA } from '../../data/mockData';
 import { useToast } from '../shared/Toast';
 
+interface SavedTemplate {
+  id: string;
+  name: string;
+  desc: string;
+  category: string;
+  icon: string;
+  sections: { name: string; icon: string }[];
+}
+
 interface Props {
   context: 'new' | 'action-report' | 'from-template' | null;
   onBack: () => void;
+  initialTitle?: string;
+  onSaveAsTemplate?: (template: SavedTemplate) => void;
 }
 
 interface ReportSection {
@@ -42,9 +53,16 @@ function getInitialSections(context: Props['context']): ReportSection[] {
 
 const TEMPLATE_CATEGORIES = ['Compliance', 'Risk', 'Controls', 'Analytics', 'Audit', 'Executive'];
 
-export default function ReportBuilder({ context, onBack }: Props) {
+const SECTION_TYPE_ICON: Record<ReportSection['type'], string> = {
+  text: 'file-text',
+  chart: 'bar-chart',
+  'exception-summary': 'alert-triangle',
+  'action-taken': 'check-circle',
+};
+
+export default function ReportBuilder({ context, onBack, initialTitle, onSaveAsTemplate }: Props) {
   const { addToast } = useToast();
-  const [title, setTitle] = useState(context === 'action-report' ? 'Action Taken Report — Duplicate Invoice Detection' : 'Untitled Audit Report');
+  const [title, setTitle] = useState(initialTitle ?? (context === 'action-report' ? 'Action Taken Report — Duplicate Invoice Detection' : 'Untitled Audit Report'));
   const [sections, setSections] = useState<ReportSection[]>(getInitialSections(context));
   const [showPreview, setShowPreview] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -305,7 +323,17 @@ export default function ReportBuilder({ context, onBack }: Props) {
                 ))}
               </div>
               <button
-                onClick={() => { addToast({ type: 'success', message: `${title} has been saved to custom templates` }); }}
+                onClick={() => {
+                  onSaveAsTemplate?.({
+                    id: `ct-saved-${Date.now()}`,
+                    name: title,
+                    desc: 'User-saved template',
+                    category: 'Audit',
+                    icon: 'file-text',
+                    sections: sections.map(s => ({ name: s.title, icon: SECTION_TYPE_ICON[s.type] })),
+                  });
+                  addToast({ type: 'success', message: `${title} has been saved to custom templates` });
+                }}
                 className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-border text-[12px] font-medium text-text-secondary hover:bg-paper-50 hover:border-primary/30 transition-colors cursor-pointer"
               >
                 <BookOpen size={13} />

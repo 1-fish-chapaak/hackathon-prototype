@@ -41,7 +41,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 // Dummy user-created templates. Replace with real data when the create-custom-template flow lands.
-const CUSTOM_TEMPLATES = [
+export const CUSTOM_TEMPLATES = [
   {
     id: 'ct-custom-01',
     name: 'Custom Template - 01',
@@ -137,6 +137,8 @@ interface ReportsViewProps {
   onShare?: (id: string) => void;
   onManageExceptions?: () => void;
   onOpenQuery?: (query: { id: string; title: string }) => void;
+  customTemplates?: typeof REPORT_TEMPLATES[number][];
+  onAddCustomTemplate?: (template: typeof REPORT_TEMPLATES[number]) => void;
 }
 
 function TemplateCarousel({ children }: { children: React.ReactNode }) {
@@ -2759,7 +2761,13 @@ function ReportView({ report, onBack, onShare, onManageExceptions, onOpenQuery, 
 }
 
 // ─── Main Reports View ───
-export default function ReportsView({ onShare, onManageExceptions, onOpenQuery }: ReportsViewProps = {}) {
+export default function ReportsView({
+  onShare,
+  onManageExceptions,
+  onOpenQuery,
+  customTemplates: customTemplatesProp,
+  onAddCustomTemplate,
+}: ReportsViewProps = {}) {
   const [activeTab, setActiveTab] = useState<'templates' | 'my-reports' | 'shared-reports'>(() => {
     if (typeof window === 'undefined') return 'my-reports';
     const t = new URLSearchParams(window.location.search).get('tab');
@@ -2772,7 +2780,12 @@ export default function ReportsView({ onShare, onManageExceptions, onOpenQuery }
   const [viewingReport, setViewingReport] = useState<typeof GENERATED_REPORTS[0] | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [editingAsCopy, setEditingAsCopy] = useState(false);
-  const [customTemplates, setCustomTemplates] = useState<typeof REPORT_TEMPLATES[number][]>(CUSTOM_TEMPLATES as typeof REPORT_TEMPLATES[number][]);
+  const [customTemplatesLocal, setCustomTemplatesLocal] = useState<typeof REPORT_TEMPLATES[number][]>(CUSTOM_TEMPLATES as typeof REPORT_TEMPLATES[number][]);
+  const customTemplates = customTemplatesProp ?? customTemplatesLocal;
+  const addCustomTemplate = (t: typeof REPORT_TEMPLATES[number]) => {
+    if (onAddCustomTemplate) onAddCustomTemplate(t);
+    else setCustomTemplatesLocal(prev => [t, ...prev]);
+  };
   const [generatedReports, setGeneratedReports] = useState<typeof GENERATED_REPORTS[number][]>([...GENERATED_REPORTS]);
   const [previewingTemplate, setPreviewingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -3178,7 +3191,7 @@ export default function ReportsView({ onShare, onManageExceptions, onOpenQuery }
             template={editingTemplate}
             isCopy={editingAsCopy}
             onClose={() => { setEditingTemplate(null); setEditingAsCopy(false); }}
-            onSaveCopy={(copy) => setCustomTemplates(prev => [copy, ...prev])}
+            onSaveCopy={(copy) => addCustomTemplate(copy)}
           />
         )}
       </AnimatePresence>
@@ -3358,7 +3371,12 @@ export default function ReportsView({ onShare, onManageExceptions, onOpenQuery }
               className="relative bg-white overflow-hidden shadow-2xl flex flex-col w-[560px] max-h-[80vh]" style={{ borderRadius: '16px' }}
               onClick={e => e.stopPropagation()}
             >
-              <ReportBuilder context="new" onBack={() => setShowBuilderModal(false)} />
+              <ReportBuilder
+                context="new"
+                onBack={() => setShowBuilderModal(false)}
+                initialTitle={newReportName.trim() || undefined}
+                onSaveAsTemplate={(t) => addCustomTemplate(t as typeof REPORT_TEMPLATES[number])}
+              />
             </motion.div>
           </motion.div>
         )}
