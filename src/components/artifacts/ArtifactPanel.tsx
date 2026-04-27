@@ -206,6 +206,15 @@ export default function ArtifactPanel({ activeTab, setActiveTab, onClose }: Arti
       transition={{ duration: 0.25, ease: 'easeInOut' }}
       className="h-full bg-surface-2 border-l border-border-light flex flex-col overflow-hidden shrink-0"
     >
+      {/* IRA Workspace identifier */}
+      <div className="h-7 border-b border-border-light bg-canvas flex items-center px-4 shrink-0">
+        <div className="flex items-center gap-1.5">
+          <Sparkles size={11} className="text-primary" />
+          <span className="text-[10.5px] font-semibold tracking-[0.08em] uppercase text-text-muted">IRA Workspace</span>
+          <span className="text-[10.5px] text-text-muted/70">· Query mode</span>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="h-12 border-b border-border-light bg-white flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-1">
