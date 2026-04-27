@@ -3117,7 +3117,7 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                       <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                     </svg>
                     {alerts.length > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center" style={{ width: 18, height: 18 }}>{alerts.length}</span>
+                      <span className="absolute -top-0.5 -right-0.5 bg-[#6a12cd] text-white text-[9px] font-bold rounded-full flex items-center justify-center" style={{ width: 18, height: 18 }}>{alerts.length}</span>
                     )}
                   </button>
 
@@ -3214,32 +3214,32 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                           const t = expandTitle.toLowerCase();
                           if (t.includes('accuracy') || t.includes('detection')) return (
                             <span className="flex items-center gap-1 text-[10px] text-ink-400">
-                              <Database size={10} className="text-brand-500" /> SQL
+                              <Database size={10} className="text-[#6a12cd]" /> SQL · audit_controls_db
                             </span>
                           );
                           if (t.includes('volume') && t.includes('trend')) return (
                             <span className="flex items-center gap-1 text-[10px] text-ink-400">
-                              <FileText size={10} className="text-green-600" /> Excel
+                              <FileText size={10} className="text-green-600" /> Excel · Invoice_Master.xlsx
                             </span>
                           );
                           if (t.includes('monthly') || t.includes('volume')) return (
                             <span className="flex items-center gap-1 text-[10px] text-ink-400">
-                              <FileText size={10} className="text-blue-500" /> CSV
+                              <FileText size={10} className="text-blue-500" /> CSV · Payment_Ledger.csv
                             </span>
                           );
                           if (t.includes('status') || t.includes('pie')) return (
                             <span className="flex items-center gap-1 text-[10px] text-ink-400">
-                              <Database size={10} className="text-amber-500" /> Query
+                              <Database size={10} className="text-amber-500" /> Query · status_distribution
                             </span>
                           );
                           if (t.includes('record') || t.includes('table')) return (
                             <span className="flex items-center gap-1 text-[10px] text-ink-400">
-                              <Database size={10} className="text-brand-500" /> SQL
+                              <Database size={10} className="text-[#6a12cd]" /> SQL · invoice_records_db
                             </span>
                           );
                           return (
                             <span className="flex items-center gap-1 text-[10px] text-ink-400">
-                              <Database size={10} className="text-brand-500" /> SQL
+                              <Database size={10} className="text-[#6a12cd]" /> SQL
                             </span>
                           );
                         })()}
@@ -3647,37 +3647,51 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
         <div className="fixed inset-0 z-[9999] bg-black/30 backdrop-blur-sm" onClick={() => setShowAlertNotifications(false)} />
         <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
           <div
-            className="pointer-events-auto bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[520px] max-h-[85vh] overflow-hidden"
+            className="pointer-events-auto bg-white rounded-[12px] border border-[#e5e7eb] shadow-[0_20px_60px_-10px_rgba(0,0,0,0.2)] w-[440px] max-h-[85vh] overflow-hidden font-['Inter',sans-serif]"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-8 pt-8 pb-4">
-              <h2 className="text-[20px] font-bold text-ink-900">Alert Notifications</h2>
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-[#e5e7eb]">
+              <div className="flex items-center gap-2.5">
+                <div className="size-8 rounded-lg bg-[#f4f0ff] flex items-center justify-center">
+                  <AlertTriangle size={15} className="text-[#6a12cd]" />
+                </div>
+                <div>
+                  <h2 className="text-[15px] font-bold text-[#26064a]">Alert Notifications</h2>
+                  <p className="text-[11px] text-[#9ca3af]">{alerts.length} active alert{alerts.length !== 1 ? 's' : ''}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowAlertNotifications(false)} className="p-1 rounded-md hover:bg-[#f9fafb] transition-colors cursor-pointer">
+                <X size={16} className="text-[#9ca3af]" />
+              </button>
             </div>
 
             {/* Alert list */}
-            <div className="px-8 pb-4 space-y-3 max-h-[400px] overflow-y-auto">
+            <div className="px-5 py-4 space-y-2.5 max-h-[400px] overflow-y-auto">
               {alerts.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-[14px] text-ink-400">No alerts</p>
-                  <p className="text-[12px] text-ink-300 mt-1">All clear! No threshold alerts triggered.</p>
+                <div className="text-center py-10">
+                  <div className="size-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                    <CheckCircle2 size={20} className="text-green-500" />
+                  </div>
+                  <p className="text-[13px] font-medium text-[#26064a]">All clear!</p>
+                  <p className="text-[11px] text-[#9ca3af] mt-0.5">No threshold alerts triggered.</p>
                 </div>
               ) : (
                 alerts.map(alert => (
-                  <div key={alert.id} className="flex items-start gap-3 bg-brand-50/50 border-l-3 border-brand-500 rounded-xl px-5 py-4" style={{ borderLeftWidth: 3 }}>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <AlertTriangle size={16} className="text-brand-600" />
-                        <span className="text-[14px] font-semibold text-ink-900">{alert.title}</span>
-                      </div>
-                      <p className="text-[13px] text-ink-600">{alert.message}</p>
-                      <p className="text-[12px] text-ink-400 mt-1">{alert.time}</p>
+                  <div key={alert.id} className="flex items-start gap-3 bg-[#fafafa] border border-[#e5e7eb] rounded-[8px] px-4 py-3 hover:bg-[#f5f0ff] transition-colors">
+                    <div className="size-7 rounded-md bg-[#f4f0ff] flex items-center justify-center shrink-0 mt-0.5">
+                      <AlertTriangle size={13} className="text-[#6a12cd]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[12px] font-semibold text-[#26064a]">{alert.title}</span>
+                      <p className="text-[11px] text-[#6b7280] mt-0.5 leading-relaxed">{alert.message}</p>
+                      <p className="text-[10px] text-[#9ca3af] mt-1">{alert.time}</p>
                     </div>
                     <button
                       onClick={() => setAlerts(prev => prev.filter(a => a.id !== alert.id))}
-                      className="shrink-0 p-1.5 border border-canvas-border rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
+                      className="shrink-0 p-1 rounded-md hover:bg-red-50 transition-colors cursor-pointer"
                     >
-                      <X size={14} className="text-ink-400" />
+                      <X size={12} className="text-[#9ca3af] hover:text-red-500" />
                     </button>
                   </div>
                 ))
@@ -3685,16 +3699,16 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between px-8 pb-8 pt-2">
+            <div className="flex items-center justify-between px-5 py-3 border-t border-[#e5e7eb]">
               <button
                 onClick={() => { setAlerts([]); }}
-                className="px-5 py-2.5 border border-canvas-border rounded-2xl text-[14px] font-semibold text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer"
+                className="text-[11px] font-semibold text-[#6a12cd] hover:text-[#5a0ebd] cursor-pointer"
               >
-                Clear All Alerts
+                Clear all
               </button>
               <button
                 onClick={() => setShowAlertNotifications(false)}
-                className="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl text-[14px] font-semibold transition-colors cursor-pointer"
+                className="px-4 py-1.5 bg-[#6a12cd] hover:bg-[#5a0ebd] text-white rounded-[8px] text-[12px] font-semibold transition-colors cursor-pointer"
               >
                 Close
               </button>
@@ -3719,6 +3733,7 @@ function ThresholdAlertModal({ open, onClose, widgetTitle, addToast }: {
   const [condition, setCondition] = useState('');
   const [emailNotification, setEmailNotification] = useState(false);
   const [notifyEmail, setNotifyEmail] = useState('');
+  const [emailList, setEmailList] = useState<string[]>([]);
 
   if (!open) return null;
 
@@ -3727,85 +3742,102 @@ function ThresholdAlertModal({ open, onClose, widgetTitle, addToast }: {
       <div className="fixed inset-0 z-[9999] bg-black/30 backdrop-blur-sm" onClick={onClose} />
       <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
         <div
-          className="pointer-events-auto bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[460px] max-h-[85vh] overflow-hidden"
+          className="pointer-events-auto bg-white rounded-[12px] border border-[#e5e7eb] shadow-[0_20px_60px_-10px_rgba(0,0,0,0.2)] w-[440px] max-h-[85vh] overflow-hidden font-['Inter',sans-serif]"
           onClick={e => e.stopPropagation()}
         >
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[#f0f0f0]">
+            <div>
+              <h2 className="text-[14px] font-bold text-[#26064a]">Set Threshold Alert</h2>
+              <p className="text-[11px] text-[#9ca3af] mt-0.5">{widgetTitle}</p>
+            </div>
+            <button onClick={onClose} className="p-1 rounded-md hover:bg-[#f9fafb] transition-colors cursor-pointer">
+              <X size={16} className="text-[#9ca3af]" />
+            </button>
+          </div>
+
           {/* Content */}
-          <div className="px-8 pt-8 pb-6 space-y-6">
-            {/* Title */}
-            <div>
-              <h2 className="text-[20px] font-bold text-ink-900">Set Threshold Alert</h2>
-              <p className="text-[14px] text-ink-400 mt-1">Configure alerts for {widgetTitle}</p>
-            </div>
-
-            {/* Threshold Value */}
-            <div>
-              <label className="text-[15px] font-bold text-ink-900 block mb-2.5">Threshold Value</label>
-              <input
-                type="number"
-                value={thresholdValue}
-                onChange={e => setThresholdValue(e.target.value)}
-                className="w-full px-5 py-3.5 text-[15px] border border-canvas-border rounded-2xl bg-white text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all"
-              />
-              <p className="text-[13px] text-ink-400 mt-2">The metric value that will trigger the alert</p>
-            </div>
-
-            {/* Condition */}
-            <div>
-              <label className="text-[15px] font-bold text-ink-900 block mb-2.5">Condition</label>
-              <div className="relative">
-                <select
-                  value={condition}
-                  onChange={e => setCondition(e.target.value)}
-                  className="w-full px-5 py-3.5 text-[15px] border border-canvas-border rounded-2xl bg-white text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all appearance-none cursor-pointer"
-                >
-                  <option value="">Select condition</option>
-                  <option value="greater">Greater than</option>
-                  <option value="less">Less than</option>
-                  <option value="equal">Equal to</option>
-                  <option value="greater_equal">Greater than or equal</option>
-                  <option value="less_equal">Less than or equal</option>
-                </select>
-                <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none" />
+          <div className="px-5 py-4 space-y-3">
+            {/* Threshold + Condition in one row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-semibold text-[#26064a] block mb-1">Threshold Value</label>
+                <input
+                  type="number"
+                  value={thresholdValue}
+                  onChange={e => setThresholdValue(e.target.value)}
+                  className="w-full px-3 py-2 text-[12px] border border-[rgba(38,6,74,0.2)] rounded-[8px] bg-white text-[#26064a] outline-none focus:border-[#6a12cd] focus:ring-1 focus:ring-[#6a12cd] transition-all shadow-sm"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-[#26064a] block mb-1">Condition</label>
+                <div className="relative">
+                  <select
+                    value={condition}
+                    onChange={e => setCondition(e.target.value)}
+                    className="w-full px-3 py-2 text-[12px] border border-[rgba(38,6,74,0.2)] rounded-[8px] bg-white text-[#26064a] outline-none focus:border-[#6a12cd] focus:ring-1 focus:ring-[#6a12cd] transition-all appearance-none cursor-pointer shadow-sm"
+                  >
+                    <option value="">Select</option>
+                    <option value="greater">Greater than (&gt;)</option>
+                    <option value="less">Less than (&lt;)</option>
+                    <option value="equal">Equal to (=)</option>
+                    <option value="greater_equal">≥ Greater or equal</option>
+                    <option value="less_equal">≤ Less or equal</option>
+                  </select>
+                  <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9ca3af] pointer-events-none" />
+                </div>
               </div>
             </div>
-
-            {/* Divider */}
-            <div className="border-t border-canvas-border" />
 
             {/* Email Notification */}
-            <div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Mail size={20} className="text-brand-600" />
-                  <span className="text-[15px] font-bold text-ink-900">Email Notification</span>
-                </div>
-                <button
-                  onClick={() => setEmailNotification(!emailNotification)}
-                  className={`relative rounded-full transition-colors cursor-pointer ${emailNotification ? 'bg-brand-600' : 'bg-ink-200'}`}
-                  style={{ width: 44, height: 24 }}
-                >
-                  <div className={`absolute top-[3px] size-[18px] bg-white rounded-full shadow transition-all ${emailNotification ? 'left-[23px]' : 'left-[3px]'}`} />
-                </button>
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-2">
+                <Mail size={14} className="text-[#6a12cd]" />
+                <span className="text-[12px] font-semibold text-[#26064a]">Email Notification</span>
               </div>
-              <p className="text-[13px] text-ink-400 mt-1.5 ml-[32px]">Receive email alerts when threshold conditions are met</p>
-              {emailNotification && (
+              <button
+                onClick={() => setEmailNotification(!emailNotification)}
+                className={`relative rounded-full transition-colors cursor-pointer ${emailNotification ? 'bg-[#6a12cd]' : 'bg-[#d1d5db]'}`}
+                style={{ width: 36, height: 20 }}
+              >
+                <div className={`absolute top-[2px] size-[16px] bg-white rounded-full shadow transition-all ${emailNotification ? 'left-[18px]' : 'left-[2px]'}`} />
+              </button>
+            </div>
+            {emailNotification && (
+              <>
+                {emailList.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {emailList.map((email, idx) => (
+                      <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#f4f0ff] border border-[#6a12cd]/20 rounded-md text-[10px] text-[#6a12cd] font-medium">
+                        {email}
+                        <button onClick={() => setEmailList(prev => prev.filter((_, i) => i !== idx))} className="hover:text-red-500 cursor-pointer"><X size={9} /></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <input
                   type="email"
                   value={notifyEmail}
                   onChange={e => setNotifyEmail(e.target.value)}
-                  placeholder="Enter email address"
-                  className="w-full mt-3 px-5 py-3.5 text-[15px] border border-canvas-border rounded-2xl bg-white text-ink-900 placeholder:text-ink-400 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && notifyEmail.trim() && notifyEmail.includes('@')) {
+                      e.preventDefault();
+                      setEmailList(prev => [...prev, notifyEmail.trim()]);
+                      setNotifyEmail('');
+                    }
+                  }}
+                  placeholder={emailList.length > 0 ? "Add another email..." : "Enter email and press Enter"}
+                  className="w-full px-3 py-2 text-[12px] border border-[rgba(38,6,74,0.2)] rounded-[8px] bg-white text-[#26064a] placeholder:text-[rgba(38,6,74,0.2)] outline-none focus:border-[#6a12cd] focus:ring-1 focus:ring-[#6a12cd] transition-all shadow-sm"
                 />
-              )}
-            </div>
+              </>
+            )}
           </div>
 
           {/* Footer */}
-          <div className="flex gap-3 px-8 pb-8">
+          <div className="flex gap-2 px-5 py-3 border-t border-[#f0f0f0]">
             <button
               onClick={onClose}
-              className="flex-1 py-3.5 border border-canvas-border rounded-2xl text-[15px] font-semibold text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer"
+              className="flex-1 py-2 border border-[#e5e7eb] rounded-[8px] text-[12px] font-semibold text-[#26064a] hover:bg-[#f9fafb] transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -3814,7 +3846,7 @@ function ThresholdAlertModal({ open, onClose, widgetTitle, addToast }: {
                 addToast({ message: 'Threshold alert saved', type: 'success' });
                 onClose();
               }}
-              className="flex-1 py-3.5 bg-brand-600 hover:bg-brand-500 text-white rounded-2xl text-[15px] font-semibold transition-colors cursor-pointer"
+              className="flex-1 py-2 bg-[#6a12cd] hover:bg-[#5a0ebd] text-white rounded-[8px] text-[12px] font-semibold transition-colors cursor-pointer"
             >
               Save Alert
             </button>
@@ -4051,16 +4083,16 @@ function WidgetCard({
           ) : (
             <div className="flex items-center gap-2 mt-0.5">
               {localSubtitle && <p className="text-[11px] text-ink-500 truncate">{localSubtitle}</p>}
-              {localSubtitle && chartType && <span className="text-ink-300 text-[9px]">·</span>}
-              {chartType && (
-                <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0">
-                  {chartType === 'bar' ? <><FileText size={8} className="text-green-600" /> Excel</> :
-                   chartType === 'pie' ? <><FileText size={8} className="text-blue-500" /> CSV</> :
-                   chartType === 'line' ? <><Database size={8} className="text-brand-500" /> SQL</> :
-                   chartType === 'table' ? <><Database size={8} className="text-amber-500" /> Query</> :
-                   <><Database size={8} className="text-brand-500" /> SQL</>}
-                </span>
-              )}
+              {localSubtitle && <span className="text-ink-300 text-[9px]">·</span>}
+              {(() => {
+                const t = localTitle.toLowerCase();
+                if (t.includes('accuracy') || t.includes('detection')) return <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0"><Database size={8} className="text-[#6a12cd]" /> SQL</span>;
+                if (t.includes('volume') && t.includes('trend')) return <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0"><FileText size={8} className="text-green-600" /> Excel</span>;
+                if (t.includes('monthly') || (t.includes('volume') && !t.includes('trend'))) return <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0"><FileText size={8} className="text-blue-500" /> CSV</span>;
+                if (t.includes('status') || t.includes('distribution')) return <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0"><Database size={8} className="text-amber-500" /> Query</span>;
+                if (t.includes('record') || t.includes('table') || chartType === 'table') return <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0"><Database size={8} className="text-[#6a12cd]" /> SQL</span>;
+                return <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0"><Database size={8} className="text-[#6a12cd]" /> SQL</span>;
+              })()}
               {dataLinksFromParent && dataLinksFromParent.length > 0 && (() => {
                 const widgetLabels = (widgetFields || []).map(id => DRAG_FIELDS.find(f => f.id === id)?.label).filter(Boolean);
                 const relevantCount = dataLinksFromParent.filter(l => widgetLabels.includes(l.fieldA) || widgetLabels.includes(l.fieldB)).length;
