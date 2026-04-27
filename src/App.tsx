@@ -16,7 +16,7 @@ import RiskRegister from './components/audit/RiskRegister';
 import AuditExecution from './components/audit/AuditExecution';
 import DashboardView from './components/dashboard/DashboardView';
 import DashboardListPage from './components/dashboard/DashboardListPage';
-import ReportsView from './components/reports/ReportsView';
+import ReportsView, { CUSTOM_TEMPLATES } from './components/reports/ReportsView';
 import HomeView from './components/home/HomeView';
 import RecentsView from './components/recents/RecentsView';
 import KnowledgeHubView from './components/knowledge/KnowledgeHubView';
@@ -89,6 +89,9 @@ export default function App() {
   const [viewLoading, setViewLoading] = useState(false);
   const [controlDrawerId, setControlDrawerId] = useState<string | null>(null);
   const [engagementBackView, setEngagementBackView] = useState<'programs' | 'audit-planning' | 'business-processes'>('programs');
+  type CustomTemplate = typeof CUSTOM_TEMPLATES[number];
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>(CUSTOM_TEMPLATES);
+  const addCustomTemplate = (t: CustomTemplate) => setCustomTemplates(prev => [t, ...prev]);
 
   useEffect(() => {
     if (mainScrollRef.current) {
@@ -314,6 +317,8 @@ export default function App() {
               setChatInitialQuery(`Open the ${q.id} duplicate invoice query`);
               setView('chat');
             }}
+            customTemplates={customTemplates}
+            onAddCustomTemplate={addCustomTemplate}
           />
         );
 
@@ -332,6 +337,7 @@ export default function App() {
           <ReportBuilder
             context={state.reportBuilderContext}
             onBack={() => setView('reports')}
+            onSaveAsTemplate={addCustomTemplate}
           />
         );
 
