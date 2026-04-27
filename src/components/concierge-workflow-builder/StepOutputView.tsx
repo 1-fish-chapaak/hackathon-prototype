@@ -5,6 +5,8 @@ import {
   Search,
   Sparkles,
   Loader2,
+  Save,
+  Check,
 } from 'lucide-react';
 import type { WorkflowDraft, RunResult } from './types';
 
@@ -12,9 +14,11 @@ interface Props {
   workflow: WorkflowDraft;
   result: RunResult | null;
   running: boolean;
+  onSave?: () => void;
+  saved?: boolean;
 }
 
-export default function StepOutputView({ workflow, result, running }: Props) {
+export default function StepOutputView({ workflow, result, running, onSave, saved }: Props) {
   if (running && !result) {
     return (
       <div className="flex items-center gap-2 rounded-xl border border-canvas-border bg-canvas-elevated px-3 py-2.5">
@@ -148,6 +152,20 @@ export default function StepOutputView({ workflow, result, running }: Props) {
           })}
         </div>
       </div>
+
+      {onSave && (
+        <div className="flex items-center justify-start">
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={saved}
+            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-semibold text-white bg-gradient-to-br from-brand-600 to-fuchsia-600 hover:from-brand-500 hover:to-fuchsia-500 shadow-[0_8px_16px_-10px_rgba(106,18,205,0.5)] disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer"
+          >
+            {saved ? <Check size={13} /> : <Save size={13} />}
+            {saved ? 'Workflow saved' : 'Save Workflow'}
+          </button>
+        </div>
+      )}
     </motion.div>
   );
 }

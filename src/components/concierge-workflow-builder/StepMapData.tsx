@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 import {
-  ChevronDown,
   X,
   File as FileIcon,
-  Eye,
-  ArrowLeftRight,
   Search,
   Check,
+  Pencil,
+  ArrowLeft,
+  Shapes,
+  ShieldCheck,
 } from 'lucide-react';
 import type {
   WorkflowDraft,
@@ -19,23 +20,26 @@ import type {
 interface Props {
   workflow: WorkflowDraft;
   files: JourneyFiles;
+  // Kept for backward compatibility with the parent — no longer used in this card.
   setFiles: (f: JourneyFiles) => void;
-  // Kept for backward compatibility with the parent — no longer rendered.
   alignments: JourneyAlignments;
   expandedInputId?: string | null;
   onToggleExpand?: (inputId: string) => void;
+  onViewWorkspace?: () => void;
+  onConfirm?: () => void;
+  confirmDisabled?: boolean;
 }
 
 export default function StepMapData({
   workflow,
   files,
-  setFiles,
   expandedInputId,
   onToggleExpand,
+  onViewWorkspace,
+  onConfirm,
+  confirmDisabled,
 }: Props) {
-  const [internalExpanded, setInternalExpanded] = useState<string | null>(
-    workflow.inputs[0]?.id ?? null,
-  );
+  const [internalExpanded, setInternalExpanded] = useState<string | null>(null);
   const expanded = expandedInputId !== undefined ? expandedInputId : internalExpanded;
   const toggleExpanded = (inputId: string) => {
     if (onToggleExpand) {
@@ -45,8 +49,6 @@ export default function StepMapData({
     }
   };
 
-  const [selectFileOpen, setSelectFileOpen] = useState<string | null>(null);
-  const [selectFileSearch, setSelectFileSearch] = useState('');
   const [previewInput, setPreviewInput] = useState<{ name: string; files: { name: string }[] } | null>(null);
 
   // Column selection state — seeded with ALL columns selected per input.
@@ -77,20 +79,12 @@ export default function StepMapData({
     setSelectedByInput((prev) => ({ ...prev, [inputId]: new Set() }));
   };
 
-  const allUploadedFiles = useMemo(() => {
-    const all: { name: string; inputId: string }[] = [];
-    Object.entries(files).forEach(([inputId, fileList]) => {
-      fileList.forEach((f) => all.push({ name: f.name, inputId }));
-    });
-    return all;
-  }, [files]);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="flex flex-col gap-3"
+      className="flex flex-col gap-2.5"
     >
       {workflow.inputs.map((input) => {
         const allCols = input.columns ?? [];
@@ -101,143 +95,94 @@ export default function StepMapData({
         );
         const isOpen = expanded === input.id;
         const uploaded = files[input.id] ?? [];
+        const sourceName = uploaded[0]?.name ?? 'No source mapped';
+        const selectedCols = allCols.filter((c) => selected.has(c));
 
         return (
           <section
             key={input.id}
-            className="rounded-2xl border border-canvas-border bg-canvas-elevated overflow-visible"
+            className="rounded-2xl border border-canvas-border bg-canvas-elevated overflow-hidden"
           >
-            {/* Header */}
-            <button
-              type="button"
-              onClick={() => toggleExpanded(input.id)}
-              className="w-full flex items-start justify-between px-5 py-4 cursor-pointer hover:bg-brand-50/40 transition-colors text-left"
-            >
-              <div className="min-w-0">
-                <div className="text-[14px] font-bold text-ink-900">{input.name}</div>
-                <p className="text-[11.5px] text-ink-400 mt-0.5 line-clamp-1">
-                  {input.description}
-                </p>
+            {/* Compact header row */}
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[14px] font-semibold text-ink-900 shrink-0">
+                  {input.name}
+                </span>
+                <ArrowLeft size={13} className="text-ink-400 shrink-0" />
+                <button
+                  type="button"
+                  onClick={() =>
+                    uploaded.length > 0 &&
+                    setPreviewInput({ name: input.name, files: uploaded })
+                  }
+                  disabled={uploaded.length === 0}
+                  className={[
+                    'text-[13px] truncate text-left transition-colors',
+                    uploaded.length > 0
+                      ? 'text-ink-500 hover:text-brand-700 cursor-pointer'
+                      : 'text-ink-400 italic cursor-default',
+                  ].join(' ')}
+                >
+                  {sourceName}
+                </button>
               </div>
-              <div className="flex items-center gap-3 shrink-0 ml-4">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-[18px] font-bold text-ink-800 tabular-nums leading-tight">
-                    {selected.size}/{allCols.length}
-                  </span>
-                  <span className="text-[10px] text-ink-400 font-semibold leading-tight">
-                    columns
-                    <br />
-                    selected
-                  </span>
-                </div>
-                <ChevronDown
-                  size={16}
-                  className={`text-ink-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                />
-              </div>
-            </button>
-
-            {/* Mapped sources */}
-            <div className="px-5 pb-4">
-              <div className="border-t border-canvas-border/30 mb-3" />
-
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400">
-                    Mapped Sources
-                  </span>
-                  {uploaded.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setPreviewInput({ name: input.name, files: uploaded })}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-canvas-border bg-canvas-elevated hover:border-ink-300 hover:text-ink-800 px-2.5 py-0.5 text-[11px] font-semibold text-ink-600 transition-colors cursor-pointer"
-                    >
-                      <Eye size={11} />
-                      Preview
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center flex-wrap gap-1.5 min-w-0">
-                  {uploaded.length === 0 ? (
-                    <span className="text-[11.5px] text-ink-400 italic">
-                      No files mapped. Upload or choose a file to get started.
-                    </span>
-                  ) : (
-                    <>
-                      {uploaded.slice(0, 2).map((f, i) => (
-                        <span
-                          key={`${f.name}-${i}`}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50/60 pl-2.5 pr-1.5 py-1 text-[11.5px] text-ink-700"
-                        >
-                          <FileIcon size={11} className="text-brand-600/70 shrink-0" />
-                          <span className="max-w-[160px] truncate">{f.name}</span>
-                          <button
-                            type="button"
-                            className="p-0.5 rounded text-ink-400 hover:text-risk-600 hover:bg-risk-50 transition-colors"
-                            aria-label="Remove file"
-                          >
-                            <X size={11} />
-                          </button>
-                        </span>
-                      ))}
-                      {uploaded.length > 2 && (
-                        <span className="inline-flex items-center rounded-lg border border-brand-200/60 bg-brand-50/40 px-2.5 py-1 text-[11.5px] font-semibold text-brand-700">
-                          + {uploaded.length - 2} more
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <SelectFileDropdown
-                  inputId={input.id}
-                  isOpen={selectFileOpen === input.id}
-                  onToggle={() => {
-                    setSelectFileOpen(selectFileOpen === input.id ? null : input.id);
-                    setSelectFileSearch('');
-                  }}
-                  onClose={() => setSelectFileOpen(null)}
-                  search={selectFileSearch}
-                  setSearch={setSelectFileSearch}
-                  allFiles={allUploadedFiles}
-                  currentFiles={uploaded}
-                  onToggleFile={(fileName, isCurrentlySelected) => {
-                    const current = files[input.id] ?? [];
-                    if (isCurrentlySelected) {
-                      setFiles({ ...files, [input.id]: current.filter((f) => f.name !== fileName) });
-                    } else {
-                      const source = allUploadedFiles.find((f) => f.name === fileName);
-                      if (source) {
-                        const original = (files[source.inputId] ?? []).find((f) => f.name === fileName);
-                        setFiles({ ...files, [input.id]: [...current, original ?? { name: fileName, size: 0 }] });
-                      }
-                    }
-                  }}
-                />
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="text-[12px] text-ink-400 tabular-nums whitespace-nowrap">
+                  {selected.size} of {allCols.length} cols
+                </span>
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(input.id)}
+                  aria-expanded={isOpen}
+                  className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-700 hover:text-brand-800 cursor-pointer transition-colors"
+                >
+                  <Pencil size={12} />
+                  Edit
+                </button>
               </div>
             </div>
 
-            {/* Column selection */}
+            {/* Collapsed: selected column pills */}
+            {!isOpen && (
+              <div className="px-4 pb-3">
+                {selectedCols.length === 0 ? (
+                  <span className="text-[11.5px] text-ink-400 italic">
+                    No columns selected.
+                  </span>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedCols.map((col) => (
+                      <span
+                        key={col}
+                        className="inline-flex items-center rounded-lg bg-brand-50 border border-brand-100 px-2.5 py-1 text-[12px] text-ink-800 font-medium"
+                      >
+                        {col}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Expanded: column picker */}
             {isOpen && (
-              <div className="border-t border-canvas-border/30 rounded-b-2xl overflow-hidden">
+              <div className="border-t border-canvas-border/60 px-4 py-3">
                 {allCols.length === 0 ? (
-                  <div className="px-5 py-4 text-[11.5px] text-ink-400">
+                  <div className="text-[11.5px] text-ink-400">
                     No columns detected for {input.name}.
                   </div>
                 ) : (
-                  <div className="px-5 py-4">
+                  <>
                     <div className="flex items-center justify-between mb-2.5">
-                      <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400">
-                        Select Columns To Use
+                      <span className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink-400">
+                        Select columns to use
                       </span>
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => selectAll(input.id, allCols)}
-                          className="text-[11px] font-semibold text-brand-700 hover:text-brand-800 cursor-pointer px-1.5 py-0.5 rounded hover:bg-brand-50 transition-colors"
+                          className="text-[11.5px] font-semibold text-brand-700 hover:text-brand-800 cursor-pointer px-1 py-0.5 transition-colors"
                         >
                           Select all
                         </button>
@@ -245,31 +190,32 @@ export default function StepMapData({
                         <button
                           type="button"
                           onClick={() => deselectAll(input.id)}
-                          className="text-[11px] font-semibold text-ink-500 hover:text-ink-700 cursor-pointer px-1.5 py-0.5 rounded hover:bg-canvas transition-colors"
+                          className="text-[11.5px] font-semibold text-ink-500 hover:text-ink-700 cursor-pointer px-1 py-0.5 transition-colors"
                         >
                           Deselect all
                         </button>
                       </div>
                     </div>
 
-                    {/* Search */}
                     <div className="relative mb-2.5">
                       <Search
                         size={12}
-                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400"
                       />
                       <input
                         type="text"
                         value={search}
                         onChange={(e) =>
-                          setSearchByInput((prev) => ({ ...prev, [input.id]: e.target.value }))
+                          setSearchByInput((prev) => ({
+                            ...prev,
+                            [input.id]: e.target.value,
+                          }))
                         }
                         placeholder="Type to filter columns…"
-                        className="w-full rounded-lg border border-canvas-border bg-canvas px-8 py-1.5 text-[12px] text-ink-800 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/30 transition-all"
+                        className="w-full rounded-full border border-canvas-border bg-canvas pl-8 pr-3 py-2 text-[12.5px] text-ink-800 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-600/15 focus:border-brand-400/50 transition-all"
                       />
                     </div>
 
-                    {/* Columns grid */}
                     {filteredCols.length === 0 ? (
                       <div className="rounded-lg border border-dashed border-canvas-border px-3 py-4 text-center text-[11.5px] text-ink-400">
                         No columns match “{search}”.
@@ -285,23 +231,25 @@ export default function StepMapData({
                                 onClick={() => toggleColumn(input.id, col)}
                                 aria-pressed={isSelected}
                                 className={[
-                                  'w-full flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left transition-colors cursor-pointer',
+                                  'w-full flex items-center gap-2.5 rounded-full border px-3 py-1.5 text-left transition-colors cursor-pointer',
                                   isSelected
-                                    ? 'border-brand-300 bg-brand-50/60'
-                                    : 'border-canvas-border bg-canvas hover:border-brand-300 hover:bg-brand-50/30',
+                                    ? 'border-brand-400 bg-brand-50/60'
+                                    : 'border-canvas-border bg-canvas-elevated hover:border-brand-300 hover:bg-brand-50/30',
                                 ].join(' ')}
                               >
                                 <span
                                   className={[
-                                    'w-4 h-4 rounded-md flex items-center justify-center shrink-0 transition-colors',
+                                    'w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors',
                                     isSelected
                                       ? 'bg-brand-600 text-white'
-                                      : 'border border-canvas-border bg-canvas-elevated',
+                                      : 'border border-canvas-border bg-canvas',
                                   ].join(' ')}
                                 >
-                                  {isSelected && <Check size={11} strokeWidth={3} />}
+                                  {isSelected && (
+                                    <Check size={12} strokeWidth={3} />
+                                  )}
                                 </span>
-                                <span className="flex-1 text-[12px] font-medium text-ink-800 truncate">
+                                <span className="flex-1 text-[13px] font-medium text-ink-800 truncate">
                                   {col}
                                 </span>
                               </button>
@@ -310,21 +258,37 @@ export default function StepMapData({
                         })}
                       </ul>
                     )}
-
-                    {/* Footer */}
-                    <div className="mt-3 rounded-lg bg-brand-50/40 border border-brand-100 px-3 py-1.5 text-[11.5px] text-ink-700">
-                      <b className="text-brand-700 tabular-nums">
-                        Selected {selected.size} of {allCols.length}
-                      </b>{' '}
-                      columns
-                    </div>
-                  </div>
+                  </>
                 )}
               </div>
             )}
           </section>
         );
       })}
+
+      <div className="flex items-center justify-between gap-2">
+        {onConfirm ? (
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={confirmDisabled}
+            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-semibold text-white bg-gradient-to-br from-brand-600 to-fuchsia-600 hover:from-brand-500 hover:to-fuchsia-500 shadow-[0_8px_16px_-10px_rgba(106,18,205,0.5)] disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+          >
+            <ShieldCheck size={13} />
+            Confirm & Proceed
+          </button>
+        ) : (
+          <span />
+        )}
+        <button
+          type="button"
+          onClick={() => onViewWorkspace?.()}
+          className="inline-flex items-center gap-1.5 rounded-md border border-canvas-border bg-canvas-elevated hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50/40 px-3 py-1.5 text-[12px] font-semibold text-ink-700 transition-colors cursor-pointer"
+        >
+          <Shapes size={13} />
+          View Workspace
+        </button>
+      </div>
 
       {/* Preview modal */}
       {previewInput && (
@@ -335,103 +299,6 @@ export default function StepMapData({
         />
       )}
     </motion.div>
-  );
-}
-
-// ─── Select File(s) dropdown ─────────────────────────────────────────
-
-function SelectFileDropdown({
-  isOpen,
-  onToggle,
-  onClose,
-  search,
-  setSearch,
-  allFiles,
-  currentFiles,
-  onToggleFile,
-}: {
-  inputId: string;
-  isOpen: boolean;
-  onToggle: () => void;
-  onClose: () => void;
-  search: string;
-  setSearch: (s: string) => void;
-  allFiles: { name: string; inputId: string }[];
-  currentFiles: { name: string }[];
-  onToggleFile: (fileName: string, isCurrentlySelected: boolean) => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    setTimeout(() => searchRef.current?.focus(), 0);
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [isOpen, onClose]);
-
-  const currentNames = new Set(currentFiles.map((f) => f.name));
-  const filtered = allFiles.filter((f) =>
-    f.name.toLowerCase().includes(search.toLowerCase()),
-  );
-
-  return (
-    <div ref={ref} className="relative shrink-0">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 bg-canvas-elevated hover:bg-brand-50 px-3 py-1.5 text-[11.5px] font-semibold text-brand-700 transition-colors cursor-pointer"
-      >
-        <ArrowLeftRight size={12} />
-        Choose File
-      </button>
-
-      {isOpen && (
-        <div className="absolute right-0 top-full mt-1.5 w-72 bg-canvas-elevated rounded-xl border border-canvas-border shadow-lg z-50 overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-2.5 border-b border-canvas-border/60">
-            <Search size={14} className="text-ink-400 shrink-0" />
-            <input
-              ref={searchRef}
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search files..."
-              className="w-full text-[12px] text-ink-700 placeholder:text-ink-400 outline-none bg-transparent"
-            />
-          </div>
-          <div className="max-h-48 overflow-y-auto py-1">
-            {filtered.length > 0 ? (
-              filtered.map((f, i) => {
-                const isSelected = currentNames.has(f.name);
-                return (
-                  <label
-                    key={`${f.name}-${i}`}
-                    className={`flex items-center gap-2.5 px-3 py-2 text-[12px] cursor-pointer transition-colors ${
-                      isSelected ? 'text-ink-800' : 'text-ink-600 hover:bg-brand-50/40'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => onToggleFile(f.name, isSelected)}
-                      className="size-3.5 rounded border-ink-300 accent-brand-600 shrink-0 cursor-pointer"
-                    />
-                    <span className="truncate">{f.name}</span>
-                  </label>
-                );
-              })
-            ) : (
-              <p className="px-3 py-3 text-[11px] text-ink-400 text-center">
-                No files found
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
   );
 }
 
