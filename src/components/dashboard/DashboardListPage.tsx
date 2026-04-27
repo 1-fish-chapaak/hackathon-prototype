@@ -16,6 +16,8 @@ interface Dashboard {
   creator: string;
   accent: string;
   sharedBy?: string;
+  dataSource?: 'excel' | 'csv' | 'sql' | 'query' | 'combo';
+  dataSourceNames?: string[];
 }
 
 type SortOption = 'recently' | 'oldest' | 'nameAZ' | 'nameZA';
@@ -38,6 +40,8 @@ const MY_DASHBOARDS: Dashboard[] = [
     timeAgo: '2 hours ago',
     creator: 'You',
     accent: 'bg-brand-50 text-brand-700',
+    dataSource: 'excel',
+    dataSourceNames: ['Invoice_Master.xlsx', 'Vendor_Finance.xlsx'],
   },
   {
     id: 'grc',
@@ -46,6 +50,8 @@ const MY_DASHBOARDS: Dashboard[] = [
     timeAgo: '3 hours ago',
     creator: 'You',
     accent: 'bg-brand-50 text-brand-700',
+    dataSource: 'sql',
+    dataSourceNames: ['audit_controls_db'],
   },
   {
     id: 'o2c',
@@ -54,6 +60,8 @@ const MY_DASHBOARDS: Dashboard[] = [
     timeAgo: '5 hours ago',
     creator: 'You',
     accent: 'bg-brand-50 text-brand-700',
+    dataSource: 'query',
+    dataSourceNames: ['revenue_query'],
   },
   {
     id: 's2c',
@@ -62,6 +70,8 @@ const MY_DASHBOARDS: Dashboard[] = [
     timeAgo: '1 day ago',
     creator: 'You',
     accent: 'bg-brand-50 text-brand-700',
+    dataSource: 'combo',
+    dataSourceNames: ['Invoice_Master.xlsx', 'PO_Register.csv', 'vendor_query', 'contract_db'],
   },
 ];
 
@@ -674,15 +684,6 @@ export default function DashboardListPage({ onDashboardClick, onImportPowerBI, c
               <p className="text-[13px] text-ink-500 mt-1">Manage and access all analytics dashboards</p>
             </div>
             <div className="flex items-center gap-2">
-              {onImportPowerBI && (
-                <button
-                  onClick={onImportPowerBI}
-                  className="flex items-center gap-2 px-3 h-10 border border-canvas-border bg-canvas-elevated rounded-md text-[13px] text-ink-700 hover:border-brand-200 transition-colors cursor-pointer"
-                >
-                  <Download size={14} />
-                  Import Power BI
-                </button>
-              )}
               <button
                 onClick={() => setCreateModalOpen(true)}
                 className="flex items-center gap-2 px-4 h-10 bg-brand-600 hover:bg-brand-500 active:bg-brand-800 text-white rounded-md text-[13px] font-semibold transition-colors cursor-pointer"
@@ -827,9 +828,33 @@ export default function DashboardListPage({ onDashboardClick, onImportPowerBI, c
 
                 {/* Footer */}
                 <div className="flex items-center justify-between pt-3 border-t border-canvas-border mt-auto">
-                  <div className="flex items-center gap-1.5">
-                    <Clock size={13} className="text-ink-400" />
-                    <span className="text-[12px] text-ink-400">{dashboard.timeAgo}</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <Clock size={13} className="text-ink-400" />
+                      <span className="text-[12px] text-ink-400">{dashboard.timeAgo}</span>
+                    </div>
+                    {dashboard.dataSourceNames && dashboard.dataSourceNames.length > 0 && (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {(() => {
+                          const types = new Set<string>();
+                          dashboard.dataSourceNames!.forEach(name => {
+                            if (name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv')) types.add('file');
+                            else if (name.includes('query')) types.add('query');
+                            else types.add('sql');
+                          });
+                          return Array.from(types).map(t => (
+                            <span key={t} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold ${
+                              t === 'file' ? 'bg-green-50 text-green-700' :
+                              t === 'query' ? 'bg-amber-50 text-amber-700' :
+                              'bg-purple-50 text-purple-700'
+                            }`}>
+                              {t === 'file' ? <Upload size={8} /> : <Database size={8} />}
+                              {t === 'file' ? 'Excel / CSV' : t === 'query' ? 'Query' : 'SQL'}
+                            </span>
+                          ));
+                        })()}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <span className="text-[12px] font-semibold text-brand-600">Open</span>

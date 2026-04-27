@@ -5,21 +5,22 @@ import {
   Users, ShieldCheck, ClipboardList, LayoutGrid,
   X, ChevronDown, Plus, Edit3, AlertTriangle,
   DollarSign, BarChart3, Clock, Zap, ArrowRight,
-  Play, FileCheck, Eye, Copy, Upload, Search,
-  XCircle, Activity, ChevronRight
+  Play, FileCheck, Eye, Copy, Upload, Search, ArrowLeft,
+  XCircle, Activity, ChevronRight, Info
 } from 'lucide-react';
 import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
 import EngagementSetupPanel from '../engagement/EngagementSetupPanel';
+import RacmMappingWorkspace from './RacmMappingWorkspace';
 
 // ─── Types (Finalized Engagement Model) ──────────────────────────────────────
 
 type EngagementLifecycle = 'draft' | 'planned' | 'frozen' | 'signed-off' | 'active' | 'in-progress' | 'pending-review' | 'closed';
-type AuditType = 'SOX' | 'IFC' | 'ITGC' | 'Internal' | 'Risk';
-type FrameworkType = 'COSO' | 'COBIT' | 'ISO 27001' | 'NIST' | 'Custom';
-type ProcessType = 'P2P' | 'O2C' | 'R2R' | 'S2C' | 'Cross';
+type AuditType = 'Financial Internal Control' | 'Operational Audit' | 'Compliance Audit' | 'IT Audit' | 'Concurrent Audit' | 'Internal Audit' | 'Other';
+type FrameworkType = 'SOX ICFR' | 'IFC' | 'COSO' | 'SOC 1' | 'SOC 2' | 'ISO 27001' | 'Internal Policy' | 'Custom';
+type ProcessType = 'P2P' | 'O2C' | 'R2R' | 'S2C' | 'ITGC' | 'Cross';
 type PriorityLevel = 'Critical' | 'High' | 'Medium' | 'Low';
-type TabId = 'execution' | 'timeline' | 'resources' | 'risk-matrix' | 'budget';
+type TabId = 'racm' | 'execution' | 'timeline' | 'resources' | 'risk-matrix' | 'budget';
 type RiskStatus = 'at-risk' | 'stable' | 'unvalidated';
 
 interface AuditEngagement {
@@ -76,9 +77,9 @@ const COLOR_PALETTE = [
 ];
 
 const MONTHS = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
-const PROCESSES: ProcessType[] = ['P2P', 'O2C', 'R2R', 'S2C', 'Cross'];
-const AUDIT_TYPES: AuditType[] = ['SOX', 'IFC', 'ITGC', 'Internal', 'Risk'];
-const FRAMEWORKS: FrameworkType[] = ['COSO', 'COBIT', 'ISO 27001', 'NIST', 'Custom'];
+const PROCESSES: ProcessType[] = ['P2P', 'O2C', 'R2R', 'S2C', 'ITGC', 'Cross'];
+const AUDIT_TYPES: AuditType[] = ['Financial Internal Control', 'Operational Audit', 'Compliance Audit', 'IT Audit', 'Concurrent Audit', 'Internal Audit', 'Other'];
+const FRAMEWORKS: FrameworkType[] = ['SOX ICFR', 'IFC', 'COSO', 'SOC 1', 'SOC 2', 'ISO 27001', 'Internal Policy', 'Custom'];
 const PRIORITIES: PriorityLevel[] = ['Critical', 'High', 'Medium', 'Low'];
 
 const RACM_VERSIONS = [
@@ -100,7 +101,7 @@ const TEAM_MEMBERS: TeamMember[] = [
 
 const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
   {
-    id: 'ap-1', name: 'P2P — SOX Audit', auditType: 'SOX', framework: 'COSO', businessProcess: 'P2P',
+    id: 'ap-1', name: 'P2P — SOX Audit', auditType: 'Financial Internal Control', framework: 'SOX ICFR', businessProcess: 'P2P',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2025-04-01', plannedEndDate: '2025-06-30',
     actualStartDate: '2025-04-05', actualEndDate: '',
@@ -112,7 +113,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     start: 0, duration: 3, color: '#6a12cd',
   },
   {
-    id: 'ap-2', name: 'O2C — SOX Audit', auditType: 'SOX', framework: 'COSO', businessProcess: 'O2C',
+    id: 'ap-2', name: 'O2C — SOX Audit', auditType: 'Financial Internal Control', framework: 'SOX ICFR', businessProcess: 'O2C',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2025-05-01', plannedEndDate: '2025-07-31',
     actualStartDate: '2025-05-02', actualEndDate: '',
@@ -124,7 +125,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     start: 1, duration: 3, color: '#0284c7',
   },
   {
-    id: 'ap-3', name: 'R2R — SOX Audit', auditType: 'SOX', framework: 'COSO', businessProcess: 'R2R',
+    id: 'ap-3', name: 'R2R — SOX Audit', auditType: 'Financial Internal Control', framework: 'SOX ICFR', businessProcess: 'R2R',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2025-04-01', plannedEndDate: '2025-08-31',
     actualStartDate: '2025-04-03', actualEndDate: '',
@@ -136,7 +137,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     start: 0, duration: 5, color: '#d97706',
   },
   {
-    id: 'ap-4', name: 'S2C — Contract Review', auditType: 'Internal', framework: 'Custom', businessProcess: 'S2C',
+    id: 'ap-4', name: 'S2C — Contract Review', auditType: 'Internal Audit', framework: 'Internal Policy', businessProcess: 'S2C',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2025-07-01', plannedEndDate: '2025-09-30',
     actualStartDate: '', actualEndDate: '',
@@ -148,7 +149,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     start: 3, duration: 3, color: '#059669',
   },
   {
-    id: 'ap-5', name: 'P2P — IFC Assessment', auditType: 'IFC', framework: 'COBIT', businessProcess: 'P2P',
+    id: 'ap-5', name: 'P2P — IFC Assessment', auditType: 'Financial Internal Control', framework: 'IFC', businessProcess: 'P2P',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2025-08-01', plannedEndDate: '2025-10-31',
     actualStartDate: '', actualEndDate: '',
@@ -160,7 +161,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     start: 4, duration: 3, color: '#6a12cd',
   },
   {
-    id: 'ap-6', name: 'IT General Controls', auditType: 'ITGC', framework: 'ISO 27001', businessProcess: 'Cross',
+    id: 'ap-6', name: 'IT General Controls', auditType: 'IT Audit', framework: 'ISO 27001', businessProcess: 'ITGC',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2025-06-01', plannedEndDate: '2026-01-31',
     actualStartDate: '2025-06-03', actualEndDate: '',
@@ -172,7 +173,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     start: 2, duration: 8, color: '#7c3aed',
   },
   {
-    id: 'ap-7', name: 'Vendor Risk Assessment', auditType: 'Risk', framework: 'NIST', businessProcess: 'P2P',
+    id: 'ap-7', name: 'Vendor Risk Assessment', auditType: 'Operational Audit', framework: 'Internal Policy', businessProcess: 'P2P',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2025-10-01', plannedEndDate: '2025-11-30',
     actualStartDate: '', actualEndDate: '',
@@ -184,7 +185,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     start: 6, duration: 2, color: '#dc2626',
   },
   {
-    id: 'ap-8', name: 'Year-End Close Review', auditType: 'SOX', framework: 'COSO', businessProcess: 'R2R',
+    id: 'ap-8', name: 'Year-End Close Review', auditType: 'Financial Internal Control', framework: 'SOX ICFR', businessProcess: 'R2R',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2026-01-01', plannedEndDate: '2026-02-28',
     actualStartDate: '', actualEndDate: '',
@@ -211,6 +212,34 @@ const SIGNOFF_LOG = [
 ];
 
 const SIGNERS = ['Karan Mehta', 'Sneha Desai', 'Abhinav S'];
+
+function getRacmLabel(versionId: string): string {
+  const found = RACM_VERSIONS.find(r => r.id === versionId);
+  return found ? found.label.replace(/\s*\(.*\)/, '') : versionId;
+}
+
+function getScopeLabel(eng: { businessProcess: ProcessType; auditType: AuditType; framework: FrameworkType }): string {
+  if (eng.businessProcess === 'Cross') return 'P2P + O2C + R2R + ITGC';
+  if (eng.businessProcess === 'ITGC') return 'ITGC (Cross Process)';
+  if (eng.framework === 'SOX ICFR' || eng.framework === 'IFC') return `${eng.businessProcess} + ITGC`;
+  return eng.businessProcess;
+}
+
+function getRacmDisplayName(eng: { businessProcess: ProcessType; auditType: AuditType; sourceRacmVersionId: string }): string {
+  const prefix = eng.businessProcess === 'Cross' ? 'Cross-Process' : eng.businessProcess;
+  const type = eng.auditType;
+  const ver = getRacmLabel(eng.sourceRacmVersionId);
+  return `${prefix} ${type} ${ver}`;
+}
+
+const PROCESS_BADGE_COLORS: Record<ProcessType, string> = {
+  P2P: 'bg-[#6a12cd]/10 text-[#6a12cd] border-[#6a12cd]/20',
+  O2C: 'bg-[#0284c7]/10 text-[#0284c7] border-[#0284c7]/20',
+  R2R: 'bg-[#d97706]/10 text-[#d97706] border-[#d97706]/20',
+  S2C: 'bg-[#059669]/10 text-[#059669] border-[#059669]/20',
+  ITGC: 'bg-[#16a34a]/10 text-[#16a34a] border-[#16a34a]/20',
+  Cross: 'bg-[#7c3aed]/10 text-[#7c3aed] border-[#7c3aed]/20',
+};
 
 function getCurrentMonth(): number { return 11; }
 
@@ -333,6 +362,1019 @@ function KpiCard({ label, value, icon: Icon, color, index }: {
       <div className="text-2xl font-bold text-text">{value}</div>
       <div className="text-[12px] text-text-muted mt-1">{label}</div>
     </motion.div>
+  );
+}
+
+// ─── RACM Dashboard (governance setup tab) ──────────────────────────────────
+
+interface RacmEntry {
+  id: string; name: string; version: string; process: string; framework: string;
+  risks: number; controls: number; mappedRisks: number; unmappedRisks: number;
+  keyControls: number; workflowCoverage: number;
+  status: 'Draft' | 'Working' | 'Active' | 'Locked';
+  readiness: 'Not Ready' | 'Needs Mapping' | 'Ready for Execution';
+}
+
+const MOCK_RACMS: RacmEntry[] = [
+  { id: 'racm-001', name: 'FY26 P2P — Vendor Payment', version: 'v2.1', process: 'P2P', framework: 'SOX ICFR', risks: 9, controls: 24, mappedRisks: 9, unmappedRisks: 0, keyControls: 6, workflowCoverage: 92, status: 'Locked', readiness: 'Ready for Execution' },
+  { id: 'racm-002', name: 'FY26 O2C — Revenue & AR', version: 'v2.1', process: 'O2C', framework: 'SOX ICFR', risks: 7, controls: 18, mappedRisks: 6, unmappedRisks: 1, keyControls: 4, workflowCoverage: 78, status: 'Active', readiness: 'Needs Mapping' },
+  { id: 'racm-003', name: 'FY26 R2R — Financial Close', version: 'v2.1', process: 'R2R', framework: 'SOX ICFR', risks: 11, controls: 31, mappedRisks: 10, unmappedRisks: 1, keyControls: 8, workflowCoverage: 85, status: 'Locked', readiness: 'Ready for Execution' },
+  { id: 'racm-004', name: 'FY26 S2C — Contract Review', version: 'v1.8', process: 'S2C', framework: 'Internal Policy', risks: 5, controls: 14, mappedRisks: 3, unmappedRisks: 2, keyControls: 2, workflowCoverage: 60, status: 'Working', readiness: 'Needs Mapping' },
+  { id: 'racm-005', name: 'FY26 ITGC — Access & Change', version: 'v2.1', process: 'ITGC', framework: 'ISO 27001', risks: 6, controls: 15, mappedRisks: 6, unmappedRisks: 0, keyControls: 5, workflowCoverage: 100, status: 'Locked', readiness: 'Ready for Execution' },
+];
+
+const RACM_STATUS_CLS: Record<string, string> = {
+  Draft: 'bg-draft-50 text-draft-700',
+  Working: 'bg-evidence-50 text-evidence-700',
+  Active: 'bg-compliant-50 text-compliant-700',
+  Locked: 'bg-brand-50 text-brand-700',
+};
+
+const READINESS_CLS: Record<string, { cls: string; icon: React.ElementType }> = {
+  'Not Ready': { cls: 'bg-risk-50 text-risk-700', icon: XCircle },
+  'Needs Mapping': { cls: 'bg-mitigated-50 text-mitigated-700', icon: AlertTriangle },
+  'Ready for Execution': { cls: 'bg-compliant-50 text-compliant-700', icon: CheckCircle2 },
+};
+
+const BP_DOT_COLORS: Record<string, string> = { P2P: '#6a12cd', O2C: '#0284c7', R2R: '#d97706', S2C: '#059669', ITGC: '#16a34a' };
+
+// Imported RACM row shape
+interface ImportedRacmRow {
+  sourceRow: number;
+  riskName: string;
+  riskDescription: string;
+  process: string;
+  controlText: string;
+  controlOwner: string;
+  controlType: string;
+  frequency: string;
+  mappingStatus: 'Not Mapped' | 'Partially Mapped' | 'Mapped';
+}
+
+// Mock parsed data from an Excel import
+const MOCK_PARSED_ROWS: ImportedRacmRow[] = [
+  { sourceRow: 2, riskName: 'Unauthorized vendor payments', riskDescription: 'Payments processed without proper PO or approval', process: 'P2P', controlText: 'Three-way match of PO, GRN, and Invoice before payment', controlOwner: 'Rajiv Sharma', controlType: 'Key', frequency: 'Per transaction', mappingStatus: 'Not Mapped' },
+  { sourceRow: 3, riskName: 'Duplicate invoices processed', riskDescription: 'Same invoice paid twice due to weak detection', process: 'P2P', controlText: 'Automated duplicate detection scan before payment release', controlOwner: 'Rajiv Sharma', controlType: 'Key', frequency: 'Per transaction', mappingStatus: 'Not Mapped' },
+  { sourceRow: 4, riskName: 'Fictitious vendor registration', riskDescription: 'Vendor created without verification of identity and bank details', process: 'P2P', controlText: 'Multi-level approval for new vendor registration with tax ID verification', controlOwner: 'Deepak Bansal', controlType: 'Key', frequency: 'Per transaction', mappingStatus: 'Not Mapped' },
+  { sourceRow: 5, riskName: 'Unauthorized PO creation', riskDescription: 'Purchase orders above threshold committed without dual sign-off', process: 'P2P', controlText: 'Dual approval workflow for POs exceeding $10K threshold', controlOwner: 'Meera Patel', controlType: 'Non-Key', frequency: 'Per transaction', mappingStatus: 'Not Mapped' },
+  { sourceRow: 6, riskName: 'SOD violation in AP', riskDescription: 'Same user creates and approves payment', process: 'P2P', controlText: 'Real-time SOD conflict detection and blocking', controlOwner: 'IT Security', controlType: 'Key', frequency: 'Continuous', mappingStatus: 'Not Mapped' },
+  { sourceRow: 7, riskName: 'Revenue recognition timing', riskDescription: 'Revenue recognized before performance obligation completion', process: 'O2C', controlText: 'ASC 606 compliance check on all revenue transactions', controlOwner: 'Neha Joshi', controlType: 'Key', frequency: 'Monthly', mappingStatus: 'Not Mapped' },
+  { sourceRow: 8, riskName: 'Incorrect journal entries', riskDescription: 'Manual JE posted without review or with incorrect amounts', process: 'R2R', controlText: 'AI anomaly detection on journal entries with management review', controlOwner: 'Rohan Patel', controlType: 'Key', frequency: 'Daily', mappingStatus: 'Not Mapped' },
+  { sourceRow: 9, riskName: 'GL balance discrepancy', riskDescription: 'Subsidiary balances do not reconcile to consolidated GL', process: 'R2R', controlText: 'Monthly GL reconciliation across all entities', controlOwner: 'Karan Mehta', controlType: 'Non-Key', frequency: 'Monthly', mappingStatus: 'Not Mapped' },
+];
+
+const COLUMN_OPTIONS = ['Risk Name', 'Risk Description', 'Process', 'Control Description', 'Control Owner', 'Control Type', 'Frequency', '— Skip —'];
+
+// ─── RACM Import Drawer ─────────────────────────────────────────────────────
+
+function RacmImportDrawer({ onClose, onImport }: { onClose: () => void; onImport: (rows: ImportedRacmRow[]) => void }) {
+  const [step, setStep] = useState(0);
+  const [fileName, setFileName] = useState('');
+  const [columnMapping, setColumnMapping] = useState<Record<number, string>>({
+    0: 'Risk Name', 1: 'Risk Description', 2: 'Process', 3: 'Control Description', 4: 'Control Owner', 5: 'Control Type', 6: 'Frequency',
+  });
+
+  const steps = ['Upload File', 'Parse Preview', 'Column Mapping', 'Review Rows', 'Confirm Import'];
+
+  const handleFileDrop = () => {
+    setFileName('RACM_FY26_P2P_v2.xlsx');
+    setStep(1);
+  };
+
+  const previewHeaders = ['Risk Name', 'Risk Description', 'Process', 'Control Description', 'Control Owner', 'Type', 'Frequency'];
+  const previewRows = MOCK_PARSED_ROWS.slice(0, 4);
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+        className="fixed inset-0 bg-ink-900/40 backdrop-blur-[2px] z-40" onClick={onClose} />
+      <motion.aside initial={{ x: 24, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 24, opacity: 0 }}
+        transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+        className="fixed top-0 right-0 bottom-0 w-full max-w-[640px] bg-canvas-elevated shadow-xl border-l border-canvas-border flex flex-col z-50"
+        role="dialog" aria-label="Import RACM">
+
+        {/* Header */}
+        <header className="shrink-0 px-6 pt-5 pb-0 border-b border-canvas-border">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <div className="flex items-center gap-2"><Upload size={18} className="text-brand-600" /><h2 className="font-display text-[18px] font-semibold text-ink-900 tracking-tight">Import RACM</h2></div>
+              <p className="text-[12px] text-ink-500 mt-0.5">Upload an Excel or CSV file containing risk and control data.</p>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 rounded-full text-ink-500 hover:text-ink-800 hover:bg-[#F4F2F7] flex items-center justify-center cursor-pointer"><X size={16} /></button>
+          </div>
+          {/* Step indicator */}
+          <div className="flex items-center gap-1 -mb-px">
+            {steps.map((s, i) => (
+              <button key={s} onClick={() => { if (i < step) setStep(i); }}
+                className={`pb-3 px-2 text-[11px] font-medium transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
+                  i === step ? 'border-brand-600 text-brand-700' : i < step ? 'border-transparent text-brand-500 hover:text-brand-700' : 'border-transparent text-ink-400'
+                }`}>
+                <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold mr-1 ${
+                  i < step ? 'bg-brand-600 text-white' : i === step ? 'bg-brand-100 text-brand-700' : 'bg-canvas text-ink-400'
+                }`}>{i < step ? '✓' : i + 1}</span>{s}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          <AnimatePresence mode="wait">
+            <motion.div key={step} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.15 }}>
+
+              {/* Step 0: Upload */}
+              {step === 0 && (
+                <div className="space-y-4">
+                  <div onClick={handleFileDrop}
+                    className="border-2 border-dashed border-border rounded-2xl p-10 text-center hover:border-primary/40 hover:bg-primary-xlight/20 transition-all cursor-pointer">
+                    <Upload size={32} className="mx-auto text-ink-300 mb-3" />
+                    <p className="text-[14px] font-semibold text-text mb-1">Drop your RACM file here</p>
+                    <p className="text-[12px] text-text-muted">or click to browse. Supports .xlsx, .xls, .csv</p>
+                    <p className="text-[10px] text-text-muted mt-3">Maximum file size: 10MB</p>
+                  </div>
+                  <div className="rounded-lg border border-canvas-border bg-canvas px-3 py-2">
+                    <p className="text-[10px] text-ink-400">Expected columns: Risk Name, Risk Description, Process, Control Description, Control Owner, Control Type, Frequency</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 1: Parse Preview */}
+              {step === 1 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-compliant-50/50 border border-compliant/20">
+                    <CheckCircle2 size={16} className="text-compliant-700 shrink-0" />
+                    <div>
+                      <span className="text-[12px] font-semibold text-compliant-700">File parsed successfully</span>
+                      <span className="text-[12px] text-compliant-700/70 ml-2">{fileName} — {MOCK_PARSED_ROWS.length} rows, {previewHeaders.length} columns detected</span>
+                    </div>
+                  </div>
+                  <div className="glass-card rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[11px]">
+                        <thead><tr className="border-b border-border bg-surface-2/50">
+                          <th className="px-2 py-2 text-left text-[9px] font-semibold text-text-muted uppercase w-8">Row</th>
+                          {previewHeaders.map(h => <th key={h} className="px-2 py-2 text-left text-[9px] font-semibold text-text-muted uppercase">{h}</th>)}
+                        </tr></thead>
+                        <tbody>{previewRows.map((r, i) => (
+                          <tr key={i} className="border-b border-border/40">
+                            <td className="px-2 py-1.5 text-[10px] font-mono text-ink-400">{r.sourceRow}</td>
+                            <td className="px-2 py-1.5 text-[10px] text-text truncate max-w-[100px]">{r.riskName}</td>
+                            <td className="px-2 py-1.5 text-[10px] text-text-muted truncate max-w-[120px]">{r.riskDescription}</td>
+                            <td className="px-2 py-1.5 text-[10px] text-text">{r.process}</td>
+                            <td className="px-2 py-1.5 text-[10px] text-text truncate max-w-[140px]">{r.controlText}</td>
+                            <td className="px-2 py-1.5 text-[10px] text-text-muted">{r.controlOwner}</td>
+                            <td className="px-2 py-1.5 text-[10px] text-text-muted">{r.controlType}</td>
+                            <td className="px-2 py-1.5 text-[10px] text-text-muted">{r.frequency}</td>
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                    <div className="px-3 py-2 border-t border-border bg-surface-2/30 text-[10px] text-text-muted">Showing {previewRows.length} of {MOCK_PARSED_ROWS.length} rows</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Column Mapping */}
+              {step === 2 && (
+                <div className="space-y-4">
+                  <p className="text-[12px] text-text-muted">Map each detected column to the correct RACM field.</p>
+                  <div className="space-y-2">
+                    {previewHeaders.map((h, i) => (
+                      <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-canvas-border bg-white">
+                        <div className="w-[140px] shrink-0">
+                          <span className="text-[11px] font-mono text-ink-500">Column {i + 1}</span>
+                          <div className="text-[12px] font-medium text-text">{h}</div>
+                        </div>
+                        <ArrowRight size={14} className="text-ink-300 shrink-0" />
+                        <select value={columnMapping[i] || '— Skip —'} onChange={e => setColumnMapping(prev => ({ ...prev, [i]: e.target.value }))}
+                          className="flex-1 px-2.5 py-1.5 rounded-lg border border-border bg-white text-[12px] text-text outline-none focus:border-primary/40 cursor-pointer">
+                          {COLUMN_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                        {columnMapping[i] && columnMapping[i] !== '— Skip —' && <CheckCircle2 size={14} className="text-compliant-700 shrink-0" />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Review Rows */}
+              {step === 3 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[12px] text-text-muted">{MOCK_PARSED_ROWS.length} rows ready for import</p>
+                    <span className="px-2.5 h-5 rounded-full text-[10px] font-semibold bg-evidence-50 text-evidence-700 inline-flex items-center">All unmapped — mapping happens after import</span>
+                  </div>
+                  <div className="glass-card rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[11px]">
+                        <thead><tr className="border-b border-border bg-surface-2/50">
+                          {['Row', 'Risk Name', 'Process', 'Control Text', 'Owner', 'Type', 'Status'].map(h =>
+                            <th key={h} className="px-3 py-2.5 text-left text-[9px] font-semibold text-text-muted uppercase whitespace-nowrap">{h}</th>
+                          )}
+                        </tr></thead>
+                        <tbody>{MOCK_PARSED_ROWS.map((r, i) => (
+                          <tr key={i} className="border-b border-border/40 hover:bg-surface-2/30 transition-colors">
+                            <td className="px-3 py-2 text-[10px] font-mono text-ink-400">{r.sourceRow}</td>
+                            <td className="px-3 py-2"><div className="text-[11px] font-medium text-text">{r.riskName}</div><div className="text-[9.5px] text-text-muted truncate max-w-[160px]">{r.riskDescription}</div></td>
+                            <td className="px-3 py-2 text-[11px] text-text">{r.process}</td>
+                            <td className="px-3 py-2 text-[10px] text-text-secondary truncate max-w-[180px]">{r.controlText}</td>
+                            <td className="px-3 py-2 text-[10px] text-text-muted">{r.controlOwner}</td>
+                            <td className="px-3 py-2"><span className={`px-1.5 h-4 rounded text-[9px] font-bold inline-flex items-center ${r.controlType === 'Key' ? 'bg-mitigated-50 text-mitigated-700' : 'bg-gray-100 text-gray-500'}`}>{r.controlType}</span></td>
+                            <td className="px-3 py-2"><span className="px-1.5 h-4 rounded text-[9px] font-bold bg-draft-50 text-draft-700 inline-flex items-center">Not Mapped</span></td>
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-canvas-border bg-canvas px-3 py-2">
+                    <p className="text-[10px] text-ink-400">Imported control descriptions are preserved as source references. Map them to Control Library objects after import.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: Confirm */}
+              {step === 4 && (
+                <div className="space-y-5">
+                  <div className="glass-card rounded-2xl p-6 text-center">
+                    <CheckCircle2 size={36} className="mx-auto text-compliant-700 mb-3" />
+                    <h3 className="text-[16px] font-bold text-text mb-1">Ready to Import</h3>
+                    <p className="text-[13px] text-text-muted mb-4">This will create {MOCK_PARSED_ROWS.length} risk-control rows from {fileName}</p>
+                    <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto text-center">
+                      <div><div className="text-xl font-bold text-text">{MOCK_PARSED_ROWS.length}</div><div className="text-[10px] text-text-muted">Rows</div></div>
+                      <div><div className="text-xl font-bold text-text">{new Set(MOCK_PARSED_ROWS.map(r => r.riskName)).size}</div><div className="text-[10px] text-text-muted">Unique Risks</div></div>
+                      <div><div className="text-xl font-bold text-text">{new Set(MOCK_PARSED_ROWS.map(r => r.process)).size}</div><div className="text-[10px] text-text-muted">Processes</div></div>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-mitigated/30 bg-mitigated-50 px-4 py-3 flex items-start gap-2.5">
+                    <Info size={14} className="text-mitigated-700 mt-0.5 shrink-0" />
+                    <div className="text-[11px] text-mitigated-700 leading-relaxed">
+                      Imported controls are <strong>not</strong> automatically created as system controls. They are preserved as source references. You will need to map each control text to a Control Library object or create new controls.
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-canvas-border bg-canvas px-3 py-2 flex items-start gap-2 opacity-50">
+                    <Activity size={11} className="text-ink-400 mt-0.5 shrink-0" />
+                    <span className="text-[10px] text-ink-400">AI auto-mapping — coming soon. Suggested matches will appear here in a future release.</span>
+                  </div>
+                </div>
+              )}
+
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Footer */}
+        <footer className="shrink-0 px-6 py-4 border-t border-canvas-border bg-canvas flex items-center justify-between">
+          <div className="text-[11px] text-ink-400">Step {step + 1} of {steps.length}</div>
+          <div className="flex items-center gap-3">
+            {step > 0 && <button onClick={() => setStep(s => s - 1)} className="px-4 py-2 rounded-lg border border-canvas-border text-[13px] font-medium text-ink-600 hover:bg-canvas transition-colors cursor-pointer">Back</button>}
+            {step < 4 ? (
+              <button onClick={() => setStep(s => s + 1)} disabled={step === 0}
+                className="px-5 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-[13px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+                {step === 3 ? 'Review Complete' : 'Continue'}
+              </button>
+            ) : (
+              <button onClick={() => onImport(MOCK_PARSED_ROWS)}
+                className="px-5 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-[13px] font-semibold transition-colors cursor-pointer">
+                Confirm Import
+              </button>
+            )}
+          </div>
+        </footer>
+      </motion.aside>
+    </>
+  );
+}
+
+// ─── RACM Dashboard with import integration ─────────────────────────────────
+
+function RacmDashboard({ engagements, onGoToExecution }: { engagements: { sourceRacmVersionId: string }[]; onGoToExecution: () => void }) {
+  const { addToast } = useToast();
+  const [showImportDrawer, setShowImportDrawer] = useState(false);
+  const [importedRows, setImportedRows] = useState<ImportedRacmRow[]>([]);
+  const [showMappingWorkspace, setShowMappingWorkspace] = useState(false);
+  const [showValidateModal, setShowValidateModal] = useState(false);
+  const [showCreateRacmModal, setShowCreateRacmModal] = useState(false);
+  const [racmList, setRacmList] = useState<RacmEntry[]>(MOCK_RACMS);
+  const [selectedRacmId, setSelectedRacmId] = useState<string | null>(null);
+
+  // RACM lifecycle state
+  const [racmStatus, setRacmStatus] = useState<'Draft' | 'Working' | 'Active' | 'Locked'>('Working');
+  const [racmReadiness, setRacmReadiness] = useState<'Not Ready' | 'Needs Mapping' | 'Ready for Execution'>('Needs Mapping');
+  const [mappingChanged, setMappingChanged] = useState(false);
+
+  const handleImport = (rows: ImportedRacmRow[]) => {
+    setImportedRows(rows);
+    setShowImportDrawer(false);
+    setRacmStatus('Working');
+    setRacmReadiness('Needs Mapping');
+    addToast({ message: `${rows.length} rows imported — review and map controls below`, type: 'success' });
+  };
+
+  const handleMapRow = (idx: number) => {
+    setImportedRows(prev => prev.map((r, i) => i === idx ? { ...r, mappingStatus: 'Mapped' } : r));
+    if (racmStatus === 'Active') {
+      setRacmStatus('Working');
+      setRacmReadiness('Needs Mapping');
+      setMappingChanged(true);
+    }
+    addToast({ message: `Control mapped to Control Library`, type: 'success' });
+  };
+
+  const handleValidate = () => {
+    setRacmStatus('Active');
+    setRacmReadiness('Ready for Execution');
+    setMappingChanged(false);
+    setShowValidateModal(false);
+    addToast({ message: 'RACM validated — ready for engagement execution', type: 'success' });
+  };
+
+  // Summary KPIs
+  const totalRacms = racmList.length;
+  const totalRisks = racmList.reduce((s, r) => s + r.risks, 0);
+  const totalControls = racmList.reduce((s, r) => s + r.controls, 0);
+  const totalUnmapped = racmList.reduce((s, r) => s + r.unmappedRisks, 0);
+  const readyCount = racmList.filter(r => r.readiness === 'Ready for Execution').length;
+  const avgCoverage = totalRacms > 0 ? Math.round(racmList.reduce((s, r) => s + r.workflowCoverage, 0) / totalRacms) : 0;
+
+  const mappedImportCount = importedRows.filter(r => r.mappingStatus === 'Mapped').length;
+  const unmappedImportCount = importedRows.filter(r => r.mappingStatus === 'Not Mapped').length;
+
+  // Validation checklist
+  const checks = [
+    { label: 'All risks reviewed', done: true },
+    { label: 'All risks have at least one mapped control', done: totalUnmapped === 0 },
+    { label: 'Key controls identified', done: MOCK_RACMS.every(r => r.keyControls > 0) },
+    { label: 'Controls have linked workflows', done: avgCoverage >= 80 },
+    { label: 'Required workflow attributes configured', done: avgCoverage >= 70 },
+    { label: 'No unmapped imported control references', done: unmappedImportCount === 0 || importedRows.length === 0 },
+    { label: 'Dataset requirements known', done: true },
+  ];
+  const checksDone = checks.filter(c => c.done).length;
+  const allChecksPassed = checks.every(c => c.done);
+
+  const MAP_STATUS_CLS: Record<string, string> = {
+    'Not Mapped': 'bg-draft-50 text-draft-700',
+    'Partially Mapped': 'bg-mitigated-50 text-mitigated-700',
+    'Mapped': 'bg-compliant-50 text-compliant-700',
+  };
+
+  // If RACM setup workspace is open, render it
+  const selectedRacm = selectedRacmId ? racmList.find(r => r.id === selectedRacmId) : null;
+  if (selectedRacm) {
+    return <RacmSetupWorkspace
+      racm={selectedRacm}
+      onBack={() => setSelectedRacmId(null)}
+      onStartMapping={() => { setSelectedRacmId(null); setShowMappingWorkspace(true); }}
+      onImport={() => { setSelectedRacmId(null); setShowImportDrawer(true); }}
+    />;
+  }
+
+  // If mapping workspace is open, render it instead of the dashboard
+  if (showMappingWorkspace) {
+    return <RacmMappingWorkspace onBack={() => {
+      setShowMappingWorkspace(false);
+      if (racmStatus === 'Active') {
+        setRacmStatus('Working');
+        setRacmReadiness('Needs Mapping');
+        setMappingChanged(true);
+      }
+    }} onGoToExecution={() => { setShowMappingWorkspace(false); onGoToExecution(); }} />;
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Action bar */}
+      <div className="flex items-center justify-between">
+        <div className="text-[12px] text-text-muted">{totalRacms} RACM{totalRacms !== 1 ? 's' : ''} across {new Set(racmList.map(r => r.process)).size} processes</div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowImportDrawer(true)}
+            className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer">
+            <Upload size={13} />Import RACM
+          </button>
+          <button onClick={() => setShowMappingWorkspace(true)}
+            className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer">
+            <Target size={13} />Start Mapping
+          </button>
+          <button onClick={() => setShowCreateRacmModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 border border-primary/30 bg-primary/5 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer">
+            <Plus size={13} />Create RACM
+          </button>
+        </div>
+      </div>
+
+      {/* Summary KPIs */}
+      <div className="grid grid-cols-6 gap-3">
+        {[
+          { label: 'Total RACMs', value: totalRacms, color: 'text-brand-700 bg-brand-50' },
+          { label: 'Risks', value: totalRisks, color: 'text-risk-700 bg-risk-50' },
+          { label: 'Controls', value: totalControls, color: 'text-evidence-700 bg-evidence-50' },
+          { label: 'Unmapped', value: totalUnmapped, color: totalUnmapped > 0 ? 'text-high-700 bg-high-50' : 'text-compliant-700 bg-compliant-50' },
+          { label: 'Ready', value: `${readyCount}/${totalRacms}`, color: 'text-compliant-700 bg-compliant-50' },
+          { label: 'Workflow Coverage', value: `${avgCoverage}%`, color: 'text-brand-700 bg-brand-50' },
+        ].map((kpi, i) => (
+          <motion.div key={kpi.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+            className="glass-card rounded-xl p-3 text-center">
+            <div className={`text-lg font-bold tabular-nums ${kpi.color.split(' ')[0]}`}>{kpi.value}</div>
+            <div className="text-[10px] text-text-muted mt-0.5">{kpi.label}</div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Unmapped warning */}
+      {totalUnmapped > 0 && (
+        <div className="rounded-xl border border-high/20 bg-high-50/30 px-4 py-3 flex items-center gap-3">
+          <AlertTriangle size={15} className="text-high-700 shrink-0" />
+          <div>
+            <span className="text-[12px] font-semibold text-high-700">{totalUnmapped} risk{totalUnmapped !== 1 ? 's' : ''} not mapped to controls.</span>
+            <span className="text-[12px] text-high-700/70 ml-1">Complete mapping before engagement execution.</span>
+          </div>
+          <button onClick={() => setShowMappingWorkspace(true)}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-high-50 text-high-700 text-[11px] font-semibold hover:bg-high/10 transition-colors cursor-pointer shrink-0">
+            <Target size={11} />Start Mapping
+          </button>
+        </div>
+      )}
+
+      {/* RACM table */}
+      <div className="glass-card rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-[12px]">
+            <thead>
+              <tr className="border-b border-border bg-surface-2/50">
+                {['RACM', 'Process', 'Framework', 'Risks', 'Controls', 'Key', 'Unmapped', 'Workflow %', 'Status', 'Readiness', 'Action'].map(h => (
+                  <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {racmList.map((racm, i) => {
+                const rd = READINESS_CLS[racm.readiness];
+                const RdIcon = rd.icon;
+                const dotColor = BP_DOT_COLORS[racm.process] || '#6B5D82';
+                return (
+                  <motion.tr key={racm.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
+                    className="border-b border-border/50 hover:bg-brand-50/20 transition-colors">
+                    <td className="px-3 py-3">
+                      <div className="text-[12px] font-medium text-text">{racm.name}</div>
+                      <div className="text-[10px] text-text-muted font-mono">{racm.version}</div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="inline-flex items-center gap-1.5 px-2 h-5 rounded-full text-[10px] font-bold border" style={{ background: `${dotColor}10`, color: dotColor, borderColor: `${dotColor}30` }}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: dotColor }} />{racm.process}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3"><span className="text-[11px] text-text-secondary">{racm.framework}</span></td>
+                    <td className="px-3 py-3"><span className="text-[12px] font-semibold text-text tabular-nums">{racm.risks}</span></td>
+                    <td className="px-3 py-3"><span className="text-[12px] font-semibold text-text tabular-nums">{racm.controls}</span></td>
+                    <td className="px-3 py-3"><span className="text-[12px] font-semibold text-brand-700 tabular-nums">{racm.keyControls}</span></td>
+                    <td className="px-3 py-3">
+                      {racm.unmappedRisks > 0
+                        ? <span className="text-[12px] font-bold text-high-700 tabular-nums">{racm.unmappedRisks}</span>
+                        : <span className="text-[11px] text-compliant-700 font-medium">0</span>}
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-2 min-w-[60px]">
+                        <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${racm.workflowCoverage}%` }} />
+                        </div>
+                        <span className="text-[10px] font-bold text-text-muted tabular-nums w-7 text-right">{racm.workflowCoverage}%</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${RACM_STATUS_CLS[racm.status]}`}>{racm.status}</span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className={`inline-flex items-center gap-1 px-2 h-5 rounded-full text-[9px] font-semibold ${rd.cls}`}>
+                        <RdIcon size={9} />{racm.readiness === 'Ready for Execution' ? 'Ready' : racm.readiness}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3">
+                      {racm.readiness === 'Needs Mapping' ? (
+                        <button onClick={() => setShowMappingWorkspace(true)}
+                          className="px-2 py-1 rounded-lg text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/15 cursor-pointer transition-colors inline-flex items-center gap-1">
+                          <Target size={9} />Map <ChevronRight size={8} />
+                        </button>
+                      ) : racm.status === 'Locked' ? (
+                        <button onClick={() => addToast({ message: `Validate RACM ${racm.name} — all checks passed`, type: 'success' })}
+                          className="px-2 py-1 rounded-lg text-[10px] font-bold text-compliant-700 bg-compliant-50 hover:bg-compliant-50/80 cursor-pointer transition-colors inline-flex items-center gap-1">
+                          <CheckCircle2 size={9} />Validated
+                        </button>
+                      ) : (
+                        <button onClick={() => addToast({ message: `View ${racm.name}`, type: 'info' })}
+                          className="px-2 py-1 rounded-lg text-[10px] font-bold text-brand-700 bg-brand-50 hover:bg-brand-50/80 cursor-pointer transition-colors inline-flex items-center gap-1">
+                          View <ChevronRight size={8} />
+                        </button>
+                      )}
+                    </td>
+                  </motion.tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-surface-2/30">
+          <span className="text-[11px] text-text-muted">{racmList.length} RACM{racmList.length !== 1 ? 's' : ''}</span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => addToast({ message: 'Validate all RACMs — checking mapping completeness', type: 'info' })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 text-[11px] font-semibold text-primary hover:bg-primary/5 transition-colors cursor-pointer">
+              <FileCheck size={11} />Validate All
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Imported Rows Review ── */}
+      {importedRows.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[13px] font-semibold text-text flex items-center gap-2">
+              <Upload size={14} className="text-brand-600" />Imported RACM — Review & Map
+            </h3>
+            <div className="flex items-center gap-3 text-[11px]">
+              <span className="text-compliant-700 font-medium">{mappedImportCount} mapped</span>
+              <span className="text-draft-700 font-medium">{unmappedImportCount} unmapped</span>
+            </div>
+          </div>
+          <div className="glass-card rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-[11px]">
+                <thead><tr className="border-b border-border bg-surface-2/50">
+                  {['Row', 'Risk', 'Process', 'Imported Control Text', 'Owner', 'Type', 'Mapping', 'Action'].map(h =>
+                    <th key={h} className="px-3 py-2.5 text-left text-[9px] font-semibold text-text-muted uppercase whitespace-nowrap">{h}</th>
+                  )}
+                </tr></thead>
+                <tbody>{importedRows.map((r, i) => (
+                  <tr key={i} className={`border-b border-border/40 transition-colors ${r.mappingStatus === 'Not Mapped' ? 'bg-risk-50/10 hover:bg-risk-50/20' : 'hover:bg-surface-2/30'}`}>
+                    <td className="px-3 py-2 text-[10px] font-mono text-ink-400">{r.sourceRow}</td>
+                    <td className="px-3 py-2">
+                      <div className="text-[11px] font-medium text-text">{r.riskName}</div>
+                      <div className="text-[9.5px] text-text-muted truncate max-w-[140px]">{r.riskDescription}</div>
+                    </td>
+                    <td className="px-3 py-2 text-[11px] text-text">{r.process}</td>
+                    <td className="px-3 py-2 text-[10px] text-text-secondary max-w-[180px]"><span className="line-clamp-2">{r.controlText}</span></td>
+                    <td className="px-3 py-2 text-[10px] text-text-muted">{r.controlOwner}</td>
+                    <td className="px-3 py-2"><span className={`px-1.5 h-4 rounded text-[9px] font-bold inline-flex items-center ${r.controlType === 'Key' ? 'bg-mitigated-50 text-mitigated-700' : 'bg-gray-100 text-gray-500'}`}>{r.controlType}</span></td>
+                    <td className="px-3 py-2"><span className={`px-1.5 h-4 rounded text-[9px] font-bold inline-flex items-center ${MAP_STATUS_CLS[r.mappingStatus]}`}>{r.mappingStatus}</span></td>
+                    <td className="px-3 py-2">
+                      {r.mappingStatus === 'Not Mapped' ? (
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => handleMapRow(i)}
+                            className="px-2 py-0.5 rounded text-[9px] font-bold text-primary bg-primary/10 hover:bg-primary/15 cursor-pointer transition-colors">Map Control</button>
+                          <button onClick={() => { handleMapRow(i); addToast({ message: 'New control created in Control Library', type: 'success' }); }}
+                            className="px-2 py-0.5 rounded text-[9px] font-bold text-brand-700 bg-brand-50 hover:bg-brand-50/80 cursor-pointer transition-colors">Create New</button>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-compliant-700 font-medium flex items-center gap-1"><CheckCircle2 size={10} />Done</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+            <div className="px-3 py-2 border-t border-border bg-surface-2/30 text-[10px] text-text-muted">
+              Source: imported file · {importedRows.length} rows · Source row numbers preserved for traceability
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mapping Changed Warning ── */}
+      {mappingChanged && (
+        <div className="rounded-xl border border-high/30 bg-high-50/30 px-4 py-3 flex items-center gap-3">
+          <AlertTriangle size={15} className="text-high-700 shrink-0" />
+          <div>
+            <span className="text-[12px] font-semibold text-high-700">RACM mapping changed</span>
+            <span className="text-[12px] text-high-700/70 ml-1">Execution readiness must be revalidated.</span>
+          </div>
+          <button onClick={() => setShowValidateModal(true)}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-[11px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer shrink-0">
+            <FileCheck size={11} />Revalidate
+          </button>
+        </div>
+      )}
+
+      {/* ── RACM Validation Checklist ── */}
+      <div className="glass-card rounded-xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <FileCheck size={14} className="text-brand-600" />
+            <h3 className="text-[13px] font-bold text-text">RACM Validation</h3>
+            <span className={`px-2 h-5 rounded-full text-[10px] font-semibold inline-flex items-center ${RACM_STATUS_CLS[racmStatus]}`}>{racmStatus}</span>
+            <span className={`px-2 h-5 rounded-full text-[10px] font-semibold inline-flex items-center ${
+              racmReadiness === 'Ready for Execution' ? 'bg-compliant-50 text-compliant-700' : racmReadiness === 'Needs Mapping' ? 'bg-mitigated-50 text-mitigated-700' : 'bg-risk-50 text-risk-700'
+            }`}>{racmReadiness}</span>
+          </div>
+          <div className="text-[11px] text-text-muted">{checksDone}/{checks.length} checks passed</div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 mb-4">
+          {checks.map((c, i) => (
+            <div key={i} className="flex items-center gap-2 py-1">
+              {c.done
+                ? <CheckCircle2 size={13} className="text-compliant-700 shrink-0" />
+                : <XCircle size={13} className="text-risk-700 shrink-0" />}
+              <span className={`text-[12px] ${c.done ? 'text-text-secondary' : 'text-text font-medium'}`}>{c.label}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {racmStatus !== 'Active' && racmStatus !== 'Locked' && (
+            <button onClick={() => setShowValidateModal(true)} disabled={!allChecksPassed}
+              className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+              <FileCheck size={13} />Validate RACM
+            </button>
+          )}
+          {racmStatus === 'Active' && (
+            <span className="flex items-center gap-1.5 text-[12px] font-semibold text-compliant-700"><CheckCircle2 size={14} />RACM Validated</span>
+          )}
+          {!allChecksPassed && racmStatus !== 'Active' && (
+            <span className="text-[11px] text-risk-700">Resolve remaining checks before validation</span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Handoff Panel ── */}
+      {racmStatus === 'Active' && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border-2 border-compliant/20 bg-gradient-to-br from-compliant-50/30 to-white p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-xl bg-compliant"><Zap size={16} className="text-white" /></div>
+            <div>
+              <h3 className="text-[14px] font-bold text-compliant-700">Ready for Execution</h3>
+              <p className="text-[12px] text-compliant-700/70 mt-0.5">This RACM defines what controls need to be executed. Execution will happen in the Execution tab using the linked workflows and selected datasets.</p>
+            </div>
+          </div>
+          <button onClick={onGoToExecution}
+            className="mt-2 flex items-center gap-1.5 px-4 py-2 bg-compliant hover:bg-compliant-700 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
+            <ArrowRight size={13} />Go to Execution
+          </button>
+        </motion.div>
+      )}
+
+      {/* Governance notice */}
+      <div className="rounded-lg border border-canvas-border bg-canvas px-4 py-3 flex items-start gap-2.5">
+        <ShieldCheck size={13} className="text-ink-400 mt-0.5 shrink-0" />
+        <p className="text-[11px] text-ink-400 leading-relaxed">
+          RACM is the governance mapping layer — it defines which risks are mitigated by which controls and how they will be tested.
+          It does not contain samples, evidence, or testing conclusions. Those belong to the Execution tab.
+        </p>
+      </div>
+
+      {/* Import RACM Drawer */}
+      <AnimatePresence>
+        {showImportDrawer && (
+          <RacmImportDrawer onClose={() => setShowImportDrawer(false)} onImport={handleImport} />
+        )}
+      </AnimatePresence>
+
+      {/* Validate RACM Modal */}
+      <AnimatePresence>
+        {showValidateModal && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/30 backdrop-blur-sm" onClick={() => setShowValidateModal(false)}>
+              <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ duration: 0.2 }} className="bg-white rounded-2xl shadow-xl border border-canvas-border w-full max-w-[440px] p-6" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-xl bg-brand-50"><FileCheck size={20} className="text-brand-600" /></div>
+                  <h2 className="text-[16px] font-bold text-text">Validate RACM</h2>
+                </div>
+                <p className="text-[13px] text-text-secondary mb-2">You are about to validate these risk-control mappings.</p>
+                <div className="rounded-lg bg-surface-2/50 border border-border px-3 py-2.5 mb-4">
+                  <p className="text-[12px] text-text leading-relaxed">
+                    I confirm these risk-control mappings are correct and ready for engagement execution.
+                    Once validated, RACM status changes to <strong>Active</strong> and execution can begin.
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-3 mb-4 text-center">
+                  <div className="glass-card rounded-lg p-2"><div className="text-lg font-bold text-text">{totalRisks}</div><div className="text-[10px] text-text-muted">Risks</div></div>
+                  <div className="glass-card rounded-lg p-2"><div className="text-lg font-bold text-text">{totalControls}</div><div className="text-[10px] text-text-muted">Controls</div></div>
+                  <div className="glass-card rounded-lg p-2"><div className="text-lg font-bold text-text">{avgCoverage}%</div><div className="text-[10px] text-text-muted">Coverage</div></div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={handleValidate}
+                    className="flex-1 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
+                    Confirm & Validate
+                  </button>
+                  <button onClick={() => setShowValidateModal(false)}
+                    className="px-4 py-2.5 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer">
+                    Cancel
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Create RACM Modal */}
+      <AnimatePresence>
+        {showCreateRacmModal && (
+          <CreateRacmModal
+            onClose={() => setShowCreateRacmModal(false)}
+            onCreate={(newRacm) => {
+              setRacmList(prev => [newRacm, ...prev]);
+              setShowCreateRacmModal(false);
+              setRacmStatus('Draft');
+              setRacmReadiness('Needs Mapping');
+              addToast({ message: `RACM "${newRacm.name}" created as Draft`, type: 'success' });
+              setSelectedRacmId(newRacm.id);
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── RACM Setup Workspace ───────────────────────────────────────────────────
+
+interface SetupRisk { id: string; name: string; description: string; process: string; sourceRow: string; }
+
+function RacmSetupWorkspace({ racm, onBack, onStartMapping, onImport }: {
+  racm: RacmEntry;
+  onBack: () => void;
+  onStartMapping: () => void;
+  onImport: () => void;
+}) {
+  const { addToast } = useToast();
+  const statusCls = RACM_STATUS_CLS[racm.status] || RACM_STATUS_CLS.Draft;
+
+  const [localRisks, setLocalRisks] = useState<SetupRisk[]>([]);
+  const [showAddRisk, setShowAddRisk] = useState(false);
+  const [riskName, setRiskName] = useState('');
+  const [riskDesc, setRiskDesc] = useState('');
+
+  const totalRisks = racm.risks + localRisks.length;
+
+  const kpis = [
+    { label: 'Total Risks', value: totalRisks, color: totalRisks > 0 ? 'text-text' : 'text-text-muted' },
+    { label: 'Mapped Risks', value: racm.mappedRisks, color: racm.mappedRisks > 0 ? 'text-compliant-700' : 'text-text-muted' },
+    { label: 'Unmapped Risks', value: totalRisks - racm.mappedRisks, color: totalRisks > racm.mappedRisks ? 'text-risk-700' : 'text-text-muted' },
+    { label: 'Controls Linked', value: racm.controls, color: racm.controls > 0 ? 'text-evidence-700' : 'text-text-muted' },
+    { label: 'Workflow Coverage', value: `${racm.workflowCoverage}%`, color: racm.workflowCoverage >= 80 ? 'text-compliant-700' : racm.workflowCoverage > 0 ? 'text-mitigated-700' : 'text-text-muted' },
+    { label: 'Readiness', value: racm.readiness === 'Ready for Execution' ? 'Ready' : racm.readiness, color: racm.readiness === 'Ready for Execution' ? 'text-compliant-700' : 'text-mitigated-700' },
+  ];
+
+  const handleAddRisk = () => {
+    if (!riskName.trim()) return;
+    const id = `RSK-${String(100 + localRisks.length + 1).padStart(3, '0')}`;
+    setLocalRisks(prev => [...prev, { id, name: riskName, description: riskDesc, process: racm.process, sourceRow: 'Manual' }]);
+    setRiskName(''); setRiskDesc(''); setShowAddRisk(false);
+    addToast({ message: `Risk "${riskName}" added`, type: 'success' });
+  };
+
+  const handleImportRisks = () => {
+    // Simulate importing 5 risks from a file
+    const imported: SetupRisk[] = [
+      { id: 'RSK-IMP-001', name: 'Unauthorized payments without PO', description: 'Payments processed without matching purchase order', process: racm.process, sourceRow: 'Row 2' },
+      { id: 'RSK-IMP-002', name: 'Duplicate vendor invoices', description: 'Same invoice submitted and paid twice', process: racm.process, sourceRow: 'Row 3' },
+      { id: 'RSK-IMP-003', name: 'Vendor master data manipulation', description: 'Unauthorized changes to vendor bank details', process: racm.process, sourceRow: 'Row 4' },
+      { id: 'RSK-IMP-004', name: 'Threshold bypass for approvals', description: 'High-value transactions processed without required approvals', process: racm.process, sourceRow: 'Row 5' },
+      { id: 'RSK-IMP-005', name: 'Segregation of duties violation', description: 'Same user creates and approves transactions', process: racm.process, sourceRow: 'Row 6' },
+    ];
+    setLocalRisks(prev => [...prev, ...imported]);
+    addToast({ message: `5 risks imported from file — ready for mapping`, type: 'success' });
+  };
+
+  const handleProceedToMapping = () => {
+    addToast({ message: `${totalRisks} risks ready — opening mapping workspace`, type: 'info' });
+    onStartMapping();
+  };
+
+  const isEmpty = totalRisks === 0;
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div>
+        <button onClick={onBack} className="flex items-center gap-1.5 text-[12px] text-text-muted hover:text-primary font-medium cursor-pointer transition-colors mb-3">
+          <ArrowLeft size={14} />Back to RACM List
+        </button>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-primary to-primary-medium"><LayoutGrid size={18} className="text-white" /></div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-[16px] font-bold text-text">{racm.name}</h2>
+              <span className="text-[11px] font-mono text-ink-400">{racm.version}</span>
+              <span className={`px-2 h-5 rounded-full text-[10px] font-semibold inline-flex items-center ${statusCls}`}>{racm.status}</span>
+            </div>
+            <div className="flex items-center gap-3 text-[12px] text-text-muted mt-0.5">
+              <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: BP_DOT_COLORS[racm.process] || '#6B5D82' }} />{racm.process}</span>
+              <span>{racm.framework}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-6 gap-3">
+        {kpis.map((kpi, i) => (
+          <motion.div key={kpi.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+            className="glass-card rounded-xl p-3 text-center">
+            <div className={`text-lg font-bold tabular-nums ${kpi.color}`}>{kpi.value}</div>
+            <div className="text-[10px] text-text-muted mt-0.5">{kpi.label}</div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Action bar */}
+      <div className="flex items-center gap-2">
+        <button onClick={() => setShowAddRisk(true)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
+          <Plus size={13} />Add Risk
+        </button>
+        <button onClick={handleImportRisks}
+          className="flex items-center gap-1.5 px-4 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer">
+          <Upload size={13} />Import Risks from File
+        </button>
+        {totalRisks > 0 && (
+          <button onClick={handleProceedToMapping}
+            className="flex items-center gap-1.5 px-4 py-2 border border-primary/30 bg-primary/5 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer ml-auto">
+            <Target size={13} />Proceed to Mapping
+          </button>
+        )}
+      </div>
+
+      {/* Helper text */}
+      <div className="rounded-lg border border-canvas-border bg-canvas px-4 py-3 flex items-start gap-2.5">
+        <Info size={13} className="text-primary/60 mt-0.5 shrink-0" />
+        <p className="text-[11px] text-ink-500 leading-relaxed">Define risks first, then map controls to establish risk coverage. Mapping happens in the next step — just create risks here.</p>
+      </div>
+
+      {/* Add Risk inline form */}
+      <AnimatePresence>
+        {showAddRisk && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+            <div className="glass-card rounded-xl p-4 space-y-3">
+              <div className="text-[12px] font-bold text-brand-700">Add Risk</div>
+              <div>
+                <label className="text-[12px] font-semibold text-text-muted block mb-1">Risk Name *</label>
+                <input value={riskName} onChange={e => setRiskName(e.target.value)} placeholder="e.g. Unauthorized vendor payments"
+                  className="w-full px-3 py-2 border border-border rounded-lg text-[13px] text-text bg-white outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all" autoFocus />
+              </div>
+              <div>
+                <label className="text-[12px] font-semibold text-text-muted block mb-1">Risk Description</label>
+                <textarea value={riskDesc} onChange={e => setRiskDesc(e.target.value)} rows={2} placeholder="Describe the risk..."
+                  className="w-full px-3 py-2 border border-border rounded-lg text-[13px] text-text bg-white outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all resize-none" />
+              </div>
+              <div className="flex items-center gap-2 text-[11px] text-ink-400">
+                <span>Process: <strong className="text-text">{racm.process}</strong></span>
+                <span>·</span>
+                <span>ID: auto-generated</span>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <button onClick={handleAddRisk} disabled={!riskName.trim()}
+                  className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">Add Risk</button>
+                <button onClick={() => { setShowAddRisk(false); setRiskName(''); setRiskDesc(''); }}
+                  className="px-4 py-2 border border-border rounded-lg text-[12px] font-medium text-ink-600 hover:bg-canvas transition-colors cursor-pointer">Cancel</button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Risks table / empty state */}
+      {isEmpty && !showAddRisk ? (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-10 text-center">
+          <AlertTriangle size={36} className="mx-auto text-ink-300 mb-3" />
+          <p className="text-[15px] font-semibold text-ink-600 mb-1">No risks added yet</p>
+          <p className="text-[13px] text-ink-400 mb-5 max-w-md mx-auto">Start by adding risks manually or importing a RACM file with existing risk and control data.</p>
+          <div className="flex items-center justify-center gap-3">
+            <button onClick={() => setShowAddRisk(true)} className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer"><Plus size={14} />Add Risk</button>
+            <button onClick={handleImportRisks} className="flex items-center gap-2 px-4 py-2.5 border border-border rounded-lg text-[13px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer"><Upload size={14} />Import Risks</button>
+          </div>
+        </motion.div>
+      ) : localRisks.length > 0 ? (
+        <div className="glass-card rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12px]">
+              <thead><tr className="border-b border-border bg-surface-2/50">
+                {['ID', 'Risk Name', 'Process', 'Source', 'Status'].map(h =>
+                  <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase">{h}</th>
+                )}
+              </tr></thead>
+              <tbody>{localRisks.map((r, i) => (
+                <motion.tr key={r.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
+                  className="border-b border-border/40 hover:bg-surface-2/30 transition-colors">
+                  <td className="px-3 py-2.5 font-mono text-[11px] text-ink-500">{r.id}</td>
+                  <td className="px-3 py-2.5">
+                    <div className="text-[12px] font-medium text-text">{r.name}</div>
+                    {r.description && <div className="text-[10px] text-text-muted truncate max-w-[250px]">{r.description}</div>}
+                  </td>
+                  <td className="px-3 py-2.5"><span className="inline-flex items-center gap-1 text-[11px]"><span className="w-1.5 h-1.5 rounded-full" style={{ background: BP_DOT_COLORS[r.process] || '#6B5D82' }} />{r.process}</span></td>
+                  <td className="px-3 py-2.5 text-[11px] text-ink-400">{r.sourceRow}</td>
+                  <td className="px-3 py-2.5"><span className="px-1.5 h-4 rounded text-[9px] font-bold bg-draft-50 text-draft-700 inline-flex items-center">Unmapped</span></td>
+                </motion.tr>
+              ))}</tbody>
+            </table>
+          </div>
+          <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-surface-2/30">
+            <span className="text-[11px] text-text-muted">{localRisks.length} risk{localRisks.length !== 1 ? 's' : ''} added</span>
+            <button onClick={handleProceedToMapping}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-[11px] font-semibold transition-colors cursor-pointer">
+              <Target size={11} />Proceed to Mapping <ChevronRight size={10} />
+            </button>
+          </div>
+        </div>
+      ) : racm.risks > 0 ? (
+        <div className="glass-card rounded-xl p-5">
+          <h3 className="text-[12px] font-bold text-ink-500 uppercase tracking-wider mb-3">Existing Risks ({racm.risks})</h3>
+          <p className="text-[12px] text-ink-400">This RACM has {racm.risks} risks from seed data.</p>
+          <button onClick={handleProceedToMapping}
+            className="mt-3 flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
+            <Target size={13} />Open Mapping Workspace
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ─── Create RACM Modal ──────────────────────────────────────────────────────
+
+const RACM_PROCESSES = ['P2P', 'O2C', 'R2R', 'S2C', 'ITGC', 'Cross'];
+const RACM_FRAMEWORKS = ['SOX ICFR', 'IFC', 'ISO 27001', 'Internal Policy', ''];
+
+function CreateRacmModal({ onClose, onCreate }: { onClose: () => void; onCreate: (r: RacmEntry) => void }) {
+  const [name, setName] = useState('');
+  const [process, setProcess] = useState('P2P');
+  const [framework, setFramework] = useState('');
+  const [description, setDescription] = useState('');
+
+  const isValid = name.trim().length > 0;
+
+  const handleCreate = () => {
+    if (!isValid) return;
+    onCreate({
+      id: `racm-${Date.now()}`,
+      name,
+      version: 'v1.0',
+      process,
+      framework: framework || 'Internal Policy',
+      risks: 0,
+      controls: 0,
+      mappedRisks: 0,
+      unmappedRisks: 0,
+      keyControls: 0,
+      workflowCoverage: 0,
+      status: 'Draft',
+      readiness: 'Not Ready',
+    });
+  };
+
+  const fieldCls = 'w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text bg-white outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all';
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/30 backdrop-blur-sm" onClick={onClose}>
+        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ duration: 0.2 }} className="bg-white rounded-2xl shadow-xl border border-canvas-border w-full max-w-[460px] flex flex-col" onClick={e => e.stopPropagation()}>
+
+          <div className="px-6 pt-5 pb-4 border-b border-canvas-border flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2"><LayoutGrid size={18} className="text-brand-600" /><h2 className="font-display text-[18px] font-semibold text-ink-900">Create RACM</h2></div>
+              <p className="text-[12px] text-ink-500 mt-0.5">Define a new Risk & Control Matrix. Add risks and controls after creation.</p>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 rounded-full text-ink-500 hover:text-ink-800 hover:bg-[#F4F2F7] flex items-center justify-center cursor-pointer"><X size={16} /></button>
+          </div>
+
+          <div className="px-6 py-5 space-y-3">
+            <div>
+              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">RACM Name *</label>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. FY26 P2P — Vendor Payment" className={fieldCls} autoFocus />
+            </div>
+            <div>
+              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Primary Business Process *</label>
+              <select value={process} onChange={e => setProcess(e.target.value)} className={fieldCls + ' cursor-pointer appearance-none'}>
+                {RACM_PROCESSES.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Framework <span className="font-normal text-ink-400">(optional)</span></label>
+              <select value={framework} onChange={e => setFramework(e.target.value)} className={fieldCls + ' cursor-pointer appearance-none'}>
+                <option value="">Select framework...</option>
+                {RACM_FRAMEWORKS.filter(Boolean).map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Description <span className="font-normal text-ink-400">(optional)</span></label>
+              <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Brief description of scope..." className={fieldCls + ' resize-none'} />
+            </div>
+          </div>
+
+          <div className="px-6 py-4 border-t border-canvas-border flex items-center justify-end gap-3">
+            <button onClick={onClose} className="px-4 py-2.5 rounded-lg border border-canvas-border text-[13px] font-medium text-ink-600 hover:bg-canvas transition-colors cursor-pointer">Cancel</button>
+            <button onClick={handleCreate} disabled={!isValid}
+              className="px-5 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-[13px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+              Create RACM
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </>
   );
 }
 
@@ -670,8 +1712,8 @@ function EngagementDrawer({
               />
             </div>
 
-            {/* Audit Type & Framework side by side */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Audit Type */}
+            <div className="mb-3">
               <Dropdown<AuditType>
                 label="Audit Type *"
                 value={form.auditType}
@@ -679,23 +1721,50 @@ function EngagementDrawer({
                 onChange={(v) => update('auditType', v)}
                 disabled={readOnly || isInExecution}
               />
+              <p className="text-[10px] text-text-muted mt-0.5 px-1">Audit type defines the nature of the audit.</p>
+            </div>
+
+            {/* Framework / Compliance Scope */}
+            <div className="mb-3">
               <Dropdown<FrameworkType>
-                label="Framework *"
+                label="Framework / Compliance Scope *"
                 value={form.framework}
                 options={FRAMEWORKS}
                 onChange={(v) => update('framework', v)}
                 disabled={readOnly || isInExecution}
               />
+              <p className="text-[10px] text-text-muted mt-0.5 px-1">Framework defines the compliance or assurance standard.</p>
             </div>
 
-            {/* Business Process */}
-            <Dropdown<ProcessType>
-              label="Business Process *"
-              value={form.businessProcess}
-              options={PROCESSES}
-              onChange={(v) => update('businessProcess', v)}
-              disabled={readOnly || isInExecution}
-            />
+            {/* SOX Enforcement Panel */}
+            <div className={`mb-3 rounded-xl border px-4 py-3 ${form.framework === 'SOX ICFR' ? 'border-brand-200 bg-brand-50/40' : 'border-border bg-surface-2/50'}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-bold text-text-muted uppercase">SOX Enforcement</span>
+                {form.framework === 'SOX ICFR' ? (
+                  <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-bold bg-brand-100 text-brand-700">Enabled</span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-500">Disabled</span>
+                )}
+              </div>
+              {form.framework === 'SOX ICFR' ? (
+                <p className="text-[10px] text-brand-700 leading-relaxed">Reviewer approval, evidence requirements, key-control validation, and period locking will be enforced.</p>
+              ) : (
+                <p className="text-[10px] text-text-muted leading-relaxed">Standard engagement rules will apply.</p>
+              )}
+              <p className="text-[9px] text-text-muted mt-1 italic">SOX enforcement is driven by framework, not audit type.</p>
+            </div>
+
+            {/* Primary Business Process / Domain */}
+            <div className="mb-3">
+              <Dropdown<ProcessType>
+                label="Primary Business Process / Domain *"
+                value={form.businessProcess}
+                options={PROCESSES}
+                onChange={(v) => update('businessProcess', v)}
+                disabled={readOnly || isInExecution}
+              />
+              <p className="text-[10px] text-text-muted mt-0.5 px-1">Used for planning and filtering. Execution scope comes from linked RACM.</p>
+            </div>
 
             {/* Audit Period */}
             <div className="grid grid-cols-2 gap-3">
@@ -817,30 +1886,7 @@ function EngagementDrawer({
               </div>
             </div>
 
-            {/* Priority & Risk Score */}
-            <div className="grid grid-cols-2 gap-3">
-              <Dropdown<PriorityLevel>
-                label="Priority"
-                value={form.priority}
-                options={PRIORITIES}
-                onChange={(v) => update('priority', v)}
-                disabled={readOnly || isInExecution}
-                renderOption={(opt) => (
-                  <span className={`font-semibold ${
-                    opt === 'Critical' ? 'text-risk-700' : opt === 'High' ? 'text-high-700' :
-                    opt === 'Medium' ? 'text-mitigated-700' : 'text-compliant-700'
-                  }`}>{opt}</span>
-                )}
-              />
-              <div className="mb-3">
-                <label className="text-[12px] font-semibold text-text-muted block mb-1.5">Risk Score (1-100)</label>
-                <input type="number" min={1} max={100} value={form.riskScore}
-                  onChange={(e) => update('riskScore', Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                  disabled={readOnly || isInExecution}
-                  className={`w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text focus:outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all ${(readOnly || isInExecution) ? 'bg-surface-2 text-text-muted cursor-not-allowed' : 'bg-white'}`}
-                />
-              </div>
-            </div>
+            {/* Priority & Risk Score — hidden from create form */}
 
             {/* Description */}
             <div className="mb-3">
@@ -1045,9 +2091,11 @@ function ActivationModal({ engagement, activating, activationError, activationLo
 
 interface Props {
   onNavigateToExecution?: (engagementId: string) => void;
+  /** When true, hides header/KPIs/attention — used when embedded inside Programs */
+  embedded?: boolean;
 }
 
-export default function AuditPlanningView({ onNavigateToExecution }: Props) {
+export default function AuditPlanningView({ onNavigateToExecution, embedded = false }: Props) {
   const { addToast } = useToast();
   const [plan, setPlan] = useState<AuditEngagement[]>(INITIAL_AUDIT_PLAN);
   const [planFrozen, setPlanFrozen] = useState(false);
@@ -1059,7 +2107,7 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
   const [signOffComment, setSignOffComment] = useState('');
   const [signerDropdownOpen, setSignerDropdownOpen] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<TabId>('execution');
+  const [activeTab, setActiveTab] = useState<TabId>(embedded ? 'racm' : 'execution');
   const [processFilter, setProcessFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
 
@@ -1243,8 +2291,8 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
     setDrawerEngagement({
       id: newId,
       name: '',
-      auditType: 'SOX',
-      framework: 'COSO',
+      auditType: 'Financial Internal Control',
+      framework: 'SOX ICFR',
       businessProcess: 'P2P',
       auditPeriodStart: '2025-04-01',
       auditPeriodEnd: '2026-03-31',
@@ -1329,6 +2377,7 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
   if (totalFailed > 0) attentionItems.push({ type: 'failed', label: 'Failed controls', count: totalFailed });
 
   const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
+    { id: 'racm', label: 'RACM', icon: LayoutGrid },
     { id: 'execution', label: 'Execution', icon: Zap },
     { id: 'timeline', label: 'Timeline', icon: Calendar },
   ];
@@ -1337,45 +2386,60 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
   const statusFilterOptions = ['All', 'Active', 'Planned'];
 
   return (
-    <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
-      <Orb hoverIntensity={0.06} rotateOnHover hue={275} opacity={0.05} />
+    <div className={`h-full overflow-y-auto ${embedded ? '' : 'bg-white bg-mesh-gradient'} relative`}>
+      {!embedded && <Orb hoverIntensity={0.06} rotateOnHover hue={275} opacity={0.05} />}
 
-      <div className="p-8 relative">
-        {/* Header */}
-        <div className="flex items-end justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-primary-medium text-white">
-                <Calendar size={16} />
+      <div className={embedded ? '' : 'p-8 relative'}>
+        {/* Header — hidden when embedded */}
+        {!embedded && (
+          <div className="flex items-end justify-between mb-6">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-primary-medium text-white">
+                  <Calendar size={16} />
+                </div>
+                <h1 className="text-xl font-bold text-text">Audit Planning</h1>
               </div>
-              <h1 className="text-xl font-bold text-text">Audit Planning</h1>
+              <p className="text-sm text-text-secondary mt-1 ml-9">FY26 Annual Audit Plan — April 2025 to March 2026</p>
             </div>
-            <p className="text-sm text-text-secondary mt-1 ml-9">FY26 Annual Audit Plan — April 2025 to March 2026</p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={openCreateDrawer}
+                className="flex items-center gap-1.5 px-3 py-2 border border-primary/30 bg-primary/5 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+              >
+                <Plus size={13} />
+                Add Engagement
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={openCreateDrawer}
-              className="flex items-center gap-1.5 px-3 py-2 border border-primary/30 bg-primary/5 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"
-            >
-              <Plus size={13} />
-              Add Engagement
+        )}
+
+        {/* KPI Strip — hidden when embedded */}
+        {!embedded && (
+          <div className="grid grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+            <KpiCard label="Engagements" value={plan.length} icon={ClipboardList} color="text-primary bg-primary-xlight" index={0} />
+            <KpiCard label="In Execution" value={activeCount} icon={Zap} color="text-evidence-700 bg-evidence-50" index={1} />
+            <KpiCard label="Total Controls" value={totalControls} icon={ShieldCheck} color="text-compliant-700 bg-compliant-50" index={2} />
+            <KpiCard label="On Track" value={onTrackEngagements} icon={CheckCircle2} color="text-compliant-700 bg-compliant-50" index={3} />
+            <KpiCard label="Pending Review" value={totalPendingReview} icon={Clock} color="text-mitigated-700 bg-mitigated-50" index={4} />
+            <KpiCard label="Overdue" value={overdueEngagements} icon={XCircle} color="text-risk-700 bg-risk-50" index={5} />
+            <KpiCard label="Failed Controls" value={totalFailed} icon={XCircle} color="text-high-700 bg-high-50" index={6} />
+          </div>
+        )}
+
+        {/* Embedded toolbar — New Engagement button when inside Programs */}
+        {embedded && (
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-[12px] text-text-muted">{plan.length} engagement{plan.length !== 1 ? 's' : ''}</div>
+            <button onClick={openCreateDrawer}
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
+              <Plus size={14} />New Engagement
             </button>
           </div>
-        </div>
+        )}
 
-        {/* Execution KPI Strip */}
-        <div className="grid grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
-          <KpiCard label="Engagements" value={plan.length} icon={ClipboardList} color="text-primary bg-primary-xlight" index={0} />
-          <KpiCard label="In Execution" value={activeCount} icon={Zap} color="text-evidence-700 bg-evidence-50" index={1} />
-          <KpiCard label="Total Controls" value={totalControls} icon={ShieldCheck} color="text-compliant-700 bg-compliant-50" index={2} />
-          <KpiCard label="On Track" value={onTrackEngagements} icon={CheckCircle2} color="text-compliant-700 bg-compliant-50" index={3} />
-          <KpiCard label="Pending Review" value={totalPendingReview} icon={Clock} color="text-mitigated-700 bg-mitigated-50" index={4} />
-          <KpiCard label="Overdue" value={overdueEngagements} icon={XCircle} color="text-risk-700 bg-risk-50" index={5} />
-          <KpiCard label="Failed Controls" value={totalFailed} icon={XCircle} color="text-high-700 bg-high-50" index={6} />
-        </div>
-
-        {/* Attention Required Strip */}
-        {attentionItems.length > 0 && (
+        {/* Attention Strip — hidden when embedded */}
+        {!embedded && attentionItems.length > 0 && (
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
             <div className="flex items-center gap-3 p-3 rounded-xl bg-risk-50/50 border border-risk/20">
               <AlertTriangle size={16} className="text-risk-700 shrink-0" />
@@ -1415,7 +2479,7 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
         {activeTab === 'timeline' && (
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4 mb-4">
             <div className="flex items-center gap-2">
-              <span className="text-[12px] font-bold text-text-muted">Process:</span>
+              <span className="text-[12px] font-bold text-text-muted">Filter by Primary Process:</span>
               <div className="flex gap-1">
                 {processFilterOptions.map(opt => (
                   <button key={opt} onClick={() => setProcessFilter(opt)}
@@ -1442,6 +2506,13 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
 
         {/* Tab Content */}
         <AnimatePresence mode="wait">
+          {/* ── RACM TAB ── */}
+          {activeTab === 'racm' && (
+            <motion.div key="racm" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}>
+              <RacmDashboard engagements={plan} onGoToExecution={() => setActiveTab('execution')} />
+            </motion.div>
+          )}
+
           {/* ── EXECUTION TAB ── */}
           {activeTab === 'execution' && (() => {
             const filterOptions = [
@@ -1455,6 +2526,9 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
             ];
 
             const filteredPlan = plan.filter(eng => {
+              // Process filter
+              if (processFilter !== 'All' && eng.businessProcess !== processFilter) return false;
+              // Status filter
               if (engFilter === 'all') return true;
               if (engFilter === 'active') return isExecutionPhase(eng.status);
               if (engFilter === 'planned') return ['planned', 'frozen', 'signed-off'].includes(eng.status);
@@ -1477,26 +2551,68 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
             return (
               <motion.div key="execution" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
                 {/* Engagement Filters */}
-                <div className="flex items-center gap-1.5 mb-4 flex-wrap">
-                  {filterOptions.map(f => (
-                    <button key={f.key} onClick={() => setEngFilter(f.key)}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
-                        engFilter === f.key ? 'bg-primary text-white' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
-                      }`}>
-                      {f.label}
-                      {f.count > 0 && <span className={`ml-1 text-[10px] tabular-nums ${engFilter === f.key ? 'text-white/80' : 'text-text-muted/60'}`}>{f.count}</span>}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-4 mb-4 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {filterOptions.map(f => (
+                      <button key={f.key} onClick={() => setEngFilter(f.key)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
+                          engFilter === f.key ? 'bg-primary text-white' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
+                        }`}>
+                        {f.label}
+                        {f.count > 0 && <span className={`ml-1 text-[10px] tabular-nums ${engFilter === f.key ? 'text-white/80' : 'text-text-muted/60'}`}>{f.count}</span>}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="w-px h-5 bg-border-light" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-text-muted">Filter by Primary Process:</span>
+                    {processFilterOptions.map(opt => (
+                      <button key={opt} onClick={() => setProcessFilter(opt)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
+                          processFilter === opt ? 'bg-evidence-700 text-white' : 'bg-surface-2 text-text-muted hover:bg-evidence-50 hover:text-evidence-700'
+                        }`}>{opt}</button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Engagement Execution Table */}
+                {filteredPlan.length === 0 ? (
+                  <div className="glass-card rounded-xl p-12 text-center">
+                    <ClipboardList size={32} className="text-text-muted mx-auto mb-3" />
+                    <p className="text-[14px] font-semibold text-text mb-1">No engagements found</p>
+                    <p className="text-[12px] text-text-muted max-w-sm mx-auto">
+                      {plan.length === 0
+                        ? 'No engagements yet. Create your first engagement by selecting a business process and RACM.'
+                        : 'No engagements match the selected filters. Try adjusting your filters above.'}
+                    </p>
+                  </div>
+                ) : (
+                <>
+                {/* Explanatory line */}
+                <div className="flex items-start gap-2 mb-3 px-1">
+                  <Info size={13} className="text-primary/60 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-text-muted leading-relaxed">
+                    Engagements are organized by <span className="font-semibold text-text-secondary">Primary Business Process</span>. Execution scope still comes from the linked RACM snapshot.
+                  </p>
+                </div>
+
                 <div className="glass-card rounded-xl overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-[12px]">
                       <thead>
                         <tr className="border-b border-border bg-surface-2/50">
-                          {['Engagement', 'Type', 'Process', 'Owner', 'Progress', 'Effective', 'Failed', 'Pending', 'Remaining', 'Status', 'Action'].map(h => (
-                            <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide whitespace-nowrap">{h}</th>
+                          {['Engagement', 'Type', 'Primary Process', 'Owner', 'Progress', 'Effective', 'Failed', 'Pending', 'Remaining', 'Status', 'Action'].map(h => (
+                            <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide whitespace-nowrap">
+                              {h === 'Primary Process' ? (
+                                <span className="group relative inline-flex items-center gap-1 cursor-help">
+                                  {h}
+                                  <Info size={10} className="text-text-muted/50" />
+                                  <span className="absolute left-0 top-full mt-1.5 z-50 hidden group-hover:block w-[220px] px-2.5 py-2 rounded-lg bg-ink-900 text-white text-[10px] font-normal normal-case tracking-normal leading-snug shadow-lg">
+                                    Used for planning, filtering, and ownership. Does not limit RACM execution scope.
+                                  </span>
+                                </span>
+                              ) : h}
+                            </th>
                           ))}
                         </tr>
                       </thead>
@@ -1516,14 +2632,25 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
                               <td className="px-3 py-2.5">
                                 <div className="flex items-center gap-2">
                                   <div className="w-2 h-2 rounded-full shrink-0" style={{ background: eng.color, opacity: isActive ? 1 : 0.4 }} />
-                                  <span className="text-[12px] font-medium text-text max-w-[160px] truncate">{eng.name}</span>
-                                  {eng.isOverdue && <span className="px-1 h-4 rounded text-[8px] font-bold bg-risk-50 text-risk-700 inline-flex items-center animate-pulse">OD</span>}
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[12px] font-semibold text-text truncate">{eng.name}</span>
+                                      {eng.isOverdue && <span className="px-1 h-4 rounded text-[8px] font-bold bg-risk-50 text-risk-700 inline-flex items-center animate-pulse shrink-0">OD</span>}
+                                    </div>
+                                    <div className="text-[10px] text-text-muted mt-0.5 truncate max-w-[220px]">
+                                      RACM: {getRacmDisplayName(eng)} · Scope: {getScopeLabel(eng)}
+                                    </div>
+                                  </div>
                                 </div>
                               </td>
                               <td className="px-3 py-2.5">
                                 <span className="px-2 h-5 rounded-full text-[9px] font-semibold bg-brand-50 text-brand-700 inline-flex items-center">{eng.auditType}</span>
                               </td>
-                              <td className="px-3 py-2.5"><span className="text-[11px] text-text-secondary">{eng.businessProcess}</span></td>
+                              <td className="px-3 py-2.5">
+                                <span className={`px-2.5 h-5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 ${PROCESS_BADGE_COLORS[eng.businessProcess]}`}>
+                                  {eng.businessProcess === 'Cross' ? 'Cross-Process' : eng.businessProcess}
+                                </span>
+                              </td>
                               <td className="px-3 py-2.5"><span className="text-[11px] text-text-secondary">{eng.owner.split(' ')[0]}</span></td>
                               <td className="px-3 py-2.5">
                                 {isActive ? (
@@ -1565,6 +2692,8 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
                     <span className="text-[11px] text-text-muted">{filteredPlan.length} of {plan.length} engagements</span>
                   </div>
                 </div>
+                </>
+                )}
               </motion.div>
             );
           })()}

@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Sparkles } from 'lucide-react';
 import { useAppState } from './hooks/useAppState';
 import { ToastProvider } from './components/shared/Toast';
+import { BulkRunProgressProvider } from './components/shared/BulkRunProgress';
 import Sidebar from './components/sidebar/Sidebar';
 import ChatView from './components/chat/ChatView';
 import ArtifactPanel from './components/artifacts/ArtifactPanel';
@@ -25,6 +26,7 @@ import ShareModal from './components/modals/ShareModal';
 import PowerBIImportWizard from './components/modals/PowerBIImportWizard';
 import ReportBuilder from './components/reports/ReportBuilder';
 import AuditPlanningView from './components/audit/AuditPlanningView';
+import ProgramsView from './components/audit/ProgramsView';
 // New pages
 import RACMView from './components/governance/RACMView';
 import ControlLibraryView from './components/governance/ControlLibraryView';
@@ -80,6 +82,7 @@ export default function App() {
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [viewLoading, setViewLoading] = useState(false);
   const [controlDrawerId, setControlDrawerId] = useState<string | null>(null);
+  const [engagementBackView, setEngagementBackView] = useState<'programs' | 'audit-planning' | 'business-processes'>('programs');
 
   useEffect(() => {
     if (mainScrollRef.current) {
@@ -100,16 +103,12 @@ export default function App() {
   const renderArtifactPanel = () => {
     if (!state.showArtifacts) return null;
 
-    if (state.artifactMode === 'workflow') {
-      return (
-        <WorkflowBuilderCanvas
-          onClose={() => setShowArtifacts(false)}
-          workflowType={state.workflowType ?? undefined}
-        />
-      );
-    }
-
-    return (
+    const inner = state.artifactMode === 'workflow' ? (
+      <WorkflowBuilderCanvas
+        onClose={() => setShowArtifacts(false)}
+        workflowType={state.workflowType ?? undefined}
+      />
+    ) : (
       <ArtifactPanel
         activeTab={state.activeArtifactTab}
         setActiveTab={setActiveArtifactTab}
@@ -118,6 +117,28 @@ export default function App() {
         onAddToReport={() => openReportBuilder('new')}
         onShareResults={() => setShowShareModal(true, { type: 'workflow-output', id: 'result-1' })}
       />
+    );
+
+    // Mode-flip rotation: Y-axis full spin (0 → 360°). Content swaps at 180°
+    // via AnimatePresence mode="wait" + key on artifactMode. perspective applied
+    // to wrapper for proper 3D feel; transformStyle preserve-3d on the spinning
+    // element so the back face renders correctly.
+    return (
+      <div style={{ perspective: '1400px' }} className="h-full">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={state.artifactMode}
+            initial={{ rotateY: 0 }}
+            animate={{ rotateY: 360 }}
+            exit={{ rotateY: 360 }}
+            transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
+            style={{ transformStyle: 'preserve-3d', backfaceVisibility: 'hidden' }}
+            className="h-full"
+          >
+            {inner}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     );
   };
 
@@ -205,19 +226,37 @@ export default function App() {
           />
         );
 
+      case 'programs':
+        return (
+          <ProgramsView
+            selectedBPId={state.selectedBPId}
+            onSelectBP={setSelectedBP}
+            onNavigateToExecution={(engId) => {
+              setEngagementBackView('programs');
+              openAuditExecution(engId);
+              setView('engagement-detail' as any);
+            }}
+          />
+        );
+
       case 'business-processes':
       case 'bp-detail':
         return (
           <BusinessProcesses
             selectedBPId={state.selectedBPId}
             onSelectBP={setSelectedBP}
+            onOpenEngagement={(engId) => {
+              setEngagementBackView('business-processes');
+              openAuditExecution(engId);
+              setView('engagement-detail' as any);
+            }}
           />
         );
 
       case 'audit-risk-register':
         return (
           <RiskRegister
-            onRunWorkflow={(id) => setSelectedWorkflow(id)}
+            onNavigate={(v) => setView(v as any)}
           />
         );
 
@@ -228,7 +267,7 @@ export default function App() {
         return (
           <EngagementDetailView
             engagementId={state.selectedEngagementId ?? undefined}
-            onBack={() => setView('audit-planning')}
+            onBack={() => setView(engagementBackView)}
             onOpenControl={(controlId) => setControlDrawerId(controlId)}
           />
         );
@@ -287,6 +326,7 @@ export default function App() {
 
       case 'audit-planning':
         return <AuditPlanningView onNavigateToExecution={(engId) => {
+          setEngagementBackView('audit-planning');
           openAuditExecution(engId);
           setView('engagement-detail' as any);
         }} />;
@@ -375,6 +415,7 @@ export default function App() {
 
   return (
     <ToastProvider>
+      <BulkRunProgressProvider>
       <div className="flex h-screen w-full bg-canvas overflow-hidden">
         <Sidebar
           view={state.view}
@@ -459,6 +500,7 @@ export default function App() {
           )}
         </AnimatePresence>
       </div>
+      </BulkRunProgressProvider>
     </ToastProvider>
   );
 }

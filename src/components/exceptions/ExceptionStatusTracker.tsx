@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, ChevronRight, ShieldCheck, X } from 'lucide-react';
 import {
   GRC_EXCEPTIONS,
+  GRC_BULK_ACTIONS,
   ACTION_HUB_TIMELINE,
   type GrcException,
   type GrcExceptionStatus,
@@ -15,6 +16,11 @@ const STATUS_STYLE: Record<GrcExceptionStatus, string> = {
   Open:           'bg-[#EEEEF1] text-ink-600',
   'Under Review': 'bg-mitigated-50 text-mitigated-700',
   Closed:         'bg-compliant-50 text-compliant-700',
+};
+const STATUS_LABEL: Record<GrcExceptionStatus, string> = {
+  Open:           'Open',
+  'Under Review': 'In-Progress',
+  Closed:         'Closed',
 };
 
 const CLASSIFICATION_STYLE: Record<GrcExceptionClassification, string> = {
@@ -40,55 +46,40 @@ function Pill({ children, className }: { children: React.ReactNode; className: s
   );
 }
 
-interface Group {
-  key: string;
-  kind: 'bulk' | 'individual';
-  label: React.ReactNode;
+interface ActionGroup {
+  actionId: string;
+  title?: string;
   exceptions: GrcException[];
 }
 
-function groupExceptions(exceptions: GrcException[]): Group[] {
-  const groups: Group[] = [];
-  const byBulk = new Map<string, GrcException[]>();
-  const individuals: GrcException[] = [];
+interface ActionPlanBuckets {
+  bulk: ActionGroup[];
+  individual: ActionGroup[];
+}
 
+// Group every exception by its action ID, then partition action groups by
+// whether they cover multiple cases (bulk) or just one (individual).
+// Exceptions with no actionId are skipped — they have no action plan yet.
+function buildActionPlans(exceptions: GrcException[]): ActionPlanBuckets {
+  const byAction = new Map<string, GrcException[]>();
   exceptions.forEach(ex => {
-    if (ex.bulkId) {
-      const arr = byBulk.get(ex.bulkId) ?? [];
-      arr.push(ex);
-      byBulk.set(ex.bulkId, arr);
-    } else {
-      individuals.push(ex);
-    }
+    if (!ex.bulkId) return;
+    const arr = byAction.get(ex.bulkId) ?? [];
+    arr.push(ex);
+    byAction.set(ex.bulkId, arr);
   });
-
-  byBulk.forEach((arr, bulkId) => {
-    if (arr.length >= 2) {
-      groups.push({
-        key: bulkId,
-        kind: 'bulk',
-        label: (
-          <span className="inline-flex items-center h-6 px-2.5 text-[12px] font-mono font-semibold bg-brand-50 text-brand-700 rounded-full">
-            {bulkId}
-          </span>
-        ),
-        exceptions: arr,
-      });
-    } else {
-      individuals.push(...arr);
-    }
+  const bulk: ActionGroup[] = [];
+  const individual: ActionGroup[] = [];
+  byAction.forEach((arr, actionId) => {
+    const title = GRC_BULK_ACTIONS[actionId]?.title;
+    const group: ActionGroup = { actionId, title, exceptions: arr };
+    if (arr.length >= 2) bulk.push(group);
+    else individual.push(group);
   });
-
-  if (individuals.length) {
-    groups.push({
-      key: 'individual',
-      kind: 'individual',
-      label: <span className="text-[13px] font-semibold text-ink-900">Individual Actions</span>,
-      exceptions: individuals,
-    });
-  }
-
-  return groups;
+  // Stable order — by action ID.
+  bulk.sort((a, b) => a.actionId.localeCompare(b.actionId));
+  individual.sort((a, b) => a.actionId.localeCompare(b.actionId));
+  return { bulk, individual };
 }
 
 function lastActionFor(id: string, timeline: ActionHubEvent[]): { message: string; date: string } | null {
@@ -102,7 +93,7 @@ function statusPills(exceptions: GrcException[]) {
   const order: GrcExceptionStatus[] = ['Open', 'Under Review', 'Closed'];
   return order
     .filter(s => counts[s])
-    .map(s => <Pill key={s} className={STATUS_STYLE[s]}>{counts[s]} {s}</Pill>);
+    .map(s => <Pill key={s} className={STATUS_STYLE[s]}>{counts[s]} {STATUS_LABEL[s]}</Pill>);
 }
 
 function idChipRow(ids: string[], max = 4) {
@@ -137,12 +128,112 @@ function truncate(text: string, n = 40) {
   return text.length > n ? text.slice(0, n).trimEnd() + '…' : text;
 }
 
+function ActionGroupRow({
+  group,
+  isOpen,
+  onToggle,
+  onPreview,
+}: {
+  group: ActionGroup;
+  isOpen: boolean;
+  onToggle: () => void;
+  onPreview: (ex: GrcException) => void;
+}) {
+  return (
+    <div>
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 px-5 py-3 cursor-pointer text-left hover:bg-[#FAFAFB]"
+      >
+        <span className="w-5 h-5 flex items-center justify-center text-ink-500">
+          {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </span>
+        <span className="inline-flex items-center h-6 px-2.5 text-[12px] font-mono font-semibold bg-brand-50 text-brand-700 rounded-full">
+          {group.actionId}
+        </span>
+        {group.title && (
+          <span className="text-[12.5px] text-ink-700 truncate">{group.title}</span>
+        )}
+        <span className="text-[12px] text-ink-500 tabular-nums whitespace-nowrap">
+          {group.exceptions.length} exception{group.exceptions.length === 1 ? '' : 's'}
+        </span>
+        <div className="flex items-center gap-1.5">{statusPills(group.exceptions)}</div>
+        <div className="flex-1" />
+        {!isOpen && idChipRow(group.exceptions.map(e => e.id))}
+      </button>
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="px-2 pb-3">
+              <table className="w-full text-[12.5px]">
+                <thead>
+                  <tr className="text-left text-ink-500 uppercase tracking-wider">
+                    <th className="px-3 py-2 font-medium text-[10.5px]">Exception ID</th>
+                    <th className="px-3 py-2 font-medium text-[10.5px]">Risk Category</th>
+                    <th className="px-3 py-2 font-medium text-[10.5px]">Classification</th>
+                    <th className="px-3 py-2 font-medium text-[10.5px]">Status</th>
+                    <th className="px-3 py-2 font-medium text-[10.5px]">Assigned To</th>
+                    <th className="px-3 py-2 font-medium text-[10.5px]">Last Action</th>
+                    <th className="px-3 py-2 font-medium text-[10.5px] text-right">Updated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {group.exceptions.map(ex => {
+                    const last = lastActionFor(ex.id, ACTION_HUB_TIMELINE);
+                    return (
+                      <tr
+                        key={ex.id}
+                        onClick={() => onPreview(ex)}
+                        className="border-t border-canvas-border hover:bg-brand-50/40 cursor-pointer transition-colors"
+                      >
+                        <td className="px-3 py-2.5 align-middle">
+                          <span className="text-brand-700 font-medium font-mono text-[12.5px]">{ex.id}</span>
+                        </td>
+                        <td className="px-3 py-2.5 align-middle text-ink-800">{ex.riskCategory}</td>
+                        <td className="px-3 py-2.5 align-middle">
+                          <Pill className={CLASSIFICATION_STYLE[ex.classification]}>{ex.classification}</Pill>
+                        </td>
+                        <td className="px-3 py-2.5 align-middle">
+                          <Pill className={STATUS_STYLE[ex.status]}>{STATUS_LABEL[ex.status]}</Pill>
+                        </td>
+                        <td className="px-3 py-2.5 align-middle">
+                          <AvatarChip name={ex.assignedTo.name} initials={ex.assignedTo.initials} />
+                        </td>
+                        <td className="px-3 py-2.5 align-middle text-ink-600 text-[12px]">
+                          {last ? truncate(last.message, 42) : '—'}
+                        </td>
+                        <td className="px-3 py-2.5 align-middle text-right text-ink-500 text-[11.5px] tabular-nums whitespace-nowrap">
+                          {last?.date ?? ex.lastUpdated}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function ExceptionStatusTracker({
   exceptions = GRC_EXCEPTIONS,
 }: { exceptions?: GrcException[] }) {
-  const groups = useMemo(() => groupExceptions(exceptions), [exceptions]);
+  const buckets = useMemo(() => buildActionPlans(exceptions), [exceptions]);
+  const totalCases = buckets.bulk.reduce((n, g) => n + g.exceptions.length, 0)
+                   + buckets.individual.reduce((n, g) => n + g.exceptions.length, 0);
 
   const [sectionOpen, setSectionOpen] = useState(true);
+  const [bulkOpen, setBulkOpen] = useState(true);
+  const [individualOpen, setIndividualOpen] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [preview, setPreview] = useState<GrcException | null>(null);
 
@@ -167,12 +258,12 @@ export default function ExceptionStatusTracker({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-[14px] font-semibold text-ink-900">Exception Status Tracker</h3>
+                <h3 className="text-[14px] font-semibold text-ink-900">Action Plan Status Tracker</h3>
                 <span className="inline-flex items-center h-5 px-2 text-[11px] font-medium bg-[#F4F2F7] text-ink-600 rounded-full tabular-nums">
-                  {exceptions.length}
+                  {totalCases}
                 </span>
               </div>
-              <p className="text-[12px] text-ink-500 mt-0.5">Exceptions grouped by action ID — click a group to expand</p>
+              <p className="text-[12px] text-ink-500 mt-0.5">Exceptions grouped by Action ID — Click a group to Expand</p>
             </div>
           </div>
           <ChevronDown size={16} className={`text-ink-500 transition-transform ${sectionOpen ? '' : '-rotate-90'}`} />
@@ -187,86 +278,88 @@ export default function ExceptionStatusTracker({
               transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
               className="overflow-hidden"
             >
-              <div className="border-t border-canvas-border divide-y divide-canvas-border">
-                {groups.map(group => {
-                  const isOpen = expanded.has(group.key);
-                  return (
-                    <div key={group.key}>
-                      <button
-                        onClick={() => toggle(group.key)}
-                        className="w-full flex items-center gap-3 px-5 py-3 cursor-pointer text-left hover:bg-[#FAFAFB]"
+              <div className="border-t border-canvas-border">
+                {/* Action Plans → Bulk subsection */}
+                <div className="border-b border-canvas-border">
+                  <button
+                    onClick={() => setBulkOpen(o => !o)}
+                    className="w-full flex items-center gap-3 px-5 py-2.5 bg-[#FAFAFB] cursor-pointer text-left hover:bg-[#F4F2F7]"
+                  >
+                    <ChevronDown size={14} className={`text-ink-500 transition-transform ${bulkOpen ? '' : '-rotate-90'}`} />
+                    <span className="text-[11.5px] font-semibold uppercase tracking-wider text-ink-700">Bulk</span>
+                    <span className="inline-flex items-center h-5 px-2 text-[11px] font-medium bg-brand-50 text-brand-700 rounded-full tabular-nums">
+                      {buckets.bulk.length} {buckets.bulk.length === 1 ? 'group' : 'groups'}
+                    </span>
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {bulkOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                        className="overflow-hidden"
                       >
-                        <span className="w-5 h-5 flex items-center justify-center text-ink-500">
-                          {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        </span>
-                        {group.label}
-                        <span className="text-[12px] text-ink-500 tabular-nums">{group.exceptions.length} exceptions</span>
-                        <div className="flex items-center gap-1.5">{statusPills(group.exceptions)}</div>
-                        <div className="flex-1" />
-                        {!isOpen && idChipRow(group.exceptions.map(e => e.id))}
-                      </button>
-                      <AnimatePresence initial={false}>
-                        {isOpen && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-                            className="overflow-hidden"
-                          >
-                            <div className="px-2 pb-3">
-                              <table className="w-full text-[12.5px]">
-                                <thead>
-                                  <tr className="text-left text-ink-500 uppercase tracking-wider">
-                                    <th className="px-3 py-2 font-medium text-[10.5px]">Exception ID</th>
-                                    <th className="px-3 py-2 font-medium text-[10.5px]">Risk Category</th>
-                                    <th className="px-3 py-2 font-medium text-[10.5px]">Classification</th>
-                                    <th className="px-3 py-2 font-medium text-[10.5px]">Status</th>
-                                    <th className="px-3 py-2 font-medium text-[10.5px]">Assigned To</th>
-                                    <th className="px-3 py-2 font-medium text-[10.5px]">Last Action</th>
-                                    <th className="px-3 py-2 font-medium text-[10.5px] text-right">Updated</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {group.exceptions.map(ex => {
-                                    const last = lastActionFor(ex.id, ACTION_HUB_TIMELINE);
-                                    return (
-                                      <tr
-                                        key={ex.id}
-                                        onClick={() => setPreview(ex)}
-                                        className="border-t border-canvas-border hover:bg-brand-50/40 cursor-pointer transition-colors"
-                                      >
-                                        <td className="px-3 py-2.5 align-middle">
-                                          <span className="text-brand-700 font-medium font-mono text-[12.5px]">{ex.id}</span>
-                                        </td>
-                                        <td className="px-3 py-2.5 align-middle text-ink-800">{ex.riskCategory}</td>
-                                        <td className="px-3 py-2.5 align-middle">
-                                          <Pill className={CLASSIFICATION_STYLE[ex.classification]}>{ex.classification}</Pill>
-                                        </td>
-                                        <td className="px-3 py-2.5 align-middle">
-                                          <Pill className={STATUS_STYLE[ex.status]}>{ex.status}</Pill>
-                                        </td>
-                                        <td className="px-3 py-2.5 align-middle">
-                                          <AvatarChip name={ex.assignedTo.name} initials={ex.assignedTo.initials} />
-                                        </td>
-                                        <td className="px-3 py-2.5 align-middle text-ink-600 text-[12px]">
-                                          {last ? truncate(last.message, 42) : '—'}
-                                        </td>
-                                        <td className="px-3 py-2.5 align-middle text-right text-ink-500 text-[11.5px] tabular-nums whitespace-nowrap">
-                                          {last?.date ?? ex.lastUpdated}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  );
-                })}
+                        <div className="divide-y divide-canvas-border">
+                          {buckets.bulk.length === 0 ? (
+                            <div className="px-5 py-4 text-[12.5px] text-ink-500">No bulk action plans yet.</div>
+                          ) : (
+                            buckets.bulk.map(group => (
+                              <ActionGroupRow
+                                key={group.actionId}
+                                group={group}
+                                isOpen={expanded.has(group.actionId)}
+                                onToggle={() => toggle(group.actionId)}
+                                onPreview={setPreview}
+                              />
+                            ))
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Action Plans → Individual subsection */}
+                <div>
+                  <button
+                    onClick={() => setIndividualOpen(o => !o)}
+                    className="w-full flex items-center gap-3 px-5 py-2.5 bg-[#FAFAFB] cursor-pointer text-left hover:bg-[#F4F2F7]"
+                  >
+                    <ChevronDown size={14} className={`text-ink-500 transition-transform ${individualOpen ? '' : '-rotate-90'}`} />
+                    <span className="text-[11.5px] font-semibold uppercase tracking-wider text-ink-700">Individual</span>
+                    <span className="inline-flex items-center h-5 px-2 text-[11px] font-medium bg-brand-50 text-brand-700 rounded-full tabular-nums">
+                      {buckets.individual.length} {buckets.individual.length === 1 ? 'group' : 'groups'}
+                    </span>
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {individualOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="divide-y divide-canvas-border">
+                          {buckets.individual.length === 0 ? (
+                            <div className="px-5 py-4 text-[12.5px] text-ink-500">No individual action plans yet.</div>
+                          ) : (
+                            buckets.individual.map(group => (
+                              <ActionGroupRow
+                                key={group.actionId}
+                                group={group}
+                                isOpen={expanded.has(group.actionId)}
+                                onToggle={() => toggle(group.actionId)}
+                                onPreview={setPreview}
+                              />
+                            ))
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </motion.div>
           )}
@@ -326,7 +419,7 @@ function ExceptionPreviewDrawer({ exception, onClose }: { exception: GrcExceptio
             <h3 className="text-[14px] font-semibold text-ink-900 leading-snug mb-3">{exception.title}</h3>
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Pill className={STATUS_STYLE[exception.status]}>{exception.status}</Pill>
+                <Pill className={STATUS_STYLE[exception.status]}>{STATUS_LABEL[exception.status]}</Pill>
                 <Pill className={CLASSIFICATION_STYLE[exception.classification]}>{exception.classification}</Pill>
               </div>
               <span className="text-[12.5px] text-ink-700">{exception.assignedTo.name}</span>
