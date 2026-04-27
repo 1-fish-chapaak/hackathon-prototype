@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, Play, ShieldCheck } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { type JourneyStep } from './Stepper';
 import StepWritePrompt from './StepWritePrompt';
-import AIAssistantPanel, { type ChatMessage, type ContextChip, type PrimaryAction, type QuickReply, type ToleranceCardState } from './AIAssistantPanel';
+import AIAssistantPanel, { type ChatMessage, type ContextChip, type InlineClarifyProps, type PrimaryAction, type QuickReply, type ToleranceCardState } from './AIAssistantPanel';
 import DataSourcePanel from './DataSourcePanel';
-import GuideMeModal from './GuideMeModal';
+import UploadDataModal from './UploadDataModal';
+import SaveWorkflowModal from './SaveWorkflowModal';
 import ClarificationPanel from './ClarificationPanel';
 import { SAMPLE_WORKFLOWS } from './sampleWorkflows';
 import { generateWorkflow, getClarifyQuestions, runWorkflow, seedAlignments } from './mockApi';
@@ -17,6 +18,7 @@ import type {
   JourneyFiles,
   JourneyMappings,
   RunResult,
+  UploadedFile,
   WorkflowDraft,
 } from './types';
 
@@ -26,13 +28,42 @@ interface Props {
 
 const STEP_META: Record<JourneyStep, { title: string; action: string }> = {
   1: { title: 'Describe your workflow', action: 'Generate' },
-  2: { title: 'Upload Data Files', action: 'Verify with Ira' },
+  2: { title: 'Upload Data Files', action: '' },
   3: { title: 'Data Mapping', action: 'Confirm & Proceed' },
-  4: { title: 'Review & Run', action: 'Run Workflow' },
+  4: { title: 'Review & Run', action: 'Validate workflow' },
 };
 
 let msgCounter = 0;
 const nextMsgId = () => `m-${++msgCounter}`;
+
+// Universal loader duration for in-chat processing indicators.
+const LOADER_MS = 3000;
+
+const VALIDATE_QUESTIONS: ClarifyQuestion[] = [
+  {
+    id: 'matching-logic',
+    title: 'What matching logic should I use?',
+    options: [
+      'Exact field matching',
+      'Fuzzy match with tolerance',
+      'AI-powered pattern detection',
+      "Custom rules (I'll define)",
+    ],
+  },
+  {
+    id: 'tolerance-preset',
+    title: 'What tolerance should I apply for amount comparisons?',
+    options: ['Strict (±1%)', 'Moderate (±5%)', 'Relaxed (±10%)', 'Custom'],
+  },
+];
+
+function tolerancePctFromAnswer(answer: string | undefined): number {
+  if (!answer) return 5;
+  if (answer.startsWith('Strict')) return 1;
+  if (answer.startsWith('Moderate')) return 5;
+  if (answer.startsWith('Relaxed')) return 10;
+  return 5;
+}
 
 export default function WorkflowBuilderJourney({ onBack }: Props) {
   const [step, setStep] = useState<JourneyStep>(1);
@@ -44,9 +75,14 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
   const [alignments, setAlignments] = useState<JourneyAlignments>({});
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<RunResult | null>(null);
-  const [guideMeOpen, setGuideMeOpen] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [draftAttachments, setDraftAttachments] = useState<UploadedFile[]>([]);
+  // Tracks the workflow id we've auto-opened the upload modal for, so we only
+  // open it once per workflow when the user first reaches step 2.
+  const uploadModalSeededFor = useRef<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [clarifying, setClarifying] = useState(false);
+  const [clarifyPhase, setClarifyPhase] = useState<'initial' | 'validate' | null>(null);
   const [clarifyQuestions, setClarifyQuestions] = useState<ClarifyQuestion[]>([]);
   const [clarifyAnswers, setClarifyAnswers] = useState<ClarifyAnswers>({});
   const [clarifyIndex, setClarifyIndex] = useState(0);
@@ -54,41 +90,31 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
   const [mapExpandedId, setMapExpandedId] = useState<string | null>(null);
   const [mapSeededFor, setMapSeededFor] = useState<string | null>(null);
   const [reviewExpandedSource, setReviewExpandedSource] = useState<string | null>(null);
+  const [workflowSaved, setWorkflowSaved] = useState(false);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [previewRevealed, setPreviewRevealed] = useState(false);
   const DEFAULT_TOLERANCE: ToleranceCardState = {
     mode: 'percentage',
     percentage: 5,
     absolute: 500,
     enabled: true,
   };
-  const [tolerance] = useState<ToleranceCardState>(DEFAULT_TOLERANCE);
+  const [tolerance, setTolerance] = useState<ToleranceCardState>(DEFAULT_TOLERANCE);
+  // Ref so completeValidatePhase (declared before executeRun) can call it.
+  const executeRunRef = useRef<((t: ToleranceCardState) => void) | null>(null);
 
   // Tracks IDs of step-specific card messages so each is pushed once per workflow.
   const pushedStepCardRef = useRef<
-    Partial<Record<'upload' | 'map' | 'review' | 'output', string>>
+    Partial<Record<'upload' | 'map' | 'review' | 'output' | 'view-preview', string>>
   >({});
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: nextMsgId(),
       role: 'assistant',
-      text: "Describe the audit workflow you want to build, or hit **Guide me** to start from a domain and task.",
+      text: 'Describe the audit workflow you want to build, or attach the data you want to work with.',
     },
   ]);
-
-  const completed = useMemo(() => {
-    const done = new Set<JourneyStep>();
-    if (workflow) done.add(1);
-    if (
-      workflow &&
-      workflow.inputs
-        .filter((i) => i.required)
-        .every((i) => (files[i.id] ?? []).length > 0)
-    )
-      done.add(2);
-    if (Object.keys(mappings).length > 0) done.add(3);
-    if (result) done.add(4);
-    return done;
-  }, [workflow, files, mappings, result]);
 
   const pushAssistant = useCallback((text: string) => {
     setMessages((m) => [...m, { id: nextMsgId(), role: 'assistant', text }]);
@@ -123,15 +149,43 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
       userPrompt?: string,
     ) => {
       setWorkflow(draft);
-      setFiles({});
+
+      // Carry forward Step 1 chat-input attachments into the workflow's
+      // input map. Each file fills the next empty required input; extras
+      // pile up on the first input. Mirrors UploadDataModal.pickTargetInputId.
+      const carried = draftAttachments;
+      const seededFiles: JourneyFiles = {};
+      if (carried.length > 0) {
+        const reqInputs = draft.inputs.filter((i) => i.required);
+        const fallback = draft.inputs[0]?.id ?? '';
+        for (const f of carried) {
+          let target = '';
+          for (const inp of reqInputs) {
+            if ((seededFiles[inp.id] ?? []).length === 0) {
+              target = inp.id;
+              break;
+            }
+          }
+          if (!target) target = fallback;
+          if (!target) continue;
+          seededFiles[target] = [...(seededFiles[target] ?? []), f];
+        }
+      }
+      setFiles(seededFiles);
+      setDraftAttachments([]);
       setMappings({});
       setAlignments(seedAlignments(draft));
       setResult(null);
+      setWorkflowSaved(false);
+      setPreviewRevealed(false);
       pushedStepCardRef.current = {};
+      uploadModalSeededFor.current = null;
+      setUploadModalOpen(false);
       const questions = getClarifyQuestions(draft);
       setClarifyQuestions(questions);
       setClarifyAnswers({});
       setClarifyIndex(0);
+      setClarifyPhase('initial');
       setClarifying(true);
       const intro =
         howArrived === 'guide'
@@ -150,50 +204,88 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
           text: `Use the **${draft.name}** template.`,
         });
       }
+      // Surface carried-forward attachments in the chat so they're visible
+      // in conversation history, not just on the Step 2 upload card.
+      if (carried.length > 0) {
+        const names = carried.map((f) => f.name).join(', ');
+        seed.push({
+          id: nextMsgId(),
+          role: 'user',
+          text: `Attached ${carried.length} file${carried.length > 1 ? 's' : ''}: ${names}`,
+        });
+      }
       seed.push({ id: nextMsgId(), role: 'assistant', text: intro });
       setMessages(seed);
       setStep(2);
     },
-    [],
+    [draftAttachments],
   );
 
   const finishClarifying = useCallback(
     (assistantText: string) => {
       setClarifying(false);
+      setClarifyPhase(null);
       pushAssistantAfterDelay(assistantText, 400);
     },
     [pushAssistantAfterDelay],
   );
 
+  const completeValidatePhase = useCallback(
+    (finalAnswers: ClarifyAnswers) => {
+      const pct = tolerancePctFromAnswer(finalAnswers['tolerance-preset']);
+      const nextTolerance = { ...tolerance, percentage: pct, enabled: true };
+      setTolerance(nextTolerance);
+      setClarifying(false);
+      setClarifyPhase(null);
+      pushAssistantAfterDelay(
+        `Got it — running with **±${pct}%** amount tolerance.`,
+        300,
+      );
+      // Kick off the run; executeRun handles the chat status updates.
+      setTimeout(() => executeRunRef.current?.(nextTolerance), 500);
+    },
+    [tolerance, pushAssistantAfterDelay],
+  );
+
   const handleClarifyAnswer = useCallback(
     (questionId: string, answer: string) => {
       pushUser(answer);
-      setClarifyAnswers((prev) => ({ ...prev, [questionId]: answer }));
+      const nextAnswers = { ...clarifyAnswers, [questionId]: answer };
+      setClarifyAnswers(nextAnswers);
       const nextIdx = clarifyIndex + 1;
       if (nextIdx >= clarifyQuestions.length) {
-        finishClarifying(
-          'Got it — locked those in. Upload the required data files in the card below so I can map them.',
-        );
+        if (clarifyPhase === 'validate') {
+          completeValidatePhase(nextAnswers);
+        } else {
+          finishClarifying(
+            'Got it — locked those in. Drop the required data files into the upload window so I can map them.',
+          );
+        }
       } else {
         setClarifyIndex(nextIdx);
       }
     },
-    [clarifyIndex, clarifyQuestions.length, pushUser, finishClarifying],
+    [clarifyIndex, clarifyQuestions.length, clarifyAnswers, clarifyPhase, pushUser, finishClarifying, completeValidatePhase],
   );
 
   const handleClarifySkip = useCallback(
     (questionId: string) => {
-      setClarifyAnswers((prev) => ({ ...prev, [questionId]: '' }));
+      const nextAnswers = { ...clarifyAnswers, [questionId]: '' };
+      setClarifyAnswers(nextAnswers);
       const nextIdx = clarifyIndex + 1;
       if (nextIdx >= clarifyQuestions.length) {
-        finishClarifying(
-          "OK, proceeding with defaults where you skipped. Upload the required data files in the card below so I can map them.",
-        );
+        if (clarifyPhase === 'validate') {
+          completeValidatePhase(nextAnswers);
+        } else {
+          finishClarifying(
+            "OK, proceeding with defaults where you skipped. Drop the required data files into the upload window so I can map them.",
+          );
+        }
       } else {
         setClarifyIndex(nextIdx);
       }
     },
-    [clarifyIndex, clarifyQuestions.length, finishClarifying],
+    [clarifyIndex, clarifyQuestions.length, clarifyAnswers, clarifyPhase, finishClarifying, completeValidatePhase],
   );
 
   const handleGenerate = useCallback(() => {
@@ -215,31 +307,26 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
     [applyWorkflow],
   );
 
-  const handleGuideInsert = useCallback(
-    (generatedPrompt: string) => {
-      if (step === 1) {
-        setPrompt(generatedPrompt);
-      } else {
-        setChatInput(generatedPrompt);
-      }
+  const handleAttachDraft = useCallback(
+    (payload: { files: UploadedFile[]; linkedSources: string[] }) => {
+      const merged = [
+        ...payload.files,
+        ...payload.linkedSources.map<UploadedFile>((name) => ({
+          name,
+          size: 0,
+          linkedSource: true,
+        })),
+      ];
+      if (merged.length === 0) return;
+      setDraftAttachments((prev) => [...prev, ...merged]);
     },
-    [step],
+    [],
   );
 
   const executeRun = useCallback(
-    async (t: ToleranceCardState) => {
+    async (_t: ToleranceCardState) => {
       if (!workflow) return;
-      const summary = t.enabled
-        ? t.mode === 'percentage'
-          ? `±${t.percentage}%`
-          : `±$${t.absolute.toLocaleString()}`
-        : 'off';
-      pushUser(`Run the workflow with tolerance **${summary}**.`);
       setRunning(true);
-      pushAssistantAfterDelay(
-        `Running with Amount tolerance **${summary}**…`,
-        300,
-      );
       try {
         const r = await runWorkflow(workflow, files, mappings);
         setResult(r);
@@ -251,57 +338,101 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
         setRunning(false);
       }
     },
-    [workflow, files, mappings, pushAssistantAfterDelay, pushUser],
+    [workflow, files, mappings, pushAssistantAfterDelay],
   );
 
+  useEffect(() => {
+    executeRunRef.current = executeRun;
+  }, [executeRun]);
+
+  const startValidateClarification = useCallback(() => {
+    pushUser(STEP_META[4].action);
+    setClarifyQuestions(VALIDATE_QUESTIONS);
+    setClarifyAnswers({});
+    setClarifyIndex(0);
+    setClarifyPhase('validate');
+    setClarifying(true);
+    pushAssistantAfterDelay(
+      "Before I kick off the run, I've spotted a couple of ambiguities — pick what fits below.",
+      350,
+    );
+  }, [pushUser, pushAssistantAfterDelay]);
+
   const handleTopAction = useCallback(() => {
-    if (step === 2) {
-      pushUser(STEP_META[2].action);
-      setStep(3);
-    } else if (step === 3) {
+    if (step === 3) {
       pushUser(STEP_META[3].action);
-      setStep(4);
+      const loaderId = nextMsgId();
+      setMessages((m) => [
+        ...m,
+        { id: loaderId, role: 'loader', text: 'Confirming mappings…' },
+      ]);
+      setTimeout(() => {
+        setMessages((m) =>
+          m
+            .filter((msg) => msg.id !== loaderId)
+            .concat({
+              id: nextMsgId(),
+              role: 'assistant',
+              text: 'Mappings confirmed — opening review.',
+            }),
+        );
+        setStep(4);
+      }, LOADER_MS);
     } else if (step === 4) {
-      executeRun(tolerance);
+      startValidateClarification();
     }
-  }, [step, executeRun, tolerance, pushUser]);
+  }, [step, pushUser, startValidateClarification]);
 
-  const topActionEnabled = useMemo(() => {
-    if (step === 2)
-      return !!workflow && workflow.inputs.filter((i) => i.required).every((i) => (files[i.id] ?? []).length > 0);
-    if (step === 3) return true;
-    if (step === 4) return !running;
-    return false;
-  }, [step, workflow, files, running]);
+  const handleSaveWorkflow = useCallback(() => {
+    if (!workflow || workflowSaved) return;
+    setSaveModalOpen(true);
+  }, [workflow, workflowSaved]);
 
-  const primaryAction: PrimaryAction | undefined = useMemo(() => {
-    if (step === 1) return undefined;
-    if (step === 4 && (running || result)) return undefined;
-    const enabled = topActionEnabled;
-    let hint: string | undefined;
-    if (step === 2 && workflow && !enabled) {
-      const missing = workflow.inputs.filter(
-        (i) => i.required && (files[i.id] ?? []).length === 0,
+  const handleSaveWorkflowConfirm = useCallback(
+    (payload: {
+      name: string;
+      bpId: string;
+      businessProcess: string;
+      racmId: string;
+      racm: string;
+      description: string;
+    }) => {
+      if (!workflow) return;
+      setWorkflow({ ...workflow, name: payload.name, description: payload.description });
+      setWorkflowSaved(true);
+      setSaveModalOpen(false);
+      pushUser('Save Workflow');
+      pushEvent(
+        `**${payload.name}** saved to **${payload.businessProcess} · ${payload.racm}**.`,
+        'success',
       );
-      if (missing.length > 0) {
-        hint = `Add ${missing.length} more ${missing.length === 1 ? 'file' : 'files'} to continue`;
-      }
-    }
-    return {
-      label: STEP_META[step].action,
-      icon: step === 4 ? <Play size={13} /> : <ShieldCheck size={13} />,
-      enabled,
-      onClick: handleTopAction,
-      hint,
-    };
-  }, [step, workflow, files, running, result, topActionEnabled, handleTopAction]);
+    },
+    [workflow, pushUser, pushEvent],
+  );
 
-  // Seed Step 3 expansion to the first input on first entry per workflow.
-  // After that, leave it alone so the user can collapse all sections.
+  // All steps now host their CTAs inline (or auto-progress), so the top-bar
+  // primary action is unused. Kept as undefined to preserve the AIAssistantPanel prop shape.
+  const primaryAction: PrimaryAction | undefined = undefined;
+
+  const inlineClarifyProps: InlineClarifyProps | undefined = useMemo(() => {
+    if (!clarifying || clarifyPhase !== 'validate') return undefined;
+    const question = clarifyQuestions[clarifyIndex];
+    if (!question) return undefined;
+    return {
+      question,
+      index: clarifyIndex,
+      total: clarifyQuestions.length,
+      stepLabel: `Step ${step} · Validate Workflow`,
+      onAnswer: handleClarifyAnswer,
+      onSkip: handleClarifySkip,
+    };
+  }, [clarifying, clarifyPhase, clarifyQuestions, clarifyIndex, step, handleClarifyAnswer, handleClarifySkip]);
+
+  // Step 3 starts with all sections collapsed; the user expands via Edit.
   useEffect(() => {
     if (step !== 3 || !workflow) return;
     if (mapSeededFor === workflow.id) return;
-    setMapExpandedId(workflow.inputs[0]?.id ?? null);
+    setMapExpandedId(null);
     setMapSeededFor(workflow.id);
   }, [step, workflow, mapSeededFor]);
 
@@ -500,7 +631,7 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
 
   // Push step-specific card messages as the journey advances.
   const pushStepCardOnce = useCallback(
-    (kind: 'upload' | 'map' | 'review' | 'output') => {
+    (kind: 'upload' | 'map' | 'review' | 'output' | 'view-preview') => {
       if (pushedStepCardRef.current[kind]) return;
       const id = nextMsgId();
       pushedStepCardRef.current[kind] = id;
@@ -519,10 +650,71 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
     else if (step === 4) pushStepCardOnce('review');
   }, [step, clarifying, workflow, pushStepCardOnce]);
 
+  // Auto-open the upload modal once per workflow when the user first reaches
+  // step 2 (after initial clarifications). Re-opens are user-driven. If
+  // attachments carried forward from Step 1 already satisfy every required
+  // input, skip the auto-open — the user has nothing to add.
+  useEffect(() => {
+    if (!workflow || step !== 2 || clarifying) return;
+    if (uploadModalSeededFor.current === workflow.id) return;
+    uploadModalSeededFor.current = workflow.id;
+    const allRequiredFilled = workflow.inputs
+      .filter((i) => i.required)
+      .every((i) => (files[i.id] ?? []).length > 0);
+    if (allRequiredFilled) return;
+    setUploadModalOpen(true);
+  }, [workflow, step, clarifying, files]);
+
+  // Auto-verify and advance to step 3 once all required files are added.
+  // Replaces the manual "Verify with Ira" CTA — user closes the upload modal
+  // and the journey continues without an extra click.
+  const autoVerifiedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!workflow || step !== 2 || clarifying || uploadModalOpen) return;
+    if (autoVerifiedRef.current === workflow.id) return;
+    const allRequiredFilled = workflow.inputs
+      .filter((i) => i.required)
+      .every((i) => (files[i.id] ?? []).length > 0);
+    if (!allRequiredFilled) return;
+    autoVerifiedRef.current = workflow.id;
+    const loaderId = nextMsgId();
+    setMessages((m) => [
+      ...m,
+      { id: loaderId, role: 'loader', text: 'Verifying files…' },
+    ]);
+    const t = setTimeout(() => {
+      setMessages((m) =>
+        m
+          .filter((msg) => msg.id !== loaderId)
+          .concat({
+            id: nextMsgId(),
+            role: 'assistant',
+            text: 'Files verified — moving to data mapping.',
+          }),
+      );
+      setStep(3);
+    }, LOADER_MS);
+    return () => clearTimeout(t);
+  }, [workflow, step, clarifying, uploadModalOpen, files]);
+
+  // Once the run finishes, surface the "View Preview" CTA in chat. The full
+  // output card is held back until the user opens the preview — this gives
+  // them a moment to inspect the output schema in the right-side Configure
+  // tab first.
   useEffect(() => {
     if (!result) return;
-    pushStepCardOnce('output');
-  }, [result, pushStepCardOnce]);
+    if (previewRevealed) {
+      pushStepCardOnce('output');
+    } else {
+      pushStepCardOnce('view-preview');
+    }
+  }, [result, previewRevealed, pushStepCardOnce]);
+
+  const handleViewPreview = useCallback(() => {
+    if (previewRevealed) return;
+    setPreviewRevealed(true);
+    pushUser('View Preview');
+  }, [previewRevealed, pushUser]);
 
   const uploadCardProps = useMemo(() => {
     if (!workflow) return undefined;
@@ -530,6 +722,10 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
       workflow,
       files,
       setFiles,
+      // Upload UI now lives in the modal — chat card only shows the
+      // "Data added" list (with a re-open trigger).
+      view: 'list-only' as const,
+      onOpenUploadModal: () => setUploadModalOpen(true),
       onLinkSource: (sourceName: string, inputName: string) => {
         pushEvent(`Linked **${sourceName}** → **${inputName}**`, 'link');
       },
@@ -539,6 +735,13 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
       focusedInputId: focusedInput?.id ?? null,
     };
   }, [workflow, files, focusedInput, pushEvent]);
+
+  const uploadModalLinkSource = useCallback(
+    (sourceName: string, inputName: string) => {
+      pushEvent(`Linked **${sourceName}** → **${inputName}**`, 'link');
+    },
+    [pushEvent],
+  );
 
   const mapCardProps = useMemo(() => {
     if (!workflow) return undefined;
@@ -550,11 +753,14 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
       expandedInputId: mapExpandedId,
       onToggleExpand: (id: string) =>
         setMapExpandedId((prev) => (prev === id ? null : id)),
+      onConfirm: step === 3 ? handleTopAction : undefined,
+      confirmDisabled: step !== 3,
     };
-  }, [workflow, files, alignments, mapExpandedId]);
+  }, [workflow, files, alignments, mapExpandedId, step, handleTopAction]);
 
   const reviewCardProps = useMemo(() => {
     if (!workflow) return undefined;
+    const showValidate = step === 4 && !running && !result;
     return {
       workflow,
       setWorkflow,
@@ -565,13 +771,29 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
       result,
       expandedSource: reviewExpandedSource,
       setExpandedSource: setReviewExpandedSource,
+      onValidate: showValidate ? handleTopAction : undefined,
+      validateDisabled: !showValidate,
     };
-  }, [workflow, files, mappings, running, result, reviewExpandedSource]);
+  }, [workflow, files, mappings, running, result, reviewExpandedSource, step, handleTopAction]);
 
   const outputCardProps = useMemo(() => {
     if (!workflow) return undefined;
-    return { workflow, result, running };
-  }, [workflow, result, running]);
+    return {
+      workflow,
+      result,
+      running,
+      onSave: result ? handleSaveWorkflow : undefined,
+      saved: workflowSaved,
+    };
+  }, [workflow, result, running, handleSaveWorkflow, workflowSaved]);
+
+  const viewPreviewCardProps = useMemo(() => {
+    if (!result) return undefined;
+    return {
+      onClick: handleViewPreview,
+      revealed: previewRevealed,
+    };
+  }, [result, previewRevealed, handleViewPreview]);
 
   return (
     <div className="flex flex-col h-full bg-canvas">
@@ -603,7 +825,8 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
             setPrompt={setPrompt}
             onGenerate={handleGenerate}
             onPickTemplate={handlePickTemplate}
-            onOpenGuideMe={() => setGuideMeOpen(true)}
+            onOpenAttach={() => setUploadModalOpen(true)}
+            attachmentCount={draftAttachments.length}
           />
         </motion.div>
       ) : (
@@ -611,7 +834,7 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
            as cards inside the chat. Clarification still overlays full-width first. */
         <div className="flex-1 min-h-0 relative overflow-hidden">
           <AnimatePresence initial={false}>
-            {!clarifying && (
+            {(!clarifying || clarifyPhase === 'validate') && (
               <motion.div
                 key="journey"
                 initial={{ opacity: 0 }}
@@ -624,28 +847,23 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
                     <div className="flex-1 min-w-0 h-full flex justify-center">
                       <div className="w-full h-full max-w-[920px]">
                         <AIAssistantPanel
-                          step={step}
-                          stepTitle={STEP_META[step].title}
-                          workflowName={workflow?.name}
                           messages={messages}
                           quickReplies={quickRepliesForStep}
                           contextChip={contextChip}
                           primaryAction={primaryAction}
                           placeholder={chatPlaceholder}
                           onSend={handleUserSend}
-                          onOpenGuideMe={() => setGuideMeOpen(true)}
+                          onOpenAttach={() => setUploadModalOpen(true)}
                           input={chatInput}
                           setInput={setChatInput}
-                          completed={completed}
-                          onJump={(s) => {
-                            if (s <= step || completed.has(s)) setStep(s);
-                          }}
                           onBack={onBack}
                           isTyping={isTyping}
                           uploadCard={uploadCardProps}
                           mapCard={mapCardProps}
                           reviewCard={reviewCardProps}
                           outputCard={outputCardProps}
+                          viewPreviewCard={viewPreviewCardProps}
+                          inlineClarify={inlineClarifyProps}
                         />
                       </div>
                     </div>
@@ -656,6 +874,8 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
                         setFiles={setFiles}
                         result={result}
                         running={running}
+                        step={step}
+                        previewRevealed={previewRevealed}
                       />
                     </div>
                   </div>
@@ -663,28 +883,22 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
                   <div className="h-full w-full flex justify-center">
                     <div className="w-full h-full max-w-[920px]">
                       <AIAssistantPanel
-                        step={step}
-                        stepTitle={STEP_META[step].title}
-                        workflowName={workflow?.name}
                         messages={messages}
                         quickReplies={quickRepliesForStep}
                         contextChip={contextChip}
                         primaryAction={primaryAction}
                         placeholder={chatPlaceholder}
                         onSend={handleUserSend}
-                        onOpenGuideMe={() => setGuideMeOpen(true)}
+                        onOpenAttach={() => setUploadModalOpen(true)}
                         input={chatInput}
                         setInput={setChatInput}
-                        completed={completed}
-                        onJump={(s) => {
-                          if (s <= step || completed.has(s)) setStep(s);
-                        }}
                         onBack={onBack}
                         isTyping={isTyping}
                         uploadCard={uploadCardProps}
                         mapCard={mapCardProps}
                         reviewCard={reviewCardProps}
                         outputCard={outputCardProps}
+                        viewPreviewCard={viewPreviewCardProps}
                       />
                     </div>
                   </div>
@@ -693,9 +907,9 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
             )}
           </AnimatePresence>
 
-          {/* Clarification — full-width view while clarifying */}
+          {/* Clarification — full-width view for initial phase only (before step 2 upload) */}
           <AnimatePresence>
-            {clarifying && step === 2 && workflow && (
+            {clarifying && clarifyPhase === 'initial' && workflow && (
               <motion.div
                 key="clarify"
                 initial={{ opacity: 0 }}
@@ -718,11 +932,24 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
         </div>
       )}
 
-      <GuideMeModal
-        open={guideMeOpen}
-        onClose={() => setGuideMeOpen(false)}
-        onPick={(generatedPrompt) => handleGuideInsert(generatedPrompt)}
+      <UploadDataModal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        workflow={workflow}
+        files={files}
+        setFiles={setFiles}
+        onLinkSource={uploadModalLinkSource}
+        onAttachDraft={handleAttachDraft}
       />
+
+      {workflow && (
+        <SaveWorkflowModal
+          open={saveModalOpen}
+          onClose={() => setSaveModalOpen(false)}
+          workflow={workflow}
+          onConfirm={handleSaveWorkflowConfirm}
+        />
+      )}
     </div>
   );
 }
