@@ -427,7 +427,7 @@ export default function ActionHubView() {
             <div className="flex items-center gap-3 bg-brand-50/70 border border-brand-100 rounded-[12px] px-4 py-2.5">
               <CircularProgress pct={s.reportHealthPct} size={48} stroke={4} label={`${s.reportHealthPct}%`} />
               <div className="leading-tight">
-                <div className="text-[11px] text-ink-500">Report Health</div>
+                <div className="text-[11px] text-ink-500">Check Health</div>
                 <div className="text-[14px] font-semibold text-ink-900">{s.reportHealthLabel}</div>
               </div>
             </div>
