@@ -1,13 +1,20 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { X, Tag, ChevronDown, Calendar, Link as LinkIcon, Paperclip, User, ChevronDown as CaretDown } from 'lucide-react';
+import { X, Tag, ChevronDown, Calendar, Link as LinkIcon, Paperclip, User, ChevronDown as CaretDown, Pencil, Trash2 } from 'lucide-react';
 import {
   ACTION_HUB_TIMELINE,
   type GrcException,
   type GrcExceptionClassification,
+  type GrcExceptionSeverity,
   type ActionHubEvent,
   type ActionHubActorRole,
 } from '../../data/mockData';
+
+const SEVERITY_TONE: Record<GrcExceptionSeverity, { base: string; active: string }> = {
+  High:   { base: 'text-ink-700', active: 'bg-high-50 border-high text-high-700' },
+  Medium: { base: 'text-ink-700', active: 'bg-mitigated-50 border-mitigated text-mitigated-700' },
+  Low:    { base: 'text-ink-700', active: 'bg-compliant-50 border-compliant text-compliant-700' },
+};
 
 const ROLE_AVATAR: Record<ActionHubActorRole, { initials: string; bg: string; fg: string }> = {
   'Risk Owner': { initials: 'RO', bg: 'bg-brand-100',    fg: 'text-brand-700' },
@@ -41,6 +48,7 @@ const CLASSIFICATION_PILL: Record<GrcExceptionClassification, string> = {
 
 export interface BulkClassifyPayload {
   actionableId: string;
+  severity: GrcExceptionSeverity;
   classification: GrcExceptionClassification;
   caseIds: string[];
   actionName?: string;
@@ -68,6 +76,14 @@ export default function BulkClassifyModal({
   onClose: () => void;
   onApply: (payload: BulkClassifyPayload) => void;
 }) {
+  // Default severity = the most common severity across the selected cases.
+  const initialSeverity = useMemo<GrcExceptionSeverity>(() => {
+    const counts: Record<GrcExceptionSeverity, number> = { High: 0, Medium: 0, Low: 0 };
+    selectedCases.forEach(c => { counts[c.severity] += 1; });
+    return (['High', 'Medium', 'Low'] as const).reduce((a, b) => counts[a] >= counts[b] ? a : b);
+  }, [selectedCases]);
+
+  const [severity, setSeverity] = useState<GrcExceptionSeverity>(initialSeverity);
   const [classification, setClassification] = useState<GrcExceptionClassification | ''>('');
   const [actionName, setActionName] = useState('');
   const [actionTaken, setActionTaken] = useState('');
@@ -158,6 +174,29 @@ export default function BulkClassifyModal({
             </div>
           </section>
 
+          {/* Severity */}
+          <div>
+            <FieldLabel required>Severity</FieldLabel>
+            <div className="grid grid-cols-3 gap-2">
+              {(['High', 'Medium', 'Low'] as const).map((s) => {
+                const selected = severity === s;
+                const tone = SEVERITY_TONE[s];
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setSeverity(s)}
+                    className={`h-10 text-[13px] font-medium rounded-[8px] border transition-colors cursor-pointer ${
+                      selected ? tone.active : `bg-canvas-elevated border-canvas-border ${tone.base} hover:border-brand-200`
+                    }`}
+                  >
+                    {s}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Classification */}
           <div>
             <FieldLabel required>Select Classification</FieldLabel>
@@ -194,25 +233,68 @@ export default function BulkClassifyModal({
               transition={{ duration: 0.15 }}
               className="space-y-4 border-t border-canvas-border pt-5"
             >
-              <div>
-                <FieldLabel required>Action Name</FieldLabel>
-                <input
-                  value={actionName}
-                  onChange={(e) => setActionName(e.target.value)}
-                  placeholder="e.g. MFA enforcement for executive accounts"
-                  className="w-full h-10 px-3 bg-canvas-elevated border border-canvas-border rounded-[8px] text-[13px] text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/20"
-                />
-              </div>
+              {/* Grouped Action Plan card with shared edit/delete toolbar */}
+              <div className="border border-canvas-border rounded-[10px] p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10.5px] uppercase tracking-wider font-semibold text-ink-500">
+                    Action Plan
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const el = document.querySelector<HTMLInputElement>('input[data-field="bulk-action-name"]');
+                        el?.focus();
+                      }}
+                      title="Edit action plan"
+                      aria-label="Edit action plan"
+                      className="w-6 h-6 flex items-center justify-center rounded text-ink-400 hover:text-brand-700 hover:bg-[#F4F2F7] cursor-pointer"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setActionName(''); setActionTaken(''); }}
+                      title="Clear action plan"
+                      aria-label="Clear action plan"
+                      className="w-6 h-6 flex items-center justify-center rounded text-ink-400 hover:text-risk-700 hover:bg-risk-50 cursor-pointer"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
 
-              <div>
-                <FieldLabel required>Action Taken</FieldLabel>
-                <textarea
-                  value={actionTaken}
-                  onChange={(e) => setActionTaken(e.target.value)}
-                  rows={4}
-                  placeholder="Describe the remediation steps, evidence, and rollout plan…"
-                  className="w-full resize-none p-3 bg-canvas-elevated border border-canvas-border rounded-[8px] text-[13px] text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/20"
-                />
+                <div>
+                  <FieldLabel required>Action Name</FieldLabel>
+                  <input
+                    data-field="bulk-action-name"
+                    value={actionName}
+                    onChange={(e) => setActionName(e.target.value)}
+                    placeholder="e.g. MFA enforcement for executive accounts"
+                    className="w-full h-10 px-3 bg-canvas-elevated border border-canvas-border rounded-[8px] text-[13px] text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/20"
+                  />
+                </div>
+
+                <div>
+                  <FieldLabel required>Action Details</FieldLabel>
+                  <div className="relative">
+                    <textarea
+                      value={actionTaken}
+                      onChange={(e) => setActionTaken(e.target.value)}
+                      rows={4}
+                      placeholder="Describe the remediation steps, evidence, and rollout plan…"
+                      className="w-full resize-none p-3 pr-10 bg-canvas-elevated border border-canvas-border rounded-[8px] text-[13px] text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/20"
+                    />
+                    <button
+                      type="button"
+                      title="Attach file"
+                      aria-label="Attach file to action details"
+                      className="absolute bottom-2 right-2 w-7 h-7 flex items-center justify-center text-ink-400 hover:text-brand-700 cursor-pointer"
+                    >
+                      <Paperclip size={14} />
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -332,6 +414,7 @@ export default function BulkClassifyModal({
               if (!canApply) return;
               onApply({
                 actionableId,
+                severity,
                 classification: classification as GrcExceptionClassification,
                 caseIds: selectedCases.map(c => c.id),
                 actionName: requiresActionPlan ? actionName.trim() : undefined,

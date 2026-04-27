@@ -58,7 +58,8 @@ const PRESETS: Record<string, { title: string; subtitle: string; ids: string[] |
   total:             { title: 'Total Exceptions',    subtitle: 'All flagged exceptions',                          ids: 'all' },
   classified:        { title: 'Classified',          subtitle: 'Exceptions with a Risk Owner classification',     ids: ['EXC001','EXC003','EXC004','EXC005','EXC006','EXC008','EXC010','EXC011','EXC012','EXC014'] },
   actionPlans:       { title: 'Action Plans',        subtitle: 'Exceptions with an action plan documented',       ids: ['EXC001','EXC003','EXC004','EXC006','EXC010','EXC012'] },
-  underReview:       { title: 'Under Review',        subtitle: 'Awaiting auditor review',                         ids: (ex) => ex.status === 'Under Review' },
+  underReview:       { title: 'In-Progress',         subtitle: 'Cases currently in progress',                     ids: (ex) => ex.status === 'Under Review' },
+  open:              { title: 'Open',                subtitle: 'Exceptions still open and awaiting resolution',   ids: (ex) => ex.status === 'Open' },
   resolved:          { title: 'Closed',              subtitle: 'Closed exceptions',                               ids: ['EXC003','EXC006','EXC010'] },
   overdue:           { title: 'Overdue',             subtitle: 'Past action due date, not yet resolved',          ids: (ex) => ex.flags?.includes('Overdue') ?? false },
   // Risk Owner tiles
@@ -88,7 +89,6 @@ function resolvePreset(key: string): DrillPreset | null {
 }
 
 type BreakdownTone = 'high' | 'risk' | 'brand' | 'compliant' | 'draft';
-type PersonaTileTone = 'brand' | 'compliant' | 'risk' | 'evidence';
 
 const BREAKDOWN_BAR: Record<BreakdownTone, string> = {
   high:      'bg-high',
@@ -114,12 +114,6 @@ const BREAKDOWN_LABEL: Record<BreakdownTone, string> = {
   draft:     'text-ink-700',
 };
 
-const PERSONA_TILE_VALUE: Record<PersonaTileTone, string> = {
-  brand:     'text-brand-700',
-  compliant: 'text-compliant-700',
-  risk:      'text-risk',
-  evidence:  'text-evidence-700',
-};
 
 const ROLE_AVATAR: Record<ActionHubActorRole, { initials: string; bg: string; fg: string }> = {
   'Risk Owner': { initials: 'RO', bg: 'bg-brand-100',    fg: 'text-brand-700' },
@@ -262,58 +256,6 @@ function StatCard({
   );
 }
 
-function PersonaCard({
-  name,
-  initials,
-  role,
-  totalActions,
-  tiles,
-  onTileClick,
-}: {
-  name: string;
-  initials: string;
-  role: 'Risk Owner' | 'Auditor';
-  totalActions: number;
-  tiles: { label: string; value: number; tone: PersonaTileTone; presetKey?: string }[];
-  onTileClick?: (presetKey: string) => void;
-}) {
-  const avatarStyle = role === 'Risk Owner'
-    ? { bg: 'bg-brand-100',  fg: 'text-brand-700' }
-    : { bg: 'bg-[#EDE4FA]', fg: 'text-brand-700' };
-  return (
-    <div className="bg-canvas-elevated border border-canvas-border rounded-[12px] p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-[8px] ${avatarStyle.bg} ${avatarStyle.fg} flex items-center justify-center font-semibold text-[13px]`}>
-            {initials}
-          </div>
-          <div>
-            <div className="text-[15px] font-semibold text-ink-900 leading-tight">{name}</div>
-            <div className="text-[12px] text-ink-500">{role}</div>
-          </div>
-        </div>
-        <span className="inline-flex items-center h-6 px-2.5 text-[11px] font-medium bg-brand-50 text-brand-700 rounded-full tabular-nums">
-          {totalActions} total actions
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {tiles.map((t) => (
-          <button
-            key={t.label}
-            onClick={() => t.presetKey && onTileClick?.(t.presetKey)}
-            className="border border-canvas-border rounded-[10px] p-3 text-left hover:border-brand-200 hover:bg-[#FAFAFB] transition-colors cursor-pointer flex items-start justify-between"
-          >
-            <div>
-              <div className={`text-[24px] leading-none font-semibold tabular-nums ${PERSONA_TILE_VALUE[t.tone]}`}>{t.value}</div>
-              <div className="text-[12px] text-ink-500 mt-2">{t.label}</div>
-            </div>
-            <ArrowRight size={13} className="text-ink-400 mt-0.5" />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function ClassificationDonut({ rows }: { rows: { label: string; count: number; tone: BreakdownTone }[] }) {
   const total = rows.reduce((sum, r) => sum + r.count, 0);
@@ -445,6 +387,8 @@ export default function ActionHubView() {
   );
   const openDrawer = useCallback((key: string) => setOpenPresetKey(key), []);
 
+  const openCount = useMemo(() => GRC_EXCEPTIONS.filter(ex => ex.status === 'Open').length, []);
+
   // Implementation outcome counts derived from live mock data.
   const implCounts = useMemo(() => {
     const acc = { Implemented: 0, 'Partially Implemented': 0, Discrepancy: 0 } as Record<ImplementationStatus, number>;
@@ -454,15 +398,6 @@ export default function ActionHubView() {
     });
     return acc;
   }, []);
-
-  const roTiles = s.riskOwner.tiles.map((t, i) => ({
-    ...t,
-    presetKey: ['roClassifications', 'roActionPlansFiled', 'roBulkActions', 'roIndividualActions'][i],
-  }));
-  const auTiles = s.auditor.tiles.map((t, i) => ({
-    ...t,
-    presetKey: ['auReviewsPerformed', 'auApproved', 'auRejected', 'auCasesClosed'][i],
-  }));
 
   // Group timeline events by date preserving order.
   const grouped = useMemo(() => {
@@ -520,7 +455,7 @@ export default function ActionHubView() {
               </span>
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-5">
+          <div className="grid grid-cols-3 gap-5">
             {s.atrReadiness.steps.map(step => {
               const pct = (step.current / step.total) * 100;
               return (
@@ -567,12 +502,13 @@ export default function ActionHubView() {
         )}
 
         {/* Count stats */}
-        <div className="grid grid-cols-6 gap-3 mb-5">
+        <div className="grid grid-cols-7 gap-3 mb-5">
           <StatCard label="Total Exceptions" value={s.counts.total}        tone="default"   icon={AlertTriangle}  onClick={() => openDrawer('total')} />
           <StatCard label="Classified"       value={s.counts.classified}   tone="brand"     icon={Tag}            navigable onClick={() => openDrawer('classified')} />
           <StatCard label="Action Plans"     value={s.counts.actionPlans}  tone="evidence"  icon={ClipboardList}  navigable onClick={() => openDrawer('actionPlans')} />
-          <StatCard label="Under Review"     value={s.counts.underReview}  tone="mitigated" icon={Clock}          navigable onClick={() => openDrawer('underReview')} />
+          <StatCard label="Open"             value={openCount}             tone="evidence"  icon={FileText}       navigable onClick={() => openDrawer('open')} />
           <StatCard label="Closed"           value={s.counts.resolved}     tone="compliant" icon={CheckCircle2}   navigable onClick={() => openDrawer('resolved')} />
+          <StatCard label="In-Progress"      value={s.counts.underReview}  tone="mitigated" icon={Clock}          navigable onClick={() => openDrawer('underReview')} />
           <StatCard label="Overdue"          value={s.counts.overdue}      tone="risk"      icon={AlertTriangle}  navigable onClick={() => openDrawer('overdue')} />
         </div>
 
@@ -600,26 +536,6 @@ export default function ActionHubView() {
         >
           <ClassificationDonut rows={s.classificationBreakdown.rows} />
         </CollapsibleSection>
-
-        {/* Persona split — sits above the Activity Timeline */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <PersonaCard
-            name={s.riskOwner.name}
-            initials={s.riskOwner.initials}
-            role="Risk Owner"
-            totalActions={s.riskOwner.totalActions}
-            tiles={roTiles}
-            onTileClick={openDrawer}
-          />
-          <PersonaCard
-            name={s.auditor.name}
-            initials={s.auditor.initials}
-            role="Auditor"
-            totalActions={s.auditor.totalActions}
-            tiles={auTiles}
-            onTileClick={openDrawer}
-          />
-        </div>
 
         {/* Activity Timeline */}
         <CollapsibleSection

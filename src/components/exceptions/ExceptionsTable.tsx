@@ -13,10 +13,15 @@ import {
   X,
   Check,
   ChevronDown,
+  ChevronUp,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  LayoutGrid,
+  AlertCircle,
+  Plus,
+  Download,
 } from 'lucide-react';
 import {
   GRC_CASE_DETAILS,
@@ -24,7 +29,6 @@ import {
   type GrcExceptionSeverity,
   type GrcExceptionStatus,
   type GrcExceptionClassification,
-  type GrcReviewStatus,
   type GrcActionStatus,
 } from '../../data/mockData';
 import type { ExceptionRole } from '../../hooks/useAppState';
@@ -40,6 +44,12 @@ const STATUS_STYLE: Record<GrcExceptionStatus, string> = {
   'Under Review': 'bg-mitigated-50 text-mitigated-700',
   Closed:         'bg-compliant-50 text-compliant-700',
 };
+// Display label — the data value 'Under Review' renders as 'In-Progress' across the UI.
+const STATUS_LABEL: Record<GrcExceptionStatus, string> = {
+  Open:           'Open',
+  'Under Review': 'In-Progress',
+  Closed:         'Closed',
+};
 const CLASSIFICATION_STYLE: Record<GrcExceptionClassification, string> = {
   Unclassified:                'bg-[#F4F2F7] text-ink-600',
   'Design Deficiency':         'bg-high-50 text-high-700',
@@ -48,43 +58,63 @@ const CLASSIFICATION_STYLE: Record<GrcExceptionClassification, string> = {
   'Business as Usual':         'bg-compliant-50 text-compliant-700',
   'False Positive':            'bg-[#EEEEF1] text-ink-600',
 };
-const REVIEW_STYLE: Record<GrcReviewStatus, string> = {
-  Pending:     'bg-mitigated-50 text-mitigated-700',
-  Approved:    'bg-compliant-50 text-compliant-700',
-  Rejected:    'bg-risk-50 text-risk-700',
-  Implemented: 'bg-compliant-50 text-compliant-700',
+// Combined Action Review status — folds the auditor decision and the
+// implementation outcome into a single column so users see one verdict
+// per row rather than two interdependent columns.
+type ActionReviewBase = 'Pending' | 'Approved' | 'Rejected';
+type CombinedActionReview =
+  | 'Pending'
+  | 'Approved (Implemented)'
+  | 'Approved (Partially Implemented)'
+  | 'Rejected (Discrepancy)'
+  | 'Approved'   // Business as Usual / False Positive — no action plan, just classification verdict
+  | 'Rejected';  // same — auditor disagreed with the BAU/FP classification
+
+const COMBINED_REVIEW_STYLE: Record<CombinedActionReview, string> = {
+  'Pending':                          'bg-[#EEEEF1] text-ink-600',
+  'Approved (Implemented)':           'bg-compliant-50 text-compliant-700',
+  'Approved (Partially Implemented)': 'bg-mitigated-50 text-mitigated-700',
+  'Rejected (Discrepancy)':           'bg-risk-50 text-risk-700',
+  'Approved':                         'bg-compliant-50 text-compliant-700',
+  'Rejected':                         'bg-risk-50 text-risk-700',
+};
+// Display label — 'Pending' (no auditor decision yet) renders as 'Under Review'.
+const COMBINED_REVIEW_LABEL: Record<CombinedActionReview, string> = {
+  'Pending':                          'Under Review',
+  'Approved (Implemented)':           'Approved (Implemented)',
+  'Approved (Partially Implemented)': 'Approved (Partially Implemented)',
+  'Rejected (Discrepancy)':           'Rejected (Discrepancy)',
+  'Approved':                         'Approved',
+  'Rejected':                         'Rejected',
 };
 
-// Action Review Status — Approved / Rejected / Pending only.
-type ActionReviewStatus = 'Pending' | 'Approved' | 'Rejected';
-const ACTION_REVIEW_STYLE: Record<ActionReviewStatus, string> = {
-  Pending:  'bg-[#EEEEF1] text-ink-600',
-  Approved: 'bg-compliant-50 text-compliant-700',
-  Rejected: 'bg-risk-50 text-risk-700',
-};
-// Legacy mock data sometimes stores 'Implemented' in actionReview — normalise for display.
-function normaliseActionReview(v: string): ActionReviewStatus {
+// Classifications that don't carry an action plan — review verdict is plain Approved/Rejected.
+const NO_PLAN_CLASSIFICATIONS = new Set<string>(['Business as Usual', 'False Positive']);
+
+// Legacy mock data sometimes stores 'Implemented' in actionReview — normalise.
+function normaliseActionReview(v: string): ActionReviewBase {
   if (v === 'Approved' || v === 'Rejected' || v === 'Pending') return v;
   if (v === 'Implemented') return 'Approved';
   return 'Pending';
 }
 
-// Implementation status — Implemented / Partially Implemented / Discrepancy.
-type ImplementationStatus = 'Implemented' | 'Partially Implemented' | 'Discrepancy';
-const IMPLEMENTATION_STYLE: Record<ImplementationStatus, string> = {
-  Implemented:            'bg-compliant-50 text-compliant-700',
-  'Partially Implemented':'bg-mitigated-50 text-mitigated-700',
-  Discrepancy:            'bg-risk-50 text-risk-700',
-};
-function deriveImplementation(actionReview: string, actionStatus: GrcActionStatus): ImplementationStatus | null {
+function combineActionReview(
+  actionReview: string,
+  actionStatus: GrcActionStatus,
+  classification: string,
+): CombinedActionReview {
   const norm = normaliseActionReview(actionReview);
-  if (norm === 'Rejected') return 'Discrepancy';
-  if (norm === 'Approved') {
-    if (actionStatus === 'Discrepancy') return 'Discrepancy';
-    if (actionStatus === 'Pending') return 'Implemented';
-    return actionStatus;
+  // BAU / False Positive — no action plan; show plain Approved / Rejected / Pending.
+  if (NO_PLAN_CLASSIFICATIONS.has(classification)) {
+    if (norm === 'Pending') return 'Pending';
+    if (norm === 'Rejected') return 'Rejected';
+    return 'Approved';
   }
-  return null; // Pending review → no implementation outcome yet
+  if (norm === 'Rejected' || actionStatus === 'Discrepancy') return 'Rejected (Discrepancy)';
+  if (norm === 'Pending') return 'Pending';
+  // Approved: pick the partial / implemented variant.
+  if (actionStatus === 'Partially Implemented') return 'Approved (Partially Implemented)';
+  return 'Approved (Implemented)';
 }
 
 function Pill({ children, className }: { children: React.ReactNode; className: string }) {
@@ -127,9 +157,7 @@ export type ColumnKey =
   | 'severity'
   | 'status'
   | 'classification'
-  | 'classReview'
   | 'actionReview'
-  | 'implementation'
   | 'actionableId'
   | 'lastUpdated'
   | 'classify'
@@ -154,17 +182,22 @@ interface ColumnDef {
 }
 
 const ALL_SEVERITIES: GrcExceptionSeverity[] = ['High', 'Medium', 'Low'];
-const ALL_STATUSES:   GrcExceptionStatus[]   = ['Open', 'Under Review', 'Closed'];
+const ALL_STATUS_LABELS: string[] = ['Open', 'In-Progress', 'Closed'];
 const ALL_CLASSIFICATIONS: GrcExceptionClassification[] = [
   'Unclassified', 'Design Deficiency', 'System Deficiency', 'Procedural Non-Compliance', 'Business as Usual', 'False Positive',
 ];
-const ALL_REVIEWS: GrcReviewStatus[] = ['Pending', 'Approved', 'Rejected', 'Implemented'];
-const ALL_ACTION_REVIEWS: ActionReviewStatus[] = ['Pending', 'Approved', 'Rejected'];
-const ALL_IMPLEMENTATIONS: ImplementationStatus[] = ['Implemented', 'Partially Implemented', 'Discrepancy'];
+const ALL_COMBINED_REVIEW_LABELS: string[] = [
+  'Under Review',
+  'Approved (Implemented)',
+  'Approved (Partially Implemented)',
+  'Rejected (Discrepancy)',
+  'Approved',
+  'Rejected',
+];
 
-function implementationAccessor(ex: GrcException): string {
+function combinedReviewAccessor(ex: GrcException): string {
   const actionStatus = GRC_CASE_DETAILS[ex.id]?.actionStatus ?? 'Pending';
-  return deriveImplementation(ex.actionReview, actionStatus) ?? '';
+  return COMBINED_REVIEW_LABEL[combineActionReview(ex.actionReview, actionStatus, ex.classification)];
 }
 
 // Action-state filter options for auditor's Classify / Action columns —
@@ -190,17 +223,16 @@ function buildColumnDefs(role: ExceptionRole, riskCategories: string[]): ColumnD
     { key: 'id',             label: 'Exception ID',   alwaysVisible: true,  draggable: true, filterable: true, filterMode: 'text', accessor: (e) => e.id },
     { key: 'riskCategory',   label: 'Risk Category',  draggable: true, filterable: true, filterMode: 'multi', filterOptions: riskCategories, accessor: (e) => e.riskCategory },
     { key: 'severity',       label: 'Severity',       draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_SEVERITIES, accessor: (e) => e.severity },
-    { key: 'status',         label: 'Status',         draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_STATUSES, accessor: (e) => e.status },
+    { key: 'status',         label: 'Status',         draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_STATUS_LABELS, accessor: (e) => STATUS_LABEL[e.status] },
     { key: 'classification', label: 'Classification', draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_CLASSIFICATIONS, accessor: (e) => e.classification },
-    { key: 'classReview',    label: 'Class. Review',  draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_REVIEWS, accessor: (e) => e.classificationReview },
-    { key: 'actionReview',   label: 'Action Review',  draggable: true, filterable: true, filterMode: 'multi', filterOptions: [...ALL_ACTION_REVIEWS], accessor: (e) => normaliseActionReview(e.actionReview) },
-    { key: 'implementation', label: 'Implementation', draggable: true, filterable: true, filterMode: 'multi', filterOptions: [...ALL_IMPLEMENTATIONS], accessor: implementationAccessor, minWidth: 150 },
+    { key: 'actionReview',   label: 'Action Review',  draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_COMBINED_REVIEW_LABELS, accessor: combinedReviewAccessor, minWidth: 220 },
     { key: 'actionableId',   label: 'Actionable ID',  draggable: true, filterable: true, filterMode: 'text', accessor: (e) => e.bulkId ?? '', minWidth: 110 },
     { key: 'lastUpdated',    label: 'Last Updated',   draggable: true, filterable: false, accessor: (e) => e.lastUpdated },
-    isAuditor
-      ? { key: 'classify', label: 'Classify', alwaysVisible: true, defaultPin: 'right', draggable: true, filterable: true, filterMode: 'multi', filterOptions: [...CLASSIFY_AUDIT_OPTIONS], accessor: classifyAuditAccessor, align: 'center', minWidth: 180 }
-      : { key: 'classify', label: 'Classify', alwaysVisible: true, alwaysPinned: 'right',                                                                                                            align: 'center', minWidth: 150 },
   ];
+  // Risk Owner gets the Classify CTA; Auditor only sees the Action CTA.
+  if (!isAuditor) {
+    base.push({ key: 'classify', label: 'Classify', alwaysVisible: true, alwaysPinned: 'right', align: 'center', minWidth: 150 });
+  }
   if (isAuditor) {
     base.push({
       key: 'action', label: 'Action', alwaysVisible: true,
@@ -501,21 +533,13 @@ function renderCell(
     case 'severity':
       return <Pill className={SEVERITY_STYLE[ex.severity]}>{ex.severity}</Pill>;
     case 'status':
-      return <Pill className={STATUS_STYLE[ex.status]}>{ex.status}</Pill>;
+      return <Pill className={STATUS_STYLE[ex.status]}>{STATUS_LABEL[ex.status]}</Pill>;
     case 'classification':
       return <Pill className={CLASSIFICATION_STYLE[ex.classification]}>{ex.classification}</Pill>;
-    case 'classReview':
-      return <Pill className={REVIEW_STYLE[ex.classificationReview]}>{ex.classificationReview}</Pill>;
     case 'actionReview': {
-      const norm = normaliseActionReview(ex.actionReview);
-      return <Pill className={ACTION_REVIEW_STYLE[norm]}>{norm}</Pill>;
-    }
-    case 'implementation': {
       const actionStatus = GRC_CASE_DETAILS[ex.id]?.actionStatus ?? 'Pending';
-      const impl = deriveImplementation(ex.actionReview, actionStatus);
-      return impl
-        ? <Pill className={IMPLEMENTATION_STYLE[impl]}>{impl}</Pill>
-        : <span className="text-ink-400 text-[12.5px]">—</span>;
+      const combined = combineActionReview(ex.actionReview, actionStatus, ex.classification);
+      return <Pill className={COMBINED_REVIEW_STYLE[combined]}>{COMBINED_REVIEW_LABEL[combined]}</Pill>;
     }
     case 'actionableId':
       return ex.bulkId ? (
@@ -708,6 +732,12 @@ export default function ExceptionsTable({
   const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSizeMenuOpen, setPageSizeMenuOpen] = useState(false);
+
+  // Filter Set + Export CSV menus
+  const [filterSetOpen, setFilterSetOpen] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const filterSetRef = useOutsideClick<HTMLDivElement>(() => setFilterSetOpen(false));
+  const exportMenuRef = useOutsideClick<HTMLDivElement>(() => setExportMenuOpen(false));
   const totalPages = Math.max(1, Math.ceil(filteredExceptions.length / pageSize));
 
   // Snap currentPage when filters change or page size shrinks below current page.
@@ -768,17 +798,23 @@ export default function ExceptionsTable({
     const fallback = 120;
     let leftSoFar = 0;
     for (const k of renderOrder) {
+      // During a role swap there's a brief render where stale state still
+      // references a removed column key — fall back gracefully.
+      const def = defByKey[k];
+      if (!def) continue;
       if (pins[k] === 'left') {
         off[k] = leftSoFar;
-        leftSoFar += defByKey[k].minWidth ?? fallback;
+        leftSoFar += def.minWidth ?? fallback;
       }
     }
     let rightSoFar = 0;
     for (let i = renderOrder.length - 1; i >= 0; i--) {
       const k = renderOrder[i];
+      const def = defByKey[k];
+      if (!def) continue;
       if (pins[k] === 'right') {
         off[k] = rightSoFar;
-        rightSoFar += defByKey[k].minWidth ?? fallback;
+        rightSoFar += def.minWidth ?? fallback;
       }
     }
     return off;
@@ -794,9 +830,43 @@ export default function ExceptionsTable({
     <div className="bg-canvas-elevated border border-canvas-border rounded-[12px] overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-canvas-border gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-[13px] font-medium text-ink-700 tabular-nums">
-            {filteredExceptions.length}{filteredExceptions.length !== exceptions.length ? ` / ${exceptions.length}` : ''} Exceptions
-          </span>
+          {/* Filter Set dropdown — replaces the previous "N Exceptions" label */}
+          <div className="relative" ref={filterSetRef}>
+            <button
+              type="button"
+              onClick={() => setFilterSetOpen(o => !o)}
+              className={`inline-flex items-center gap-1.5 h-8 pl-2.5 pr-2 text-[12.5px] font-medium rounded-[8px] border cursor-pointer transition-colors ${
+                filterSetOpen
+                  ? 'bg-brand-50 border-brand-200 text-brand-700'
+                  : 'bg-canvas-elevated border-canvas-border text-ink-700 hover:border-brand-200'
+              }`}
+              aria-haspopup="menu"
+              aria-expanded={filterSetOpen}
+            >
+              <LayoutGrid size={13} />
+              Filter Set
+              {filterSetOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            </button>
+            {filterSetOpen && (
+              <div className="absolute z-30 left-0 top-9 w-[300px] bg-canvas-elevated border border-canvas-border rounded-[10px] shadow-xl overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-canvas-border">
+                  <span className="text-[12.5px] font-medium text-ink-700">Saved Sets</span>
+                  <span className="text-[11.5px] text-ink-500 tabular-nums">0/10</span>
+                </div>
+                <div className="px-4 py-8 flex flex-col items-center justify-center text-center">
+                  <AlertCircle size={20} className="text-ink-400 mb-2.5" />
+                  <span className="text-[12.5px] text-ink-500">No filter sets saved yet</span>
+                </div>
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[12.5px] font-medium text-ink-500 border-t border-canvas-border hover:bg-[#FAFAFB] hover:text-brand-700 cursor-pointer"
+                >
+                  <Plus size={13} />
+                  Generate Filter Set
+                </button>
+              </div>
+            )}
+          </div>
           {activeFilterCount > 0 && (
             <button
               onClick={() => setFilters(emptyFilters)}
@@ -826,6 +896,7 @@ export default function ExceptionsTable({
             <tr className="bg-[#FAFAFB] border-b border-canvas-border text-left text-ink-500 uppercase tracking-wider">
               {renderOrder.map((key) => {
                 const def = defByKey[key];
+                if (!def) return null;
                 const pinned = pins[key];
                 const isDragTarget = dropTargetKey === key;
                 const isDragging = draggingKey === key;
@@ -953,6 +1024,7 @@ export default function ExceptionsTable({
                   <tr key={ex.id} className={`border-b border-canvas-border last:border-b-0 transition-colors ${rowBg}`}>
                     {renderOrder.map((key) => {
                       const def = defByKey[key];
+                      if (!def) return null;
                       const pinned = pins[key];
                       const offset = pinOffsets[key] ?? 0;
                       const stickyStyle: React.CSSProperties = pinned
@@ -996,7 +1068,40 @@ export default function ExceptionsTable({
     </div>
 
       {/* Pagination footer — sticks to the bottom of the viewport while scrolling */}
-      <div className="sticky bottom-0 z-20 flex items-center justify-end gap-5 px-5 py-3 bg-canvas-elevated border border-canvas-border rounded-[12px] shadow-[0_-4px_12px_rgba(15,15,30,0.04)] text-[12.5px] text-ink-700">
+      <div className="sticky bottom-0 z-20 flex items-center justify-between gap-5 px-5 py-3 bg-canvas-elevated border border-canvas-border rounded-[12px] shadow-[0_-4px_12px_rgba(15,15,30,0.04)] text-[12.5px] text-ink-700">
+        {/* Export CSV split button — left side */}
+        <div className="relative inline-flex items-stretch" ref={exportMenuRef}>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 h-8 pl-3 pr-3 text-[12.5px] font-medium text-brand-700 bg-canvas-elevated border border-canvas-border rounded-l-[6px] hover:border-brand-200 cursor-pointer"
+          >
+            <Download size={13} />
+            Export CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => setExportMenuOpen(o => !o)}
+            className="inline-flex items-center justify-center w-7 h-8 bg-canvas-elevated border-y border-r border-canvas-border rounded-r-[6px] text-ink-500 hover:text-brand-700 hover:border-brand-200 cursor-pointer"
+            aria-haspopup="menu"
+            aria-expanded={exportMenuOpen}
+            aria-label="Export options"
+          >
+            <ChevronDown size={12} />
+          </button>
+          {exportMenuOpen && (
+            <div className="absolute z-30 left-0 bottom-full mb-1 w-[140px] bg-canvas-elevated border border-canvas-border rounded-[8px] shadow-xl py-1">
+              <button
+                type="button"
+                onClick={() => setExportMenuOpen(false)}
+                className="block w-full text-left px-3 py-1.5 text-[12.5px] text-ink-800 hover:bg-[#FAFAFB] cursor-pointer"
+              >
+                All Data
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-5">
         <div className="flex items-center gap-2 relative" ref={pageSizeMenuRef}>
           <span className="text-brand-700 font-medium">Rows per page :</span>
           <button
@@ -1064,6 +1169,7 @@ export default function ExceptionsTable({
           >
             <ChevronsRight size={15} />
           </button>
+        </div>
         </div>
       </div>
     </div>
