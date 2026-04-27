@@ -26,6 +26,7 @@ import ShareModal from './components/modals/ShareModal';
 import PowerBIImportWizard from './components/modals/PowerBIImportWizard';
 import ReportBuilder from './components/reports/ReportBuilder';
 import AuditPlanningView from './components/audit/AuditPlanningView';
+import AuditPlanningPage from './components/audit/AuditPlanningPage';
 import ProgramsView from './components/audit/ProgramsView';
 // New pages
 import RACMView from './components/governance/RACMView';
@@ -335,7 +336,7 @@ export default function App() {
         );
 
       case 'audit-planning':
-        return <AuditPlanningView onNavigateToExecution={(engId) => {
+        return <AuditPlanningPage onNavigateToExecution={(engId) => {
           setEngagementBackView('audit-planning');
           openAuditExecution(engId);
           setView('engagement-detail' as any);
