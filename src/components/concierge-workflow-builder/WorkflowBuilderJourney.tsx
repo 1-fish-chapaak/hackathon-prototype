@@ -358,8 +358,10 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
   const handleSaveWorkflowConfirm = useCallback(
     (payload: {
       name: string;
+      bpId: string;
       businessProcess: string;
-      subProcess: string;
+      racmId: string;
+      racm: string;
       description: string;
     }) => {
       if (!workflow) return;
@@ -368,7 +370,7 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
       setSaveModalOpen(false);
       pushUser('Save Workflow');
       pushEvent(
-        `**${payload.name}** saved to **${payload.businessProcess} · ${payload.subProcess}**.`,
+        `**${payload.name}** saved to **${payload.businessProcess} · ${payload.racm}**.`,
         'success',
       );
     },

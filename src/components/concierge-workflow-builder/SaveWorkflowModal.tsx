@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lightbulb, Save, X } from 'lucide-react';
 import type { WorkflowDraft } from './types';
+import { BUSINESS_PROCESSES, RACMS } from '../../data/mockData';
 
 interface Props {
   open: boolean;
@@ -9,39 +10,13 @@ interface Props {
   workflow: WorkflowDraft;
   onConfirm: (payload: {
     name: string;
+    bpId: string;
     businessProcess: string;
-    subProcess: string;
+    racmId: string;
+    racm: string;
     description: string;
   }) => void;
 }
-
-const PROCESS_TREE: Record<string, string[]> = {
-  Procurement: [
-    'Purchase Order Management',
-    'Vendor Management',
-    'Contract Compliance',
-    'Sourcing',
-  ],
-  'Finance & Accounting': [
-    'Accounts Payable',
-    'Accounts Receivable',
-    'General Ledger',
-    'Period Close',
-  ],
-  'Audit & Compliance': [
-    'Internal Audit',
-    'Regulatory Reporting',
-    'Risk Assessment',
-    'SOX Controls',
-  ],
-  Operations: [
-    'Inventory Reconciliation',
-    'Logistics & Shipping',
-    'Quality Assurance',
-  ],
-};
-
-const BUSINESS_PROCESSES = Object.keys(PROCESS_TREE);
 
 export default function SaveWorkflowModal({
   open,
@@ -50,26 +25,25 @@ export default function SaveWorkflowModal({
   onConfirm,
 }: Props) {
   const [name, setName] = useState(workflow.name);
-  const [businessProcess, setBusinessProcess] = useState('');
-  const [subProcess, setSubProcess] = useState('');
+  const [bpId, setBpId] = useState('');
+  const [racmId, setRacmId] = useState('');
   const [description, setDescription] = useState(workflow.description);
 
   // Reset form whenever the modal opens for the current workflow.
   useEffect(() => {
     if (!open) return;
     setName(workflow.name);
-    setBusinessProcess('');
-    setSubProcess('');
+    setBpId('');
+    setRacmId('');
     setDescription(workflow.description);
   }, [open, workflow]);
 
-  const subProcessOptions = useMemo(
-    () => (businessProcess ? PROCESS_TREE[businessProcess] : []),
-    [businessProcess],
+  const racmOptions = useMemo(
+    () => (bpId ? RACMS.filter((r) => r.bpId === bpId) : []),
+    [bpId],
   );
 
-  const canSave =
-    name.trim().length > 0 && businessProcess.length > 0 && subProcess.length > 0;
+  const canSave = name.trim().length > 0 && bpId.length > 0 && racmId.length > 0;
 
   return (
     <AnimatePresence>
@@ -149,46 +123,48 @@ export default function SaveWorkflowModal({
                   </p>
                 </div>
 
-                {/* Business process + Sub-process */}
+                {/* Business process + RACM */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[12.5px] font-semibold text-ink-800 mb-1.5">
                       Business process <span className="text-risk">*</span>
                     </label>
                     <select
-                      value={businessProcess}
+                      value={bpId}
                       onChange={(e) => {
-                        setBusinessProcess(e.target.value);
-                        setSubProcess('');
+                        setBpId(e.target.value);
+                        setRacmId('');
                       }}
                       className="w-full rounded-lg border border-canvas-border bg-canvas-elevated px-3 py-2 text-[13px] text-ink-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/30 transition-all cursor-pointer"
                     >
                       <option value="">Select…</option>
-                      {BUSINESS_PROCESSES.map((p) => (
-                        <option key={p} value={p}>
-                          {p}
+                      {BUSINESS_PROCESSES.map((bp) => (
+                        <option key={bp.id} value={bp.id}>
+                          {bp.name} ({bp.abbr})
                         </option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-[12.5px] font-semibold text-ink-800 mb-1.5">
-                      Sub-process <span className="text-risk">*</span>
+                      RACM <span className="text-risk">*</span>
                     </label>
                     <select
-                      value={subProcess}
-                      onChange={(e) => setSubProcess(e.target.value)}
-                      disabled={!businessProcess}
+                      value={racmId}
+                      onChange={(e) => setRacmId(e.target.value)}
+                      disabled={!bpId}
                       className="w-full rounded-lg border border-canvas-border bg-canvas-elevated px-3 py-2 text-[13px] text-ink-800 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/30 transition-all cursor-pointer disabled:cursor-not-allowed disabled:bg-canvas disabled:text-ink-400"
                     >
                       <option value="">
-                        {businessProcess
-                          ? 'Select sub-process…'
+                        {bpId
+                          ? racmOptions.length > 0
+                            ? 'Select RACM…'
+                            : 'No RACMs for this BP'
                           : 'Pick a business process first'}
                       </option>
-                      {subProcessOptions.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
+                      {racmOptions.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
                         </option>
                       ))}
                     </select>
@@ -225,14 +201,19 @@ export default function SaveWorkflowModal({
                 <button
                   type="button"
                   disabled={!canSave}
-                  onClick={() =>
+                  onClick={() => {
+                    const bp = BUSINESS_PROCESSES.find((b) => b.id === bpId);
+                    const racm = RACMS.find((r) => r.id === racmId);
+                    if (!bp || !racm) return;
                     onConfirm({
                       name: name.trim(),
-                      businessProcess,
-                      subProcess,
+                      bpId,
+                      businessProcess: bp.name,
+                      racmId,
+                      racm: racm.name,
                       description: description.trim(),
-                    })
-                  }
+                    });
+                  }}
                   className="inline-flex items-center gap-1.5 rounded-lg text-[12.5px] font-semibold px-4 py-2 bg-gradient-to-br from-brand-600 to-fuchsia-600 hover:from-brand-500 hover:to-fuchsia-500 text-white shadow-[0_8px_16px_-8px_rgba(106,18,205,0.45)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
                 >
                   <Save size={13} />
