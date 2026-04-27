@@ -41,6 +41,13 @@ import {
 } from "./DrillContext";
 import type { DrillLevel } from "./DrillContext";
 import { KpiCard } from "./KpiCard";
+import {
+  Plus,
+  Eye,
+  Filter,
+  Download,
+  X,
+} from "lucide-react";
 
 /* ─── Colour palette ─────────────────────────────────────────────────────── */
 const PURPLE = "#7C3AED";
@@ -516,7 +523,34 @@ function PieTooltip({ active, payload }: any) {
 
 /* ─── Table preview component ────────────────────────────────────────────── */
 function TablePreview() {
+  const ALL_COLUMNS = [
+    "INVOICE ID",
+    "PO NUMBER",
+    "DATE",
+    "VENDOR",
+    "CATEGORY",
+    "VALUE",
+    "PERFORMANCE",
+  ];
+  const COL_KEYS: Record<string, string> = {
+    "INVOICE ID": "id",
+    "PO NUMBER": "po",
+    DATE: "date",
+    VENDOR: "vendor",
+    CATEGORY: "cat",
+    VALUE: "value",
+    PERFORMANCE: "perf",
+  };
+
   const [page, setPage] = useState(1);
+  const [tableFilters, setTableFilters] = useState<
+    { column: string; value: string }[]
+  >([]);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    ...ALL_COLUMNS,
+  ]);
+  const [showColumnDropdown, setShowColumnDropdown] = useState(false);
+
   const rows = [
     {
       id: "STG-001",
@@ -616,21 +650,163 @@ function TablePreview() {
           ? "#f59e0b"
           : "#ef4444";
 
+  const addFilter = () => {
+    setTableFilters((prev) => [
+      ...prev,
+      { column: ALL_COLUMNS[0], value: "" },
+    ]);
+  };
+
+  const removeFilter = (idx: number) => {
+    setTableFilters((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateFilter = (
+    idx: number,
+    field: "column" | "value",
+    val: string,
+  ) => {
+    setTableFilters((prev) =>
+      prev.map((f, i) => (i === idx ? { ...f, [field]: val } : f)),
+    );
+  };
+
+  const toggleColumn = (col: string) => {
+    setVisibleColumns((prev) =>
+      prev.includes(col)
+        ? prev.filter((c) => c !== col)
+        : [...prev, col],
+    );
+  };
+
+  const clearAllFilters = () => {
+    setTableFilters([]);
+  };
+
+  const handleDownload = () => {
+    const header = visibleColumns.join(",");
+    const csvRows = rows.map((r: any) =>
+      visibleColumns.map((col) => String(r[COL_KEYS[col]])).join(","),
+    );
+    const csv = [header, ...csvRows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "table-export.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const displayedColumns = ALL_COLUMNS.filter((c) =>
+    visibleColumns.includes(c),
+  );
+
   return (
     <div className="w-full h-full flex flex-col text-[12px] font-['Inter',sans-serif]">
+      {/* ── Filter Toolbar ── */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-[#e5e7eb] shrink-0">
+        <button
+          onClick={addFilter}
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-ink-600 rounded-lg border border-canvas-border hover:bg-brand-50 transition-colors"
+        >
+          <Plus size={14} />
+          Add Filter
+        </button>
+
+        {/* Columns toggle */}
+        <div className="relative">
+          <button
+            onClick={() => setShowColumnDropdown((v) => !v)}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-ink-600 rounded-lg border border-canvas-border hover:bg-brand-50 transition-colors"
+          >
+            <Eye size={14} />
+            Columns ({visibleColumns.length}/{ALL_COLUMNS.length})
+          </button>
+          {showColumnDropdown && (
+            <div className="absolute top-full left-0 mt-1 z-30 w-44 bg-white rounded-lg border border-[#e5e7eb] shadow-lg py-1">
+              {ALL_COLUMNS.map((col) => (
+                <label
+                  key={col}
+                  className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-ink-600 hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={visibleColumns.includes(col)}
+                    onChange={() => toggleColumn(col)}
+                    className="accent-brand-600 rounded"
+                  />
+                  {col}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={clearAllFilters}
+          disabled={tableFilters.length === 0}
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-ink-600 rounded-lg border border-canvas-border hover:bg-brand-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <Filter size={14} />
+          Clear All
+        </button>
+
+        <div className="ml-auto">
+          <button
+            onClick={handleDownload}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-ink-600 rounded-lg border border-canvas-border hover:bg-brand-50 transition-colors"
+          >
+            <Download size={14} />
+            Download
+          </button>
+        </div>
+      </div>
+
+      {/* ── Active filter rows ── */}
+      {tableFilters.length > 0 && (
+        <div className="flex flex-col gap-1.5 px-4 py-2 border-b border-[#e5e7eb] bg-gray-50/50 shrink-0">
+          {tableFilters.map((f, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <select
+                value={f.column}
+                onChange={(e) =>
+                  updateFilter(idx, "column", e.target.value)
+                }
+                className="px-2 py-1 text-[12px] text-ink-600 rounded-lg border border-canvas-border bg-white focus:outline-none focus:ring-1 focus:ring-brand-400"
+              >
+                {ALL_COLUMNS.map((col) => (
+                  <option key={col} value={col}>
+                    {col}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={f.value}
+                onChange={(e) =>
+                  updateFilter(idx, "value", e.target.value)
+                }
+                placeholder="Select values..."
+                className="px-2 py-1 text-[12px] text-ink-600 rounded-lg border border-canvas-border bg-white placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-400 w-40"
+              />
+              <button
+                onClick={() => removeFilter(idx)}
+                className="p-1 text-ink-600 rounded hover:bg-gray-200 transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Table ── */}
       <div className="flex-1 overflow-auto">
         <table className="w-full border-collapse">
           <thead className="sticky top-0 bg-white z-10">
             <tr className="border-b border-gray-200">
-              {[
-                "INVOICE ID",
-                "PO NUMBER",
-                "DATE",
-                "VENDOR",
-                "CATEGORY",
-                "VALUE",
-                "PERFORMANCE",
-              ].map((col) => (
+              {displayedColumns.map((col) => (
                 <th
                   key={col}
                   className="text-left py-2.5 px-3 text-[10px] font-semibold text-gray-500 uppercase tracking-[0.5px] whitespace-nowrap"
@@ -646,43 +822,57 @@ function TablePreview() {
                 key={i}
                 className="border-b border-gray-100 transition-colors hover:bg-gray-50"
               >
-                <td className="py-2.5 px-3 text-gray-500 whitespace-nowrap">
-                  {r.id}
-                </td>
-                <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
-                  {r.po}
-                </td>
-                <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
-                  {r.date}
-                </td>
-                <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
-                  {r.vendor}
-                </td>
-                <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
-                  {r.cat}
-                </td>
-                <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
-                  {r.value}
-                </td>
-                <td className="py-2.5 px-3 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-16 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${r.perf}%`,
-                          backgroundColor: perfColor(r.perf),
-                        }}
-                      />
+                {displayedColumns.includes("INVOICE ID") && (
+                  <td className="py-2.5 px-3 text-gray-500 whitespace-nowrap">
+                    {r.id}
+                  </td>
+                )}
+                {displayedColumns.includes("PO NUMBER") && (
+                  <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
+                    {r.po}
+                  </td>
+                )}
+                {displayedColumns.includes("DATE") && (
+                  <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
+                    {r.date}
+                  </td>
+                )}
+                {displayedColumns.includes("VENDOR") && (
+                  <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
+                    {r.vendor}
+                  </td>
+                )}
+                {displayedColumns.includes("CATEGORY") && (
+                  <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
+                    {r.cat}
+                  </td>
+                )}
+                {displayedColumns.includes("VALUE") && (
+                  <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
+                    {r.value}
+                  </td>
+                )}
+                {displayedColumns.includes("PERFORMANCE") && (
+                  <td className="py-2.5 px-3 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-16 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${r.perf}%`,
+                            backgroundColor: perfColor(r.perf),
+                          }}
+                        />
+                      </div>
+                      <span
+                        style={{ color: perfColor(r.perf) }}
+                        className="font-medium w-8"
+                      >
+                        {r.perf}%
+                      </span>
                     </div>
-                    <span
-                      style={{ color: perfColor(r.perf) }}
-                      className="font-medium w-8"
-                    >
-                      {r.perf}%
-                    </span>
-                  </div>
-                </td>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

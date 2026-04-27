@@ -10,12 +10,15 @@ import {
   Download, Filter, Share2, Loader2,
   MoreVertical, Edit, Trash2, ChevronUp, Eye, EyeOff,
   Search, LineChart, AreaChart, ListChecks,
-  Database, Link2, Zap, ArrowRight, Unlink
+  Database, Link2, Zap, ArrowRight, Unlink,
+  Bell, Columns,
+  MessageSquare, Star, Upload, Layers, CloudUpload, Check
 } from 'lucide-react';
 import Orb from '../shared/Orb';
 import { useToast, type ToastType } from '../shared/Toast';
 import { AddCardModal } from './add-widget/AddCardModal';
 import { ConfigurableChart } from './add-widget/ConfigurableChart';
+import { SEED, TYPE_META, formatDate } from '../data-sources/sources';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -813,13 +816,43 @@ const AGG_OPTIONS = [
   { value: 'max', label: 'Max', symbol: '↑' },
 ];
 
+// ─── Add Data modal data ─────────────────────────────────────────────────
+const ADD_DATA_QUERY_SESSIONS = [
+  { group: 'TODAY', items: [
+    'What are the top 5 performing categories?',
+    'Compare year-over-year growth across all states',
+  ]},
+  { group: 'YESTERDAY', items: [
+    'Show customer acquisition cost by channel',
+    'What is the average order value by product category?',
+  ]},
+  { group: 'LAST 7 DAYS', items: [
+    'Analyze revenue trends for the last 12 months',
+    'Which sales person has the highest conversion rate?',
+    'Show me the distribution of products across different regions',
+    'What is the total revenue by country?',
+    'Compare Q1 vs Q2 performance metrics',
+  ]},
+];
+
+const ADD_DATA_FAVOURITES = [
+  { group: '', items: [
+    'Monthly revenue breakdown by region',
+    'Top 10 vendors by invoice volume',
+    'Compliance score trends Q1–Q4',
+    'Duplicate invoice detection summary',
+    'Department-wise spend analysis',
+    'Year-over-year procurement savings',
+  ]},
+];
+
 function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, editData }: {
   open: boolean;
   onClose: (widgetAdded?: boolean) => void;
   addToast: (t: { message: string; type: ToastType }) => void;
   customFields?: string[] | null;
-  onAddWidget?: (widget: { chartType: string; title: string; xField: string; yField: string }) => void;
-  editData?: { chartType: string; title: string; xField: string; yField: string } | null;
+  onAddWidget?: (widget: { chartType: string; title: string; xField: string; yField: string; color?: string; fontFamily?: string; seriesColors?: Record<string, string> }) => void;
+  editData?: { chartType: string; title: string; xField: string; yField: string; color?: string; fontFamily?: string; seriesColors?: Record<string, string> } | null;
 }) {
   const [selectedChart, setSelectedChart] = useState<ChartTypeDef | null>(null);
   const [chartTypeCollapsed, setChartTypeCollapsed] = useState(false);
@@ -836,7 +869,13 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
   const [yIndexFields, setYIndexFields] = useState<string[]>([]);
   const [legendFields, setLegendFields] = useState<string[]>([]);
   const [aggDropdownOpen, setAggDropdownOpen] = useState<string | null>(null);
-  const [addDataDropdown, setAddDataDropdown] = useState(false);
+  const [showAddDataModal, setShowAddDataModal] = useState(false);
+  const [addDataTab, setAddDataTab] = useState<'recent' | 'saved' | 'upload' | 'all' | 'files' | 'db'>('recent');
+  const [addDataSearch, setAddDataSearch] = useState('');
+  const [addDataSelectedQuery, setAddDataSelectedQuery] = useState<string | null>(null);
+  const [addDataSelectedSource, setAddDataSelectedSource] = useState<string | null>(null);
+  const [addDataUploadedFile, setAddDataUploadedFile] = useState<File | null>(null);
+  const [addDataDragging, setAddDataDragging] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadStep, setUploadStep] = useState<'upload' | 'review'>('upload');
   const [uploadedFileName, setUploadedFileName] = useState('');
@@ -1628,44 +1667,12 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
                             <Database size={12} className="text-brand-600" />
                             <span className="text-[12px] font-bold uppercase tracking-[0.8px] text-ink-900">Data Source</span>
                           </div>
-                          <div className="relative">
-                            <button
-                              onClick={() => setAddDataDropdown(!addDataDropdown)}
-                              className="bg-brand-600 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded cursor-pointer hover:bg-brand-500 transition-colors"
-                            >
-                              Add Data
-                            </button>
-                            {addDataDropdown && (
-                              <>
-                                <div className="fixed inset-0 z-30" onClick={() => setAddDataDropdown(false)} />
-                                <div className="absolute top-full right-0 z-40 mt-1 w-[160px] bg-white border border-canvas-border rounded-lg shadow-xl py-1">
-                                  <button
-                                    onClick={() => {
-                                      setAddDataDropdown(false);
-                                      setShowQueryModal(true);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-ink-700 hover:bg-brand-50 hover:text-brand-600 transition-colors text-left cursor-pointer"
-                                  >
-                                    <Search size={13} className="text-ink-400" />
-                                    From Query
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setAddDataDropdown(false);
-                                      setUploadStep('upload');
-                                      setUploadedFileName('');
-                                      setUploadedHeaders([]);
-                                      setShowUploadModal(true);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-ink-700 hover:bg-brand-50 hover:text-brand-600 transition-colors text-left cursor-pointer"
-                                  >
-                                    <FileText size={13} className="text-ink-400" />
-                                    From Excel
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
+                          <button
+                            onClick={() => setShowAddDataModal(true)}
+                            className="bg-brand-600 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded cursor-pointer hover:bg-brand-500 transition-colors"
+                          >
+                            Add Data
+                          </button>
                         </div>
 
 
@@ -2392,6 +2399,298 @@ function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, ed
         </div>
       </>
     )}
+
+    {/* ── Add Data Modal ── */}
+    {showAddDataModal && (() => {
+      const allSources = SEED;
+      const fileSources = allSources.filter(s => s.type === 'file');
+      const dbSources = allSources.filter(s => s.type === 'database' || s.type === 'api' || s.type === 'cloud');
+      const closeAddData = () => {
+        setShowAddDataModal(false);
+        setAddDataTab('recent');
+        setAddDataSearch('');
+        setAddDataSelectedQuery(null);
+        setAddDataSelectedSource(null);
+        setAddDataUploadedFile(null);
+        setAddDataDragging(false);
+      };
+      return (
+        <>
+          <div className="fixed inset-0 z-[10000] bg-black/30 backdrop-blur-sm" onClick={closeAddData} />
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center pointer-events-none">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="pointer-events-auto bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[820px] h-[600px] flex flex-col overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-7 py-5 border-b border-canvas-border">
+                <h2 className="text-[16px] font-bold text-ink-900 shrink-0">Add data</h2>
+                <div className="flex-1 mx-5 relative">
+                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
+                  <input
+                    type="text"
+                    value={addDataSearch}
+                    onChange={e => setAddDataSearch(e.target.value)}
+                    placeholder={addDataTab === 'upload' ? 'Drop files below to upload...' : 'Search...'}
+                    className="w-full pl-10 pr-4 py-2 text-[13px] border border-canvas-border rounded-full bg-canvas-elevated text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
+                  />
+                </div>
+                <button
+                  onClick={closeAddData}
+                  className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer shrink-0"
+                >
+                  <X size={20} className="text-ink-400" />
+                </button>
+              </div>
+
+              {/* Tab bar */}
+              <div className="flex gap-5 px-7 border-b border-canvas-border">
+                {([
+                  { id: 'recent' as const, label: 'Recent Chats', icon: MessageSquare, count: ADD_DATA_QUERY_SESSIONS.reduce((n, g) => n + g.items.length, 0) },
+                  { id: 'saved' as const, label: 'Favourites', icon: Star, count: ADD_DATA_FAVOURITES.reduce((n, g) => n + g.items.length, 0) },
+                  { id: 'upload' as const, label: 'Upload', icon: Upload, count: 0 },
+                  { id: 'all' as const, label: 'All Data', icon: Layers, count: allSources.length },
+                  { id: 'files' as const, label: 'Files', icon: FileText, count: fileSources.length },
+                  { id: 'db' as const, label: 'DB', icon: Database, count: dbSources.length },
+                ]).map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setAddDataTab(tab.id); setAddDataSelectedQuery(null); setAddDataSelectedSource(null); }}
+                    className={`flex items-center gap-1.5 pb-3 pt-3 text-[13px] font-semibold transition-colors cursor-pointer relative whitespace-nowrap ${
+                      addDataTab === tab.id ? 'text-brand-700' : 'text-ink-400 hover:text-ink-600'
+                    }`}
+                  >
+                    <tab.icon size={14} />
+                    {tab.label}
+                    {tab.count > 0 && <span className="text-[11px] text-ink-400 font-normal">{tab.count}</span>}
+                    {addDataTab === tab.id && (
+                      <motion.div layoutId="add-data-widget-tab" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-600 rounded-full" />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto px-7 py-6">
+                <AnimatePresence mode="wait">
+                  {/* Recent Chats / Favourites */}
+                  {(addDataTab === 'recent' || addDataTab === 'saved') && (() => {
+                    const groups = addDataTab === 'recent' ? ADD_DATA_QUERY_SESSIONS : ADD_DATA_FAVOURITES;
+                    const hasResults = groups.some(g => g.items.some(q => q.toLowerCase().includes(addDataSearch.toLowerCase())));
+                    return (
+                      <motion.div key={addDataTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+                        {hasResults ? (
+                          <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                            {groups.map(group => {
+                              const filtered = group.items.filter(q => q.toLowerCase().includes(addDataSearch.toLowerCase()));
+                              if (filtered.length === 0) return null;
+                              return (
+                                <div key={group.group || 'ungrouped'}>
+                                  {group.group && <div className="text-[11px] font-bold text-ink-500 uppercase tracking-wider mb-2">{group.group}</div>}
+                                  <div className="space-y-2">
+                                    {filtered.map(q => (
+                                      <button
+                                        key={q}
+                                        onClick={() => setAddDataSelectedQuery(q)}
+                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer text-left ${
+                                          addDataSelectedQuery === q ? 'border-brand-500 bg-brand-50' : 'border-canvas-border bg-canvas-elevated hover:border-brand-200'
+                                        }`}
+                                      >
+                                        {addDataTab === 'recent' && <MessageSquare size={14} className={addDataSelectedQuery === q ? 'text-brand-600' : 'text-ink-400'} />}
+                                        {addDataTab === 'saved' && <Star size={14} className={addDataSelectedQuery === q ? 'text-brand-600' : 'text-ink-400'} />}
+                                        <span className={`text-[13px] ${addDataSelectedQuery === q ? 'text-brand-700 font-medium' : 'text-ink-700'}`}>{q}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-16 text-center">
+                            {addDataTab === 'recent' ? <MessageSquare size={32} className="text-ink-200 mb-3" /> : <Star size={32} className="text-ink-200 mb-3" />}
+                            <p className="text-[14px] font-medium text-ink-500 mb-1">
+                              {addDataTab === 'recent' ? 'No chats found' : 'No favourites found'}
+                            </p>
+                            <p className="text-[12px] text-ink-400">
+                              {addDataSearch ? 'Try a different search term.' : addDataTab === 'recent' ? 'Start a new chat to see it here.' : 'Star a chat to add it to favourites.'}
+                            </p>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })()}
+
+                  {/* Upload tab */}
+                  {addDataTab === 'upload' && (
+                    <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+                      <input
+                        id="add-data-modal-file-input"
+                        type="file"
+                        accept=".xlsx,.xls,.csv"
+                        className="hidden"
+                        onChange={e => { const f = e.target.files?.[0]; if (f) setAddDataUploadedFile(f); }}
+                      />
+                      <div
+                        onDragOver={e => { e.preventDefault(); setAddDataDragging(true); }}
+                        onDragLeave={() => setAddDataDragging(false)}
+                        onDrop={e => { e.preventDefault(); setAddDataDragging(false); const f = e.dataTransfer.files[0]; if (f) setAddDataUploadedFile(f); }}
+                        onClick={() => !addDataUploadedFile && document.getElementById('add-data-modal-file-input')?.click()}
+                        className={`border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center text-center transition-all min-h-[300px] ${
+                          addDataDragging
+                            ? 'border-brand-500 bg-brand-50'
+                            : addDataUploadedFile
+                              ? 'border-compliant bg-green-50/30 cursor-default'
+                              : 'border-ink-200 bg-surface-2/30 cursor-pointer hover:border-brand-300 hover:bg-brand-50/20'
+                        }`}
+                      >
+                        {addDataUploadedFile ? (
+                          <div>
+                            <CloudUpload size={28} className="text-green-600 mx-auto mb-3" />
+                            <h3 className="text-[15px] font-bold text-ink-900 mb-1">{addDataUploadedFile.name}</h3>
+                            <p className="text-[13px] text-compliant font-medium mb-1">
+                              {(addDataUploadedFile.size / 1024).toFixed(1)} KB — File ready
+                            </p>
+                            <button
+                              onClick={e => { e.stopPropagation(); setAddDataUploadedFile(null); }}
+                              className="text-[12px] text-ink-400 hover:text-red-500 transition-colors cursor-pointer mt-1"
+                            >
+                              Remove file
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <Upload size={28} className="text-ink-300 mb-3" />
+                            <h3 className="text-[14px] font-semibold text-ink-800 mb-1">Drop files here</h3>
+                            <p className="text-[13px] text-ink-400 mb-4">or pick from your computer</p>
+                            <button
+                              onClick={e => { e.stopPropagation(); document.getElementById('add-data-modal-file-input')?.click(); }}
+                              className="flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-[13px] font-semibold rounded-lg transition-colors cursor-pointer"
+                            >
+                              <Upload size={14} />
+                              Choose files
+                            </button>
+                            <p className="text-[11px] text-ink-400 mt-3">CSV · Excel · 50 MB each</p>
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* All Data / Files / DB tabs */}
+                  {(addDataTab === 'all' || addDataTab === 'files' || addDataTab === 'db') && (() => {
+                    const sources = (addDataTab === 'all' ? allSources : addDataTab === 'files' ? fileSources : dbSources)
+                      .filter(s => s.name.toLowerCase().includes(addDataSearch.toLowerCase()));
+                    const tabLabel = addDataTab === 'all' ? 'data sources' : addDataTab === 'files' ? 'files' : 'databases';
+                    return (
+                      <motion.div key={addDataTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+                        {sources.length > 0 ? (
+                          <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
+                            {sources.map(source => {
+                              const { icon: Icon, tone } = TYPE_META[source.type];
+                              const isSelected = addDataSelectedSource === source.id;
+                              return (
+                                <button
+                                  key={source.id}
+                                  onClick={() => setAddDataSelectedSource(isSelected ? null : source.id)}
+                                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer text-left ${
+                                    isSelected ? 'border-brand-500 bg-brand-50' : 'border-canvas-border bg-canvas-elevated hover:border-brand-200'
+                                  }`}
+                                >
+                                  <div className={`size-8 rounded-md flex items-center justify-center shrink-0 ${tone}`}>
+                                    <Icon size={14} />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-[13px] font-medium text-ink-900 truncate">{source.name}</div>
+                                    <div className="text-[11px] text-ink-400">{source.subtype} · {formatDate(source.createdAt)}</div>
+                                  </div>
+                                  {isSelected && <Check size={16} className="text-brand-600 shrink-0" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-16 text-center">
+                            <Search size={32} className="text-ink-200 mb-3" />
+                            <p className="text-[14px] font-medium text-ink-500 mb-1">No {tabLabel} found</p>
+                            <p className="text-[12px] text-ink-400">
+                              {addDataSearch ? 'Try a different search term.' : `No ${tabLabel} available.`}
+                            </p>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })()}
+                </AnimatePresence>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 px-7 py-4 border-t border-canvas-border">
+                <p className="text-[12px] text-ink-400 mr-auto">Pick sources or files to attach.</p>
+                <button onClick={closeAddData} className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 transition-colors cursor-pointer">
+                  Cancel
+                </button>
+                {(addDataTab === 'recent' || addDataTab === 'saved') && (
+                  <button
+                    onClick={() => {
+                      if (addDataSelectedQuery) {
+                        addToast({ message: 'Data source attached', type: 'success' });
+                        closeAddData();
+                      }
+                    }}
+                    disabled={!addDataSelectedQuery}
+                    className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
+                      addDataSelectedQuery ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <MessageSquare size={14} />
+                    Open in Chat
+                  </button>
+                )}
+                {addDataTab === 'upload' && (
+                  <button
+                    onClick={() => {
+                      if (addDataUploadedFile) {
+                        addToast({ message: 'Data source attached', type: 'success' });
+                        closeAddData();
+                      }
+                    }}
+                    disabled={!addDataUploadedFile}
+                    className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
+                      addDataUploadedFile ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <Check size={14} />
+                    Attach
+                  </button>
+                )}
+                {(addDataTab === 'all' || addDataTab === 'files' || addDataTab === 'db') && (
+                  <button
+                    onClick={() => {
+                      if (addDataSelectedSource) {
+                        addToast({ message: 'Data source attached', type: 'success' });
+                        closeAddData();
+                      }
+                    }}
+                    disabled={!addDataSelectedSource}
+                    className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
+                      addDataSelectedSource ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <Check size={14} />
+                    Attach
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        </>
+      );
+    })()}
     </>
   );
 }
@@ -3106,6 +3405,15 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
 
                 {/* Actions right */}
                 <div className="flex items-center gap-1">
+                  {/* Download as PNG */}
+                  <button
+                    onClick={() => addToast({ message: 'Widget downloaded as PNG', type: 'success' })}
+                    className="p-2 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
+                    title="Download as PNG"
+                  >
+                    <Download size={18} className="text-ink-700" />
+                  </button>
+
                   {/* Bell with badge */}
                   <button
                     onClick={() => setShowAlertNotifications(true)}
@@ -3603,36 +3911,43 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
     </AnimatePresence>
 
     {/* Delete confirmation */}
-    {showExpandDeleteConfirm && (
-      <>
-        <div className="fixed inset-0 z-[10000] bg-black/30 backdrop-blur-sm" onClick={() => setShowExpandDeleteConfirm(false)} />
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[360px] p-6" onClick={e => e.stopPropagation()}>
+    <AnimatePresence>
+      {showExpandDeleteConfirm && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[10000] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowExpandDeleteConfirm(false)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.2 }}
+            className="relative bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[360px] p-6"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="flex items-center gap-3 mb-3">
               <div className="size-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
                 <Trash2 size={18} className="text-red-500" />
               </div>
-              <h3 className="text-[15px] font-bold text-ink-900">Delete Widget</h3>
+              <h3 className="text-[16px] font-bold text-ink-900">Delete Widget</h3>
             </div>
             <p className="text-[13px] text-ink-500 mb-5">Are you sure you want to delete <strong>"{expandTitle}"</strong>? This action cannot be undone.</p>
-            <div className="flex gap-3">
+            <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowExpandDeleteConfirm(false)}
-                className="flex-1 py-2.5 border border-canvas-border rounded-xl text-[13px] font-semibold text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer"
+                className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 border border-canvas-border rounded-xl transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={() => { setShowExpandDeleteConfirm(false); onDelete?.(); }}
-                className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[13px] font-semibold transition-colors cursor-pointer"
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-[13px] font-semibold rounded-xl transition-colors cursor-pointer"
               >
                 Delete
               </button>
             </div>
-          </div>
-        </div>
-      </>
-    )}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
 
     <ThresholdAlertModal
       open={showThresholdModal}
@@ -3932,6 +4247,7 @@ function WidgetCard({
   chartType,
   hideDrill,
   dataSourceInfo,
+  hasAlert,
 }: {
   title: string;
   subtitle?: string;
@@ -3955,6 +4271,7 @@ function WidgetCard({
   chartType?: string;
   hideDrill?: boolean;
   dataSourceInfo?: { type: 'sql' | 'excel' | 'csv' | 'query'; name: string; meta: string };
+  hasAlert?: boolean;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -4028,6 +4345,16 @@ function WidgetCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setShowMenu(false); }}
     >
+      {/* Alert badge — pulsing bell in top-right when widget has an active alert */}
+      {hasAlert && (
+        <div className="absolute top-2 right-2 z-20 flex items-center justify-center" title="Active threshold alert">
+          <span className="absolute inline-flex size-5 rounded-full bg-orange-400/30 animate-ping" />
+          <span className="relative flex items-center justify-center size-5 rounded-full bg-orange-500 shadow-sm">
+            <Bell size={10} className="text-white" strokeWidth={2.5} />
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-2 pb-0">
         {/* Drag handle */}
@@ -4355,14 +4682,36 @@ function WidgetCard({
                       Edit Widget
                     </button>
                   )}
+                  {onChangeSize && (
+                    <>
+                      <div className="my-1 mx-3 border-t border-canvas-border/40" />
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(false); onChangeSize(1); }}
+                        className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors text-left cursor-pointer ${colSpan === 1 ? 'text-brand-600 bg-brand-50 font-semibold' : 'text-ink-700 hover:bg-brand-50 hover:text-brand-600'}`}
+                      >
+                        <Columns size={13} />
+                        Half Width
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(false); onChangeSize(2); }}
+                        className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] transition-colors text-left cursor-pointer ${colSpan === 2 ? 'text-brand-600 bg-brand-50 font-semibold' : 'text-ink-700 hover:bg-brand-50 hover:text-brand-600'}`}
+                      >
+                        <Maximize2 size={13} />
+                        Full Width
+                      </button>
+                    </>
+                  )}
                   {onDelete && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowMenu(false); setShowDeleteConfirm(true); }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] text-ink-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left cursor-pointer"
-                    >
-                      <Trash2 size={13} />
-                      Delete Widget
-                    </button>
+                    <>
+                      <div className="my-1 mx-3 border-t border-canvas-border/40" />
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(false); setShowDeleteConfirm(true); }}
+                        className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] text-ink-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left cursor-pointer"
+                      >
+                        <Trash2 size={13} />
+                        Delete Widget
+                      </button>
+                    </>
                   )}
                 </div>
               </>
@@ -4430,36 +4779,43 @@ function WidgetCard({
       </div>
 
       {/* Delete confirmation */}
-      {showDeleteConfirm && (
-        <>
-          <div className="fixed inset-0 z-[9999] bg-black/30 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
-            <div className="pointer-events-auto bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[360px] p-6" onClick={e => e.stopPropagation()}>
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[9999] flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
+              className="relative bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[360px] p-6"
+              onClick={e => e.stopPropagation()}
+            >
               <div className="flex items-center gap-3 mb-3">
                 <div className="size-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
                   <Trash2 size={18} className="text-red-500" />
                 </div>
-                <h3 className="text-[15px] font-bold text-ink-900">Delete Widget</h3>
+                <h3 className="text-[16px] font-bold text-ink-900">Delete Widget</h3>
               </div>
               <p className="text-[13px] text-ink-500 mb-5">Are you sure you want to delete <strong>"{localTitle}"</strong>? This action cannot be undone.</p>
-              <div className="flex gap-3">
+              <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 py-2.5 border border-canvas-border rounded-xl text-[13px] font-semibold text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer"
+                  className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 border border-canvas-border rounded-xl transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => { setShowDeleteConfirm(false); onDelete?.(); }}
-                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[13px] font-semibold transition-colors cursor-pointer"
+                  className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-[13px] font-semibold rounded-xl transition-colors cursor-pointer"
                 >
                   Delete
                 </button>
               </div>
-            </div>
-          </div>
-        </>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Resize handle — bottom right corner */}
       {onChangeSize && (
@@ -4702,8 +5058,8 @@ interface DashboardProps {
   initialDashboardId?: string | null;
   initialDashboardName?: string | null;
   initialCustomFields?: string[] | null;
-  savedWidgets?: Array<{ chartType: string; title: string; xField: string; yField: string }>;
-  onSaveWidgets?: (widgets: Array<{ chartType: string; title: string; xField: string; yField: string }>) => void;
+  savedWidgets?: Array<{ chartType: string; title: string; xField: string; yField: string; color?: string; fontFamily?: string; seriesColors?: Record<string, string> }>;
+  onSaveWidgets?: (widgets: Array<{ chartType: string; title: string; xField: string; yField: string; color?: string; fontFamily?: string; seriesColors?: Record<string, string> }>) => void;
   onBack?: () => void;
   onImportPowerBI?: () => void;
   onShare?: () => void;
@@ -5170,9 +5526,9 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
   const [filterDepartment, setFilterDepartment] = useState<string[]>([]);
   const [pageFilterFields, setPageFilterFields] = useState<string[]>([]);
   const [addWidgetOpen, setAddWidgetOpen] = useState(!!initialCustomFields?.length);
-  const [editingWidget, setEditingWidget] = useState<{ index: number; data: { chartType: string; title: string; xField: string; yField: string } } | null>(null);
+  const [editingWidget, setEditingWidget] = useState<{ index: number; data: { chartType: string; title: string; xField: string; yField: string; color?: string; fontFamily?: string; seriesColors?: Record<string, string> } } | null>(null);
   const [customFields] = useState<string[] | null>(initialCustomFields || null);
-  const [userWidgets, setUserWidgets] = useState<Array<{ chartType: string; title: string; xField: string; yField: string }>>(savedWidgets);
+  const [userWidgets, setUserWidgets] = useState<Array<{ chartType: string; title: string; xField: string; yField: string; color?: string; fontFamily?: string; seriesColors?: Record<string, string> }>>(savedWidgets);
   const isCustomDashboard = isCustomInitial;
   const [editingDashName, setEditingDashName] = useState(false);
   const [dashName, setDashName] = useState(isCustomDashboard ? (initialDashboardName || 'Custom Dashboard') : (initialDashboardName || ''));
@@ -5652,6 +6008,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                 loading={widgetLoadingStates['w1'] === 'loading'}
                 isFirstLoad={!hasLoadedOnce}
                 chartType="bar"
+                hasAlert
               >
                 <div className="w-full h-full">
                   <ConfigurableChart type={"combo" as any} xAxis="Month" yAxis="Duplicate Count" />
@@ -5675,6 +6032,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                 loading={widgetLoadingStates['w2'] === 'loading'}
                 isFirstLoad={!hasLoadedOnce}
                 chartType="line"
+                hasAlert
               >
                 <div className="w-full h-full">
                   <ConfigurableChart type="area" xAxis="Month" yAxis="Duplicate Count" />
@@ -5721,6 +6079,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                 loading={widgetLoadingStates['w4'] === 'loading'}
                 isFirstLoad={!hasLoadedOnce}
                 chartType="pie"
+                hasAlert
               >
                 <div className="w-full h-full">
                   <ConfigurableChart type="pie" xAxis="Status" yAxis="Duplicate Count" />
@@ -6004,12 +6363,19 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
         initialWidgetType={editingWidget?.data?.chartType}
         initialXAxis={editingWidget?.data?.xField}
         initialYAxis={editingWidget?.data?.yField}
+        initialColor={editingWidget?.data?.color}
+        initialFontFamily={editingWidget?.data?.fontFamily}
+        initialName={editingWidget?.data?.title}
+        initialSeriesColors={editingWidget?.data?.seriesColors}
         onSelectCard={(cardType, config) => {
           const widget = {
             chartType: cardType,
             title: config?.name || cardType,
             xField: config?.xAxis || '',
             yField: config?.yAxis || '',
+            color: config?.color,
+            fontFamily: config?.fontFamily,
+            seriesColors: config?.seriesColors,
           };
           if (editingWidget !== null && editingWidget.index >= 0) {
             const next = userWidgets.map((w, i) => i === editingWidget.index ? widget : w);

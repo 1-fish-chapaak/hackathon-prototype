@@ -206,6 +206,18 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
   // Reset on open
   if (!open) return null;
 
+  // Column cap: show at most 50 columns
+  const totalColumns = parsedHeaders.length;
+  const displayHeaders = parsedHeaders.slice(0, 50);
+  const columnsTruncated = totalColumns > 50;
+
+  // Row display: preview (50 rows) vs full data
+  const displayRows = parsedRows.slice(0, 50).map(row => row.slice(0, 50));
+
+  // Select All helpers
+  const allSheetsSelected = sheetNames.length > 0 && sheetNames.every(s => selectedSheets.includes(s));
+  const someSheetsSelected = sheetNames.some(s => selectedSheets.includes(s)) && !allSheetsSelected;
+
   const allSources = SEED;
   const fileSources = allSources.filter(s => s.type === 'file');
   const dbSources = allSources.filter(s => s.type === 'database' || s.type === 'api' || s.type === 'cloud');
@@ -518,6 +530,23 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
                             <span className="text-[12px] font-medium text-brand-700 truncate max-w-[180px] block" title={uploadedFile?.name}>{uploadedFile?.name || 'Uploaded_Data.xlsx'}</span>
                           </div>
                           <div className="pl-6 space-y-0.5">
+                            {/* Select All checkbox */}
+                            <button
+                              onClick={() => {
+                                if (allSheetsSelected) {
+                                  setSelectedSheets([]);
+                                } else {
+                                  setSelectedSheets([...sheetNames]);
+                                }
+                              }}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors cursor-pointer hover:bg-surface-2"
+                            >
+                              <div className={`size-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${allSheetsSelected ? 'bg-brand-600 border-brand-600' : someSheetsSelected ? 'bg-brand-300 border-brand-400' : 'border-ink-300 bg-white'}`}>
+                                {allSheetsSelected && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                {someSheetsSelected && !allSheetsSelected && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M3 6H9" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>}
+                              </div>
+                              <span className="text-[12px] font-semibold text-ink-700">Select All ({sheetNames.length} sheets)</span>
+                            </button>
                             {sheetNames.map(sheet => {
                               const isSelected = selectedSheets.includes(sheet);
                               return (
@@ -546,28 +575,36 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
 
                     {/* Right — real data preview table with both scrolls */}
                     <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                      <div className="px-5 py-3 border-b border-canvas-border shrink-0">
-                        <span className="text-[14px] font-semibold text-ink-900">{activeSheet}</span>
-                        <span className="text-[12px] text-ink-500 ml-2">({parsedRows.length} rows)</span>
+                      <div className="px-5 py-3 border-b border-canvas-border shrink-0 flex items-center justify-between">
+                        <div>
+                          <span className="text-[14px] font-semibold text-ink-900">{activeSheet}</span>
+                          <span className="text-[12px] text-ink-500 ml-2">({parsedRows.length} rows)</span>
+                          {columnsTruncated && (
+                            <span className="text-[12px] text-ink-400 ml-3">Showing 50 of {totalColumns} columns</span>
+                          )}
+                        </div>
+                        {parsedRows.length > 50 && (
+                          <span className="text-[11px] text-ink-400">Showing 50 of {parsedRows.length} rows</span>
+                        )}
                       </div>
                       <div className="flex-1 overflow-auto">
-                        {parsedHeaders.length > 0 ? (
-                          <table className="text-left" style={{ minWidth: `${parsedHeaders.length * 180}px` }}>
+                        {displayHeaders.length > 0 ? (
+                          <table className="text-left" style={{ minWidth: `${displayHeaders.length * 180}px` }}>
                             <thead className="sticky top-0 bg-brand-50/70 z-10">
                               <tr>
-                                {parsedHeaders.map((h, i) => (
+                                {displayHeaders.map((h, i) => (
                                   <th key={i} className="text-[11px] font-bold text-brand-800 uppercase tracking-wider px-5 py-3 border-b border-brand-200 whitespace-nowrap">{h}</th>
                                 ))}
                               </tr>
                             </thead>
                             <tbody>
-                              {parsedRows.map((row, i) => (
+                              {displayRows.map((row, i) => (
                                 <tr key={i} className="border-b border-canvas-border/50 hover:bg-brand-50/20 transition-colors">
                                   {row.map((cell, j) => (
                                     <td key={j} className={`px-5 py-2.5 text-[13px] whitespace-nowrap ${j === 0 ? 'font-semibold text-ink-900' : 'text-ink-700'}`}>{cell}</td>
                                   ))}
                                   {/* Pad if row has fewer cells than headers */}
-                                  {row.length < parsedHeaders.length && Array.from({ length: parsedHeaders.length - row.length }).map((_, k) => (
+                                  {row.length < displayHeaders.length && Array.from({ length: displayHeaders.length - row.length }).map((_, k) => (
                                     <td key={`pad-${k}`} className="px-5 py-2.5 text-[13px] text-ink-400">—</td>
                                   ))}
                                 </tr>
@@ -643,7 +680,7 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
                               return cells;
                             };
                             const headers = parseLine(lines[0]);
-                            const rows = lines.slice(1, 51).map(parseLine);
+                            const rows = lines.slice(1).map(parseLine);
                             setParsedHeaders(headers);
                             setParsedRows(rows);
                             const fname = uploadedFile.name.replace(/\.[^.]+$/, '');
@@ -981,39 +1018,40 @@ export default function DashboardListPage({ onDashboardClick, onImportPowerBI, c
       <AnimatePresence>
         {deleteConfirmId && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setDeleteConfirmId(null)} />
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setDeleteConfirmId(null)} />
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-canvas-elevated rounded-xl border border-canvas-border p-6 max-w-md w-full mx-4"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
+              className="relative bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[360px] p-6 mx-4"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[15px] font-semibold text-ink-900">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="size-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+                  <Trash2 size={18} className="text-red-500" />
+                </div>
+                <h3 className="text-[16px] font-bold text-ink-900">
                   {activeTab === 'shared' ? 'Remove Dashboard' : 'Delete Dashboard'}
                 </h3>
-                <button onClick={() => setDeleteConfirmId(null)} className="p-1 hover:bg-brand-50 rounded-md transition-colors cursor-pointer">
-                  <X size={16} className="text-ink-500" />
-                </button>
               </div>
-              <p className="text-[13px] text-ink-500 mb-6">
+              <p className="text-[13px] text-ink-500 mb-5">
                 Are you sure you want to {activeTab === 'shared' ? 'remove' : 'delete'}{' '}
-                <span className="font-semibold text-ink-800">
+                <strong>
                   "{currentDashboards.find(d => d.id === deleteConfirmId)?.name}"
-                </span>
+                </strong>
                 ? {activeTab === 'my' && 'This action cannot be undone.'}
               </p>
               <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => setDeleteConfirmId(null)}
-                  className="px-4 py-2 border border-canvas-border rounded-md text-[13px] text-ink-700 hover:border-brand-200 transition-colors cursor-pointer"
+                  className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 border border-canvas-border rounded-xl transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleDelete(deleteConfirmId)}
-                  className="px-4 py-2 bg-risk text-white rounded-md text-[13px] font-semibold hover:bg-risk/90 transition-colors cursor-pointer"
+                  className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-[13px] font-semibold rounded-xl transition-colors cursor-pointer"
                 >
                   {activeTab === 'shared' ? 'Remove' : 'Delete'}
                 </button>

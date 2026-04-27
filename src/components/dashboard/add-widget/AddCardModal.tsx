@@ -312,6 +312,10 @@ interface AddCardModalProps {
   initialXAxis?: string;
   initialYAxis?: string;
   initialWidgetType?: string;
+  initialColor?: string;
+  initialFontFamily?: string;
+  initialName?: string;
+  initialSeriesColors?: Record<string, string>;
   onOpenExcelUpload?: () => void;
   onOpenQueryModal?: () => void;
   isCreateDashboardMode?: boolean;
@@ -319,7 +323,7 @@ interface AddCardModalProps {
 }
 
 /* ─── Modal ────���─────────────────────────────────────────────────────────── */
-export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', initialXAxis, initialYAxis, initialWidgetType, onOpenExcelUpload, onOpenQueryModal, isCreateDashboardMode = false, onNavigateToBuilder }: AddCardModalProps) {
+export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', initialXAxis, initialYAxis, initialWidgetType, initialColor, initialFontFamily, initialName, initialSeriesColors, onOpenExcelUpload, onOpenQueryModal, isCreateDashboardMode = false, onNavigateToBuilder }: AddCardModalProps) {
   const [activeTab, setActiveTab] = useState<"data" | "format">("data");
   const [selected, setSelected] = useState<WidgetDef | null>(null); // No default selection
   const [chartTypeOpen, setChartTypeOpen] = useState(true);
@@ -445,6 +449,13 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
         setYFieldIds([]);
         setYAggs({});
       }
+      // Pre-fill color, font family, name, and series colors
+      if (initialColor) setChartColor(initialColor);
+      if (initialFontFamily) setFontFamily(initialFontFamily);
+      if (initialName) setWidgetName(initialName);
+      if (initialSeriesColors && Object.keys(initialSeriesColors).length > 0) {
+        setSeriesColors(initialSeriesColors);
+      }
     }
     if (open && mode === 'add') {
       setSelected(null);
@@ -459,8 +470,12 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
       setSeriesColors({});
       setBarSpacing("0");
       setSpacingMap({});
+      setWidgetName("");
+      setWidgetDescription("");
+      setChartColor("#6a12cd");
+      setFontFamily("Inter");
     }
-  }, [open, mode, initialWidgetType, initialXAxis, initialYAxis]);
+  }, [open, mode, initialWidgetType, initialXAxis, initialYAxis, initialColor, initialFontFamily, initialName, initialSeriesColors]);
 
   const removeXField = (id: string) => setXFieldIds(prev => prev.filter(f => f !== id));
   const removeYField = (id: string) => {
@@ -1180,6 +1195,11 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
 
                 {/* ── RANGE (Y AXIS) section ── */}
                 <RangeYAxisSection />
+
+                {/* ── RANGE (Y AXIS INDEX) section ── */}
+                {yIndexFieldIds.length > 0 && (
+                  <RangeYAxisSection label="Range (Y Axis Index)" />
+                )}
 
                 {/* ── CONDITIONAL FORMATTING section ── */}
                 <ConditionalFormattingSection 
