@@ -311,7 +311,7 @@ export default function App() {
             onShare={(id) => setShowShareModal(true, { type: 'report', id })}
             onManageExceptions={() => setView('manage-exceptions')}
             onOpenQuery={(q) => {
-              setChatInitialQuery(q.title);
+              setChatInitialQuery(`Open the ${q.id} duplicate invoice query`);
               setView('chat');
             }}
           />
