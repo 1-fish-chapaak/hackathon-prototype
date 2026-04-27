@@ -208,8 +208,6 @@ export default function App() {
           <WorkflowDetail
             workflowId={state.selectedWorkflowId!}
             onBack={() => fromLibrary ? setView('workflow-library') : setSelectedWorkflow(null)}
-            onViewDashboard={() => setView('dashboards')}
-            onGenerateReport={() => openReportBuilder('new')}
             onOpenExecutor={() => openWorkflowExecutor(state.selectedWorkflowId!)}
             onEditInChat={() => enterWorkflowMode({ workflowId: state.selectedWorkflowId! })}
           />
