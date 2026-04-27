@@ -305,7 +305,7 @@ export default function ReportBuilder({ context, onBack }: Props) {
                 ))}
               </div>
               <button
-                onClick={() => { setTemplateName(title); setShowSaveTemplate(true); }}
+                onClick={() => { addToast({ type: 'success', message: `${title} has been saved to custom templates` }); }}
                 className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-border text-[12px] font-medium text-text-secondary hover:bg-paper-50 hover:border-primary/30 transition-colors cursor-pointer"
               >
                 <BookOpen size={13} />

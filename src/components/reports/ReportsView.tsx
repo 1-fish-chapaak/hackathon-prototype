@@ -3295,6 +3295,7 @@ export default function ReportsView({ onShare, onManageExceptions, onOpenQuery }
                     {REPORT_TEMPLATES.map(rt => (
                       <option key={rt.id} value={rt.id}>{rt.name}</option>
                     ))}
+                    <option value="__custom__">Custom Template</option>
                   </select>
                 </div>
               </div>
@@ -3303,10 +3304,33 @@ export default function ReportsView({ onShare, onManageExceptions, onOpenQuery }
               <div className="px-6 py-4 border-t border-border-light shrink-0 flex justify-end">
                 <button
                   onClick={() => {
+                    if (newReportTemplate === '__custom__') {
+                      closeNewReportModal();
+                      setShowBuilderModal(true);
+                      return;
+                    }
+                    const template = REPORT_TEMPLATES.find(t => t.id === newReportTemplate);
+                    if (!template) return;
                     closeNewReportModal();
-                    setShowBuilderModal(true);
+                    addToast({ type: 'info', message: `Generating "${newReportName}"...` });
+                    setTimeout(() => {
+                      const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                      const newReport: typeof GENERATED_REPORTS[number] = {
+                        id: `gr-gen-${Date.now()}`,
+                        templateId: template.id,
+                        name: newReportName.trim(),
+                        tag: 'Internal Audit',
+                        generatedBy: 'You',
+                        generatedAt: today,
+                        status: 'draft',
+                        pages: 8,
+                      };
+                      setGeneratedReports(prev => [newReport, ...prev]);
+                      setViewingReport(newReport);
+                      addToast({ type: 'success', message: 'Report generated!' });
+                    }, 1200);
                   }}
-                  disabled={!newReportName.trim()}
+                  disabled={!newReportName.trim() || !newReportTemplate}
                   className="flex items-center gap-2 px-5 py-2 bg-primary hover:bg-primary-hover text-white text-[13px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer" style={{ borderRadius: '8px' }}
                 >
                   Continue <ArrowRight size={14} />
