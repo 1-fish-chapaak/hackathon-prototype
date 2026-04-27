@@ -131,16 +131,18 @@ function kindIcon(kind: AssetKind) {
   return FileText;
 }
 
+// Canonical kind→token mapping from data-sources/sources.ts (TYPE_META). Keeps
+// this modal's tile colors in sync with DataSourcesView and DataPickerModal.
 function kindStyles(kind: AssetKind): { wrap: string; icon: string } {
   switch (kind) {
     case 'db':
-      return { wrap: 'bg-sky-50', icon: 'text-sky-700' };
+      return { wrap: 'bg-evidence-50', icon: 'text-evidence-700' };
     case 'cloud':
-      return { wrap: 'bg-emerald-50', icon: 'text-emerald-700' };
+      return { wrap: 'bg-compliant-50', icon: 'text-compliant-700' };
     case 'session':
-      return { wrap: 'bg-amber-50', icon: 'text-amber-700' };
+      return { wrap: 'bg-paper-100', icon: 'text-ink-700' };
     case 'api':
-      return { wrap: 'bg-orange-50', icon: 'text-orange-700' };
+      return { wrap: 'bg-mitigated-50', icon: 'text-mitigated-700' };
     case 'file':
     default:
       return { wrap: 'bg-brand-50', icon: 'text-brand-700' };
@@ -338,7 +340,7 @@ export default function UploadDataModal({
                     className={[
                       'w-full rounded-full border px-9 py-1.5 text-[13px] focus:outline-none transition-all',
                       tab === 'upload'
-                        ? 'border-amber-200 bg-amber-50/40 text-ink-400 placeholder:text-ink-400 cursor-default'
+                        ? 'border-canvas-border bg-paper-50 text-ink-400 placeholder:text-ink-400 cursor-default'
                         : 'border-canvas-border bg-canvas text-ink-800 placeholder:text-ink-400 focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/30',
                     ].join(' ')}
                   />
