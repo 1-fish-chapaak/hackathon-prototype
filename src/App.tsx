@@ -44,6 +44,11 @@ import WorkingPaperPanel from './components/execution/WorkingPaperPanel';
 import WorkflowExecutionPanel from './components/execution/WorkflowExecutionPanel';
 import TraceabilityPanel from './components/execution/TraceabilityPanel';
 
+const LAUNCHED_FROM_REPORT =
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).has('from') &&
+  new URLSearchParams(window.location.search).get('view') === 'manage-exceptions';
+
 export default function App() {
   const {
     state,
@@ -304,6 +309,10 @@ export default function App() {
             onOpenBuilder={() => openReportBuilder('new')}
             onShare={(id) => setShowShareModal(true, { type: 'report', id })}
             onManageExceptions={() => setView('manage-exceptions')}
+            onOpenQuery={(q) => {
+              setChatInitialQuery(q.title);
+              setView('chat');
+            }}
           />
         );
 
@@ -313,6 +322,7 @@ export default function App() {
             role={state.exceptionRole}
             setRole={setExceptionRole}
             onBack={() => setView('reports')}
+            embedded={LAUNCHED_FROM_REPORT}
           />
         );
 
@@ -417,13 +427,15 @@ export default function App() {
     <ToastProvider>
       <BulkRunProgressProvider>
       <div className="flex h-screen w-full bg-canvas overflow-hidden">
-        <Sidebar
-          view={state.view}
-          setView={setView}
-          expanded={state.sidebarExpanded}
-          toggleSidebar={toggleSidebar}
-          setSidebarExpanded={setSidebarExpanded}
-        />
+        {!(LAUNCHED_FROM_REPORT && state.view === 'manage-exceptions') && (
+          <Sidebar
+            view={state.view}
+            setView={setView}
+            expanded={state.sidebarExpanded}
+            toggleSidebar={toggleSidebar}
+            setSidebarExpanded={setSidebarExpanded}
+          />
+        )}
         <main ref={mainScrollRef} className="flex-1 flex flex-col overflow-hidden">
           <AnimatePresence mode="wait">
             <motion.div
