@@ -9,7 +9,7 @@ import {
   Image, Layout, X, Edit3, BookOpen, Upload, Lightbulb, Loader2, Trash2,
   List, LayoutGrid, GripVertical, Plus, StickyNote, PanelLeftClose, PanelLeftOpen,
   ShieldAlert, MoreVertical, Eye, Database, Search, PackageOpen,
-  MessageSquare, Paperclip, Send, Clock as ClockIcon
+  MessageSquare, Paperclip, Send, Clock as ClockIcon, History,
 } from 'lucide-react';
 import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/mockData';
 import { StatusBadge } from '../shared/StatusBadge';
@@ -1613,13 +1613,15 @@ function CommentDrawer({
   const [attachment, setAttachment] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const grouped = comments.reduce<Record<string, { queryId: string; queryTitle: string; items: QueryComment[] }>>((acc, c) => {
+  // Show only comments belonging to the query the user clicked from.
+  const queryComments = comments.filter(c => c.queryId === query.id);
+  const grouped = queryComments.reduce<Record<string, { queryId: string; queryTitle: string; items: QueryComment[] }>>((acc, c) => {
     if (!acc[c.queryId]) acc[c.queryId] = { queryId: c.queryId, queryTitle: c.queryTitle, items: [] };
     acc[c.queryId].items.push(c);
     return acc;
   }, {});
   const queryGroups = Object.values(grouped);
-  const totalComments = comments.length;
+  const totalComments = queryComments.length;
 
   const handlePost = () => {
     const body = text.trim();
@@ -1798,6 +1800,170 @@ type SectionProps = {
 };
 
 type QueryComment = { id: string; queryId: string; queryTitle: string; author: string; initials: string; timestamp: string; text: string; attachment?: string };
+
+// ─── Report-level Activity Log Drawer ───
+// Shows every comment / action across every query card on the report,
+// chronologically, with a comment box at the top for new entries.
+function ReportActivityLogDrawer({
+  reportName,
+  comments,
+  onAddComment,
+  onClose,
+}: {
+  reportName: string;
+  comments: QueryComment[];
+  onAddComment?: (queryId: string, queryTitle: string, text: string, attachment?: string) => void;
+  onClose: () => void;
+}) {
+  const [text, setText] = useState('');
+  const [attachment, setAttachment] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Newest first.
+  const sorted = [...comments].reverse();
+
+  const handlePost = () => {
+    const body = text.trim();
+    if (!body) return;
+    // Report-level entries are tagged as global so they show across all surfaces.
+    onAddComment?.('REPORT', `${reportName} — Report-level note`, body, attachment ?? undefined);
+    setText('');
+    setAttachment(null);
+  };
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        className="fixed inset-0 bg-ink-900/40 backdrop-blur-[2px] z-50"
+        onClick={onClose}
+      />
+      <motion.aside
+        initial={{ x: 24, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: 24, opacity: 0 }}
+        transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+        className="fixed top-0 right-0 bottom-0 w-full max-w-[560px] bg-white shadow-xl border-l border-border-light flex flex-col z-[60]"
+        role="dialog"
+        aria-label="Report activity log"
+      >
+        <header className="shrink-0 px-6 py-5 flex items-start justify-between gap-4 border-b border-border-light">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-[10px] bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <History size={18} />
+            </div>
+            <div>
+              <h2 className="text-[16px] font-semibold text-text leading-tight">Report Activity Log</h2>
+              <p className="text-[12.5px] text-text-muted mt-0.5 leading-snug">
+                All actions and comments across every query card on this report.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full text-text-muted hover:text-text hover:bg-primary-xlight flex items-center justify-center cursor-pointer shrink-0"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </header>
+
+        {/* Comment input with attachment */}
+        <section className="shrink-0 px-6 py-4 border-b border-border-light bg-paper-50">
+          <div className="relative">
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Add a comment to the report activity log…"
+              rows={3}
+              className="w-full resize-none p-3 pr-10 bg-white border border-border-light rounded-[8px] text-[13px] text-text placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) setAttachment(f.name);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute bottom-2 right-2 w-7 h-7 flex items-center justify-center text-text-muted hover:text-primary cursor-pointer"
+              aria-label="Attach file"
+              title="Attach file"
+            >
+              <Paperclip size={14} />
+            </button>
+          </div>
+          {attachment && (
+            <div className="mt-2 inline-flex items-center gap-1.5 h-6 px-2 bg-primary/5 text-primary text-[11.5px] font-medium rounded-full">
+              <Paperclip size={11} />
+              {attachment}
+              <button onClick={() => setAttachment(null)} className="hover:text-primary/70 cursor-pointer" aria-label="Remove attachment">
+                <X size={11} />
+              </button>
+            </div>
+          )}
+          <div className="mt-2 flex justify-end">
+            <button
+              onClick={handlePost}
+              disabled={!text.trim()}
+              className={`inline-flex items-center gap-1.5 h-8 px-3 text-[12.5px] font-semibold rounded-[8px] transition-colors ${
+                text.trim()
+                  ? 'bg-primary text-white hover:bg-primary/90 cursor-pointer'
+                  : 'bg-primary/40 text-white/80 cursor-not-allowed'
+              }`}
+            >
+              <Send size={12} />
+              Post
+            </button>
+          </div>
+        </section>
+
+        {/* Activity feed */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {sorted.length === 0 ? (
+            <p className="text-center text-[12.5px] text-text-muted py-10">No activity recorded yet.</p>
+          ) : (
+            <ol className="space-y-4">
+              {sorted.map(c => (
+                <li key={c.id} className="flex gap-3">
+                  <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-semibold">
+                    {c.initials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-3 mb-0.5">
+                      <span className="text-[12.5px] font-semibold text-text">{c.author}</span>
+                      <span className="text-[11px] text-text-muted tabular-nums whitespace-nowrap">{c.timestamp}</span>
+                    </div>
+                    <div className="text-[11px] text-text-muted mb-1.5">
+                      <span className="inline-flex items-center h-4 px-1.5 font-mono font-medium bg-primary/5 text-primary rounded">
+                        {c.queryId}
+                      </span>{' '}
+                      <span className="ml-1 line-clamp-1">{c.queryTitle}</span>
+                    </div>
+                    <p className="text-[12.5px] text-text leading-relaxed">{c.text}</p>
+                    {c.attachment && (
+                      <button className="mt-1.5 inline-flex items-center gap-1.5 h-6 px-2 bg-primary/5 text-primary text-[11.5px] font-medium rounded-full hover:bg-primary/10 cursor-pointer">
+                        <Paperclip size={11} />
+                        {c.attachment}
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </motion.aside>
+    </>
+  );
+}
 
 function DraggableQuerySection({
   section,
@@ -2157,6 +2323,9 @@ function ReportView({ report, onBack, onShare, onManageExceptions, initialTempla
     setSections(prev => prev.filter(s => s.id !== id));
   };
 
+  // Report-level activity log drawer (consolidates activity across all query cards).
+  const [activityLogOpen, setActivityLogOpen] = useState(false);
+
   // ─── Shared comments state (common activity log across all query cards) ───
   const [comments, setComments] = useState<QueryComment[]>([
     { id: 'c-1', queryId: 'Q01', queryTitle: 'Detects duplicate invoice entries by vendor, date, and amount', author: 'Priya Mehta',  initials: 'PM', timestamp: '2 days ago', text: 'Grouped cases by vendor and exported for AP review. Priority — largest 12 duplicates are all the same vendor.' },
@@ -2289,12 +2458,31 @@ function ReportView({ report, onBack, onShare, onManageExceptions, initialTempla
                 {reportTemplate && (
                   <p className="text-white/60 text-[13px] mb-3">{reportTemplate.desc}</p>
                 )}
-                <div className="flex items-center gap-2 text-[13px]">
-                  <span className="font-semibold text-white">{report.generatedBy}</span>
-                  <span className="text-white/30 mx-0.5">|</span>
-                  <span className="text-white/70">{report.generatedAt}</span>
-                  <span className="text-white/30 mx-0.5">|</span>
-                  <span className="text-white/70">{activeQueries.length} {activeQueries.length === 1 ? 'query' : 'queries'}</span>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-[13px]">
+                    <span className="font-semibold text-white">{report.generatedBy}</span>
+                    <span className="text-white/30 mx-0.5">|</span>
+                    <span className="text-white/70">{report.generatedAt}</span>
+                    <span className="text-white/30 mx-0.5">|</span>
+                    <span className="text-white/70">{activeQueries.length} {activeQueries.length === 1 ? 'query' : 'queries'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setActivityLogOpen(true)}
+                      title="View this report's activity log"
+                      aria-label="View report activity log"
+                      className="w-9 h-9 rounded-[10px] flex items-center justify-center text-white/80 bg-white/10 border border-white/20 hover:bg-white/20 hover:text-white transition-colors cursor-pointer"
+                    >
+                      <History size={15} />
+                    </button>
+                    <button
+                      onClick={() => addToast({ type: 'success', message: 'Generating report summary…' })}
+                      className="inline-flex items-center gap-1.5 h-9 px-3.5 text-[12.5px] font-semibold text-primary bg-white rounded-[10px] hover:bg-white/90 transition-colors cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+                    >
+                      <Sparkles size={13} />
+                      Generate Summary
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2359,12 +2547,31 @@ function ReportView({ report, onBack, onShare, onManageExceptions, initialTempla
                             {reportTemplate && (
                               <p className="text-white/60 text-[13px] mb-3">{reportTemplate.desc}</p>
                             )}
-                            <div className="flex items-center gap-2 text-[13px]">
-                              <span className="font-semibold text-white">{report.generatedBy}</span>
-                              <span className="text-white/30 mx-0.5">|</span>
-                              <span className="text-white/70">{report.generatedAt}</span>
-                              <span className="text-white/30 mx-0.5">|</span>
-                              <span className="text-white/70">{sections.filter(s => s.kind === 'query').length} {sections.filter(s => s.kind === 'query').length === 1 ? 'query' : 'queries'}</span>
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2 text-[13px]">
+                                <span className="font-semibold text-white">{report.generatedBy}</span>
+                                <span className="text-white/30 mx-0.5">|</span>
+                                <span className="text-white/70">{report.generatedAt}</span>
+                                <span className="text-white/30 mx-0.5">|</span>
+                                <span className="text-white/70">{sections.filter(s => s.kind === 'query').length} {sections.filter(s => s.kind === 'query').length === 1 ? 'query' : 'queries'}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setActivityLogOpen(true)}
+                                  title="View this report's activity log"
+                                  aria-label="View report activity log"
+                                  className="w-9 h-9 rounded-[10px] flex items-center justify-center text-white/80 bg-white/10 border border-white/20 hover:bg-white/20 hover:text-white transition-colors cursor-pointer"
+                                >
+                                  <History size={15} />
+                                </button>
+                                <button
+                                  onClick={() => addToast({ type: 'success', message: 'Generating report summary…' })}
+                                  className="inline-flex items-center gap-1.5 h-9 px-3.5 text-[12.5px] font-semibold text-primary bg-white rounded-[10px] hover:bg-white/90 transition-colors cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+                                >
+                                  <Sparkles size={13} />
+                                  Generate Summary
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -2450,6 +2657,18 @@ function ReportView({ report, onBack, onShare, onManageExceptions, initialTempla
           </div>
         )}
       </div>
+
+      {/* Report-level activity log drawer */}
+      <AnimatePresence>
+        {activityLogOpen && (
+          <ReportActivityLogDrawer
+            reportName={report.name}
+            comments={comments}
+            onAddComment={addComment}
+            onClose={() => setActivityLogOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

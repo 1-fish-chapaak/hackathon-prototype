@@ -18,6 +18,11 @@ const STATUS_STYLE: Record<GrcExceptionStatus, string> = {
   'Under Review': 'bg-mitigated-50 text-mitigated-700',
   Closed:         'bg-compliant-50 text-compliant-700',
 };
+const STATUS_LABEL: Record<GrcExceptionStatus, string> = {
+  Open:           'Open',
+  'Under Review': 'In-Progress',
+  Closed:         'Closed',
+};
 
 const CLASSIFICATION_STYLE: Record<GrcExceptionClassification, string> = {
   Unclassified:                'bg-[#F4F2F7] text-ink-600',
@@ -54,7 +59,7 @@ function ExceptionCard({ ex }: { ex: GrcException }) {
       <h4 className="text-[14px] font-semibold text-ink-900 leading-snug mb-2.5">{ex.title}</h4>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <Pill className={STATUS_STYLE[ex.status]}>{ex.status}</Pill>
+          <Pill className={STATUS_STYLE[ex.status]}>{STATUS_LABEL[ex.status]}</Pill>
           <Pill className={CLASSIFICATION_STYLE[ex.classification]}>{ex.classification}</Pill>
         </div>
         <span className="text-[12px] text-ink-700 shrink-0">{ex.assignedTo.name}</span>

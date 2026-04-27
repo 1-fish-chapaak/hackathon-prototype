@@ -42,11 +42,15 @@ function StatCard({
   value,
   icon: Icon,
   tone,
+  active,
+  onClick,
 }: {
   label: string;
   value: number;
   icon: React.ElementType;
   tone: 'default' | 'info' | 'warning' | 'alert';
+  active?: boolean;
+  onClick?: () => void;
 }) {
   const toneStyles = {
     default: { bg: 'bg-canvas-elevated', border: 'border-canvas-border', iconBg: 'bg-[#F4F2F7]', iconColor: 'text-ink-500', valueColor: 'text-ink-900' },
@@ -55,8 +59,18 @@ function StatCard({
     alert:   { bg: 'bg-high-50/60',      border: 'border-high-50',      iconBg: 'bg-high-50',    iconColor: 'text-high-700', valueColor: 'text-high-700' },
   }[tone];
 
+  const interactive = Boolean(onClick);
+  const activeRing = active ? 'ring-2 ring-brand-600 ring-offset-1' : '';
   return (
-    <div className={`${toneStyles.bg} border ${toneStyles.border} rounded-[12px] p-4 flex items-start justify-between`}>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!interactive}
+      className={`${toneStyles.bg} border ${toneStyles.border} rounded-[12px] p-4 flex items-start justify-between text-left ${activeRing} ${
+        interactive ? 'cursor-pointer hover:border-brand-300 transition-colors' : 'cursor-default'
+      }`}
+      aria-pressed={interactive ? !!active : undefined}
+    >
       <div>
         <div className="text-[12px] text-ink-500 mb-2">{label}</div>
         <div className={`text-[28px] leading-none font-semibold tabular-nums ${toneStyles.valueColor}`}>{value}</div>
@@ -64,7 +78,7 @@ function StatCard({
       <div className={`w-8 h-8 ${toneStyles.iconBg} ${toneStyles.iconColor} rounded-full flex items-center justify-center shrink-0`}>
         <Icon size={16} strokeWidth={1.75} />
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -113,10 +127,23 @@ export default function ManageExceptionsView({ role, setRole, onBack }: ManageEx
   const stats = useMemo(() => {
     const total = exceptions.length;
     const classified = exceptions.filter(e => e.classification !== 'Unclassified').length;
-    const classReviewPending = exceptions.filter(e => e.classificationReview === 'Pending').length;
+    const unclassified = exceptions.filter(e => e.classification === 'Unclassified').length;
     const actionReviewPending = exceptions.filter(e => e.actionReview === 'Pending' && e.classification !== 'Unclassified').length;
-    return { total, classified, classReviewPending, actionReviewPending };
+    return { total, classified, unclassified, actionReviewPending };
   }, [exceptions]);
+
+  // KPI-driven filter — clicking a tile narrows the table; clicking the active tile clears.
+  type KpiFilter = 'total' | 'classified' | 'unclassified' | 'actionReviewPending' | null;
+  const [kpiFilter, setKpiFilter] = useState<KpiFilter>(null);
+  const visibleExceptions = useMemo(() => {
+    switch (kpiFilter) {
+      case 'classified':           return exceptions.filter(e => e.classification !== 'Unclassified');
+      case 'unclassified':         return exceptions.filter(e => e.classification === 'Unclassified');
+      case 'actionReviewPending':  return exceptions.filter(e => e.actionReview === 'Pending' && e.classification !== 'Unclassified');
+      default:                     return exceptions;
+    }
+  }, [exceptions, kpiFilter]);
+  const toggleKpiFilter = (k: Exclude<KpiFilter, null>) => setKpiFilter(prev => (prev === k ? null : k));
 
   const toggleSelect = (id: string) => {
     setSelected(prev => {
@@ -196,15 +223,15 @@ export default function ManageExceptionsView({ role, setRole, onBack }: ManageEx
 
             {/* Stats */}
             <div className="grid grid-cols-4 gap-4 mb-6">
-              <StatCard label="Total Exceptions" value={stats.total} icon={AlertTriangle} tone="default" />
-              <StatCard label="Exceptions Classified" value={stats.classified} icon={Tag} tone="info" />
-              <StatCard label="Classification Review Pending" value={stats.classReviewPending} icon={Clock} tone="warning" />
-              <StatCard label="Action Review Pending" value={stats.actionReviewPending} icon={CheckCircle2} tone="alert" />
+              <StatCard label="Total Exceptions"        value={stats.total}                tone="default" icon={AlertTriangle} active={kpiFilter === null}                onClick={() => setKpiFilter(null)} />
+              <StatCard label="Exceptions Classified"   value={stats.classified}           tone="info"    icon={Tag}            active={kpiFilter === 'classified'}          onClick={() => toggleKpiFilter('classified')} />
+              <StatCard label="Unclassified Exceptions" value={stats.unclassified}         tone="warning" icon={Clock}          active={kpiFilter === 'unclassified'}        onClick={() => toggleKpiFilter('unclassified')} />
+              <StatCard label="Action Review Pending"   value={stats.actionReviewPending}  tone="alert"   icon={CheckCircle2}   active={kpiFilter === 'actionReviewPending'} onClick={() => toggleKpiFilter('actionReviewPending')} />
             </div>
 
             {/* Table card */}
             <ExceptionsTable
-              exceptions={exceptions}
+              exceptions={visibleExceptions}
               role={role}
               selected={selected}
               onToggleSelect={toggleSelect}
@@ -282,6 +309,7 @@ export default function ManageExceptionsView({ role, setRole, onBack }: ManageEx
           <ReviewClassificationDrawer
             key="classification-drawer"
             exception={drawerException}
+            role={role}
             onClose={() => setDrawer(null)}
             onDecision={() => setDrawer(null)}
           />
@@ -290,6 +318,7 @@ export default function ManageExceptionsView({ role, setRole, onBack }: ManageEx
           <ReviewCaseDrawer
             key="action-drawer"
             exception={drawerException}
+            role={role}
             onClose={() => setDrawer(null)}
             onDecision={() => setDrawer(null)}
             onViewBulk={(bulkId) => setBulkModalId(bulkId)}
