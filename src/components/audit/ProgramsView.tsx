@@ -103,7 +103,6 @@ export default function ProgramsView({ onSelectBP, onNavigateToExecution, initia
   const viewModes: { id: ViewMode; label: string; icon: React.ElementType }[] = [
     { id: 'processes', label: 'Process View', icon: Building2 },
     { id: 'engagements', label: 'Engagement View', icon: Calendar },
-    { id: 'split', label: 'Split View', icon: Columns },
   ];
 
   return (
