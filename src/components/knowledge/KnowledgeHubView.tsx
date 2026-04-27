@@ -71,6 +71,63 @@ const SCOPE_TONE: Record<BehaviourPref['scope'], string> = {
 
 // ─── Smart Learn tab ─────────────────────────────────────────────────────────
 
+// ─── Coming-soon overlay for Smart Learn ─────────────────────────────────────
+// The underlying tab content stays in DOM (blurred + non-interactive) so users
+// get a hint of what's landing without being able to touch placeholder data.
+
+function SmartLearnComingSoon() {
+  return (
+    <div className="absolute inset-0 z-10 flex items-start justify-center pt-16 px-6 pointer-events-none">
+      <motion.div
+        initial={{ opacity: 0, y: 8, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
+        className="pointer-events-auto max-w-lg w-full text-center rounded-2xl bg-canvas-elevated border border-canvas-border shadow-xl px-8 py-8"
+      >
+        {/* Coming-soon pill */}
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 text-[11px] font-semibold tracking-wide uppercase mb-4">
+          <Sparkles size={11} />
+          Coming soon
+        </span>
+
+        {/* Animated chef-hat / brain icon */}
+        <div className="relative w-14 h-14 mx-auto mb-4">
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-100 to-brand-50" />
+          <motion.div
+            animate={{ rotate: [0, 6, -6, 0] }}
+            transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
+            className="relative w-full h-full flex items-center justify-center"
+          >
+            <Brain size={26} className="text-brand-700" />
+          </motion.div>
+        </div>
+
+        {/* Witty hero — keeps the "IRA is cooking" cue */}
+        <h2 className="font-display text-[22px] font-[420] text-ink-900 leading-tight mb-2">
+          IRA is still cooking this one up.
+        </h2>
+
+        {/* Sub-line — explains the feature so the placeholder isn't just a mystery */}
+        <p className="text-[13px] text-ink-500 leading-relaxed max-w-md mx-auto">
+          Smart Learn will remember your output preferences and your organisation's vocabulary — so IRA writes the way <em className="not-italic font-semibold text-ink-700">you</em> would. We're tasting before we serve.
+        </p>
+
+        {/* Quiet animated dots — shows it's actively in motion, not stalled */}
+        <div className="mt-5 flex items-center justify-center gap-1.5" aria-hidden="true">
+          {[0, 1, 2].map(i => (
+            <motion.span
+              key={i}
+              className="w-1.5 h-1.5 rounded-full bg-brand-400"
+              animate={{ opacity: [0.3, 1, 0.3], y: [0, -2, 0] }}
+              transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.18, ease: 'easeInOut' }}
+            />
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 function SmartLearnTab() {
   const [behaviours, setBehaviours] = useState<BehaviourPref[]>(() => {
     try {
@@ -164,8 +221,14 @@ function SmartLearnTab() {
   ];
 
   return (
-    <div className="space-y-8">
-      {/* ── Hero stats ──────────────────────────────────────────────────── */}
+    <div className="relative">
+      {/* Coming-soon overlay — Smart Learn is masked behind a witty placeholder */}
+      <SmartLearnComingSoon />
+
+      {/* Underlying content — blurred + non-interactive so the layout shows
+          through without exposing placeholder data the user can edit. */}
+      <div className="space-y-8 filter blur-[6px] opacity-50 pointer-events-none select-none" aria-hidden="true">
+        {/* ── Hero stats ──────────────────────────────────────────────────── */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="rounded-xl border border-canvas-border bg-canvas-elevated p-5">
           <div className="font-mono text-[11px] text-ink-500 tabular-nums mb-2">Behavioural preferences</div>
@@ -361,6 +424,7 @@ function SmartLearnTab() {
         <p className="text-[13px] text-ink-800 leading-relaxed">
           Edits here teach IRA permanently. If you correct a mapping in chat, the new value lands here within a few minutes.
         </p>
+      </div>
       </div>
     </div>
   );

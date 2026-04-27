@@ -15,9 +15,9 @@ import EngagementSetupPanel from '../engagement/EngagementSetupPanel';
 // ─── Types (Finalized Engagement Model) ──────────────────────────────────────
 
 type EngagementLifecycle = 'draft' | 'planned' | 'frozen' | 'signed-off' | 'active' | 'in-progress' | 'pending-review' | 'closed';
-type AuditType = 'SOX' | 'IFC' | 'ITGC' | 'Internal' | 'Risk';
-type FrameworkType = 'COSO' | 'COBIT' | 'ISO 27001' | 'NIST' | 'Custom';
-type ProcessType = 'P2P' | 'O2C' | 'R2R' | 'S2C' | 'Cross';
+type AuditType = 'Financial Internal Control' | 'Operational Audit' | 'Compliance Audit' | 'IT Audit' | 'Concurrent Audit' | 'Internal Audit' | 'Other';
+type FrameworkType = 'SOX ICFR' | 'IFC' | 'COSO' | 'SOC 1' | 'SOC 2' | 'ISO 27001' | 'Internal Policy' | 'Custom';
+type ProcessType = 'P2P' | 'O2C' | 'R2R' | 'S2C' | 'ITGC' | 'Cross';
 type PriorityLevel = 'Critical' | 'High' | 'Medium' | 'Low';
 type TabId = 'execution' | 'timeline' | 'resources' | 'risk-matrix' | 'budget';
 type RiskStatus = 'at-risk' | 'stable' | 'unvalidated';
@@ -76,9 +76,9 @@ const COLOR_PALETTE = [
 ];
 
 const MONTHS = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
-const PROCESSES: ProcessType[] = ['P2P', 'O2C', 'R2R', 'S2C', 'Cross'];
-const AUDIT_TYPES: AuditType[] = ['SOX', 'IFC', 'ITGC', 'Internal', 'Risk'];
-const FRAMEWORKS: FrameworkType[] = ['COSO', 'COBIT', 'ISO 27001', 'NIST', 'Custom'];
+const PROCESSES: ProcessType[] = ['P2P', 'O2C', 'R2R', 'S2C', 'ITGC', 'Cross'];
+const AUDIT_TYPES: AuditType[] = ['Financial Internal Control', 'Operational Audit', 'Compliance Audit', 'IT Audit', 'Concurrent Audit', 'Internal Audit', 'Other'];
+const FRAMEWORKS: FrameworkType[] = ['SOX ICFR', 'IFC', 'COSO', 'SOC 1', 'SOC 2', 'ISO 27001', 'Internal Policy', 'Custom'];
 const PRIORITIES: PriorityLevel[] = ['Critical', 'High', 'Medium', 'Low'];
 
 const RACM_VERSIONS = [
@@ -100,7 +100,7 @@ const TEAM_MEMBERS: TeamMember[] = [
 
 const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
   {
-    id: 'ap-1', name: 'P2P — SOX Audit', auditType: 'SOX', framework: 'COSO', businessProcess: 'P2P',
+    id: 'ap-1', name: 'P2P — SOX Audit', auditType: 'Financial Internal Control', framework: 'SOX ICFR', businessProcess: 'P2P',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2025-04-01', plannedEndDate: '2025-06-30',
     actualStartDate: '2025-04-05', actualEndDate: '',
@@ -112,7 +112,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     start: 0, duration: 3, color: '#6a12cd',
   },
   {
-    id: 'ap-2', name: 'O2C — SOX Audit', auditType: 'SOX', framework: 'COSO', businessProcess: 'O2C',
+    id: 'ap-2', name: 'O2C — SOX Audit', auditType: 'Financial Internal Control', framework: 'SOX ICFR', businessProcess: 'O2C',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2025-05-01', plannedEndDate: '2025-07-31',
     actualStartDate: '2025-05-02', actualEndDate: '',
@@ -124,7 +124,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     start: 1, duration: 3, color: '#0284c7',
   },
   {
-    id: 'ap-3', name: 'R2R — SOX Audit', auditType: 'SOX', framework: 'COSO', businessProcess: 'R2R',
+    id: 'ap-3', name: 'R2R — SOX Audit', auditType: 'Financial Internal Control', framework: 'SOX ICFR', businessProcess: 'R2R',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2025-04-01', plannedEndDate: '2025-08-31',
     actualStartDate: '2025-04-03', actualEndDate: '',
@@ -136,7 +136,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     start: 0, duration: 5, color: '#d97706',
   },
   {
-    id: 'ap-4', name: 'S2C — Contract Review', auditType: 'Internal', framework: 'Custom', businessProcess: 'S2C',
+    id: 'ap-4', name: 'S2C — Contract Review', auditType: 'Internal Audit', framework: 'Internal Policy', businessProcess: 'S2C',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2025-07-01', plannedEndDate: '2025-09-30',
     actualStartDate: '', actualEndDate: '',
@@ -148,7 +148,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     start: 3, duration: 3, color: '#059669',
   },
   {
-    id: 'ap-5', name: 'P2P — IFC Assessment', auditType: 'IFC', framework: 'COBIT', businessProcess: 'P2P',
+    id: 'ap-5', name: 'P2P — IFC Assessment', auditType: 'Financial Internal Control', framework: 'IFC', businessProcess: 'P2P',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2025-08-01', plannedEndDate: '2025-10-31',
     actualStartDate: '', actualEndDate: '',
@@ -160,7 +160,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     start: 4, duration: 3, color: '#6a12cd',
   },
   {
-    id: 'ap-6', name: 'IT General Controls', auditType: 'ITGC', framework: 'ISO 27001', businessProcess: 'Cross',
+    id: 'ap-6', name: 'IT General Controls', auditType: 'IT Audit', framework: 'ISO 27001', businessProcess: 'ITGC',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2025-06-01', plannedEndDate: '2026-01-31',
     actualStartDate: '2025-06-03', actualEndDate: '',
@@ -172,7 +172,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     start: 2, duration: 8, color: '#7c3aed',
   },
   {
-    id: 'ap-7', name: 'Vendor Risk Assessment', auditType: 'Risk', framework: 'NIST', businessProcess: 'P2P',
+    id: 'ap-7', name: 'Vendor Risk Assessment', auditType: 'Operational Audit', framework: 'Internal Policy', businessProcess: 'P2P',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2025-10-01', plannedEndDate: '2025-11-30',
     actualStartDate: '', actualEndDate: '',
@@ -184,7 +184,7 @@ const INITIAL_AUDIT_PLAN: AuditEngagement[] = [
     start: 6, duration: 2, color: '#dc2626',
   },
   {
-    id: 'ap-8', name: 'Year-End Close Review', auditType: 'SOX', framework: 'COSO', businessProcess: 'R2R',
+    id: 'ap-8', name: 'Year-End Close Review', auditType: 'Financial Internal Control', framework: 'SOX ICFR', businessProcess: 'R2R',
     auditPeriodStart: '2025-04-01', auditPeriodEnd: '2026-03-31',
     plannedStartDate: '2026-01-01', plannedEndDate: '2026-02-28',
     actualStartDate: '', actualEndDate: '',
@@ -217,9 +217,10 @@ function getRacmLabel(versionId: string): string {
   return found ? found.label.replace(/\s*\(.*\)/, '') : versionId;
 }
 
-function getScopeLabel(eng: { businessProcess: ProcessType; auditType: AuditType }): string {
+function getScopeLabel(eng: { businessProcess: ProcessType; auditType: AuditType; framework: FrameworkType }): string {
   if (eng.businessProcess === 'Cross') return 'P2P + O2C + R2R + ITGC';
-  if (eng.auditType === 'SOX' || eng.auditType === 'IFC') return `${eng.businessProcess} + ITGC`;
+  if (eng.businessProcess === 'ITGC') return 'ITGC (Cross Process)';
+  if (eng.framework === 'SOX ICFR' || eng.framework === 'IFC') return `${eng.businessProcess} + ITGC`;
   return eng.businessProcess;
 }
 
@@ -235,6 +236,7 @@ const PROCESS_BADGE_COLORS: Record<ProcessType, string> = {
   O2C: 'bg-[#0284c7]/10 text-[#0284c7] border-[#0284c7]/20',
   R2R: 'bg-[#d97706]/10 text-[#d97706] border-[#d97706]/20',
   S2C: 'bg-[#059669]/10 text-[#059669] border-[#059669]/20',
+  ITGC: 'bg-[#16a34a]/10 text-[#16a34a] border-[#16a34a]/20',
   Cross: 'bg-[#7c3aed]/10 text-[#7c3aed] border-[#7c3aed]/20',
 };
 
@@ -696,8 +698,8 @@ function EngagementDrawer({
               />
             </div>
 
-            {/* Audit Type & Framework side by side */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Audit Type */}
+            <div className="mb-3">
               <Dropdown<AuditType>
                 label="Audit Type *"
                 value={form.auditType}
@@ -705,23 +707,50 @@ function EngagementDrawer({
                 onChange={(v) => update('auditType', v)}
                 disabled={readOnly || isInExecution}
               />
+              <p className="text-[10px] text-text-muted mt-0.5 px-1">Audit type defines the nature of the audit.</p>
+            </div>
+
+            {/* Framework / Compliance Scope */}
+            <div className="mb-3">
               <Dropdown<FrameworkType>
-                label="Framework *"
+                label="Framework / Compliance Scope *"
                 value={form.framework}
                 options={FRAMEWORKS}
                 onChange={(v) => update('framework', v)}
                 disabled={readOnly || isInExecution}
               />
+              <p className="text-[10px] text-text-muted mt-0.5 px-1">Framework defines the compliance or assurance standard.</p>
             </div>
 
-            {/* Business Process */}
-            <Dropdown<ProcessType>
-              label="Business Process *"
-              value={form.businessProcess}
-              options={PROCESSES}
-              onChange={(v) => update('businessProcess', v)}
-              disabled={readOnly || isInExecution}
-            />
+            {/* SOX Enforcement Panel */}
+            <div className={`mb-3 rounded-xl border px-4 py-3 ${form.framework === 'SOX ICFR' ? 'border-brand-200 bg-brand-50/40' : 'border-border bg-surface-2/50'}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-bold text-text-muted uppercase">SOX Enforcement</span>
+                {form.framework === 'SOX ICFR' ? (
+                  <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-bold bg-brand-100 text-brand-700">Enabled</span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-500">Disabled</span>
+                )}
+              </div>
+              {form.framework === 'SOX ICFR' ? (
+                <p className="text-[10px] text-brand-700 leading-relaxed">Reviewer approval, evidence requirements, key-control validation, and period locking will be enforced.</p>
+              ) : (
+                <p className="text-[10px] text-text-muted leading-relaxed">Standard engagement rules will apply.</p>
+              )}
+              <p className="text-[9px] text-text-muted mt-1 italic">SOX enforcement is driven by framework, not audit type.</p>
+            </div>
+
+            {/* Primary Business Process / Domain */}
+            <div className="mb-3">
+              <Dropdown<ProcessType>
+                label="Primary Business Process / Domain *"
+                value={form.businessProcess}
+                options={PROCESSES}
+                onChange={(v) => update('businessProcess', v)}
+                disabled={readOnly || isInExecution}
+              />
+              <p className="text-[10px] text-text-muted mt-0.5 px-1">Used for planning and filtering. Execution scope comes from linked RACM.</p>
+            </div>
 
             {/* Audit Period */}
             <div className="grid grid-cols-2 gap-3">
@@ -1048,9 +1077,11 @@ function ActivationModal({ engagement, activating, activationError, activationLo
 
 interface Props {
   onNavigateToExecution?: (engagementId: string) => void;
+  /** When true, hides header/KPIs/attention — used when embedded inside Programs */
+  embedded?: boolean;
 }
 
-export default function AuditPlanningView({ onNavigateToExecution }: Props) {
+export default function AuditPlanningView({ onNavigateToExecution, embedded = false }: Props) {
   const { addToast } = useToast();
   const [plan, setPlan] = useState<AuditEngagement[]>(INITIAL_AUDIT_PLAN);
   const [planFrozen, setPlanFrozen] = useState(false);
@@ -1246,8 +1277,8 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
     setDrawerEngagement({
       id: newId,
       name: '',
-      auditType: 'SOX',
-      framework: 'COSO',
+      auditType: 'Financial Internal Control',
+      framework: 'SOX ICFR',
       businessProcess: 'P2P',
       auditPeriodStart: '2025-04-01',
       auditPeriodEnd: '2026-03-31',
@@ -1340,45 +1371,60 @@ export default function AuditPlanningView({ onNavigateToExecution }: Props) {
   const statusFilterOptions = ['All', 'Active', 'Planned'];
 
   return (
-    <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
-      <Orb hoverIntensity={0.06} rotateOnHover hue={275} opacity={0.05} />
+    <div className={`h-full overflow-y-auto ${embedded ? '' : 'bg-white bg-mesh-gradient'} relative`}>
+      {!embedded && <Orb hoverIntensity={0.06} rotateOnHover hue={275} opacity={0.05} />}
 
-      <div className="p-8 relative">
-        {/* Header */}
-        <div className="flex items-end justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-primary-medium text-white">
-                <Calendar size={16} />
+      <div className={embedded ? '' : 'p-8 relative'}>
+        {/* Header — hidden when embedded */}
+        {!embedded && (
+          <div className="flex items-end justify-between mb-6">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-primary-medium text-white">
+                  <Calendar size={16} />
+                </div>
+                <h1 className="text-xl font-bold text-text">Audit Planning</h1>
               </div>
-              <h1 className="text-xl font-bold text-text">Audit Planning</h1>
+              <p className="text-sm text-text-secondary mt-1 ml-9">FY26 Annual Audit Plan — April 2025 to March 2026</p>
             </div>
-            <p className="text-sm text-text-secondary mt-1 ml-9">FY26 Annual Audit Plan — April 2025 to March 2026</p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={openCreateDrawer}
+                className="flex items-center gap-1.5 px-3 py-2 border border-primary/30 bg-primary/5 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+              >
+                <Plus size={13} />
+                Add Engagement
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={openCreateDrawer}
-              className="flex items-center gap-1.5 px-3 py-2 border border-primary/30 bg-primary/5 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"
-            >
-              <Plus size={13} />
-              Add Engagement
+        )}
+
+        {/* KPI Strip — hidden when embedded */}
+        {!embedded && (
+          <div className="grid grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+            <KpiCard label="Engagements" value={plan.length} icon={ClipboardList} color="text-primary bg-primary-xlight" index={0} />
+            <KpiCard label="In Execution" value={activeCount} icon={Zap} color="text-evidence-700 bg-evidence-50" index={1} />
+            <KpiCard label="Total Controls" value={totalControls} icon={ShieldCheck} color="text-compliant-700 bg-compliant-50" index={2} />
+            <KpiCard label="On Track" value={onTrackEngagements} icon={CheckCircle2} color="text-compliant-700 bg-compliant-50" index={3} />
+            <KpiCard label="Pending Review" value={totalPendingReview} icon={Clock} color="text-mitigated-700 bg-mitigated-50" index={4} />
+            <KpiCard label="Overdue" value={overdueEngagements} icon={XCircle} color="text-risk-700 bg-risk-50" index={5} />
+            <KpiCard label="Failed Controls" value={totalFailed} icon={XCircle} color="text-high-700 bg-high-50" index={6} />
+          </div>
+        )}
+
+        {/* Embedded toolbar — New Engagement button when inside Programs */}
+        {embedded && (
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-[12px] text-text-muted">{plan.length} engagement{plan.length !== 1 ? 's' : ''}</div>
+            <button onClick={openCreateDrawer}
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
+              <Plus size={14} />New Engagement
             </button>
           </div>
-        </div>
+        )}
 
-        {/* Execution KPI Strip */}
-        <div className="grid grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
-          <KpiCard label="Engagements" value={plan.length} icon={ClipboardList} color="text-primary bg-primary-xlight" index={0} />
-          <KpiCard label="In Execution" value={activeCount} icon={Zap} color="text-evidence-700 bg-evidence-50" index={1} />
-          <KpiCard label="Total Controls" value={totalControls} icon={ShieldCheck} color="text-compliant-700 bg-compliant-50" index={2} />
-          <KpiCard label="On Track" value={onTrackEngagements} icon={CheckCircle2} color="text-compliant-700 bg-compliant-50" index={3} />
-          <KpiCard label="Pending Review" value={totalPendingReview} icon={Clock} color="text-mitigated-700 bg-mitigated-50" index={4} />
-          <KpiCard label="Overdue" value={overdueEngagements} icon={XCircle} color="text-risk-700 bg-risk-50" index={5} />
-          <KpiCard label="Failed Controls" value={totalFailed} icon={XCircle} color="text-high-700 bg-high-50" index={6} />
-        </div>
-
-        {/* Attention Required Strip */}
-        {attentionItems.length > 0 && (
+        {/* Attention Strip — hidden when embedded */}
+        {!embedded && attentionItems.length > 0 && (
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
             <div className="flex items-center gap-3 p-3 rounded-xl bg-risk-50/50 border border-risk/20">
               <AlertTriangle size={16} className="text-risk-700 shrink-0" />

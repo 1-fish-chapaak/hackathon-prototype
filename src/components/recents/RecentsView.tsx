@@ -1,10 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  MessageSquare, Workflow, Star, Search, Plus, Clock,
+  MessageSquare, Workflow, Star, Search, Plus, Clock, X,
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
 import { CHAT_HISTORY, WORKFLOWS } from '../../data/mockData';
+import {
+  DateFilterPicker, dateInFilter, isDateFilterActive, dateFilterLabel,
+  DEFAULT_DATE_FILTER, type DateFilter,
+} from '../shared/DateFilterPicker';
 
 interface Props {
   setView: (v: View) => void;
@@ -168,6 +172,8 @@ function RecentRow({ icon: Icon, title, meta, trailing, ts, onClick, fav, onTogg
 export default function RecentsView({ setView, openChat, openWorkflowExecutor }: Props) {
   const [tab, setTab] = useState<TabId>('chats');
   const [search, setSearch] = useState('');
+  const [dateFilter, setDateFilter] = useState<DateFilter>(DEFAULT_DATE_FILTER);
+  const [dateOpen, setDateOpen] = useState(false);
 
   const [favourites, setFavourites] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem(FAVES_KEY) || '[]')); }
@@ -187,13 +193,24 @@ export default function RecentsView({ setView, openChat, openWorkflowExecutor }:
   const chatRows = useMemo(buildChatRows, []);
   const workflowRows = useMemo(buildWorkflowRunRows, []);
 
-  const filteredChats = chatRows.filter(c => !search || c.title.toLowerCase().includes(search.toLowerCase()));
-  const filteredWorkflows = workflowRows.filter(w => !search || w.wfName.toLowerCase().includes(search.toLowerCase()));
+  const matchesText = (text: string) => !search || text.toLowerCase().includes(search.toLowerCase());
+  const matchesDate = (ts: Date) => dateInFilter(ts.toISOString(), dateFilter, NOW);
+
+  const filteredChats = chatRows.filter(c => matchesText(c.title) && matchesDate(c.ts));
+  const filteredWorkflows = workflowRows.filter(w => matchesText(w.wfName) && matchesDate(w.ts));
 
   const favouriteEntries = [
-    ...chatRows.filter(c => favourites.has(c.id)).map(c => ({ kind: 'chat' as const, row: c })),
-    ...workflowRows.filter(w => favourites.has(w.id)).map(w => ({ kind: 'workflow' as const, row: w })),
+    ...chatRows.filter(c => favourites.has(c.id) && matchesText(c.title) && matchesDate(c.ts)).map(c => ({ kind: 'chat' as const, row: c })),
+    ...workflowRows.filter(w => favourites.has(w.id) && matchesText(w.wfName) && matchesDate(w.ts)).map(w => ({ kind: 'workflow' as const, row: w })),
   ].sort((a, b) => b.row.ts.getTime() - a.row.ts.getTime());
+
+  // Counts for the active-filters bar.
+  const dateActive = isDateFilterActive(dateFilter);
+  const dateLabel = dateFilterLabel(dateFilter);
+  const isFiltered = search.trim() !== '' || dateActive;
+  const tabTotal = tab === 'chats' ? chatRows.length : tab === 'workflows' ? workflowRows.length : favourites.size;
+  const tabVisible = tab === 'chats' ? filteredChats.length : tab === 'workflows' ? filteredWorkflows.length : favouriteEntries.length;
+  const clearAllFilters = () => { setSearch(''); setDateFilter(DEFAULT_DATE_FILTER); };
 
   const newButtonLabel = tab === 'chats' ? 'New chat' : tab === 'workflows' ? 'New run' : null;
   const onNewClick = () => {
@@ -263,18 +280,68 @@ export default function RecentsView({ setView, openChat, openWorkflowExecutor }:
         </div>
       </div>
 
-      {/* Search field (always visible, not the icon-only one above) */}
-      <div className="max-w-6xl mx-auto px-8 pt-6">
-        <div className="relative max-w-md">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
-          <input
-            type="text"
-            placeholder={`Search ${TABS.find(t => t.id === tab)!.label.toLowerCase()}…`}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 h-9 rounded-md border border-canvas-border bg-canvas-elevated text-[13px] text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-brand-600 transition-colors"
+      {/* Search + date filter toolbar */}
+      <div className="max-w-6xl mx-auto px-8 pt-6 space-y-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 max-w-md">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
+            <input
+              type="text"
+              placeholder={`Search ${TABS.find(t => t.id === tab)!.label.toLowerCase()}…`}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 h-9 rounded-md border border-canvas-border bg-canvas-elevated text-[13px] text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-brand-600 transition-colors"
+            />
+          </div>
+          <DateFilterPicker
+            filter={dateFilter}
+            open={dateOpen}
+            onToggle={() => setDateOpen(p => !p)}
+            onClose={() => setDateOpen(false)}
+            onApply={(next) => { setDateFilter(next); setDateOpen(false); }}
+            today={NOW}
           />
         </div>
+
+        {/* Active filters bar — surfaces what's filtering + clear escape, with count. */}
+        {isFiltered && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[12px] text-ink-500 tabular-nums">
+              <span className="font-semibold text-ink-700">{tabVisible}</span> of {tabTotal} {tabTotal === 1 ? 'item' : 'items'}
+            </span>
+            <span className="text-[12px] text-ink-400">·</span>
+            {search.trim() && (
+              <span className="inline-flex items-center gap-1.5 pl-2.5 pr-1 h-7 rounded-full bg-brand-50 border border-brand-200 text-[12px] text-brand-700">
+                Search: <span className="font-semibold">"{search.trim()}"</span>
+                <button
+                  onClick={() => setSearch('')}
+                  className="p-0.5 rounded-full hover:bg-brand-100 cursor-pointer"
+                  aria-label="Clear search filter"
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            {dateActive && (
+              <span className="inline-flex items-center gap-1.5 pl-2.5 pr-1 h-7 rounded-full bg-brand-50 border border-brand-200 text-[12px] text-brand-700">
+                Date: <span className="font-semibold">{dateLabel}</span>
+                <button
+                  onClick={() => setDateFilter(DEFAULT_DATE_FILTER)}
+                  className="p-0.5 rounded-full hover:bg-brand-100 cursor-pointer"
+                  aria-label="Clear date filter"
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            <button
+              onClick={clearAllFilters}
+              className="text-[12px] font-medium text-brand-700 hover:text-brand-800 hover:underline cursor-pointer ml-1"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Body */}
@@ -300,7 +367,11 @@ export default function RecentsView({ setView, openChat, openWorkflowExecutor }:
                   onToggleFav={toggleFav(c.id)}
                 />
               ))}
-              {filteredChats.length === 0 && <EmptyState label="chats" />}
+              {filteredChats.length === 0 && (
+                isFiltered
+                  ? <FilteredEmptyState label="chats" onClear={clearAllFilters} />
+                  : <EmptyState label="chats" />
+              )}
             </motion.div>
           )}
 
@@ -333,7 +404,11 @@ export default function RecentsView({ setView, openChat, openWorkflowExecutor }:
                   />
                 );
               })}
-              {filteredWorkflows.length === 0 && <EmptyState label="workflow runs" />}
+              {filteredWorkflows.length === 0 && (
+                isFiltered
+                  ? <FilteredEmptyState label="workflow runs" onClear={clearAllFilters} />
+                  : <EmptyState label="workflow runs" />
+              )}
             </motion.div>
           )}
 
@@ -347,11 +422,15 @@ export default function RecentsView({ setView, openChat, openWorkflowExecutor }:
               className="space-y-0.5"
             >
               {favouriteEntries.length === 0 && (
-                <div className="text-center py-16">
-                  <Star size={28} className="mx-auto text-ink-400 mb-3" />
-                  <p className="text-[14px] text-ink-500 mb-1">No favourites yet.</p>
-                  <p className="text-[12px] text-ink-400">Hover any chat or workflow run and click the star to pin it here.</p>
-                </div>
+                isFiltered ? (
+                  <FilteredEmptyState label="favourites" onClear={clearAllFilters} />
+                ) : (
+                  <div className="text-center py-16">
+                    <Star size={28} className="mx-auto text-ink-400 mb-3" />
+                    <p className="text-[14px] text-ink-500 mb-1">No favourites yet.</p>
+                    <p className="text-[12px] text-ink-400">Hover any chat or workflow run and click the star to pin it here.</p>
+                  </div>
+                )
               )}
               {favouriteEntries.map(e => {
                 if (e.kind === 'chat') {
@@ -404,6 +483,23 @@ function EmptyState({ label }: { label: string }) {
     <div className="text-center py-16">
       <Search size={28} className="mx-auto text-ink-400 mb-3" />
       <p className="text-[14px] text-ink-500">No {label} match your search.</p>
+    </div>
+  );
+}
+
+function FilteredEmptyState({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <div className="text-center py-16">
+      <Search size={28} className="mx-auto text-ink-400 mb-3" />
+      <p className="text-[14px] text-ink-700 font-medium">No {label} match your filters.</p>
+      <p className="text-[12px] text-ink-500 mt-1">Try widening the date range or clearing filters.</p>
+      <button
+        onClick={onClear}
+        className="inline-flex items-center gap-2 mt-4 px-3 h-9 rounded-md border border-brand-300 bg-brand-50 text-brand-700 text-[12.5px] font-semibold hover:bg-brand-100 transition-colors cursor-pointer"
+      >
+        <X size={13} />
+        Clear filters
+      </button>
     </div>
   );
 }
