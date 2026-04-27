@@ -149,7 +149,30 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
       userPrompt?: string,
     ) => {
       setWorkflow(draft);
-      setFiles({});
+
+      // Carry forward Step 1 chat-input attachments into the workflow's
+      // input map. Each file fills the next empty required input; extras
+      // pile up on the first input. Mirrors UploadDataModal.pickTargetInputId.
+      const carried = draftAttachments;
+      const seededFiles: JourneyFiles = {};
+      if (carried.length > 0) {
+        const reqInputs = draft.inputs.filter((i) => i.required);
+        const fallback = draft.inputs[0]?.id ?? '';
+        for (const f of carried) {
+          let target = '';
+          for (const inp of reqInputs) {
+            if ((seededFiles[inp.id] ?? []).length === 0) {
+              target = inp.id;
+              break;
+            }
+          }
+          if (!target) target = fallback;
+          if (!target) continue;
+          seededFiles[target] = [...(seededFiles[target] ?? []), f];
+        }
+      }
+      setFiles(seededFiles);
+      setDraftAttachments([]);
       setMappings({});
       setAlignments(seedAlignments(draft));
       setResult(null);
@@ -181,11 +204,21 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
           text: `Use the **${draft.name}** template.`,
         });
       }
+      // Surface carried-forward attachments in the chat so they're visible
+      // in conversation history, not just on the Step 2 upload card.
+      if (carried.length > 0) {
+        const names = carried.map((f) => f.name).join(', ');
+        seed.push({
+          id: nextMsgId(),
+          role: 'user',
+          text: `Attached ${carried.length} file${carried.length > 1 ? 's' : ''}: ${names}`,
+        });
+      }
       seed.push({ id: nextMsgId(), role: 'assistant', text: intro });
       setMessages(seed);
       setStep(2);
     },
-    [],
+    [draftAttachments],
   );
 
   const finishClarifying = useCallback(
@@ -618,13 +651,19 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
   }, [step, clarifying, workflow, pushStepCardOnce]);
 
   // Auto-open the upload modal once per workflow when the user first reaches
-  // step 2 (after initial clarifications). Re-opens are user-driven.
+  // step 2 (after initial clarifications). Re-opens are user-driven. If
+  // attachments carried forward from Step 1 already satisfy every required
+  // input, skip the auto-open — the user has nothing to add.
   useEffect(() => {
     if (!workflow || step !== 2 || clarifying) return;
     if (uploadModalSeededFor.current === workflow.id) return;
     uploadModalSeededFor.current = workflow.id;
+    const allRequiredFilled = workflow.inputs
+      .filter((i) => i.required)
+      .every((i) => (files[i.id] ?? []).length > 0);
+    if (allRequiredFilled) return;
     setUploadModalOpen(true);
-  }, [workflow, step, clarifying]);
+  }, [workflow, step, clarifying, files]);
 
   // Auto-verify and advance to step 3 once all required files are added.
   // Replaces the manual "Verify with Ira" CTA — user closes the upload modal
