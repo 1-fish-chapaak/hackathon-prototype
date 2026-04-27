@@ -445,3 +445,35 @@ select.no-focus-ring:focus-visible {
   50%  { transform: translateX(6px)  scale(1.1); opacity: 1; }
   100% { transform: translateX(18px) scale(0.9); opacity: 0; }
 }
+
+/* Always-visible scrollbar — forces overlay scrollbar to show on macOS */
+.chart-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+.chart-scroll::-webkit-scrollbar {
+  -webkit-appearance: none;
+  width: 8px;
+  height: 8px;
+}
+.chart-scroll::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+.chart-scroll::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 4px;
+}
+.chart-scroll::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+.chart-scroll::-webkit-scrollbar-corner {
+  background: #f3f4f6;
+}
+
+/* Remove focus outline from Recharts chart containers */
+.recharts-wrapper,
+.recharts-wrapper *,
+.recharts-surface {
+  outline: none !important;
+  box-shadow: none !important;
+}
