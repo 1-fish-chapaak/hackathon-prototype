@@ -43,8 +43,8 @@ const CATEGORY_COLORS: Record<string, string> = {
 // Dummy user-created templates. Replace with real data when the create-custom-template flow lands.
 const CUSTOM_TEMPLATES = [
   {
-    id: 'ct-001',
-    name: 'Vendor Risk Scorecard',
+    id: 'ct-custom-01',
+    name: 'Custom Template - 01',
     desc: 'Custom scorecard for third-party vendors with risk tiers, control gaps, and remediation SLAs.',
     category: 'Risk',
     icon: 'alert-triangle',
@@ -56,8 +56,8 @@ const CUSTOM_TEMPLATES = [
     ],
   },
   {
-    id: 'ct-002',
-    name: 'Quarterly Audit Snapshot',
+    id: 'ct-custom-02',
+    name: 'Custom Template - 02',
     desc: 'One-page executive snapshot of quarterly audit findings and status.',
     category: 'Audit',
     icon: 'file-text',
@@ -2170,13 +2170,14 @@ function DraggableQuerySection({
 }
 
 // ─── Report View (with multiple queries) ───
-function ReportView({ report, onBack, onShare, onManageExceptions, onOpenQuery, initialTemplate }: {
+function ReportView({ report, onBack, onShare, onManageExceptions, onOpenQuery, initialTemplate, customTemplates = [] }: {
   report: typeof GENERATED_REPORTS[0];
   onBack: () => void;
   onShare?: () => void;
   onManageExceptions?: () => void;
   onOpenQuery?: (query: { id: string; title: string }) => void;
   initialTemplate?: typeof REPORT_TEMPLATES[0] | null;
+  customTemplates?: typeof REPORT_TEMPLATES[number][];
 }) {
   const { addToast } = useToast();
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
@@ -2204,7 +2205,10 @@ function ReportView({ report, onBack, onShare, onManageExceptions, onOpenQuery, 
     }, 800);
   };
 
-  const reportTemplate = REPORT_TEMPLATES.find(t => t.id === report.templateId) ?? null;
+  const reportTemplate =
+    REPORT_TEMPLATES.find(t => t.id === report.templateId) ??
+    customTemplates.find(t => t.id === report.templateId) ??
+    null;
 
   const DEFAULT_QUERIES = [
     {
@@ -2837,6 +2841,7 @@ export default function ReportsView({ onShare, onManageExceptions, onOpenQuery }
         onManageExceptions={onManageExceptions}
         onOpenQuery={onOpenQuery}
         initialTemplate={reportAppliedTemplates[viewingReport.id] ?? null}
+        customTemplates={customTemplates}
       />
     );
   }
