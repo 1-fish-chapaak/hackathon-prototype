@@ -307,7 +307,7 @@ function AggDropdown({ value, onChange, fieldId }: { value: string; onChange: (v
 interface AddCardModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectCard: (cardType: string, config?: { xAxis: string; yAxis: string; color: string; name?: string; description?: string; seriesColors?: Record<string, string> }) => void;
+  onSelectCard: (cardType: string, config?: { xAxis: string; yAxis: string; color: string; name?: string; description?: string; seriesColors?: Record<string, string>; fontFamily?: string }) => void;
   mode?: 'add' | 'edit';
   initialXAxis?: string;
   initialYAxis?: string;
@@ -350,6 +350,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
   const [timeFieldIds, setTimeFieldIds] = useState<string[]>([]);
   const [yAggs, setYAggs] = useState<Record<string, string>>({});
   const [chartColor, setChartColor] = useState("#6a12cd");
+  const [fontFamily, setFontFamily] = useState("Inter");
   const [seriesColors, setSeriesColors] = useState<Record<string, string>>({});
   const [barSpacing, setBarSpacing] = useState("0");
   const [spacingMap, setSpacingMap] = useState<Record<string, string>>({});
@@ -485,7 +486,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
     if (!selected) return;
     const xAxis = needsFields ? xAxisValue : "";
     const yAxis = needsFields ? yAxisValue : selected.defaultY;
-    onSelectCard(selected.cardType, { xAxis, yAxis, color: chartColor, name: widgetName, description: widgetDescription, seriesColors: Object.keys(seriesColors).length > 0 ? seriesColors : undefined });
+    onSelectCard(selected.cardType, { xAxis, yAxis, color: chartColor, name: widgetName, description: widgetDescription, seriesColors: Object.keys(seriesColors).length > 0 ? seriesColors : undefined, fontFamily });
     onOpenChange(false);
   };
 
@@ -884,13 +885,30 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                   </button>
                   {generalThemeOpen && (
                     <div className="bg-[#fafafa] p-2.5 space-y-3">
-                      {/* Color swatches */}
-                      <ColorPicker
-                        selectedColor={selectedBaseColor}
-                        onColorChange={setSelectedBaseColor}
-                        colors={baseColors}
-                      />
-                      
+                      {/* Font Family dropdown */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[12px] font-semibold text-[#26064a]">Font Family</label>
+                        <WhiteDropdown
+                          value={fontFamily}
+                          onChange={setFontFamily}
+                          options={[
+                            { value: "Inter", label: "Inter" },
+                            { value: "Poppins", label: "Poppins" },
+                            { value: "Roboto", label: "Roboto" },
+                            { value: "Open Sans", label: "Open Sans" },
+                            { value: "Montserrat", label: "Montserrat" },
+                            { value: "Lato", label: "Lato" },
+                            { value: "Nunito", label: "Nunito" },
+                            { value: "Raleway", label: "Raleway" },
+                            { value: "PT Sans", label: "PT Sans" },
+                            { value: "Merriweather", label: "Merriweather" },
+                            { value: "Playfair Display", label: "Playfair Display" },
+                          ]}
+                          placeholder="Select font..."
+                          size="sm"
+                        />
+                      </div>
+
                       {/* Text formatting options */}
                       <div className="flex items-center bg-white rounded-[6px] border border-[#e5e7eb] overflow-hidden">
                         <button
@@ -1215,7 +1233,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                     if (!selected) return;
                     const xAxis = needsFields ? xAxisValue : "";
                     const yAxis = needsFields ? yAxisValue : selected.defaultY;
-                    onNavigateToBuilder({ cardType: selected.cardType, config: { xAxis, yAxis, color: chartColor, name: widgetName, description: widgetDescription } });
+                    onNavigateToBuilder({ cardType: selected.cardType, config: { xAxis, yAxis, color: chartColor, name: widgetName, description: widgetDescription, fontFamily } });
                     onOpenChange(false);
                   } else {
                     handleAdd();
@@ -1406,6 +1424,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                         onSeriesColorChange={(label, color) => setSeriesColors(prev => ({ ...prev, [label]: color }))}
                         barSpacing={barSpacing}
                         pieSpacingMap={selected?.builderType === 'pie' ? spacingMap : undefined}
+                        fontFamily={fontFamily}
                       />
                     )}
                   </div>

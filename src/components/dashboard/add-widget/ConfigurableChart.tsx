@@ -741,6 +741,8 @@ export interface ConfigurableChartProps {
   barSpacing?: string;
   /** Per-slice distance from center for pie charts */
   pieSpacingMap?: Record<string, string>;
+  /** Font family for all chart text. Default: "Inter" */
+  fontFamily?: string;
 }
 
 /* ─── Drill-level → effective time-axis mapping ───────────────────────────── */
@@ -767,7 +769,9 @@ export function ConfigurableChart({
   onSeriesColorChange,
   barSpacing,
   pieSpacingMap,
+  fontFamily: fontFamilyProp,
 }: ConfigurableChartProps) {
+  const fontFamily = `${fontFamilyProp || "Inter"}, sans-serif`;
   /* normalise type string */
   const t = (
     type === "Line Chart"
@@ -968,7 +972,7 @@ export function ConfigurableChart({
             tick={{
               fontSize: 12,
               fill: "#6b7280",
-              fontFamily: "Inter, sans-serif",
+              fontFamily,
             }}
             axisLine={false}
             tickLine={false}
@@ -980,7 +984,7 @@ export function ConfigurableChart({
             tick={{
               fontSize: 12,
               fill: "#6b7280",
-              fontFamily: "Inter, sans-serif",
+              fontFamily,
             }}
             axisLine={false}
             tickLine={false}
@@ -994,7 +998,7 @@ export function ConfigurableChart({
               style: {
                 fontSize: 12,
                 fill: "#9ca3af",
-                fontFamily: "Inter, sans-serif",
+                fontFamily,
               },
             }}
           />
@@ -1018,7 +1022,7 @@ export function ConfigurableChart({
                   fontSize: 12,
                   fill: BASE_COLOR,
                   fontWeight: 600,
-                  fontFamily: "Inter, sans-serif",
+                  fontFamily,
                 }}
               />
             )}
@@ -1043,7 +1047,7 @@ export function ConfigurableChart({
                     fontSize: 12,
                     fill: GRAY,
                     fontWeight: 600,
-                    fontFamily: "Inter, sans-serif",
+                    fontFamily,
                   }}
                 />
               )}
@@ -1055,7 +1059,7 @@ export function ConfigurableChart({
             wrapperStyle={{
               fontSize: 12,
               paddingTop: 8,
-              fontFamily: "Inter, sans-serif",
+              fontFamily,
             }}
             payload={legendPayload}
           />
@@ -1121,8 +1125,8 @@ export function ConfigurableChart({
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
-          <YAxis domain={[minVal, maxVal]} tickFormatter={yFmt} tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} width={50} tickMargin={4} label={{ value: yAxis, angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
+          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", fontFamily }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", fontFamily } }} />
+          <YAxis domain={[minVal, maxVal]} tickFormatter={yFmt} tick={{ fontSize: 12, fill: "#6b7280", fontFamily }} axisLine={false} tickLine={false} width={50} tickMargin={4} label={{ value: yAxis, angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", fontFamily } }} />
           <Tooltip content={<TrendTooltip yAxis={yAxis} />} />
           <Area
             type="monotone"
@@ -1148,7 +1152,7 @@ export function ConfigurableChart({
                   fontSize: 12,
                   fill: BASE_COLOR,
                   fontWeight: 600,
-                  fontFamily: "Inter, sans-serif",
+                  fontFamily,
                 }}
               />
             )}
@@ -1173,13 +1177,13 @@ export function ConfigurableChart({
                     fontSize: 12,
                     fill: GRAY,
                     fontWeight: 600,
-                    fontFamily: "Inter, sans-serif",
+                    fontFamily,
                   }}
                 />
               )}
             </Line>
           )}
-          <Legend iconType="circle" iconSize={8} verticalAlign="top" align="right" wrapperStyle={{ fontSize: 12, fontFamily: "Inter, sans-serif", paddingBottom: 8 }} payload={legendPayload} />
+          <Legend iconType="circle" iconSize={8} verticalAlign="top" align="right" wrapperStyle={{ fontSize: 12, fontFamily, paddingBottom: 8 }} payload={legendPayload} />
         </AreaChart>
       </ResponsiveContainer>
     );
@@ -1192,10 +1196,10 @@ export function ConfigurableChart({
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 12, right: 12, left: 12, bottom: 28 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
-          <YAxis tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} width={50} tickMargin={4} label={{ value: "Count", angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
+          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", fontFamily }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", fontFamily } }} />
+          <YAxis tick={{ fontSize: 12, fill: "#6b7280", fontFamily }} axisLine={false} tickLine={false} width={50} tickMargin={4} label={{ value: "Count", angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", fontFamily } }} />
           <Tooltip content={<BarTooltip />} cursor={false} />
-          <Legend iconType="circle" verticalAlign="top" align="right" wrapperStyle={{ fontSize: 12, fontFamily: "Inter, sans-serif", paddingBottom: 8 }} />
+          <Legend iconType="circle" verticalAlign="top" align="right" wrapperStyle={{ fontSize: 12, fontFamily, paddingBottom: 8 }} />
           <Bar dataKey="duplicates" name="Total Duplicates" fill={seriesColors?.["Total Duplicates"] || BASE_COLOR} radius={[4, 4, 0, 0]} />
           <Bar dataKey="resolved" name="Resolved" fill={seriesColors?.["Resolved"] || BASE_LIGHT1} radius={[4, 4, 0, 0]} />
           <Line type="monotone" dataKey="pending" name="Pending" stroke={seriesColors?.["Pending"] || AMBER} strokeWidth={2.5} dot={{ fill: seriesColors?.["Pending"] || AMBER, r: 4, strokeWidth: 0 }} activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2 }} />
@@ -1231,8 +1235,8 @@ export function ConfigurableChart({
           }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
-          <YAxis tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} width={50} tickMargin={4} label={{ value: "Count", angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
+          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", fontFamily }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", fontFamily } }} />
+          <YAxis tick={{ fontSize: 12, fill: "#6b7280", fontFamily }} axisLine={false} tickLine={false} width={50} tickMargin={4} label={{ value: "Count", angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", fontFamily } }} />
           <Tooltip content={<BarTooltip />} cursor={false} />
           <Bar
             dataKey="duplicates"
@@ -1248,7 +1252,7 @@ export function ConfigurableChart({
                   fontSize: 12,
                   fill: BASE_COLOR,
                   fontWeight: 600,
-                  fontFamily: "Inter, sans-serif",
+                  fontFamily,
                 }}
               />
             )}
@@ -1268,7 +1272,7 @@ export function ConfigurableChart({
                     fontSize: 12,
                     fill: BASE_LIGHT1,
                     fontWeight: 600,
-                    fontFamily: "Inter, sans-serif",
+                    fontFamily,
                   }}
                 />
               )}
@@ -1289,7 +1293,7 @@ export function ConfigurableChart({
                     fontSize: 12,
                     fill: BASE_LIGHT2,
                     fontWeight: 600,
-                    fontFamily: "Inter",
+                    fontFamily,
                   }}
                 />
               )}
@@ -1327,7 +1331,7 @@ export function ConfigurableChart({
           style={{
             fontSize: 11,
             fontWeight: 600,
-            fontFamily: "Inter, sans-serif",
+            fontFamily,
           }}
         >
           {`${(percent * 100).toFixed(0)}%`}

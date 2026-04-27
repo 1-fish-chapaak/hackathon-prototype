@@ -109,6 +109,12 @@ interface ChatViewProps {
   onChatLoaded?: () => void;
   /** Optional view router so the slide-out can deep-link to /recents. */
   setView?: (v: import('../../hooks/useAppState').View) => void;
+  /** Pending dashboard waiting for chat data */
+  pendingDashboard?: { name: string; description: string } | null;
+  /** Create dashboard with fields from chat */
+  onAddToDashboard?: (fields: string[]) => void;
+  /** Dismiss the pending dashboard banner */
+  onDismissPendingDashboard?: () => void;
 }
 
 const QUICK_ACTIONS = [
@@ -782,7 +788,7 @@ function SaveAsWorkflowModal({ open, defaultName, defaultDescription, onCancel, 
   );
 }
 
-export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowType, initialQuery, onInitialQueryProcessed, selectedChatId, onChatLoaded, setView }: ChatViewProps) {
+export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowType, initialQuery, onInitialQueryProcessed, selectedChatId, onChatLoaded, setView, pendingDashboard, onAddToDashboard, onDismissPendingDashboard }: ChatViewProps) {
   const { addToast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -1456,6 +1462,38 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
             </button>
           </div>
 
+          {pendingDashboard && (
+            <div className="shrink-0 mx-5 mb-2 px-4 py-2.5 bg-white/80 backdrop-blur-sm rounded-xl border border-brand-200 flex items-center justify-between gap-3 relative z-10">
+              <div className="flex items-center gap-2.5">
+                <div className="size-8 rounded-lg bg-brand-600 flex items-center justify-center">
+                  <BarChart3 size={14} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[13px] font-semibold text-brand-900">Creating: {pendingDashboard.name}</p>
+                  <p className="text-[11px] text-brand-600">Run a query, then add results to your dashboard</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const mockFields = ['Date', 'Region', 'Category', 'Vendor Name', 'Invoice Amount (₹)', 'Status', 'Department', 'Quantity'];
+                    onAddToDashboard?.(mockFields);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-[12px] font-semibold rounded-lg transition-colors cursor-pointer"
+                >
+                  <BarChart3 size={12} />
+                  Add to Dashboard
+                </button>
+                <button
+                  onClick={onDismissPendingDashboard}
+                  className="p-1 rounded-md text-brand-400 hover:text-brand-700 hover:bg-brand-100 transition-colors cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
           <div style={{
             flex: 1,
             display: 'flex',
@@ -1623,6 +1661,39 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
             </div>
           </div>
         </div>
+
+        {/* Pending Dashboard Banner */}
+        {pendingDashboard && (
+          <div className="shrink-0 px-4 py-2.5 bg-gradient-to-r from-brand-50 to-brand-100/50 border-b border-brand-200 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="size-8 rounded-lg bg-brand-600 flex items-center justify-center">
+                <BarChart3 size={14} className="text-white" />
+              </div>
+              <div>
+                <p className="text-[13px] font-semibold text-brand-900">Creating: {pendingDashboard.name}</p>
+                <p className="text-[11px] text-brand-600">Run a query, then add results to your dashboard</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const mockFields = ['Date', 'Region', 'Category', 'Vendor Name', 'Invoice Amount (₹)', 'Status', 'Department', 'Quantity'];
+                  onAddToDashboard?.(mockFields);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-[12px] font-semibold rounded-lg transition-colors cursor-pointer"
+              >
+                <BarChart3 size={12} />
+                Add to Dashboard
+              </button>
+              <button
+                onClick={onDismissPendingDashboard}
+                className="p-1 rounded-md text-brand-400 hover:text-brand-700 hover:bg-brand-100 transition-colors cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Messages */}
         <div

@@ -96,6 +96,8 @@ export interface AppState {
   dashboardWidgets: Record<string, Array<{ chartType: string; title: string; xField: string; yField: string }>>;
   // User-created dashboards (persisted across navigation)
   createdDashboards: Array<{ id: string; name: string; description: string; timeAgo: string; creator: string; accent: string }>;
+  // Pending dashboard — saved while user is in chat before creating
+  pendingDashboard: { name: string; description: string } | null;
   // Execution panels
   executionPanel: ExecutionPanel;
   executionPanelControlId: string | null;
@@ -141,6 +143,7 @@ const INITIAL_STATE: AppState = {
   dashboardCustomFields: null,
   dashboardWidgets: {},
   createdDashboards: [],
+  pendingDashboard: null,
   executionPanel: null,
   executionPanelControlId: null,
   exceptionRole: 'risk-owner',
@@ -270,6 +273,10 @@ export function useAppState() {
     setState(prev => ({ ...prev, createdDashboards: prev.createdDashboards.filter(d => d.id !== id) }));
   }, []);
 
+  const setPendingDashboard = useCallback((pending: AppState['pendingDashboard']) => {
+    setState(prev => ({ ...prev, pendingDashboard: pending }));
+  }, []);
+
   const openExecutionPanel = useCallback((panel: ExecutionPanel, controlId?: string) => {
     setState(prev => ({ ...prev, executionPanel: panel, executionPanelControlId: controlId ?? null }));
   }, []);
@@ -311,6 +318,7 @@ export function useAppState() {
     saveDashboardWidgets,
     addCreatedDashboard,
     deleteCreatedDashboard,
+    setPendingDashboard,
     openExecutionPanel,
     closeExecutionPanel,
     setExceptionRole,

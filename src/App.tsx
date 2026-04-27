@@ -74,6 +74,7 @@ export default function App() {
     saveDashboardWidgets,
     addCreatedDashboard,
     deleteCreatedDashboard,
+    setPendingDashboard,
     openExecutionPanel,
     closeExecutionPanel,
     setExceptionRole,
@@ -180,6 +181,23 @@ export default function App() {
               selectedChatId={state.selectedChatId}
               onChatLoaded={() => setSelectedChatId(null)}
               setView={setView}
+              pendingDashboard={state.pendingDashboard}
+              onAddToDashboard={(fields) => {
+                const pending = state.pendingDashboard;
+                if (!pending) return;
+                const newId = `custom-${Date.now()}`;
+                addCreatedDashboard({
+                  id: newId,
+                  name: pending.name,
+                  description: pending.description || 'Custom dashboard',
+                  timeAgo: 'Just now',
+                  creator: 'You',
+                  accent: 'bg-brand-50 text-brand-700',
+                });
+                setPendingDashboard(null);
+                openDashboard(newId, fields);
+              }}
+              onDismissPendingDashboard={() => setPendingDashboard(null)}
             />
             <AnimatePresence>
               {renderArtifactPanel()}
@@ -280,6 +298,10 @@ export default function App() {
             createdDashboards={state.createdDashboards}
             onCreateDashboard={addCreatedDashboard}
             onDeleteDashboard={deleteCreatedDashboard}
+            onOpenChat={(pending) => {
+              if (pending) setPendingDashboard(pending);
+              setView('chat');
+            }}
           />
         );
 
