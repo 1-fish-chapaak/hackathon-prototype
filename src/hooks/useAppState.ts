@@ -85,6 +85,9 @@ export interface AppState {
   // Chat initial context (for workflow mode entry)
   chatInitialQuery: string | null;
   chatWorkflowContext: { templateId?: string; workflowId?: string } | null;
+  // Seed prompt handed off from chat → AI Concierge workflow builder.
+  // Consumed once on the journey's first render, then cleared by the parent.
+  workflowBuilderSeedPrompt: string | null;
   // Selected chat to load into ChatView (e.g. from Recents); null = fresh chat
   selectedChatId: string | null;
   // Query assumptions
@@ -137,6 +140,7 @@ const INITIAL_STATE: AppState = {
   workflowType: null,
   chatInitialQuery: null,
   chatWorkflowContext: null,
+  workflowBuilderSeedPrompt: null,
   selectedChatId: null,
   queryAssumptions: [],
   selectedDashboardId: null,
@@ -289,6 +293,24 @@ export function useAppState() {
     setState(prev => ({ ...prev, exceptionRole: role }));
   }, []);
 
+  // Hand off a prompt typed in chat (with the "Build a workflow" toggle on)
+  // to the AI Concierge workflow builder. Sets the seed and routes to the
+  // builder view in a single transition; the journey consumes the seed on
+  // mount, generates the workflow, and lands the user on the clarification
+  // screen — skipping the prompt page entirely.
+  const launchWorkflowBuilderWithPrompt = useCallback((prompt: string) => {
+    setState(prev => ({
+      ...prev,
+      view: 'ai-concierge-workflow-builder' as View,
+      workflowBuilderSeedPrompt: prompt,
+      showChatHistory: false,
+    }));
+  }, []);
+
+  const setWorkflowBuilderSeedPrompt = useCallback((prompt: string | null) => {
+    setState(prev => ({ ...prev, workflowBuilderSeedPrompt: prompt }));
+  }, []);
+
   return {
     state,
     setView,
@@ -322,5 +344,7 @@ export function useAppState() {
     openExecutionPanel,
     closeExecutionPanel,
     setExceptionRole,
+    launchWorkflowBuilderWithPrompt,
+    setWorkflowBuilderSeedPrompt,
   };
 }
