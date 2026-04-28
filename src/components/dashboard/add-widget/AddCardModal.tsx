@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { ConfigurableChart, PIE_DATA } from "./ConfigurableChart";
+import { FileTreeView } from "./FileTreeView";
 import { ColorPicker } from "./ColorPicker";
 import { WhiteDropdown } from "./WhiteDropdown";
 import TypographySection from "./imports/TypographySection-1760-98";
@@ -307,19 +308,24 @@ function AggDropdown({ value, onChange, fieldId }: { value: string; onChange: (v
 interface AddCardModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectCard: (cardType: string, config?: { xAxis: string; yAxis: string; color: string; name?: string; description?: string; seriesColors?: Record<string, string> }) => void;
+  onSelectCard: (cardType: string, config?: { xAxis: string; yAxis: string; color: string; name?: string; description?: string; seriesColors?: Record<string, string>; fontFamily?: string }) => void;
   mode?: 'add' | 'edit';
   initialXAxis?: string;
   initialYAxis?: string;
   initialWidgetType?: string;
+  initialColor?: string;
+  initialFontFamily?: string;
+  initialName?: string;
+  initialSeriesColors?: Record<string, string>;
   onOpenExcelUpload?: () => void;
   onOpenQueryModal?: () => void;
+  onOpenAddData?: () => void;
   isCreateDashboardMode?: boolean;
   onNavigateToBuilder?: (data: { cardType: string; config: any }) => void;
 }
 
 /* ─── Modal ────���─────────────────────────────────────────────────────────── */
-export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', initialXAxis, initialYAxis, initialWidgetType, onOpenExcelUpload, onOpenQueryModal, isCreateDashboardMode = false, onNavigateToBuilder }: AddCardModalProps) {
+export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', initialXAxis, initialYAxis, initialWidgetType, initialColor, initialFontFamily, initialName, initialSeriesColors, onOpenExcelUpload, onOpenQueryModal, onOpenAddData, isCreateDashboardMode = false, onNavigateToBuilder }: AddCardModalProps) {
   const [activeTab, setActiveTab] = useState<"data" | "format">("data");
   const [selected, setSelected] = useState<WidgetDef | null>(null); // No default selection
   const [chartTypeOpen, setChartTypeOpen] = useState(true);
@@ -350,6 +356,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
   const [timeFieldIds, setTimeFieldIds] = useState<string[]>([]);
   const [yAggs, setYAggs] = useState<Record<string, string>>({});
   const [chartColor, setChartColor] = useState("#6a12cd");
+  const [fontFamily, setFontFamily] = useState("Inter");
   const [seriesColors, setSeriesColors] = useState<Record<string, string>>({});
   const [barSpacing, setBarSpacing] = useState("0");
   const [spacingMap, setSpacingMap] = useState<Record<string, string>>({});
@@ -444,6 +451,13 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
         setYFieldIds([]);
         setYAggs({});
       }
+      // Pre-fill color, font family, name, and series colors
+      if (initialColor) setChartColor(initialColor);
+      if (initialFontFamily) setFontFamily(initialFontFamily);
+      if (initialName) setWidgetName(initialName);
+      if (initialSeriesColors && Object.keys(initialSeriesColors).length > 0) {
+        setSeriesColors(initialSeriesColors);
+      }
     }
     if (open && mode === 'add') {
       setSelected(null);
@@ -458,8 +472,12 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
       setSeriesColors({});
       setBarSpacing("0");
       setSpacingMap({});
+      setWidgetName("");
+      setWidgetDescription("");
+      setChartColor("#6a12cd");
+      setFontFamily("Inter");
     }
-  }, [open, mode, initialWidgetType, initialXAxis, initialYAxis]);
+  }, [open, mode, initialWidgetType, initialXAxis, initialYAxis, initialColor, initialFontFamily, initialName, initialSeriesColors]);
 
   const removeXField = (id: string) => setXFieldIds(prev => prev.filter(f => f !== id));
   const removeYField = (id: string) => {
@@ -485,7 +503,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
     if (!selected) return;
     const xAxis = needsFields ? xAxisValue : "";
     const yAxis = needsFields ? yAxisValue : selected.defaultY;
-    onSelectCard(selected.cardType, { xAxis, yAxis, color: chartColor, name: widgetName, description: widgetDescription, seriesColors: Object.keys(seriesColors).length > 0 ? seriesColors : undefined });
+    onSelectCard(selected.cardType, { xAxis, yAxis, color: chartColor, name: widgetName, description: widgetDescription, seriesColors: Object.keys(seriesColors).length > 0 ? seriesColors : undefined, fontFamily });
     onOpenChange(false);
   };
 
@@ -685,10 +703,10 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        ref={addDataBtnRef}
-                        onClick={(e) => { e.stopPropagation(); setAddDataOpen(true); }}
-                        className="bg-[#6a12cd] text-white text-[12px] font-semibold uppercase tracking-[0.6px] px-2 py-1 rounded-[4px] hover:bg-[#5a0ebd] transition-colors shadow-sm"
+                        onClick={(e) => { e.stopPropagation(); onOpenAddData?.(); }}
+                        className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-white bg-[#6a12cd] hover:bg-[#5a0ebd] rounded-md transition-colors cursor-pointer shrink-0"
                       >
+                        <Plus size={10} />
                         Add Data
                       </button>
                     </div>
@@ -709,106 +727,17 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                         </div>
                       </div>
 
-                      {/* File 1: Invoice_Master.xlsx */}
-                      <div className={`mx-2.5 mb-2 bg-white rounded-[6px] border border-[#e5e7eb] overflow-hidden ${isFile1Disabled ? 'opacity-50' : ''}`}>
-                        <button
-                          onClick={() => !isFile1Disabled && setFile1Open(!file1Open)}
-                          disabled={isFile1Disabled}
-                          className={`w-full flex items-center justify-between px-2.5 py-2 bg-gradient-to-r from-[#faf5ff] to-white transition-all border-b border-[#e5e7eb] ${isFile1Disabled ? 'cursor-not-allowed' : 'hover:from-[#f5f0ff] hover:to-[#fefefe]'}`}
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <div className="size-[16px] rounded-[4px] flex items-center justify-center">
-                              <FileSpreadsheet className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
-                            </div>
-                            <span className="font-semibold text-[#26064a] text-[12px]">Invoice_Master.xlsx</span>
-                            {isFile1Disabled && <span className="text-[9px] text-gray-400 ml-1">(Locked)</span>}
-                          </div>
-                          <ChevronDown
-                            className="size-[12px] text-[#6a12cd] transition-transform duration-200"
-                            style={{ transform: file1Open ? "rotate(180deg)" : "rotate(0deg)" }}
-                          />
-                        </button>
-                        {file1Open && !isFile1Disabled && (
-                          <div className="px-2 py-1 bg-white">
-                            {dimensionFields.slice(0, 8).map((f) => (
-                              <div
-                                key={f.id}
-                                draggable={!isFile1Disabled}
-                                onDragStart={(e) => {
-                                  if (isFile1Disabled) {
-                                    e.preventDefault();
-                                    return;
-                                  }
-                                  e.dataTransfer.effectAllowed = "copy";
-                                  e.dataTransfer.setData("fieldId", f.id);
-                                  e.dataTransfer.setData("fieldKind", f.kind);
-                                }}
-                                className={`w-full flex items-center gap-2 px-1 py-1.5 rounded-[4px] transition-colors ${isFile1Disabled ? 'cursor-not-allowed' : 'cursor-move hover:bg-[#faf5ff]'}`}
-                              >
-                                <svg className="shrink-0 size-[12px]" fill="none" viewBox="0 0 12 12">
-                                  <path d={svgPathsDrag.p233bb300} stroke="#D1D5DC" strokeLinecap="round" strokeLinejoin="round" strokeWidth="0.75" />
-                                  <path d={svgPathsDrag.p358d1c00} stroke="#D1D5DC" strokeLinecap="round" strokeLinejoin="round" strokeWidth="0.75" />
-                                  <path d={svgPathsDrag.p31563d00} stroke="#D1D5DC" strokeLinecap="round" strokeLinejoin="round" strokeWidth="0.75" />
-                                  <path d={svgPathsDrag.p37817400} stroke="#D1D5DC" strokeLinecap="round" strokeLinejoin="round" strokeWidth="0.75" />
-                                  <path d={svgPathsDrag.p14c67980} stroke="#D1D5DC" strokeLinecap="round" strokeLinejoin="round" strokeWidth="0.75" />
-                                  <path d={svgPathsDrag.p1acad500} stroke="#D1D5DC" strokeLinecap="round" strokeLinejoin="round" strokeWidth="0.75" />
-                                </svg>
-                                <span className="font-normal text-[#26064a] text-[12px]">{f.label}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* File 2: Vendor_Finance.xlsx */}
-                      <div className={`mx-2.5 mb-2.5 bg-white rounded-[6px] border border-[#e5e7eb] overflow-hidden ${isFile2Disabled ? 'opacity-50' : ''}`}>
-                        <button
-                          onClick={() => !isFile2Disabled && setFile2Open(!file2Open)}
-                          disabled={isFile2Disabled}
-                          className={`w-full flex items-center justify-between px-2.5 py-2 bg-gradient-to-r from-[#faf5ff] to-white transition-all border-b border-[#e5e7eb] ${isFile2Disabled ? 'cursor-not-allowed' : 'hover:from-[#f5f0ff] hover:to-[#fefefe]'}`}
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <div className="size-[16px] rounded-[3px] flex items-center justify-center">
-                              <FileSpreadsheet className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
-                            </div>
-                            <span className="font-semibold text-[#26064a] text-[12px]">Vendor_Finance.xlsx</span>
-                            {isFile2Disabled && <span className="text-[9px] text-gray-400 ml-1">(Locked)</span>}
-                          </div>
-                          <ChevronDown
-                            className="size-[12px] text-[#6a12cd] transition-transform duration-200"
-                            style={{ transform: file2Open ? "rotate(180deg)" : "rotate(0deg)" }}
-                          />
-                        </button>
-                        {file2Open && !isFile2Disabled && (
-                          <div className="px-2 py-1 bg-white">
-                            {measureFields.map((f) => (
-                              <div
-                                key={f.id}
-                                draggable={!isFile2Disabled}
-                                onDragStart={(e) => {
-                                  if (isFile2Disabled) {
-                                    e.preventDefault();
-                                    return;
-                                  }
-                                  e.dataTransfer.effectAllowed = "copy";
-                                  e.dataTransfer.setData("fieldId", f.id);
-                                  e.dataTransfer.setData("fieldKind", f.kind);
-                                }}
-                                className={`w-full flex items-center gap-2 px-1 py-1.5 rounded-[4px] transition-colors ${isFile2Disabled ? 'cursor-not-allowed' : 'cursor-move hover:bg-[#faf5ff]'}`}
-                              >
-                                <svg className="shrink-0 size-[12px]" fill="none" viewBox="0 0 12 12">
-                                  <path d={svgPathsDrag.p233bb300} stroke="#D1D5DC" strokeLinecap="round" strokeLinejoin="round" strokeWidth="0.75" />
-                                  <path d={svgPathsDrag.p358d1c00} stroke="#D1D5DC" strokeLinecap="round" strokeLinejoin="round" strokeWidth="0.75" />
-                                  <path d={svgPathsDrag.p31563d00} stroke="#D1D5DC" strokeLinecap="round" strokeLinejoin="round" strokeWidth="0.75" />
-                                  <path d={svgPathsDrag.p37817400} stroke="#D1D5DC" strokeLinecap="round" strokeLinejoin="round" strokeWidth="0.75" />
-                                  <path d={svgPathsDrag.p14c67980} stroke="#D1D5DC" strokeLinecap="round" strokeLinejoin="round" strokeWidth="0.75" />
-                                  <path d={svgPathsDrag.p1acad500} stroke="#D1D5DC" strokeLinecap="round" strokeLinejoin="round" strokeWidth="0.75" />
-                                </svg>
-                                <span className="text-[12px] font-normal text-[#26064a]">{f.label}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                      {/* File → Sheet → Fields tree */}
+                      <div className="mx-2.5 mb-2.5">
+                        <FileTreeView
+                          files={[
+                            { name: 'Invoice_Master.xlsx', icon: 'excel', sheets: [{ name: 'Sheet1', columns: dimensionFields.slice(0, 8).map(f => f.label) }] },
+                            { name: 'Vendor_Finance.xlsx', icon: 'excel', sheets: [{ name: 'Sheet1', columns: measureFields.map(f => f.label) }] },
+                          ]}
+                          search={dataSearch}
+                          draggable
+                          fieldIdMap={Object.fromEntries(FIELDS.map(f => [f.label, f.id]))}
+                        />
                       </div>
                     </div>
                   </div>
@@ -884,13 +813,30 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                   </button>
                   {generalThemeOpen && (
                     <div className="bg-[#fafafa] p-2.5 space-y-3">
-                      {/* Color swatches */}
-                      <ColorPicker
-                        selectedColor={selectedBaseColor}
-                        onColorChange={setSelectedBaseColor}
-                        colors={baseColors}
-                      />
-                      
+                      {/* Font Family dropdown */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[12px] font-semibold text-[#26064a]">Font Family</label>
+                        <WhiteDropdown
+                          value={fontFamily}
+                          onChange={setFontFamily}
+                          options={[
+                            { value: "Inter", label: "Inter" },
+                            { value: "Poppins", label: "Poppins" },
+                            { value: "Roboto", label: "Roboto" },
+                            { value: "Open Sans", label: "Open Sans" },
+                            { value: "Montserrat", label: "Montserrat" },
+                            { value: "Lato", label: "Lato" },
+                            { value: "Nunito", label: "Nunito" },
+                            { value: "Raleway", label: "Raleway" },
+                            { value: "PT Sans", label: "PT Sans" },
+                            { value: "Merriweather", label: "Merriweather" },
+                            { value: "Playfair Display", label: "Playfair Display" },
+                          ]}
+                          placeholder="Select font..."
+                          size="sm"
+                        />
+                      </div>
+
                       {/* Text formatting options */}
                       <div className="flex items-center bg-white rounded-[6px] border border-[#e5e7eb] overflow-hidden">
                         <button
@@ -1163,6 +1109,11 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                 {/* ── RANGE (Y AXIS) section ── */}
                 <RangeYAxisSection />
 
+                {/* ── RANGE (Y AXIS INDEX) section ── */}
+                {yIndexFieldIds.length > 0 && (
+                  <RangeYAxisSection label="Range (Y Axis Index)" />
+                )}
+
                 {/* ── CONDITIONAL FORMATTING section ── */}
                 <ConditionalFormattingSection 
                   xAxisFields={xFieldIds.map(id => FIELDS.find(f => f.id === id)?.label || id)}
@@ -1215,7 +1166,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                     if (!selected) return;
                     const xAxis = needsFields ? xAxisValue : "";
                     const yAxis = needsFields ? yAxisValue : selected.defaultY;
-                    onNavigateToBuilder({ cardType: selected.cardType, config: { xAxis, yAxis, color: chartColor, name: widgetName, description: widgetDescription } });
+                    onNavigateToBuilder({ cardType: selected.cardType, config: { xAxis, yAxis, color: chartColor, name: widgetName, description: widgetDescription, fontFamily } });
                     onOpenChange(false);
                   } else {
                     handleAdd();
@@ -1406,6 +1357,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                         onSeriesColorChange={(label, color) => setSeriesColors(prev => ({ ...prev, [label]: color }))}
                         barSpacing={barSpacing}
                         pieSpacingMap={selected?.builderType === 'pie' ? spacingMap : undefined}
+                        fontFamily={fontFamily}
                       />
                     )}
                   </div>
@@ -1443,51 +1395,6 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
         </div>
       </DialogContent>
 
-      {/* ── Add Data Dropdown Portal ── */}
-      {addDataOpen && addDataBtnRef.current && createPortal(
-        <div
-          style={{
-            position: "fixed",
-            top: addDataBtnRef.current.getBoundingClientRect().bottom + 4,
-            left: addDataBtnRef.current.getBoundingClientRect().left,
-            zIndex: 99999,
-          }}
-          className="bg-[#fefefe] rounded-[8px] border border-[rgba(106,18,205,0.2)] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.1),0px_2px_4px_-1px_rgba(0,0,0,0.06)] w-[180px] overflow-hidden"
-          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          onMouseLeave={() => setAddDataOpen(false)}
-        >
-          <div className="p-1.5">
-            {/* From Excel */}
-            <button
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                setAddDataOpen(false); 
-                onOpenExcelUpload?.();
-              }}
-              className="flex items-center gap-2 px-2 py-2 bg-white hover:bg-purple-50 rounded-[6px] transition-colors group"
-            >
-              <FileSpreadsheet className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
-              <span className="text-[12px] font-medium text-[#26064a]">From Excel</span>
-            </button>
-
-            {/* From Query */}
-            <button 
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                setAddDataOpen(false); 
-                onOpenQueryModal?.();
-              }} 
-              className="flex items-center gap-2 px-2 py-2 bg-white hover:bg-purple-50 rounded-[6px] transition-colors group"
-            >
-              <svg className="size-[12px] shrink-0" fill="none" viewBox="0 0 17.5 17.5">
-                <path d={svgPathsQuery.p309aaa80} fill="#6a12cd" fillOpacity="1" />
-              </svg>
-              <span className="text-[12px] font-medium text-[#26064a] whitespace-nowrap">From Query</span>
-            </button>
-          </div>
-        </div>,
-        document.body,
-      )}
 
 
     </Dialog>

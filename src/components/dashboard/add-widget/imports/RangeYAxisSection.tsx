@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, MoveVertical } from "lucide-react";
 
-export default function RangeYAxisSection() {
+export default function RangeYAxisSection({ label = "Range (Y Axis)" }: { label?: string } = {}) {
   const [rangeOpen, setRangeOpen] = useState(false);
   const [invertRange, setInvertRange] = useState(true);
   const [minimum, setMinimum] = useState("");
@@ -17,7 +17,7 @@ export default function RangeYAxisSection() {
           <div className="size-[18px] rounded-[4px] flex items-center justify-center">
             <MoveVertical className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
           </div>
-          <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">Range (Y Axis)</span>
+          <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">{label}</span>
         </div>
         <ChevronDown
           className="size-[14px] text-[#6a12cd] transition-transform duration-200"

@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Search, Clock, Plus, ChevronDown, LayoutGrid, MoreVertical,
-  Trash2, Check, Download, Share2, X, MessageSquare, Upload, Database, CloudUpload
+  Trash2, Check, Download, Share2, X, MessageSquare, Upload, Database, CloudUpload,
+  Star, Layers, FileText, GripVertical, BarChart3
 } from 'lucide-react';
 import { useToast } from '../shared/Toast';
+import { SEED, TYPE_META, formatDate, type DataSource } from '../data-sources/sources';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -28,6 +30,7 @@ interface DashboardListPageProps {
   createdDashboards?: Dashboard[];
   onCreateDashboard?: (dashboard: Dashboard) => void;
   onDeleteDashboard?: (id: string) => void;
+  onOpenChat?: (pendingDashboard?: { name: string; description: string }) => void;
 }
 
 // ─── Data ───────────────────────────────────────────────────────────────────
@@ -146,25 +149,127 @@ const QUERY_SESSIONS = [
   ]},
 ];
 
+const FAVOURITES = [
+  { group: '', items: [
+    'Monthly revenue breakdown by region',
+    'Top 10 vendors by invoice volume',
+    'Compliance score trends Q1–Q4',
+    'Duplicate invoice detection summary',
+    'Department-wise spend analysis',
+    'Year-over-year procurement savings',
+  ]},
+];
+
+const QUERY_TEMPLATES = [
+  { group: 'FINANCIAL', items: [
+    'Revenue Analysis — by region, category, and time period',
+    'Expense Breakdown — department-wise cost distribution',
+    'Cash Flow Overview — inflows vs outflows over time',
+  ]},
+  { group: 'AUDIT & COMPLIANCE', items: [
+    'Control Testing Summary — pass/fail rates by control',
+    'Risk Heatmap — risk severity across business units',
+    'Exception Aging — open exceptions by age bucket',
+  ]},
+  { group: 'OPERATIONS', items: [
+    'Vendor Performance Scorecard — delivery, quality, cost',
+    'Process Cycle Time — average processing duration by step',
+  ]},
+];
+
 // ─── Create Dashboard Modal ─────────────────────────────────────────────────
 
-type CreateStep = 'details' | 'source' | 'query' | 'upload' | 'navigator';
+// ─── File Tree Component (Navigator sidebar) ────────────────────────────────
 
-function CreateDashboardModal({ open, onClose, onCreate }: {
+function NavFileTree({ files }: { files: { name: string; sheets: { name: string; columns: string[] }[] }[] }) {
+  const [expandedFiles, setExpandedFiles] = useState<Record<string, boolean>>({ [files[0]?.name]: true });
+  const [expandedSheets, setExpandedSheets] = useState<Record<string, boolean>>({ [`${files[0]?.name}::${files[0]?.sheets[0]?.name}`]: true });
+
+  return (
+    <div className="space-y-2">
+      {files.map(file => {
+        const isFileOpen = expandedFiles[file.name] ?? false;
+        return (
+          <div key={file.name} className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
+            <button
+              onClick={() => setExpandedFiles(p => ({ ...p, [file.name]: !p[file.name] }))}
+              className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-[#faf5ff] to-white hover:from-[#f5f0ff] transition-all cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <FileText size={14} className="text-[#6a12cd]" />
+                <span className="text-[12px] font-semibold text-[#26064a]">{file.name}</span>
+              </div>
+              <ChevronDown
+                size={14}
+                className="text-[#6a12cd] transition-transform"
+                style={{ transform: isFileOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+              />
+            </button>
+            {isFileOpen && (
+              <div className="border-t border-[#f0f0f0]">
+                {file.sheets.map(sheet => {
+                  const key = `${file.name}::${sheet.name}`;
+                  const isSheetOpen = expandedSheets[key] ?? false;
+                  return (
+                    <div key={key}>
+                      <button
+                        onClick={() => setExpandedSheets(p => ({ ...p, [key]: !p[key] }))}
+                        className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#faf5ff] transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <LayoutGrid size={12} className="text-ink-400" />
+                          <span className="text-[11px] font-medium text-ink-700">{sheet.name}</span>
+                          <span className="text-[10px] text-ink-400">({sheet.columns.length})</span>
+                        </div>
+                        <ChevronDown
+                          size={12}
+                          className="text-ink-400 transition-transform"
+                          style={{ transform: isSheetOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                        />
+                      </button>
+                      {isSheetOpen && (
+                        <div className="pb-1">
+                          {sheet.columns.map(col => (
+                            <div key={col} className="flex items-center gap-2.5 px-6 py-1.5 hover:bg-[#f0ecff] transition-colors cursor-default">
+                              <GripVertical size={11} className="text-ink-300 shrink-0" />
+                              <span className="text-[11px] text-ink-600">{col}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+type CreateStep = 'details' | 'add-data' | 'navigator';
+type AddDataTab = 'recent' | 'saved' | 'upload' | 'all' | 'files' | 'db';
+
+function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
   open: boolean;
   onClose: () => void;
   onCreate: (name: string, description: string, customFields?: string[]) => void;
+  onOpenChat?: (pendingDashboard?: { name: string; description: string }) => void;
 }) {
   const [step, setStep] = useState<CreateStep>('details');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedSource, setSelectedSource] = useState<'query' | 'upload' | 'sql' | null>(null);
+  const [activeTab, setActiveTab] = useState<AddDataTab>('recent');
   const [querySearch, setQuerySearch] = useState('');
   const [selectedQuery, setSelectedQuery] = useState<string | null>(null);
+  const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [selectedSheets, setSelectedSheets] = useState<string[]>(['Sheet 1']);
   const [activeSheet, setActiveSheet] = useState('Sheet 1');
+  const [fileTreeExpanded, setFileTreeExpanded] = useState(true);
   const [parsedHeaders, setParsedHeaders] = useState<string[]>([]);
   const [parsedRows, setParsedRows] = useState<string[][]>([]);
   const [sheetNames, setSheetNames] = useState<string[]>(['Sheet 1']);
@@ -172,13 +277,30 @@ function CreateDashboardModal({ open, onClose, onCreate }: {
   // Reset on open
   if (!open) return null;
 
+  // Column cap: show at most 50 columns
+  const totalColumns = parsedHeaders.length;
+  const displayHeaders = parsedHeaders.slice(0, 50);
+  const columnsTruncated = totalColumns > 50;
+
+  // Row display: preview (50 rows) vs full data
+  const displayRows = parsedRows.slice(0, 50).map(row => row.slice(0, 50));
+
+  // Select All helpers
+  const allSheetsSelected = sheetNames.length > 0 && sheetNames.every(s => selectedSheets.includes(s));
+  const someSheetsSelected = sheetNames.some(s => selectedSheets.includes(s)) && !allSheetsSelected;
+
+  const allSources = SEED;
+  const fileSources = allSources.filter(s => s.type === 'file');
+  const dbSources = allSources.filter(s => s.type === 'database' || s.type === 'api' || s.type === 'cloud');
+
   const handleClose = () => {
     setStep('details');
     setName('');
     setDescription('');
-    setSelectedSource(null);
+    setActiveTab('recent');
     setQuerySearch('');
     setSelectedQuery(null);
+    setSelectedSource(null);
     setUploadedFile(null);
     setDragging(false);
     onClose();
@@ -189,10 +311,8 @@ function CreateDashboardModal({ open, onClose, onCreate }: {
     handleClose();
   };
 
-  const stepLabels: Record<CreateStep, string> = { details: 'Step 1 of 3', source: 'Step 2 of 3', query: 'Step 3 of 3', upload: 'Step 3 of 3', navigator: '' };
-  const stepTitles: Record<CreateStep, string> = { details: 'Dashboard Details', source: 'Choose Data Source', query: 'Select Query', upload: 'Upload Dataset', navigator: 'Navigator' };
-  const stepLabel = stepLabels[step];
-  const stepTitle = stepTitles[step];
+  const isAddData = step === 'add-data';
+  const isNavigator = step === 'navigator';
 
   return (
     <AnimatePresence>
@@ -210,24 +330,78 @@ function CreateDashboardModal({ open, onClose, onCreate }: {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 10 }}
             transition={{ duration: 0.2 }}
-            className={`relative bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl flex flex-col overflow-hidden max-h-[85vh] ${
-              step === 'navigator' ? 'w-[1100px]' : 'w-[680px]'
+            className={`relative bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl flex flex-col overflow-hidden ${
+              isNavigator ? 'w-[1100px] h-[80vh]' : isAddData ? 'w-[820px] h-[600px]' : 'w-[680px] max-h-[85vh]'
             }`}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-7 py-5 border-b border-canvas-border">
-              <div>
-                <h2 className="text-[16px] font-bold text-ink-900">{stepTitle}</h2>
-                <p className="text-[12px] text-ink-500 mt-0.5">{stepLabel}</p>
-              </div>
-              <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
-                <X size={20} className="text-ink-400" />
-              </button>
+              {isAddData ? (
+                <>
+                  <h2 className="text-[16px] font-bold text-ink-900 shrink-0">Add data</h2>
+                  <div className="flex-1 mx-5 relative">
+                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
+                    <input
+                      type="text"
+                      value={querySearch}
+                      onChange={e => setQuerySearch(e.target.value)}
+                      placeholder={activeTab === 'upload' ? 'Drop files below to upload...' : 'Search...'}
+                      className="w-full pl-10 pr-4 py-2 text-[13px] border border-canvas-border rounded-full bg-canvas-elevated text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
+                    />
+                  </div>
+                  <button
+                    onClick={() => { handleClose(); onOpenChat?.(); }}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-[12px] font-semibold rounded-lg transition-colors cursor-pointer shrink-0"
+                  >
+                    <Plus size={14} />
+                    New Chat
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <h2 className="text-[16px] font-bold text-ink-900">{isNavigator ? 'Navigator' : 'Dashboard Details'}</h2>
+                    <p className="text-[12px] text-ink-500 mt-0.5">{isNavigator ? '' : 'Step 1 of 2'}</p>
+                  </div>
+                  <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer shrink-0">
+                    <X size={20} className="text-ink-400" />
+                  </button>
+                </>
+              )}
             </div>
 
+            {/* Tab bar — only in add-data step */}
+            {isAddData && (
+              <div className="flex gap-5 px-7 border-b border-canvas-border">
+                {([
+                  { id: 'recent' as AddDataTab, label: 'Recent Chats', icon: MessageSquare, count: QUERY_SESSIONS.reduce((n, g) => n + g.items.length, 0) },
+                  { id: 'saved' as AddDataTab, label: 'Favourites', icon: Star, count: FAVOURITES.reduce((n, g) => n + g.items.length, 0) },
+                  { id: 'upload' as AddDataTab, label: 'Upload', icon: Upload, count: 0 },
+                  { id: 'all' as AddDataTab, label: 'All Data', icon: Layers, count: allSources.length },
+                  { id: 'files' as AddDataTab, label: 'Files', icon: FileText, count: fileSources.length },
+                  { id: 'db' as AddDataTab, label: 'DB', icon: Database, count: dbSources.length },
+                ]).map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setActiveTab(tab.id); setSelectedQuery(null); setSelectedSource(null); }}
+                    className={`flex items-center gap-1.5 pb-3 pt-3 text-[13px] font-semibold transition-colors cursor-pointer relative whitespace-nowrap ${
+                      activeTab === tab.id ? 'text-brand-700' : 'text-ink-400 hover:text-ink-600'
+                    }`}
+                  >
+                    <tab.icon size={14} />
+                    {tab.label}
+                    {tab.count > 0 && <span className="text-[11px] text-ink-400 font-normal">{tab.count}</span>}
+                    {activeTab === tab.id && (
+                      <motion.div layoutId="add-data-tab" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-600 rounded-full" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-7 py-6">
+            <div className={`flex-1 overflow-hidden ${isNavigator ? '' : 'overflow-y-auto px-7 py-6'}`}>
               <AnimatePresence mode="wait">
                 {/* ── Step 1: Details ── */}
                 {step === 'details' && (
@@ -258,104 +432,57 @@ function CreateDashboardModal({ open, onClose, onCreate }: {
                   </motion.div>
                 )}
 
-                {/* ── Step 2: Choose Data Source ── */}
-                {step === 'source' && (
-                  <motion.div key="source" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.15 }}>
-                    <p className="text-[14px] text-ink-600 mb-5">How would you like to populate your dashboard?</p>
-                    <div className="grid grid-cols-3 gap-4">
-                      {/* Start from Query */}
-                      <button
-                        onClick={() => setSelectedSource('query')}
-                        className={`flex flex-col items-start p-5 rounded-xl border-2 transition-all cursor-pointer text-left ${
-                          selectedSource === 'query' ? 'border-brand-500 bg-brand-50/50' : 'border-canvas-border bg-canvas-elevated hover:border-brand-200'
-                        }`}
-                      >
-                        <div className="size-10 rounded-xl bg-brand-100 flex items-center justify-center mb-4">
-                          <MessageSquare size={18} className="text-brand-600" />
+                {/* ── Step 2: Add Data — chat tabs (recent / saved / templates) ── */}
+                {isAddData && (activeTab === 'recent' || activeTab === 'saved') && (() => {
+                  const groups = activeTab === 'recent' ? QUERY_SESSIONS : FAVOURITES;
+                  const hasResults = groups.some(g => g.items.some(q => q.toLowerCase().includes(querySearch.toLowerCase())));
+                  return (
+                    <motion.div key={activeTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+                      {hasResults ? (
+                        <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                          {groups.map(group => {
+                            const filtered = group.items.filter(q => q.toLowerCase().includes(querySearch.toLowerCase()));
+                            if (filtered.length === 0) return null;
+                            return (
+                              <div key={group.group || 'ungrouped'}>
+                                {group.group && <div className="text-[11px] font-bold text-ink-500 uppercase tracking-wider mb-2">{group.group}</div>}
+                                <div className="space-y-2">
+                                  {filtered.map(q => (
+                                    <button
+                                      key={q}
+                                      onClick={() => setSelectedQuery(q)}
+                                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer text-left ${
+                                        selectedQuery === q ? 'border-brand-500 bg-brand-50' : 'border-canvas-border bg-canvas-elevated hover:border-brand-200'
+                                      }`}
+                                    >
+                                      {activeTab === 'recent' && <MessageSquare size={14} className={selectedQuery === q ? 'text-brand-600' : 'text-ink-400'} />}
+                                      {activeTab === 'saved' && <Star size={14} className={selectedQuery === q ? 'text-brand-600' : 'text-ink-400'} />}
+                                      <span className={`text-[13px] ${selectedQuery === q ? 'text-brand-700 font-medium' : 'text-ink-700'}`}>{q}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                        <span className="text-[13px] font-bold text-ink-900 mb-1">Start from Query</span>
-                        <span className="text-[11px] text-ink-500 leading-relaxed">Create a dashboard from an existing Q&A session.</span>
-                      </button>
-
-                      {/* Choose your data source */}
-                      <button
-                        onClick={() => setSelectedSource('upload')}
-                        className={`flex flex-col items-start p-5 rounded-xl border-2 transition-all cursor-pointer text-left ${
-                          selectedSource === 'upload' ? 'border-brand-500 bg-brand-50/50' : 'border-canvas-border bg-canvas-elevated hover:border-brand-200'
-                        }`}
-                      >
-                        <div className="size-10 rounded-xl bg-green-100 flex items-center justify-center mb-4">
-                          <Upload size={18} className="text-green-600" />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                          {activeTab === 'recent' ? <MessageSquare size={32} className="text-ink-200 mb-3" /> : <Star size={32} className="text-ink-200 mb-3" />}
+                          <p className="text-[14px] font-medium text-ink-500 mb-1">
+                            {activeTab === 'recent' ? 'No chats found' : 'No favourites found'}
+                          </p>
+                          <p className="text-[12px] text-ink-400">
+                            {querySearch ? 'Try a different search term.' : activeTab === 'recent' ? 'Start a new chat to see it here.' : 'Star a chat to add it to favourites.'}
+                          </p>
                         </div>
-                        <span className="text-[13px] font-bold text-ink-900 mb-1">Choose your data source</span>
-                        <span className="text-[11px] text-ink-500 leading-relaxed">Upload a file from your computer or select an existing dataset to get started.</span>
-                      </button>
+                      )}
+                    </motion.div>
+                  );
+                })()}
 
-                      {/* Connect SQL Server — Coming Soon */}
-                      <div className="flex flex-col items-start p-5 rounded-xl border-2 border-canvas-border bg-surface-2/50 opacity-60 relative">
-                        <span className="absolute top-3 right-3 text-[10px] font-bold text-ink-400 bg-surface-2 px-2 py-0.5 rounded-full">Coming Soon</span>
-                        <div className="size-10 rounded-xl bg-surface-2 flex items-center justify-center mb-4">
-                          <Database size={18} className="text-ink-400" />
-                        </div>
-                        <span className="text-[13px] font-bold text-ink-500 mb-1">Connect SQL Server</span>
-                        <span className="text-[11px] text-ink-400 leading-relaxed">Connect directly to your SQL database for real-time data sync.</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* ── Step 3A: Select Query ── */}
-                {step === 'query' && (
-                  <motion.div key="query" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.15 }}>
-                    {/* Search + New Query */}
-                    <div className="flex items-center gap-3 mb-5">
-                      <div className="flex-1 relative">
-                        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
-                        <input
-                          type="text"
-                          value={querySearch}
-                          onChange={e => setQuerySearch(e.target.value)}
-                          placeholder="Search query sessions"
-                          className="w-full pl-10 pr-4 py-2.5 text-[13px] border border-canvas-border rounded-xl bg-canvas-elevated text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
-                        />
-                      </div>
-                      <button className="px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-[13px] font-semibold rounded-xl transition-colors cursor-pointer">
-                        New Query
-                      </button>
-                    </div>
-
-                    {/* Query list */}
-                    <div className="space-y-4 max-h-[400px] overflow-y-auto">
-                      {QUERY_SESSIONS.map(group => {
-                        const filtered = group.items.filter(q => q.toLowerCase().includes(querySearch.toLowerCase()));
-                        if (filtered.length === 0) return null;
-                        return (
-                          <div key={group.group}>
-                            <div className="text-[11px] font-bold text-ink-500 uppercase tracking-wider mb-2">{group.group}</div>
-                            <div className="space-y-2">
-                              {filtered.map(q => (
-                                <button
-                                  key={q}
-                                  onClick={() => setSelectedQuery(q)}
-                                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer text-left ${
-                                    selectedQuery === q ? 'border-brand-500 bg-brand-50' : 'border-canvas-border bg-canvas-elevated hover:border-brand-200'
-                                  }`}
-                                >
-                                  <MessageSquare size={14} className={selectedQuery === q ? 'text-brand-600' : 'text-ink-400'} />
-                                  <span className={`text-[13px] ${selectedQuery === q ? 'text-brand-700 font-medium' : 'text-ink-700'}`}>{q}</span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* ── Step 3B: Upload Dataset ── */}
-                {step === 'upload' && (
-                  <motion.div key="upload" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.15 }}>
+                {/* ── Step 2: Add Data — Upload tab ── */}
+                {isAddData && activeTab === 'upload' && (
+                  <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
                     <input
                       id="create-dash-file-input"
                       type="file"
@@ -368,25 +495,20 @@ function CreateDashboardModal({ open, onClose, onCreate }: {
                       onDragLeave={() => setDragging(false)}
                       onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) setUploadedFile(f); }}
                       onClick={() => !uploadedFile && document.getElementById('create-dash-file-input')?.click()}
-                      className={`border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center text-center transition-all ${
+                      className={`border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center text-center transition-all min-h-[300px] ${
                         dragging
                           ? 'border-brand-500 bg-brand-50'
                           : uploadedFile
                             ? 'border-compliant bg-green-50/30 cursor-default'
-                            : 'border-brand-300 bg-brand-50/30 cursor-pointer hover:border-brand-400 hover:bg-brand-50/50'
+                            : 'border-ink-200 bg-surface-2/30 cursor-pointer hover:border-brand-300 hover:bg-brand-50/20'
                       }`}
                     >
-                      <div className={`size-16 rounded-full flex items-center justify-center mb-5 shadow-sm ${
-                        uploadedFile ? 'bg-green-100' : 'bg-white border border-canvas-border'
-                      }`}>
-                        <CloudUpload size={28} className={uploadedFile ? 'text-green-600' : 'text-brand-500'} />
-                      </div>
-
                       {uploadedFile ? (
                         <div>
+                          <CloudUpload size={28} className="text-green-600 mx-auto mb-3" />
                           <h3 className="text-[15px] font-bold text-ink-900 mb-1">{uploadedFile.name}</h3>
                           <p className="text-[13px] text-compliant font-medium mb-1">
-                            {(uploadedFile.size / 1024).toFixed(1)} KB — File ready to upload
+                            {(uploadedFile.size / 1024).toFixed(1)} KB — File ready
                           </p>
                           <button
                             onClick={e => { e.stopPropagation(); setUploadedFile(null); }}
@@ -397,33 +519,71 @@ function CreateDashboardModal({ open, onClose, onCreate }: {
                         </div>
                       ) : (
                         <>
-                          <h3 className="text-[15px] font-bold text-ink-900 mb-2">Upload Dataset</h3>
-                          <p className="text-[13px] text-ink-500 mb-6 max-w-[360px]">
-                            Drag and drop your .xlsx or .csv file here, or click to browse.
-                          </p>
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={e => e.stopPropagation()}
-                              className="px-5 py-2.5 border-2 border-brand-500 text-brand-600 text-[13px] font-semibold rounded-xl hover:bg-brand-50 transition-colors cursor-pointer"
-                            >
-                              Choose Existing
-                            </button>
-                            <button
-                              onClick={e => { e.stopPropagation(); document.getElementById('create-dash-file-input')?.click(); }}
-                              className="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-[13px] font-semibold rounded-xl transition-colors cursor-pointer"
-                            >
-                              Browse Files
-                            </button>
-                          </div>
+                          <Upload size={28} className="text-ink-300 mb-3" />
+                          <h3 className="text-[14px] font-semibold text-ink-800 mb-1">Drop files here</h3>
+                          <p className="text-[13px] text-ink-400 mb-4">or pick from your computer</p>
+                          <button
+                            onClick={e => { e.stopPropagation(); document.getElementById('create-dash-file-input')?.click(); }}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-[13px] font-semibold rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Upload size={14} />
+                            Choose files
+                          </button>
+                          <p className="text-[11px] text-ink-400 mt-3">CSV · Excel · ≤ 50 MB each</p>
                         </>
                       )}
                     </div>
                   </motion.div>
                 )}
 
+                {/* ── Step 2: Add Data — All Data / Files / DB tabs ── */}
+                {isAddData && (activeTab === 'all' || activeTab === 'files' || activeTab === 'db') && (() => {
+                  const sources = (activeTab === 'all' ? allSources : activeTab === 'files' ? fileSources : dbSources)
+                    .filter(s => s.name.toLowerCase().includes(querySearch.toLowerCase()));
+                  const tabLabel = activeTab === 'all' ? 'data sources' : activeTab === 'files' ? 'files' : 'databases';
+                  return (
+                    <motion.div key={activeTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+                      {sources.length > 0 ? (
+                        <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
+                          {sources.map(source => {
+                            const { icon: Icon, tone } = TYPE_META[source.type];
+                            const isSelected = selectedSource === source.id;
+                            return (
+                              <button
+                                key={source.id}
+                                onClick={() => setSelectedSource(isSelected ? null : source.id)}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer text-left ${
+                                  isSelected ? 'border-brand-500 bg-brand-50' : 'border-canvas-border bg-canvas-elevated hover:border-brand-200'
+                                }`}
+                              >
+                                <div className={`size-8 rounded-md flex items-center justify-center shrink-0 ${tone}`}>
+                                  <Icon size={14} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-[13px] font-medium text-ink-900 truncate">{source.name}</div>
+                                  <div className="text-[11px] text-ink-400">{source.subtype} · {formatDate(source.createdAt)}</div>
+                                </div>
+                                {isSelected && <Check size={16} className="text-brand-600 shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                          <Search size={32} className="text-ink-200 mb-3" />
+                          <p className="text-[14px] font-medium text-ink-500 mb-1">No {tabLabel} found</p>
+                          <p className="text-[12px] text-ink-400">
+                            {querySearch ? 'Try a different search term.' : `No ${tabLabel} available.`}
+                          </p>
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })()}
+
                 {/* ── Step 4: Navigator — real parsed data ── */}
                 {step === 'navigator' && (
-                  <motion.div key="navigator" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.15 }} className="flex gap-0 -mx-7 -my-6" style={{ height: '520px' }}>
+                  <motion.div key="navigator" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="flex h-full">
                     {/* Left sidebar — file tree */}
                     <div className="w-[280px] shrink-0 border-r border-canvas-border flex flex-col overflow-hidden">
                       <div className="px-4 pt-4 pb-3 shrink-0">
@@ -433,13 +593,20 @@ function CreateDashboardModal({ open, onClose, onCreate }: {
                         </div>
                       </div>
                       <div className="flex-1 overflow-y-auto px-4 pb-4">
-                        {/* Uploaded file */}
                         <div className="mb-2">
-                          <div className="flex items-center gap-2 py-1.5 cursor-pointer">
-                            <ChevronDown size={14} className="text-ink-400" />
-                            <LayoutGrid size={14} className="text-brand-600" />
-                            <span className="text-[12px] font-medium text-brand-700 truncate max-w-[180px] block" title={uploadedFile?.name}>{uploadedFile?.name || 'Uploaded_Data.xlsx'}</span>
-                          </div>
+                          <button
+                            onClick={() => {
+                              if (allSheetsSelected) setSelectedSheets([]);
+                              else setSelectedSheets([...sheetNames]);
+                            }}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors cursor-pointer hover:bg-surface-2"
+                          >
+                            <div className={`size-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${allSheetsSelected ? 'bg-brand-600 border-brand-600' : someSheetsSelected ? 'bg-brand-300 border-brand-400' : 'border-ink-300 bg-white'}`}>
+                              {allSheetsSelected && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                              {someSheetsSelected && !allSheetsSelected && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M3 6H9" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>}
+                            </div>
+                            <span className="text-[12px] font-semibold text-brand-700 truncate" title={uploadedFile?.name}>{uploadedFile?.name || 'Uploaded_Data.xlsx'}</span>
+                          </button>
                           <div className="pl-6 space-y-0.5">
                             {sheetNames.map(sheet => {
                               const isSelected = selectedSheets.includes(sheet);
@@ -457,7 +624,6 @@ function CreateDashboardModal({ open, onClose, onCreate }: {
                                   <div className={`size-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-brand-600 border-brand-600' : 'border-ink-300 bg-white'}`}>
                                     {isSelected && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                                   </div>
-                                  <LayoutGrid size={13} className="text-ink-400 shrink-0" />
                                   <span className="text-[12px] truncate" title={sheet}>{sheet}</span>
                                 </button>
                               );
@@ -467,30 +633,25 @@ function CreateDashboardModal({ open, onClose, onCreate }: {
                       </div>
                     </div>
 
-                    {/* Right — real data preview table with both scrolls */}
-                    <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                      <div className="px-5 py-3 border-b border-canvas-border shrink-0">
-                        <span className="text-[14px] font-semibold text-ink-900">{activeSheet}</span>
-                        <span className="text-[12px] text-ink-500 ml-2">({parsedRows.length} rows)</span>
-                      </div>
-                      <div className="flex-1 overflow-auto">
-                        {parsedHeaders.length > 0 ? (
-                          <table className="text-left" style={{ minWidth: `${parsedHeaders.length * 180}px` }}>
-                            <thead className="sticky top-0 bg-brand-50/70 z-10">
-                              <tr>
-                                {parsedHeaders.map((h, i) => (
+                    {/* Right — data preview table */}
+                    <div className="flex-1 flex flex-col min-w-0">
+                      <div className="flex-1 overflow-auto bg-white">
+                        {displayHeaders.length > 0 ? (
+                          <table className="w-full text-left">
+                            <thead className="sticky top-0 z-10">
+                              <tr className="bg-brand-50">
+                                {displayHeaders.map((h, i) => (
                                   <th key={i} className="text-[11px] font-bold text-brand-800 uppercase tracking-wider px-5 py-3 border-b border-brand-200 whitespace-nowrap">{h}</th>
                                 ))}
                               </tr>
                             </thead>
                             <tbody>
-                              {parsedRows.map((row, i) => (
-                                <tr key={i} className="border-b border-canvas-border/50 hover:bg-brand-50/20 transition-colors">
+                              {displayRows.map((row, i) => (
+                                <tr key={i} className="border-b border-canvas-border/40 hover:bg-brand-50/20 transition-colors">
                                   {row.map((cell, j) => (
                                     <td key={j} className={`px-5 py-2.5 text-[13px] whitespace-nowrap ${j === 0 ? 'font-semibold text-ink-900' : 'text-ink-700'}`}>{cell}</td>
                                   ))}
-                                  {/* Pad if row has fewer cells than headers */}
-                                  {row.length < parsedHeaders.length && Array.from({ length: parsedHeaders.length - row.length }).map((_, k) => (
+                                  {row.length < displayHeaders.length && Array.from({ length: displayHeaders.length - row.length }).map((_, k) => (
                                     <td key={`pad-${k}`} className="px-5 py-2.5 text-[13px] text-ink-400">—</td>
                                   ))}
                                 </tr>
@@ -513,7 +674,7 @@ function CreateDashboardModal({ open, onClose, onCreate }: {
             <div className="flex items-center justify-end gap-3 px-7 py-4 border-t border-canvas-border">
               {step === 'details' && (
                 <button
-                  onClick={() => { if (name.trim()) setStep('source'); }}
+                  onClick={() => { if (name.trim()) setStep('add-data'); }}
                   disabled={!name.trim()}
                   className={`px-6 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
                     name.trim() ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
@@ -522,95 +683,96 @@ function CreateDashboardModal({ open, onClose, onCreate }: {
                   Next Step
                 </button>
               )}
-              {step === 'source' && (
+              {isAddData && (
                 <>
-                  <button onClick={() => setStep('details')} className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 transition-colors cursor-pointer">
-                    Back
+                  <p className="text-[12px] text-ink-400 mr-auto">Pick sources or files to attach.</p>
+                  <button onClick={handleClose} className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 transition-colors cursor-pointer">
+                    Cancel
                   </button>
-                  <button
-                    onClick={() => {
-                      if (selectedSource === 'query') setStep('query');
-                      else if (selectedSource === 'upload') setStep('upload');
-                      else handleCreate();
-                    }}
-                    disabled={!selectedSource}
-                    className={`px-6 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
-                      selectedSource ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
-                    }`}
-                  >
-                    {selectedSource === 'query' || selectedSource === 'upload' ? 'Next Step' : 'Create Dashboard'}
-                  </button>
-                </>
-              )}
-              {step === 'query' && (
-                <>
-                  <button onClick={() => setStep('source')} className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 transition-colors cursor-pointer">
-                    Back
-                  </button>
-                  <button
-                    onClick={() => handleCreate()}
-                    disabled={!selectedQuery}
-                    className={`px-6 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
-                      selectedQuery ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
-                    }`}
-                  >
-                    Create Dashboard
-                  </button>
-                </>
-              )}
-              {step === 'upload' && (
-                <>
-                  <button onClick={() => { setUploadedFile(null); setStep('source'); }} className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 transition-colors cursor-pointer">
-                    Back
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (uploadedFile) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                          const text = e.target?.result as string;
-                          if (!text) return;
-                          const lines = text.split('\n').filter(l => l.trim());
-                          if (lines.length === 0) return;
-                          // Parse CSV (handle quoted values)
-                          const parseLine = (line: string) => {
-                            const cells: string[] = [];
-                            let current = '';
-                            let inQuote = false;
-                            for (const ch of line) {
-                              if (ch === '"') { inQuote = !inQuote; }
-                              else if (ch === ',' && !inQuote) { cells.push(current.trim()); current = ''; }
-                              else { current += ch; }
-                            }
-                            cells.push(current.trim());
-                            return cells;
+                  {(activeTab === 'recent' || activeTab === 'saved') && (
+                    <button
+                      onClick={() => {
+                        handleClose();
+                        onOpenChat?.({ name, description });
+                      }}
+                      disabled={!selectedQuery}
+                      className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
+                        selectedQuery ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <MessageSquare size={14} />
+                      Open in Chat
+                    </button>
+                  )}
+                  {activeTab === 'upload' && (
+                    <button
+                      onClick={() => {
+                        if (uploadedFile) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            const text = ev.target?.result as string;
+                            if (!text) return;
+                            const lines = text.split('\n').filter(l => l.trim());
+                            if (lines.length === 0) return;
+                            const parseLine = (line: string) => {
+                              const cells: string[] = [];
+                              let current = '';
+                              let inQuote = false;
+                              for (const ch of line) {
+                                if (ch === '"') { inQuote = !inQuote; }
+                                else if (ch === ',' && !inQuote) { cells.push(current.trim()); current = ''; }
+                                else { current += ch; }
+                              }
+                              cells.push(current.trim());
+                              return cells;
+                            };
+                            const headers = parseLine(lines[0]);
+                            const rows = lines.slice(1).map(parseLine);
+                            setParsedHeaders(headers);
+                            setParsedRows(rows);
+                            const fname = uploadedFile.name.replace(/\.[^.]+$/, '');
+                            setSheetNames([fname]);
+                            setActiveSheet(fname);
+                            setSelectedSheets([fname]);
                           };
-                          const headers = parseLine(lines[0]);
-                          const rows = lines.slice(1, 51).map(parseLine); // Max 50 rows
-                          setParsedHeaders(headers);
-                          setParsedRows(rows);
-                          const fname = uploadedFile.name.replace(/\.[^.]+$/, '');
-                          setSheetNames([fname]);
-                          setActiveSheet(fname);
-                          setSelectedSheets([fname]);
-                        };
-                        reader.readAsText(uploadedFile);
-                      }
-                      setStep('navigator');
-                    }}
-                    disabled={!uploadedFile}
-                    className={`px-6 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
-                      uploadedFile ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
-                    }`}
-                  >
-                    Review Data
-                  </button>
+                          reader.readAsText(uploadedFile);
+                        }
+                        setStep('navigator');
+                      }}
+                      disabled={!uploadedFile}
+                      className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
+                        uploadedFile ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <Check size={14} />
+                      Attach
+                    </button>
+                  )}
+                  {(activeTab === 'all' || activeTab === 'files' || activeTab === 'db') && (
+                    <button
+                      onClick={() => {
+                        const source = allSources.find(s => s.id === selectedSource);
+                        if (source) {
+                          const mockFields = ['Date', 'Region', 'Category', 'Vendor Name', 'Invoice Amount (₹)', 'Status', 'Department', 'Quantity'];
+                          onCreate(name, description, mockFields);
+                          handleClose();
+                        }
+                      }}
+                      disabled={!selectedSource}
+                      className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
+                        selectedSource ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <Check size={14} />
+                      Attach
+                    </button>
+                  )}
                 </>
               )}
-              {step === 'navigator' && (
+              {isNavigator && (
                 <>
-                  <span className="text-[12px] text-ink-500 mr-auto">{selectedSheets.length} sheet(s) selected</span>
-                  <button onClick={() => setStep('upload')} className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 transition-colors cursor-pointer border border-canvas-border rounded-xl">
+                  <span className="text-[12px] text-ink-500 mr-auto">{displayRows.length}{parsedRows.length > 50 ? ` of ${parsedRows.length}` : ''} rows</span>
+                  <button onClick={() => setStep('add-data')} className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 transition-colors cursor-pointer border border-canvas-border rounded-xl">
                     Back
                   </button>
                   <button
@@ -631,7 +793,7 @@ function CreateDashboardModal({ open, onClose, onCreate }: {
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
-export default function DashboardListPage({ onDashboardClick, onImportPowerBI, createdDashboards = [], onCreateDashboard, onDeleteDashboard }: DashboardListPageProps) {
+export default function DashboardListPage({ onDashboardClick, onImportPowerBI, createdDashboards = [], onCreateDashboard, onDeleteDashboard, onOpenChat }: DashboardListPageProps) {
   const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState<'my' | 'shared'>('my');
   const [searchQuery, setSearchQuery] = useState('');
@@ -755,14 +917,13 @@ export default function DashboardListPage({ onDashboardClick, onImportPowerBI, c
 
         {/* ── Dashboard Grid ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence>
             {filteredDashboards.map((dashboard, i) => (
               <motion.div
                 key={dashboard.id}
-                layout
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
+                exit={{ opacity: 0 }}
                 transition={{ delay: i * 0.04 }}
                 onClick={() => onDashboardClick(dashboard.id)}
                 className="glass-card rounded-xl p-5 cursor-pointer group relative flex flex-col"
@@ -871,9 +1032,31 @@ export default function DashboardListPage({ onDashboardClick, onImportPowerBI, c
         {/* Empty state */}
         {filteredDashboards.length === 0 && (
           <div className="text-center py-16">
-            <LayoutGrid size={40} className="text-ink-300 mx-auto mb-3" />
-            <p className="text-[14px] text-ink-500 font-medium">No dashboards found</p>
-            <p className="text-[12px] text-ink-400 mt-1">Try a different search term or create a new dashboard.</p>
+            <div className="mx-auto mb-6 relative" style={{ width: 120, height: 120 }}>
+              <div className="absolute inset-0 rounded-full bg-brand-50 animate-pulse" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                {activeTab === 'shared' ? <Share2 size={48} className="text-brand-300" /> : <LayoutGrid size={48} className="text-brand-300" />}
+              </div>
+            </div>
+            <p className="text-[16px] text-ink-700 font-semibold">
+              {activeTab === 'shared' ? 'No shared dashboards' : searchQuery ? 'No dashboards found' : 'No dashboards yet'}
+            </p>
+            <p className="text-[13px] text-ink-400 mt-1.5 mb-5">
+              {activeTab === 'shared'
+                ? 'Dashboards shared with you by your team will appear here.'
+                : searchQuery
+                  ? 'Try a different search term or create a new dashboard.'
+                  : 'Create your first dashboard to start visualizing your data.'}
+            </p>
+            {activeTab === 'my' && (
+              <button
+                onClick={() => setCreateModalOpen(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer"
+              >
+                <Plus size={14} />
+                Create Dashboard
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -882,39 +1065,40 @@ export default function DashboardListPage({ onDashboardClick, onImportPowerBI, c
       <AnimatePresence>
         {deleteConfirmId && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setDeleteConfirmId(null)} />
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setDeleteConfirmId(null)} />
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-canvas-elevated rounded-xl border border-canvas-border p-6 max-w-md w-full mx-4"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
+              className="relative bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[360px] p-6 mx-4"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[15px] font-semibold text-ink-900">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="size-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+                  <Trash2 size={18} className="text-red-500" />
+                </div>
+                <h3 className="text-[16px] font-bold text-ink-900">
                   {activeTab === 'shared' ? 'Remove Dashboard' : 'Delete Dashboard'}
                 </h3>
-                <button onClick={() => setDeleteConfirmId(null)} className="p-1 hover:bg-brand-50 rounded-md transition-colors cursor-pointer">
-                  <X size={16} className="text-ink-500" />
-                </button>
               </div>
-              <p className="text-[13px] text-ink-500 mb-6">
+              <p className="text-[13px] text-ink-500 mb-5">
                 Are you sure you want to {activeTab === 'shared' ? 'remove' : 'delete'}{' '}
-                <span className="font-semibold text-ink-800">
+                <strong>
                   "{currentDashboards.find(d => d.id === deleteConfirmId)?.name}"
-                </span>
+                </strong>
                 ? {activeTab === 'my' && 'This action cannot be undone.'}
               </p>
               <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => setDeleteConfirmId(null)}
-                  className="px-4 py-2 border border-canvas-border rounded-md text-[13px] text-ink-700 hover:border-brand-200 transition-colors cursor-pointer"
+                  className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 border border-canvas-border rounded-xl transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleDelete(deleteConfirmId)}
-                  className="px-4 py-2 bg-risk text-white rounded-md text-[13px] font-semibold hover:bg-risk/90 transition-colors cursor-pointer"
+                  className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-[13px] font-semibold rounded-xl transition-colors cursor-pointer"
                 >
                   {activeTab === 'shared' ? 'Remove' : 'Delete'}
                 </button>
@@ -928,6 +1112,7 @@ export default function DashboardListPage({ onDashboardClick, onImportPowerBI, c
       <CreateDashboardModal
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
+        onOpenChat={onOpenChat}
         onCreate={(name, desc, customFields) => {
           const newId = `custom-${Date.now()}`;
           const newDashboard = {
