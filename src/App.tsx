@@ -3,17 +3,20 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Sparkles } from 'lucide-react';
 import { useAppState } from './hooks/useAppState';
 import { ToastProvider } from './components/shared/Toast';
+import { BulkRunProgressProvider } from './components/shared/BulkRunProgress';
 import Sidebar from './components/sidebar/Sidebar';
 import ChatView from './components/chat/ChatView';
 import ArtifactPanel from './components/artifacts/ArtifactPanel';
 import WorkflowBuilderCanvas from './components/artifacts/WorkflowBuilderCanvas';
 import WorkflowTemplates from './components/workflow/WorkflowTemplates';
 import WorkflowDetail from './components/workflow/WorkflowDetail';
+import WorkflowLibraryView from './components/workflow/WorkflowLibraryView';
 import BusinessProcesses from './components/audit/BusinessProcesses';
 import RiskRegister from './components/audit/RiskRegister';
 import AuditExecution from './components/audit/AuditExecution';
 import DashboardView from './components/dashboard/DashboardView';
-import ReportsView from './components/reports/ReportsView';
+import DashboardListPage from './components/dashboard/DashboardListPage';
+import ReportsView, { CUSTOM_TEMPLATES } from './components/reports/ReportsView';
 import HomeView from './components/home/HomeView';
 import RecentsView from './components/recents/RecentsView';
 import KnowledgeHubView from './components/knowledge/KnowledgeHubView';
@@ -23,6 +26,8 @@ import ShareModal from './components/modals/ShareModal';
 import PowerBIImportWizard from './components/modals/PowerBIImportWizard';
 import ReportBuilder from './components/reports/ReportBuilder';
 import AuditPlanningView from './components/audit/AuditPlanningView';
+import AuditPlanningPage from './components/audit/AuditPlanningPage';
+import ProgramsView from './components/audit/ProgramsView';
 // New pages
 import RACMView from './components/governance/RACMView';
 import ControlLibraryView from './components/governance/ControlLibraryView';
@@ -34,6 +39,17 @@ import AdminView from './components/admin/AdminView';
 import FindingsView from './components/execution/FindingsView';
 import WorkflowExecutor from './components/workflow/WorkflowExecutor';
 import WorkflowEditInChatJourney from './components/workflow-edit-in-chat/WorkflowEditInChatJourney';
+import EngagementDetailView from './components/engagement/EngagementDetailView';
+import ControlDetailDrawer from './components/engagement/ControlDetailDrawer';
+import ManageExceptionsView from './components/exceptions/ManageExceptionsView';
+import WorkingPaperPanel from './components/execution/WorkingPaperPanel';
+import WorkflowExecutionPanel from './components/execution/WorkflowExecutionPanel';
+import TraceabilityPanel from './components/execution/TraceabilityPanel';
+
+const LAUNCHED_FROM_REPORT =
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).has('from') &&
+  new URLSearchParams(window.location.search).get('view') === 'manage-exceptions';
 
 export default function App() {
   const {
@@ -47,6 +63,7 @@ export default function App() {
     toggleChatHistory,
     setSelectedWorkflow,
     setSelectedBP,
+    openAuditExecution,
     setShowExceptionModal,
     setShowEmailPreviewModal,
     setShowShareModal,
@@ -60,10 +77,23 @@ export default function App() {
     openWorkflowExecutor,
     openChat,
     setSelectedChatId,
+    openDashboard,
+    saveDashboardWidgets,
+    addCreatedDashboard,
+    deleteCreatedDashboard,
+    setPendingDashboard,
+    openExecutionPanel,
+    closeExecutionPanel,
+    setExceptionRole,
   } = useAppState();
 
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [controlDrawerId, setControlDrawerId] = useState<string | null>(null);
+  const [engagementBackView, setEngagementBackView] = useState<'programs' | 'audit-planning' | 'business-processes'>('programs');
+  type CustomTemplate = typeof CUSTOM_TEMPLATES[number];
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>(CUSTOM_TEMPLATES);
+  const addCustomTemplate = (t: CustomTemplate) => setCustomTemplates(prev => [t, ...prev]);
 
   useEffect(() => {
     if (mainScrollRef.current) {
@@ -84,16 +114,12 @@ export default function App() {
   const renderArtifactPanel = () => {
     if (!state.showArtifacts) return null;
 
-    if (state.artifactMode === 'workflow') {
-      return (
-        <WorkflowBuilderCanvas
-          onClose={() => setShowArtifacts(false)}
-          workflowType={state.workflowType ?? undefined}
-        />
-      );
-    }
-
-    return (
+    const inner = state.artifactMode === 'workflow' ? (
+      <WorkflowBuilderCanvas
+        onClose={() => setShowArtifacts(false)}
+        workflowType={state.workflowType ?? undefined}
+      />
+    ) : (
       <ArtifactPanel
         activeTab={state.activeArtifactTab}
         setActiveTab={setActiveArtifactTab}
@@ -102,6 +128,28 @@ export default function App() {
         onAddToReport={() => openReportBuilder('new')}
         onShareResults={() => setShowShareModal(true, { type: 'workflow-output', id: 'result-1' })}
       />
+    );
+
+    // Mode-flip rotation: Y-axis full spin (0 → 360°). Content swaps at 180°
+    // via AnimatePresence mode="wait" + key on artifactMode. perspective applied
+    // to wrapper for proper 3D feel; transformStyle preserve-3d on the spinning
+    // element so the back face renders correctly.
+    return (
+      <div style={{ perspective: '1400px' }} className="h-full">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={state.artifactMode}
+            initial={{ rotateY: 0 }}
+            animate={{ rotateY: 360 }}
+            exit={{ rotateY: 360 }}
+            transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
+            style={{ transformStyle: 'preserve-3d', backfaceVisibility: 'hidden' }}
+            className="h-full"
+          >
+            {inner}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     );
   };
 
@@ -143,6 +191,23 @@ export default function App() {
               selectedChatId={state.selectedChatId}
               onChatLoaded={() => setSelectedChatId(null)}
               setView={setView}
+              pendingDashboard={state.pendingDashboard}
+              onAddToDashboard={(fields) => {
+                const pending = state.pendingDashboard;
+                if (!pending) return;
+                const newId = `custom-${Date.now()}`;
+                addCreatedDashboard({
+                  id: newId,
+                  name: pending.name,
+                  description: pending.description || 'Custom dashboard',
+                  timeAgo: 'Just now',
+                  creator: 'You',
+                  accent: 'bg-brand-50 text-brand-700',
+                });
+                setPendingDashboard(null);
+                openDashboard(newId, fields);
+              }}
+              onDismissPendingDashboard={() => setPendingDashboard(null)}
             />
             <AnimatePresence>
               {renderArtifactPanel()}
@@ -159,23 +224,23 @@ export default function App() {
           />
         );
 
-      case 'workflow-detail':
+      case 'workflow-detail': {
+        const fromLibrary = state.selectedWorkflowId?.startsWith('lw-');
         return (
           <WorkflowDetail
             workflowId={state.selectedWorkflowId!}
-            onBack={() => setSelectedWorkflow(null)}
-            onViewDashboard={() => setView('dashboards')}
-            onGenerateReport={() => openReportBuilder('new')}
+            onBack={() => fromLibrary ? setView('workflow-library') : setSelectedWorkflow(null)}
             onOpenExecutor={() => openWorkflowExecutor(state.selectedWorkflowId!)}
             onEditInChat={() => enterWorkflowMode({ workflowId: state.selectedWorkflowId! })}
           />
         );
+      }
 
       case 'workflow-library':
         return (
-          <WorkflowTemplates
+          <WorkflowLibraryView
+            onCreateWorkflow={() => enterWorkflowMode()}
             onSelectWorkflow={(id) => setSelectedWorkflow(id)}
-            onBuildNew={() => enterWorkflowMode()}
           />
         );
 
@@ -195,30 +260,78 @@ export default function App() {
           />
         );
 
+      case 'programs':
+        return (
+          <ProgramsView
+            selectedBPId={state.selectedBPId}
+            onSelectBP={setSelectedBP}
+            onNavigateToExecution={(engId) => {
+              setEngagementBackView('programs');
+              openAuditExecution(engId);
+              setView('engagement-detail' as any);
+            }}
+          />
+        );
+
       case 'business-processes':
       case 'bp-detail':
         return (
           <BusinessProcesses
             selectedBPId={state.selectedBPId}
             onSelectBP={setSelectedBP}
+            onOpenEngagement={(engId) => {
+              setEngagementBackView('business-processes');
+              openAuditExecution(engId);
+              setView('engagement-detail' as any);
+            }}
           />
         );
 
       case 'audit-risk-register':
         return (
           <RiskRegister
-            onRunWorkflow={(id) => setSelectedWorkflow(id)}
+            onNavigate={(v) => setView(v as any)}
           />
         );
 
       case 'audit-execution':
         return <AuditExecution />;
 
+      case 'engagement-detail':
+        return (
+          <EngagementDetailView
+            engagementId={state.selectedEngagementId ?? undefined}
+            onBack={() => setView(engagementBackView)}
+            onOpenControl={(controlId) => setControlDrawerId(controlId)}
+          />
+        );
+
       case 'dashboards':
         return (
-          <DashboardView
+          <DashboardListPage
+            onDashboardClick={(id, customFields) => openDashboard(id, customFields)}
             onImportPowerBI={() => setShowPowerBIWizard(true)}
-            onShare={() => setShowShareModal(true, { type: 'dashboard', id: 'dash-1' })}
+            createdDashboards={state.createdDashboards}
+            onCreateDashboard={addCreatedDashboard}
+            onDeleteDashboard={deleteCreatedDashboard}
+            onOpenChat={(pending) => {
+              if (pending) setPendingDashboard(pending);
+              setView('chat');
+            }}
+          />
+        );
+
+      case 'dashboard-detail':
+        return (
+          <DashboardView
+            initialDashboardId={state.selectedDashboardId}
+            initialDashboardName={state.createdDashboards.find(d => d.id === state.selectedDashboardId)?.name}
+            initialCustomFields={state.dashboardCustomFields}
+            savedWidgets={state.dashboardWidgets[state.selectedDashboardId || ''] || []}
+            onSaveWidgets={(widgets) => saveDashboardWidgets(state.selectedDashboardId || '', widgets)}
+            onBack={() => setView('dashboards')}
+            onImportPowerBI={() => setShowPowerBIWizard(true)}
+            onShare={() => setShowShareModal(true, { type: 'dashboard', id: state.selectedDashboardId || 'dash-1' })}
           />
         );
 
@@ -228,6 +341,23 @@ export default function App() {
           <ReportsView
             onOpenBuilder={() => openReportBuilder('new')}
             onShare={(id) => setShowShareModal(true, { type: 'report', id })}
+            onManageExceptions={() => setView('manage-exceptions')}
+            onOpenQuery={(q) => {
+              setChatInitialQuery(`Open the ${q.id} duplicate invoice query`);
+              setView('chat');
+            }}
+            customTemplates={customTemplates}
+            onAddCustomTemplate={addCustomTemplate}
+          />
+        );
+
+      case 'manage-exceptions':
+        return (
+          <ManageExceptionsView
+            role={state.exceptionRole}
+            setRole={setExceptionRole}
+            onBack={() => setView('reports')}
+            embedded={LAUNCHED_FROM_REPORT}
           />
         );
 
@@ -236,11 +366,16 @@ export default function App() {
           <ReportBuilder
             context={state.reportBuilderContext}
             onBack={() => setView('reports')}
+            onSaveAsTemplate={addCustomTemplate}
           />
         );
 
       case 'audit-planning':
-        return <AuditPlanningView />;
+        return <AuditPlanningPage onNavigateToExecution={(engId) => {
+          setEngagementBackView('audit-planning');
+          openAuditExecution(engId);
+          setView('engagement-detail' as any);
+        }} />;
 
       case 'knowledge-hub':
         return <KnowledgeHubView />;
@@ -263,10 +398,22 @@ export default function App() {
 
       // Execution — new pages
       case 'execution-testing':
-        return <ControlTestingView />;
+        return (
+          <ControlTestingView
+            onOpenWorkingPaper={(id) => openExecutionPanel('working-paper', id)}
+            onOpenWorkflow={(id) => openExecutionPanel('workflow-execution', id)}
+            onOpenTrace={(id) => openExecutionPanel('traceability', id)}
+          />
+        );
 
       case 'execution-evidence':
-        return <EvidenceView />;
+        return (
+          <EvidenceView
+            onOpenWorkingPaper={(id) => openExecutionPanel('working-paper', id)}
+            onOpenWorkflow={(id) => openExecutionPanel('workflow-execution', id)}
+            onOpenTrace={(id) => openExecutionPanel('traceability', id)}
+          />
+        );
 
       // Intelligence — AI Concierge
       case 'ai-concierge':
@@ -279,7 +426,13 @@ export default function App() {
 
       // Execution — Findings
       case 'findings':
-        return <FindingsView />;
+        return (
+          <FindingsView
+            onOpenWorkingPaper={(id) => openExecutionPanel('working-paper', id)}
+            onOpenWorkflow={(id) => openExecutionPanel('workflow-execution', id)}
+            onOpenTrace={(id) => openExecutionPanel('traceability', id)}
+          />
+        );
 
       // Admin
       case 'admin-users':
@@ -308,14 +461,17 @@ export default function App() {
 
   return (
     <ToastProvider>
+      <BulkRunProgressProvider>
       <div className="flex h-screen w-full bg-canvas overflow-hidden">
-        <Sidebar
-          view={state.view}
-          setView={setView}
-          expanded={state.sidebarExpanded}
-          toggleSidebar={toggleSidebar}
-          setSidebarExpanded={setSidebarExpanded}
-        />
+        {!(LAUNCHED_FROM_REPORT && state.view === 'manage-exceptions') && (
+          <Sidebar
+            view={state.view}
+            setView={setView}
+            expanded={state.sidebarExpanded}
+            toggleSidebar={toggleSidebar}
+            setSidebarExpanded={setSidebarExpanded}
+          />
+        )}
         <main ref={mainScrollRef} className="flex-1 flex flex-col overflow-hidden">
           <AnimatePresence mode="wait">
             <motion.div
@@ -353,7 +509,46 @@ export default function App() {
             <PowerBIImportWizard onClose={() => setShowPowerBIWizard(false)} />
           )}
         </AnimatePresence>
+
+        {/* Execution Panels */}
+        <AnimatePresence>
+          {state.executionPanel === 'working-paper' && (
+            <WorkingPaperPanel
+              controlId={state.executionPanelControlId ?? undefined}
+              onClose={closeExecutionPanel}
+              onViewWorkflow={() => openExecutionPanel('workflow-execution', state.executionPanelControlId ?? undefined)}
+              onViewTrace={() => openExecutionPanel('traceability', state.executionPanelControlId ?? undefined)}
+            />
+          )}
+          {state.executionPanel === 'workflow-execution' && (
+            <WorkflowExecutionPanel
+              controlId={state.executionPanelControlId ?? undefined}
+              onClose={closeExecutionPanel}
+              onViewWorkingPaper={() => openExecutionPanel('working-paper', state.executionPanelControlId ?? undefined)}
+              onViewTrace={() => openExecutionPanel('traceability', state.executionPanelControlId ?? undefined)}
+            />
+          )}
+          {state.executionPanel === 'traceability' && (
+            <TraceabilityPanel
+              controlId={state.executionPanelControlId ?? undefined}
+              onClose={closeExecutionPanel}
+              onOpenWorkingPaper={() => openExecutionPanel('working-paper', state.executionPanelControlId ?? undefined)}
+              onOpenWorkflow={() => openExecutionPanel('workflow-execution', state.executionPanelControlId ?? undefined)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Control Detail Drawer */}
+        <AnimatePresence>
+          {controlDrawerId && (
+            <ControlDetailDrawer
+              controlId={controlDrawerId}
+              onClose={() => setControlDrawerId(null)}
+            />
+          )}
+        </AnimatePresence>
       </div>
+      </BulkRunProgressProvider>
     </ToastProvider>
   );
 }

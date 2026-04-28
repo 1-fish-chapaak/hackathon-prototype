@@ -93,6 +93,14 @@ export const WORKFLOWS = [
 
 // ─── Report Templates ───
 export const REPORT_TEMPLATES = [
+  { id: "rt-internal-audit", name: "Internal Audit Report", desc: "End-to-end audit report with executive summary, audit queries, findings, and recommendations", category: "Audit", icon: "file-text", sections: [
+    { name: 'Executive Summary', icon: 'file-text' },
+    { name: 'Audit Queries', icon: 'check-circle' },
+    { name: 'Findings & Observations', icon: 'alert-triangle' },
+    { name: 'Risk Analysis', icon: 'shield' },
+    { name: 'Recommendations', icon: 'trending-up' },
+    { name: 'Appendix', icon: 'file-text' },
+  ]},
   { id: "rt-001", name: "SOX Compliance Report", desc: "Comprehensive SOX compliance status with control testing results", category: "Compliance", icon: "shield", sections: [
     { name: 'Executive Summary', icon: 'file-text' },
     { name: 'Scope & Objectives', icon: 'file-text' },
@@ -101,61 +109,60 @@ export const REPORT_TEMPLATES = [
     { name: 'Remediation Status', icon: 'shield' },
     { name: 'Appendix', icon: 'file-text' },
   ]},
-  { id: "rt-002", name: "Risk Assessment Summary", desc: "Overview of all identified risks, their ratings, and mitigation status", category: "Risk", icon: "alert-triangle", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Risk Identification', icon: 'alert-triangle' },
-    { name: 'Risk Matrix', icon: 'shield' },
-    { name: 'Mitigation Strategies', icon: 'check-circle' },
-    { name: 'Trend Analysis', icon: 'trending-up' },
-    { name: 'Recommendations', icon: 'file-text' },
-  ]},
-  { id: "rt-003", name: "Control Effectiveness Report", desc: "Detailed analysis of control effectiveness across all business processes", category: "Controls", icon: "check-circle", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Control Environment Overview', icon: 'shield' },
-    { name: 'Testing Methodology', icon: 'file-text' },
-    { name: 'Effectiveness Ratings', icon: 'check-circle' },
-    { name: 'Gap Analysis', icon: 'alert-triangle' },
-    { name: 'Improvement Plan', icon: 'trending-up' },
-  ]},
-  { id: "rt-004", name: "Workflow Analytics Report", desc: "Performance metrics and insights from automated workflow executions", category: "Analytics", icon: "bar-chart", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Workflow Performance Metrics', icon: 'bar-chart' },
-    { name: 'Exception Trends', icon: 'trending-up' },
-    { name: 'Processing Efficiency', icon: 'check-circle' },
-    { name: 'Anomaly Detection Results', icon: 'alert-triangle' },
-    { name: 'Recommendations', icon: 'file-text' },
-  ]},
-  { id: "rt-005", name: "Deficiency Tracker", desc: "Status of all identified deficiencies with remediation progress", category: "Audit", icon: "file-text", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Key Findings', icon: 'alert-triangle' },
-    { name: 'Deficiency Details', icon: 'shield' },
-    { name: 'Remediation Progress', icon: 'check-circle' },
-    { name: 'Timeline & Milestones', icon: 'trending-up' },
-    { name: 'Appendix', icon: 'file-text' },
-  ]},
-  { id: "rt-006", name: "Executive Dashboard Export", desc: "Board-ready summary of GRC posture and key metrics", category: "Executive", icon: "trending-up", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Key Metrics Dashboard', icon: 'bar-chart' },
-    { name: 'Risk Heatmap', icon: 'alert-triangle' },
-    { name: 'Compliance Scorecard', icon: 'shield' },
-    { name: 'Strategic Recommendations', icon: 'check-circle' },
-    { name: 'Outlook & Next Steps', icon: 'trending-up' },
-  ]},
-  { id: "rt-007", name: "Action Taken Report", desc: "Summary of exception actions, risk owner responses, and resolution status", category: "Audit", icon: "clipboard-check", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Exception Overview', icon: 'alert-triangle' },
-    { name: 'Actions Taken', icon: 'check-circle' },
-    { name: 'Risk Owner Responses', icon: 'shield' },
+  { id: "rt-007", name: "ATR Report", desc: "Action Taken Report with query summary, risk details, action plan, and resolution status", category: "Audit", icon: "clipboard-check", sections: [
+    { name: 'Report Information', icon: 'file-text' },
+    { name: 'Query Summary', icon: 'file-text' },
+    { name: 'Risk Details', icon: 'alert-triangle' },
+    { name: 'Action Plan', icon: 'check-circle' },
     { name: 'Resolution Status', icon: 'clipboard-check' },
-    { name: 'Pending Items', icon: 'file-text' },
   ]},
+  // { id: "rt-002", name: "Risk Assessment Summary", desc: "Overview of all identified risks, their ratings, and mitigation status", category: "Risk", icon: "alert-triangle", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Risk Identification', icon: 'alert-triangle' },
+  //   { name: 'Risk Matrix', icon: 'shield' },
+  //   { name: 'Mitigation Strategies', icon: 'check-circle' },
+  //   { name: 'Trend Analysis', icon: 'trending-up' },
+  //   { name: 'Recommendations', icon: 'file-text' },
+  // ]},
+  // { id: "rt-003", name: "Control Effectiveness Report", desc: "Detailed analysis of control effectiveness across all business processes", category: "Controls", icon: "check-circle", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Control Environment Overview', icon: 'shield' },
+  //   { name: 'Testing Methodology', icon: 'file-text' },
+  //   { name: 'Effectiveness Ratings', icon: 'check-circle' },
+  //   { name: 'Gap Analysis', icon: 'alert-triangle' },
+  //   { name: 'Improvement Plan', icon: 'trending-up' },
+  // ]},
+  // { id: "rt-004", name: "Workflow Analytics Report", desc: "Performance metrics and insights from automated workflow executions", category: "Analytics", icon: "bar-chart", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Workflow Performance Metrics', icon: 'bar-chart' },
+  //   { name: 'Exception Trends', icon: 'trending-up' },
+  //   { name: 'Processing Efficiency', icon: 'check-circle' },
+  //   { name: 'Anomaly Detection Results', icon: 'alert-triangle' },
+  //   { name: 'Recommendations', icon: 'file-text' },
+  // ]},
+  // { id: "rt-005", name: "Deficiency Tracker", desc: "Status of all identified deficiencies with remediation progress", category: "Audit", icon: "file-text", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Key Findings', icon: 'alert-triangle' },
+  //   { name: 'Deficiency Details', icon: 'shield' },
+  //   { name: 'Remediation Progress', icon: 'check-circle' },
+  //   { name: 'Timeline & Milestones', icon: 'trending-up' },
+  //   { name: 'Appendix', icon: 'file-text' },
+  // ]},
+  // { id: "rt-006", name: "Executive Dashboard Export", desc: "Board-ready summary of GRC posture and key metrics", category: "Executive", icon: "trending-up", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Key Metrics Dashboard', icon: 'bar-chart' },
+  //   { name: 'Risk Heatmap', icon: 'alert-triangle' },
+  //   { name: 'Compliance Scorecard', icon: 'shield' },
+  //   { name: 'Strategic Recommendations', icon: 'check-circle' },
+  //   { name: 'Outlook & Next Steps', icon: 'trending-up' },
+  // ]},
 ];
 
 // ─── Generated Reports ───
 export const GENERATED_REPORTS = [
   { id: "gr-001", templateId: "rt-001", name: "FY26 Q1 SOX Compliance Report", tag: "Internal Audit", generatedBy: "Karan Mehta", generatedAt: "Mar 20, 2026", status: "final", pages: 24 },
-  { id: "gr-002", templateId: "rt-002", name: "P2P Risk Assessment — March 2026", tag: "Bulk Audit", generatedBy: "Tushar Goel", generatedAt: "Mar 18, 2026", status: "draft", pages: 12 },
-  { id: "gr-003", templateId: "rt-004", name: "Workflow Performance — Feb 2026", tag: "Internal Audit", generatedBy: "AI Copilot", generatedAt: "Mar 1, 2026", status: "final", pages: 8 },
+  { id: "gr-002", templateId: "ct-custom-01", name: "P2P Risk Assessment — March 2026", tag: "Bulk Audit", generatedBy: "Tushar Goel", generatedAt: "Mar 18, 2026", status: "draft", pages: 12 },
+  { id: "gr-003", templateId: "ct-custom-02", name: "Workflow Performance — Feb 2026", tag: "Internal Audit", generatedBy: "AI Copilot", generatedAt: "Mar 1, 2026", status: "final", pages: 8 },
 ];
 
 export const SHARED_REPORTS = [
@@ -236,6 +243,332 @@ export const ACTION_TAKEN_DATA = [
   { exceptionId: 'EXC-004', action: 'Cross-referenced with PO and GRN records', actionBy: 'Deepak Bansal', actionDate: 'Mar 23, 2026', resolution: 'Under review — awaiting vendor response' },
   { exceptionId: 'EXC-003', action: 'Verified against historical payment records', actionBy: 'Tushar Goel', actionDate: 'Mar 21, 2026', resolution: 'Escalated to vendor management' },
   { exceptionId: 'EXC-008', action: 'Initial review completed', actionBy: 'Karan Mehta', actionDate: 'Mar 24, 2026', resolution: 'Pending detailed analysis' },
+];
+
+// ─── GRC Exceptions (Case Management · Manage Exceptions page) ───
+export type GrcExceptionSeverity = 'High' | 'Medium' | 'Low';
+export type GrcExceptionStatus = 'Open' | 'Under Review' | 'Closed';
+export type GrcExceptionClassification =
+  | 'Unclassified'
+  | 'Design Deficiency'
+  | 'System Deficiency'
+  | 'Procedural Non-Compliance'
+  | 'Business as Usual'
+  | 'False Positive';
+export type GrcReviewStatus = 'Pending' | 'Approved' | 'Rejected' | 'Implemented';
+
+export interface GrcException {
+  id: string;
+  riskCategory: string;
+  severity: GrcExceptionSeverity;
+  status: GrcExceptionStatus;
+  classification: GrcExceptionClassification;
+  classificationReview: GrcReviewStatus;
+  actionReview: GrcReviewStatus;
+  lastUpdated: string;
+  flags?: Array<'Overdue' | 'Bulk'>;
+  bulkId?: string;
+  title: string;
+  assignedTo: { name: string; initials: string };
+}
+
+export type GrcActivityAuthorRole = 'Auditor' | 'Risk Owner';
+export interface GrcActivityEntry {
+  id: string;
+  author: string;
+  role: GrcActivityAuthorRole;
+  timestamp: string;
+  message: string;
+  comment?: string;
+  attachment?: { name: string };
+}
+export type GrcActionStatus = 'Implemented' | 'Partially Implemented' | 'Pending' | 'Discrepancy';
+export interface GrcCaseDetail {
+  classificationJustification: string;
+  actionTitle: string;
+  actionDueDate: string;
+  actionDescription: string;
+  actionStatus: GrcActionStatus;
+  activityLog: GrcActivityEntry[];
+}
+export interface GrcBulkAction {
+  id: string;
+  caseIds: string[];
+  title: string;
+}
+
+const PERSON = {
+  RK: { name: 'Ravi Kumar',  initials: 'RK' },
+  SR: { name: 'Sunita Rao',  initials: 'SR' },
+  AS: { name: 'Arun Singh',  initials: 'AS' },
+};
+
+export const GRC_EXCEPTIONS: GrcException[] = [
+  { id: 'EXC001', riskCategory: 'Access Control',    severity: 'High',   status: 'Under Review', classification: 'Design Deficiency',        classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '2 days ago',   flags: ['Overdue', 'Bulk'], bulkId: 'ACT002', title: 'Unauthorized Admin Access via Legacy VPN Endpoint',                   assignedTo: PERSON.RK },
+  { id: 'EXC002', riskCategory: 'Data Privacy',      severity: 'High',   status: 'Open',         classification: 'Unclassified',             classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '1 day ago',                        title: 'Customer PII Stored in Unencrypted S3 Buckets',                       assignedTo: PERSON.SR },
+  { id: 'EXC003', riskCategory: 'Financial Controls',severity: 'High',   status: 'Closed',       classification: 'System Deficiency',        classificationReview: 'Approved',    actionReview: 'Approved',lastUpdated: '3 days ago',   flags: ['Bulk'], bulkId: 'ACT001', title: 'Vendor Invoice Approval Bypassed for Transactions Over $50K',         assignedTo: PERSON.AS },
+  { id: 'EXC004', riskCategory: 'IT Security',       severity: 'High',   status: 'Under Review', classification: 'System Deficiency',        classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '3 days ago',   flags: ['Bulk'], bulkId: 'ACT001', title: 'Missing MFA for C-Suite Remote Access',                               assignedTo: PERSON.AS },
+  { id: 'EXC005', riskCategory: 'Compliance',        severity: 'High',   status: 'Open',         classification: 'Procedural Non-Compliance',classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '2 days ago',   flags: ['Overdue', 'Bulk'], bulkId: 'ACT002', title: 'GDPR Data Subject Requests Exceeding 30-Day SLA',                     assignedTo: PERSON.SR },
+  { id: 'EXC006', riskCategory: 'Financial Controls',severity: 'High',   status: 'Closed',       classification: 'Design Deficiency',        classificationReview: 'Approved',    actionReview: 'Approved',lastUpdated: '15 days ago',  bulkId: 'ACT004', title: 'Trading Desk Reconciliation Errors in Q3',                            assignedTo: PERSON.RK },
+  { id: 'EXC007', riskCategory: 'IT Security',       severity: 'Medium', status: 'Open',         classification: 'Unclassified',             classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: 'about 7 hours ago',                title: 'Firewall Rule Permits Unrestricted Outbound Traffic',                 assignedTo: PERSON.AS },
+  { id: 'EXC008', riskCategory: 'Compliance',        severity: 'High',   status: 'Open',         classification: 'Business as Usual',        classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '4 days ago',                       title: 'Missing Security Log Retention on Payment Processing System',         assignedTo: PERSON.SR },
+  { id: 'EXC009', riskCategory: 'Operational Risk',  severity: 'Medium', status: 'Open',         classification: 'Unclassified',             classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '5 days ago',                       title: 'Inadequate Access Review for Terminated Contractors',                 assignedTo: PERSON.RK },
+  { id: 'EXC010', riskCategory: 'Financial Controls',severity: 'High',   status: 'Closed',       classification: 'System Deficiency',        classificationReview: 'Approved',    actionReview: 'Approved',lastUpdated: '12 days ago',  bulkId: 'ACT005', title: 'Duplicate Payments to 3 Vendors (Oct-Nov)',                           assignedTo: PERSON.AS },
+  { id: 'EXC011', riskCategory: 'IT Security',       severity: 'Medium', status: 'Open',         classification: 'False Positive',           classificationReview: 'Approved',    actionReview: 'Approved',lastUpdated: '6 days ago',                       title: 'Service Account API Key Usage — policy-exempt accounts',              assignedTo: PERSON.SR },
+  { id: 'EXC012', riskCategory: 'Data Privacy',      severity: 'High',   status: 'Open',         classification: 'Procedural Non-Compliance',classificationReview: 'Pending',     actionReview: 'Rejected',   lastUpdated: '1 day ago',   bulkId: 'ACT006', title: 'Customer Data Shared with Unauthorized Third-Party',                  assignedTo: PERSON.RK },
+  { id: 'EXC013', riskCategory: 'Compliance',        severity: 'Low',    status: 'Open',         classification: 'Procedural Non-Compliance',classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '20 days ago', flags: ['Bulk'], bulkId: 'ACT003', title: 'CAB Approval Bypassed for Production Change',                         assignedTo: PERSON.RK },
+  { id: 'EXC014', riskCategory: 'Access Control',    severity: 'Medium', status: 'Open',         classification: 'Design Deficiency',        classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '8 days ago',  flags: ['Bulk'], bulkId: 'ACT003', title: 'Change Management System — CAB approval not enforced',                assignedTo: PERSON.SR },
+];
+
+export const GRC_BULK_ACTIONS: Record<string, GrcBulkAction> = {
+  'ACT001': { id: 'ACT001', caseIds: ['EXC003', 'EXC004'],           title: 'MFA enforcement — executive accounts' },
+  'ACT002': { id: 'ACT002', caseIds: ['EXC001', 'EXC005'],           title: 'Legacy access & SLA remediation bundle' },
+  'ACT003': { id: 'ACT003', caseIds: ['EXC013', 'EXC014'],           title: 'CAB approval enforcement — change mgmt' },
+  'ACT004': { id: 'ACT004', caseIds: ['EXC006'],                     title: 'Q3 trading reconciliation fix' },
+  'ACT005': { id: 'ACT005', caseIds: ['EXC010'],                     title: 'Vendor duplicate payment recovery' },
+  'ACT006': { id: 'ACT006', caseIds: ['EXC012'],                     title: 'Third-party data share review' },
+};
+
+const DEFAULT_ACTIVITY: GrcActivityEntry[] = [
+  {
+    id: 'act-1',
+    author: 'Priya Mehta',
+    role: 'Auditor',
+    timestamp: '21 Apr 2026, 18:00',
+    message: 'Accepted action — marked Under Review pending implementation verification',
+    comment: 'Action plan is comprehensive. Monitoring the completion of the decommission ticket by Nov 30.',
+  },
+  {
+    id: 'act-2',
+    author: 'Priya Mehta',
+    role: 'Auditor',
+    timestamp: '20 Apr 2026, 18:00',
+    message: 'Reviewed case and submitted for final decision',
+  },
+  {
+    id: 'act-3',
+    author: 'Ravi Kumar',
+    role: 'Risk Owner',
+    timestamp: '18 Apr 2026, 18:00',
+    message: 'Action submitted: Access Control Remediation',
+    attachment: { name: 'vpn_remediation_plan.pdf' },
+  },
+  {
+    id: 'act-4',
+    author: 'Ravi Kumar',
+    role: 'Risk Owner',
+    timestamp: '16 Apr 2026, 10:30',
+    message: 'Classified exception as Design Deficiency',
+  },
+  {
+    id: 'act-5',
+    author: 'System',
+    role: 'Auditor',
+    timestamp: '15 Apr 2026, 09:00',
+    message: 'Case assigned to Ravi Kumar (Risk Owner)',
+  },
+];
+
+export const GRC_CASE_DETAILS: Record<string, GrcCaseDetail> = {
+  'EXC001': {
+    classificationJustification:
+      '"The VPN endpoint was intentionally kept active for legacy integrations, but lacked proper access controls. This is a design gap that requires immediate remediation."',
+    actionTitle: 'Access Control Remediation — legacy VPN endpoint',
+    actionDueDate: 'Due 30 Apr 2026',
+    actionDescription:
+      'Decommissioned the legacy VPN endpoint and routed remaining integrations through the corporate SSO gateway. MFA enforced, audit logs shipped to Splunk, and evidence captured in the remediation workbook.',
+    actionStatus: 'Pending',
+    activityLog: DEFAULT_ACTIVITY,
+  },
+  'EXC003': {
+    classificationJustification:
+      '"Unauthorized MFA bypass was configured at the system level without Security Committee approval. This is a system deficiency."',
+    actionTitle: 'MFA Policy Enforcement for Executive Accounts',
+    actionDueDate: 'Due 05 May 2026',
+    actionDescription:
+      'Removed MFA bypass configuration for all 6 C-suite accounts. Implemented hardware security key (FIDO2) as primary MFA method for executive accounts with a 30-day transition window. Security Committee formally notified and approval process documented.',
+    actionStatus: 'Partially Implemented',
+    activityLog: DEFAULT_ACTIVITY,
+  },
+  'EXC004': {
+    classificationJustification:
+      '"Same MFA bypass pattern observed on engineering administrator accounts. Classified as system deficiency pending remediation."',
+    actionTitle: 'MFA Policy Enforcement for Admin Accounts',
+    actionDueDate: 'Due 12 May 2026',
+    actionDescription:
+      'Admin account MFA bypass is being removed in waves. Wave 1 complete; waves 2–3 scheduled before due date.',
+    actionStatus: 'Pending',
+    activityLog: DEFAULT_ACTIVITY,
+  },
+  'EXC005': {
+    classificationJustification:
+      '"Vendor onboarding checklist was skipped for three engagements in Q1. Procedural gap, not a design or system flaw."',
+    actionTitle: 'Vendor Onboarding Checklist Backfill',
+    actionDueDate: 'Due 02 May 2026',
+    actionDescription:
+      'Backfilling onboarding documentation for the three engagements; adding a gating control in the intake workflow so future engagements cannot proceed without a signed checklist.',
+    actionStatus: 'Pending',
+    activityLog: DEFAULT_ACTIVITY,
+  },
+  'EXC008': {
+    classificationJustification:
+      '"Control operated as designed; the observed variance is within tolerance. No remediation required."',
+    actionTitle: 'No action required — documented rationale',
+    actionDueDate: 'Due 28 Apr 2026',
+    actionDescription:
+      'Auditor requested confirmation that variance is within tolerance. Evidence pack attached.',
+    actionStatus: 'Implemented',
+    activityLog: DEFAULT_ACTIVITY,
+  },
+  'EXC012': {
+    classificationJustification:
+      '"Endpoint isolation policy was not enforced on the engineering ring — system-level gap in the MDM baseline."',
+    actionTitle: 'Endpoint Isolation Baseline Rollout',
+    actionDueDate: 'Due 20 May 2026',
+    actionDescription:
+      'Rolling out the hardened isolation baseline to the engineering ring. Staged pilot complete; full rollout scheduled over next 10 business days.',
+    actionStatus: 'Pending',
+    activityLog: DEFAULT_ACTIVITY,
+  },
+};
+
+// ─── Action Hub (Case Mgmt > Action Hub tab) ───
+export type ActionHubActorRole = 'Risk Owner' | 'Auditor' | 'Ira (AI)' | 'System';
+
+export interface ActionHubEvent {
+  id: string;
+  date: string;              // "23 Apr 2026"
+  time: string;              // "19:06"
+  relative: string;          // "29 minutes ago"
+  actor: string;             // "Priya Mehta" / "Ira (AI)" / "System"
+  role: ActionHubActorRole;
+  message: string;
+  exceptionId: string;
+  comment?: string;
+  attachment?: { name: string };
+}
+
+export const ACTION_HUB_SUMMARY = {
+  auditPeriod: 'FY 2024–25',
+  viewedBy: 'Ravi Kumar',
+  reportHealthPct: 72,
+  reportHealthLabel: 'Good' as const,
+  atrReadiness: {
+    completedSteps: 0,
+    totalSteps: 3,
+    overallPct: 60,
+    steps: [
+      { id: 'step-1', label: 'All exceptions classified',           current: 10, total: 14 },
+      { id: 'step-3', label: 'Action Plan submitted by Risk Owner', current: 5,  total: 8  },
+      { id: 'step-4', label: 'Auditor review complete',             current: 3,  total: 10 },
+    ],
+  },
+  overdue: [
+    { id: 'EXC001', overdueLabel: '5d overdue' },
+    { id: 'EXC005', overdueLabel: '3d overdue' },
+  ],
+  counts: {
+    total: 14,
+    classified: 10,
+    actionPlans: 6,
+    underReview: 2,
+    resolved: 3,
+    overdue: 2,
+  },
+  riskOwner: {
+    name: 'Ravi Kumar',
+    initials: 'RK',
+    role: 'Risk Owner' as const,
+    totalActions: 16,
+    tiles: [
+      { label: 'Classifications',     value: 10, tone: 'brand'     as const },
+      { label: 'Action Plans Filed',  value: 6,  tone: 'compliant' as const },
+      { label: 'Bulk Actions',        value: 2,  tone: 'brand'     as const },
+      { label: 'Individual Actions',  value: 4,  tone: 'evidence'  as const },
+    ],
+  },
+  auditor: {
+    name: 'Priya Mehta',
+    initials: 'PM',
+    role: 'Auditor' as const,
+    totalActions: 6,
+    tiles: [
+      { label: 'Reviews Performed',   value: 5, tone: 'brand'     as const },
+      { label: 'Approved / Accepted', value: 2, tone: 'compliant' as const },
+      { label: 'Rejected',            value: 1, tone: 'risk'      as const },
+      { label: 'Cases Closed',        value: 3, tone: 'brand'     as const },
+    ],
+  },
+  classificationBreakdown: {
+    classified: 10,
+    unclassified: 4,
+    bulk: 2,
+    individual: 8,
+    rows: [
+      { label: 'Design Deficiency',         count: 3, tone: 'high'      as const },
+      { label: 'System Deficiency',         count: 3, tone: 'risk'      as const, underline: true },
+      { label: 'Procedural Non-Compliance', count: 2, tone: 'brand'     as const },
+      { label: 'Business as Usual',         count: 1, tone: 'compliant' as const },
+      { label: 'False Positive',            count: 1, tone: 'draft'     as const },
+    ],
+  },
+};
+
+export const ACTION_HUB_TIMELINE: ActionHubEvent[] = [
+  { id: 'ev-01', date: '23 Apr 2026', time: '19:06', relative: '29 minutes ago', actor: 'Priya Mehta', role: 'Auditor',    message: 'Case accepted — marked as Partially Implemented',                 exceptionId: 'EXC003' },
+
+  { id: 'ev-02', date: '22 Apr 2026', time: '18:00', relative: '1 day ago',     actor: 'System',      role: 'System',     message: 'Case reopened after auditor rejection',                            exceptionId: 'EXC012' },
+  { id: 'ev-03', date: '22 Apr 2026', time: '18:00', relative: '1 day ago',     actor: 'Priya Mehta', role: 'Auditor',    message: 'Rejected — Discrepancy raised',                                    exceptionId: 'EXC012', comment: '"The submitted action does not adequately address the regulatory notification requirement under GDPR Article 33."' },
+  { id: 'ev-04', date: '22 Apr 2026', time: '18:00', relative: '1 day ago',     actor: 'Arun Singh',  role: 'Risk Owner', message: 'Classified as Design Deficiency',                                  exceptionId: 'EXC014', comment: '"Change management system does not enforce CAB approval before production deployments."' },
+
+  { id: 'ev-05', date: '21 Apr 2026', time: '18:00', relative: '2 days ago',    actor: 'Priya Mehta', role: 'Auditor',    message: 'Accepted action — marked Under Review pending implementation verification', exceptionId: 'EXC001', comment: '"Action plan is comprehensive. Monitoring the completion of the decommission ticket by Nov 30."' },
+  { id: 'ev-06', date: '21 Apr 2026', time: '18:00', relative: '2 days ago',    actor: 'Sunita Rao',  role: 'Risk Owner', message: 'Classified as Procedural Non-Compliance',                          exceptionId: 'EXC005', comment: '"The DSR process lacks automation and escalation rules."' },
+  { id: 'ev-07', date: '21 Apr 2026', time: '18:00', relative: '2 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 72% confidence',                exceptionId: 'EXC013' },
+
+  { id: 'ev-08', date: '20 Apr 2026', time: '18:00', relative: '3 days ago',    actor: 'Priya Mehta', role: 'Auditor',    message: 'Reviewed case and submitted for final decision',                   exceptionId: 'EXC001' },
+  { id: 'ev-09', date: '20 Apr 2026', time: '18:00', relative: '3 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 82% confidence',                exceptionId: 'EXC007' },
+  { id: 'ev-10', date: '20 Apr 2026', time: '18:00', relative: '3 days ago',    actor: 'Sunita Rao',  role: 'Risk Owner', message: 'Classified as False Positive',                                     exceptionId: 'EXC011', comment: '"API keys flagged are exempt service accounts per Security Policy Exception SEC-EX-2023-14."' },
+
+  { id: 'ev-11', date: '19 Apr 2026', time: '18:00', relative: '4 days ago',    actor: 'Sunita Rao',  role: 'Risk Owner', message: 'Classified as Business as Usual',                                  exceptionId: 'EXC008', comment: '"Logging gap was an operational oversight during maintenance. Compensating controls documented."' },
+  { id: 'ev-12', date: '19 Apr 2026', time: '18:00', relative: '4 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 81% confidence',                exceptionId: 'EXC014' },
+
+  { id: 'ev-13', date: '18 Apr 2026', time: '18:00', relative: '5 days ago',    actor: 'Ravi Kumar',  role: 'Risk Owner', message: 'Action submitted: Access Control Remediation',                     exceptionId: 'EXC001', attachment: { name: 'vpn_remediation_plan.pdf' } },
+  { id: 'ev-14', date: '18 Apr 2026', time: '18:00', relative: '5 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 94% confidence',                exceptionId: 'EXC002' },
+  { id: 'ev-15', date: '18 Apr 2026', time: '18:00', relative: '5 days ago',    actor: 'Ravi Kumar',  role: 'Risk Owner', message: 'Action submitted: Unauthorized Data Share Remediation',            exceptionId: 'EXC012' },
+
+  { id: 'ev-16', date: '17 Apr 2026', time: '18:00', relative: '6 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 79% confidence',                exceptionId: 'EXC009' },
+
+  { id: 'ev-17', date: '16 Apr 2026', time: '18:00', relative: '7 days ago',    actor: 'Ravi Kumar',  role: 'Risk Owner', message: 'Classified as Design Deficiency',                                  exceptionId: 'EXC001', comment: '"The VPN endpoint was intentionally kept active for legacy integrations, but lacked proper access controls."' },
+  { id: 'ev-18', date: '16 Apr 2026', time: '18:00', relative: '7 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 86% confidence',                exceptionId: 'EXC005' },
+
+  { id: 'ev-19', date: '15 Apr 2026', time: '18:00', relative: '8 days ago',    actor: 'Arun Singh',  role: 'Risk Owner', message: 'Bulk action submitted under ACT001',                         exceptionId: 'EXC003', attachment: { name: 'erp_config_patch_notes.pdf' } },
+  { id: 'ev-20', date: '15 Apr 2026', time: '18:00', relative: '8 days ago',    actor: 'Arun Singh',  role: 'Risk Owner', message: 'Bulk action submitted under ACT001',                         exceptionId: 'EXC004' },
+  { id: 'ev-21', date: '15 Apr 2026', time: '18:00', relative: '8 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 84% confidence',                exceptionId: 'EXC010' },
+
+  { id: 'ev-22', date: '14 Apr 2026', time: '18:00', relative: '9 days ago',    actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 88% confidence',                exceptionId: 'EXC008' },
+
+  { id: 'ev-23', date: '13 Apr 2026', time: '18:00', relative: '10 days ago',   actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 97% confidence',                exceptionId: 'EXC001' },
+
+  { id: 'ev-24', date: '11 Apr 2026', time: '18:00', relative: '12 days ago',   actor: 'Arun Singh',  role: 'Risk Owner', message: 'Bulk classified as System Deficiency under ACT001',          exceptionId: 'EXC003', comment: '"ERP configuration error in v2.3 upgrade removed the dual-approval requirement."' },
+  { id: 'ev-25', date: '11 Apr 2026', time: '18:00', relative: '12 days ago',   actor: 'Arun Singh',  role: 'Risk Owner', message: 'Bulk classified as System Deficiency under ACT001',          exceptionId: 'EXC004', comment: '"Unauthorized MFA bypass configured at system level without proper approval."' },
+
+  { id: 'ev-26', date: '09 Apr 2026', time: '18:00', relative: '14 days ago',   actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 91% confidence',                exceptionId: 'EXC003' },
+  { id: 'ev-27', date: '09 Apr 2026', time: '18:00', relative: '14 days ago',   actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 89% confidence',                exceptionId: 'EXC004' },
+
+  { id: 'ev-28', date: '08 Apr 2026', time: '18:00', relative: '15 days ago',   actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 78% confidence',                exceptionId: 'EXC006' },
+  { id: 'ev-29', date: '08 Apr 2026', time: '18:00', relative: '15 days ago',   actor: 'Ravi Kumar',  role: 'Risk Owner', message: 'Classified as Design Deficiency',                                  exceptionId: 'EXC006', comment: '"Quarterly vendor review was skipped; design-level remediation scheduled."' },
+
+  { id: 'ev-30', date: '06 Apr 2026', time: '18:00', relative: '17 days ago',   actor: 'Priya Mehta', role: 'Auditor',    message: 'Closed case — resolution verified',                                exceptionId: 'EXC006' },
+  { id: 'ev-31', date: '06 Apr 2026', time: '18:00', relative: '17 days ago',   actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 92% confidence',                exceptionId: 'EXC011' },
+
+  { id: 'ev-32', date: '04 Apr 2026', time: '18:00', relative: '19 days ago',   actor: 'Priya Mehta', role: 'Auditor',    message: 'Closed case — no further action required',                         exceptionId: 'EXC010' },
+  { id: 'ev-33', date: '04 Apr 2026', time: '18:00', relative: '19 days ago',   actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 77% confidence',                exceptionId: 'EXC013' },
+
+  { id: 'ev-34', date: '02 Apr 2026', time: '18:00', relative: '21 days ago',   actor: 'Priya Mehta', role: 'Auditor',    message: 'Closed case — resolution verified',                                exceptionId: 'EXC013' },
+  { id: 'ev-35', date: '02 Apr 2026', time: '18:00', relative: '21 days ago',   actor: 'System',      role: 'System',     message: 'Case auto-assigned to risk owner queue',                           exceptionId: 'EXC002' },
+  { id: 'ev-36', date: '02 Apr 2026', time: '18:00', relative: '21 days ago',   actor: 'Ira (AI)',    role: 'Ira (AI)',   message: 'Exception flagged by Ira (AI) with 83% confidence',                exceptionId: 'EXC007' },
+
+  { id: 'ev-37', date: '01 Apr 2026', time: '18:00', relative: '22 days ago',   actor: 'System',      role: 'System',     message: 'Audit cycle opened for FY 2024–25',                                exceptionId: '—' },
 ];
 
 // ─── Email Template ───

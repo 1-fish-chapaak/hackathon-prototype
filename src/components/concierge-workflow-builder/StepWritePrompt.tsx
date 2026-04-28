@@ -8,7 +8,8 @@ interface Props {
   setPrompt: (v: string) => void;
   onGenerate: () => void;
   onPickTemplate: (id: string) => void;
-  onOpenGuideMe: () => void;
+  onOpenAttach: () => void;
+  attachmentCount?: number;
 }
 
 export default function StepWritePrompt({
@@ -16,7 +17,8 @@ export default function StepWritePrompt({
   setPrompt,
   onGenerate,
   onPickTemplate,
-  onOpenGuideMe,
+  onOpenAttach,
+  attachmentCount = 0,
 }: Props) {
   const hasPrompt = prompt.trim().length > 0;
   const totalWorkflows = WORKFLOWS.length + SAMPLE_WORKFLOWS.length;
@@ -57,24 +59,22 @@ export default function StepWritePrompt({
             onChange={(e) => setPrompt(e.target.value)}
             rows={3}
             placeholder="Describe a workflow and let Auditify do the rest…"
-            className="w-full bg-transparent resize-none text-[14px] text-ink-800 placeholder:text-ink-400 focus:outline-none leading-relaxed"
+            className="no-focus-ring w-full bg-transparent resize-none text-[14px] text-ink-800 placeholder:text-ink-400 focus:outline-none leading-relaxed"
           />
           <div className="flex items-center justify-between pt-3 border-t border-canvas-border">
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-500 hover:bg-brand-50 hover:text-brand-600 transition-colors cursor-pointer"
-                aria-label="Attach"
+                onClick={onOpenAttach}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-ink-500 hover:bg-brand-50 hover:text-brand-600 transition-colors cursor-pointer"
+                aria-label="Attach data"
               >
                 <Plus size={16} />
-              </button>
-              <button
-                type="button"
-                onClick={onOpenGuideMe}
-                className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 hover:bg-brand-100 text-brand-700 text-[12px] font-semibold px-3 py-1.5 transition-colors cursor-pointer"
-              >
-                <Sparkles size={13} />
-                Guide me
+                {attachmentCount > 0 && (
+                  <span className="text-[11.5px] font-semibold text-brand-700">
+                    {attachmentCount} attached
+                  </span>
+                )}
               </button>
             </div>
             <button

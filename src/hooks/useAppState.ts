@@ -20,12 +20,15 @@ export type View =
   | 'governance-control-detail'
   | 'audit-risk-register'
   | 'audit-planning'
+  | 'programs'
   // Execution
   | 'audit-execution'
+  | 'engagement-detail'
   | 'execution-testing'
   | 'execution-evidence'
   // Intelligence
   | 'dashboards'
+  | 'dashboard-detail'
   | 'reports'
   | 'report-history'
   | 'report-builder'
@@ -45,12 +48,16 @@ export type View =
   | 'admin-logs'
   // One-Click Audit
   | 'one-click-audit'
+  // Case Management
+  | 'manage-exceptions'
   // Chat trash
   | 'chat-trash';
 
 export type ChatMode = 'chat' | 'workflow';
-export type ArtifactTab = 'plan' | 'code' | 'sources' | 'result' | 'flow' | 'preview';
+export type ExceptionRole = 'risk-owner' | 'auditor';
+export type ArtifactTab = 'plan' | 'code' | 'sources' | 'flow' | 'preview';
 export type ArtifactMode = 'query' | 'workflow';
+export type ExecutionPanel = 'working-paper' | 'workflow-execution' | 'traceability' | null;
 
 export interface AppState {
   view: View;
@@ -83,13 +90,36 @@ export interface AppState {
   selectedChatId: string | null;
   // Query assumptions
   queryAssumptions: string[];
+  // Dashboard detail
+  selectedDashboardId: string | null;
+  dashboardCustomFields: string[] | null;
+  // Persisted widgets per custom dashboard
+  dashboardWidgets: Record<string, Array<{ chartType: string; title: string; xField: string; yField: string }>>;
+  // User-created dashboards (persisted across navigation)
+  createdDashboards: Array<{ id: string; name: string; description: string; timeAgo: string; creator: string; accent: string }>;
+  // Pending dashboard — saved while user is in chat before creating
+  pendingDashboard: { name: string; description: string } | null;
+  // Execution panels
+  executionPanel: ExecutionPanel;
+  executionPanelControlId: string | null;
+  // Manage Exceptions (Case Mgmt) active role
+  exceptionRole: ExceptionRole;
 }
 
+const getInitialView = (): View => {
+  if (typeof window === 'undefined') return 'home';
+  const params = new URLSearchParams(window.location.search);
+  const v = params.get('view');
+  if (v === 'reports') return 'reports';
+  if (v === 'manage-exceptions') return 'manage-exceptions';
+  return 'home';
+};
+
 const INITIAL_STATE: AppState = {
-  view: 'home',
+  view: getInitialView(),
   sidebarExpanded: false,
   chatMode: 'chat',
-  activeArtifactTab: 'result',
+  activeArtifactTab: 'plan',
   artifactMode: 'query',
   showArtifacts: false,
   showChatHistory: false,
@@ -110,6 +140,14 @@ const INITIAL_STATE: AppState = {
   chatWorkflowContext: null,
   selectedChatId: null,
   queryAssumptions: [],
+  selectedDashboardId: null,
+  dashboardCustomFields: null,
+  dashboardWidgets: {},
+  createdDashboards: [],
+  pendingDashboard: null,
+  executionPanel: null,
+  executionPanelControlId: null,
+  exceptionRole: 'risk-owner',
 };
 
 export function useAppState() {
@@ -149,6 +187,14 @@ export function useAppState() {
 
   const setSelectedBP = useCallback((id: string | null) => {
     setState(prev => ({ ...prev, selectedBPId: id, view: id ? 'bp-detail' : 'business-processes' }));
+  }, []);
+
+  const setSelectedEngagement = useCallback((id: string | null) => {
+    setState(prev => ({ ...prev, selectedEngagementId: id }));
+  }, []);
+
+  const openAuditExecution = useCallback((engagementId: string) => {
+    setState(prev => ({ ...prev, view: 'audit-execution' as View, selectedEngagementId: engagementId }));
   }, []);
 
   // Modal controls
@@ -224,6 +270,38 @@ export function useAppState() {
     setState(prev => ({ ...prev, view: 'workflow-executor' as View, selectedWorkflowId: workflowId }));
   }, []);
 
+  const openDashboard = useCallback((dashboardId: string, customFields?: string[]) => {
+    setState(prev => ({ ...prev, view: 'dashboard-detail' as View, selectedDashboardId: dashboardId, dashboardCustomFields: customFields || null }));
+  }, []);
+
+  const saveDashboardWidgets = useCallback((dashboardId: string, widgets: Array<{ chartType: string; title: string; xField: string; yField: string }>) => {
+    setState(prev => ({ ...prev, dashboardWidgets: { ...prev.dashboardWidgets, [dashboardId]: widgets } }));
+  }, []);
+
+  const addCreatedDashboard = useCallback((dashboard: AppState['createdDashboards'][number]) => {
+    setState(prev => ({ ...prev, createdDashboards: [dashboard, ...prev.createdDashboards] }));
+  }, []);
+
+  const deleteCreatedDashboard = useCallback((id: string) => {
+    setState(prev => ({ ...prev, createdDashboards: prev.createdDashboards.filter(d => d.id !== id) }));
+  }, []);
+
+  const setPendingDashboard = useCallback((pending: AppState['pendingDashboard']) => {
+    setState(prev => ({ ...prev, pendingDashboard: pending }));
+  }, []);
+
+  const openExecutionPanel = useCallback((panel: ExecutionPanel, controlId?: string) => {
+    setState(prev => ({ ...prev, executionPanel: panel, executionPanelControlId: controlId ?? null }));
+  }, []);
+
+  const closeExecutionPanel = useCallback(() => {
+    setState(prev => ({ ...prev, executionPanel: null, executionPanelControlId: null }));
+  }, []);
+
+  const setExceptionRole = useCallback((role: ExceptionRole) => {
+    setState(prev => ({ ...prev, exceptionRole: role }));
+  }, []);
+
   return {
     state,
     setView,
@@ -246,7 +324,16 @@ export function useAppState() {
     setQueryAssumptions,
     enterWorkflowMode,
     openWorkflowExecutor,
+    openAuditExecution,
     openChat,
     setSelectedChatId,
+    openDashboard,
+    saveDashboardWidgets,
+    addCreatedDashboard,
+    deleteCreatedDashboard,
+    setPendingDashboard,
+    openExecutionPanel,
+    closeExecutionPanel,
+    setExceptionRole,
   };
 }

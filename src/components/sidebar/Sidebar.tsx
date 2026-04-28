@@ -5,7 +5,8 @@ import {
   FileBarChart, ChevronDown, PanelLeft,
   AlertTriangle, Sparkles, Building2, Home, Calendar,
   Shield, Search as SearchIcon, Settings, Clock, Check,
-  Wand2, MoreHorizontal, LogOut, HelpCircle
+  Wand2, MoreHorizontal, LogOut, HelpCircle, ExternalLink,
+  ClipboardCheck, FileText, Target, Layers
 } from 'lucide-react';
 import type { View } from '../../hooks/useAppState';
 
@@ -26,8 +27,8 @@ function NavItem({ icon: Icon, label, active, expanded, onClick, badge }: {
       onClick={onClick}
       title={!expanded ? label : undefined}
       className={`
-        w-full flex items-center gap-2.5 rounded-lg transition-colors duration-150 relative cursor-pointer
-        ${expanded ? 'h-9 px-3.5' : 'h-10 px-0 justify-center'}
+        flex items-center gap-2.5 rounded-lg transition-colors duration-150 relative cursor-pointer
+        ${expanded ? 'w-full h-8 px-3.5' : 'w-8 h-8 mx-auto px-0 justify-center'}
         ${active
           ? 'bg-sidebar-surface-active text-sidebar-accent font-semibold'
           : 'text-sidebar-text hover:bg-sidebar-surface-hover hover:text-sidebar-accent'
@@ -45,7 +46,7 @@ function NavItem({ icon: Icon, label, active, expanded, onClick, badge }: {
             animate={{ opacity: 1, width: 'auto' }}
             exit={{ opacity: 0, width: 0 }}
             transition={{ duration: 0.15 }}
-            className="text-[13.5px] truncate overflow-hidden whitespace-nowrap"
+            className="text-[14px] leading-[20px] truncate overflow-hidden whitespace-nowrap"
             style={{ fontWeight: active ? 600 : 520 }}
           >
             {label}
@@ -71,10 +72,16 @@ function NavItem({ icon: Icon, label, active, expanded, onClick, badge }: {
 
 /* ── Section divider with optional label ── */
 function Divider({ label, expanded }: { label?: string; expanded: boolean }) {
-  if (!expanded || !label) return <div className="h-px bg-sidebar-border my-2 mx-3" />;
+  if (!expanded || !label) {
+    return (
+      <div className="mx-0 py-[13.5px]">
+        <div className="h-px bg-sidebar-border" />
+      </div>
+    );
+  }
   return (
-    <div className="px-3.5 pt-2 pb-1">
-      <span className="text-[12px] font-medium uppercase text-sidebar-text-dim">{label}</span>
+    <div className="px-3.5 py-2">
+      <span className="text-[12px] leading-[16px] font-medium uppercase text-white/60">{label}</span>
     </div>
   );
 }
@@ -94,6 +101,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
   const teamRef = useRef<HTMLDivElement>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [signOutConfirm, setSignOutConfirm] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -119,6 +127,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
   const isExpanded = expanded || hoverExpanded;
 
   const handleMouseEnter = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     if (!expanded) {
       hoverTimerRef.current = setTimeout(() => setHoverExpanded(true), 200);
     }
@@ -126,7 +135,9 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
 
   const handleMouseLeave = () => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-    if (!expanded) setHoverExpanded(false);
+    if (!expanded) {
+      hoverTimerRef.current = setTimeout(() => setHoverExpanded(false), 250);
+    }
   };
 
   /* View group helpers for active detection */
@@ -137,16 +148,19 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
   return (
     <motion.div
       animate={{ width: isExpanded ? 256 : 64 }}
-      transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+      transition={{
+        duration: 0.28,
+        // ease: [0.22, 1, 0.36, 1],
+      }}
       className="h-full bg-sidebar-bg noise-texture flex flex-col shrink-0 overflow-hidden z-50"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {/* ── Logo row + team switcher ── */}
-      <div className={`border-b border-sidebar-border shrink-0 relative ${isExpanded ? 'px-4 pt-[18px] pb-4' : 'px-2 py-3'}`} ref={teamRef}>
+      <div className={`border-b border-sidebar-border shrink-0 relative h-[59px] flex items-center ${isExpanded ? 'px-4' : 'px-0 justify-center'}`} ref={teamRef}>
         <div className={`flex items-center ${isExpanded ? 'gap-3' : 'justify-center'}`}>
-          <div className="w-[30px] h-[30px] rounded-lg bg-gradient-to-br from-brand-500 to-brand-400 flex items-center justify-center shrink-0" style={{ boxShadow: '0 2px 8px rgb(106 18 205 / 0.30)' }}>
-            <Sparkles size={12} className="text-white" />
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-400 flex items-center justify-center shrink-0" style={{ boxShadow: '0 2px 8px rgb(106 18 205 / 0.30)' }}>
+            <Sparkles size={14} className="text-white" />
           </div>
           <AnimatePresence>
             {isExpanded && (
@@ -160,10 +174,10 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                 <div className="text-[14px] font-bold text-sidebar-accent leading-tight whitespace-nowrap">IRAME.AI</div>
                 <button
                   onClick={() => { setTeamOpen(p => !p); setTeamSearch(''); }}
-                  className="text-[12px] text-sidebar-text-dim font-medium whitespace-nowrap flex items-center gap-1 hover:text-sidebar-text transition-colors cursor-pointer"
+                  className="text-[12px] text-white font-medium whitespace-nowrap flex items-center gap-1 hover:text-sidebar-text transition-colors cursor-pointer"
                 >
                   Audit Intelligence
-                  <ChevronDown size={8} className={`text-sidebar-text-muted transition-transform duration-150 ${teamOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={8} className={`text-white transition-transform duration-150 ${teamOpen ? 'rotate-180' : ''}`} />
                 </button>
               </motion.div>
             )}
@@ -178,7 +192,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -4, scale: 0.98 }}
               transition={{ duration: 0.15, ease: [0.22, 0.68, 0, 1] }}
-              className="absolute left-3 right-3 top-full mt-1.5 rounded-xl z-50 overflow-hidden border border-white/[0.12] bg-sidebar-bg shadow-2xl"
+              className="absolute left-3 right-3 top-full mt-0 rounded-xl z-50 overflow-hidden border border-white/[0.12] bg-sidebar-bg shadow-2xl"
             >
               {/* Search */}
               <div className="p-3">
@@ -189,13 +203,13 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                     background: 'rgba(163, 102, 240, 0.08)',
                   }}
                 >
-                  <SearchIcon size={14} className="text-white/50 shrink-0" />
+                  <SearchIcon size={14} className="text-white shrink-0" />
                   <input
                     type="text"
                     placeholder="Search Team"
                     value={teamSearch}
                     onChange={e => setTeamSearch(e.target.value)}
-                    className="flex-1 bg-transparent outline-none text-white placeholder:text-white/40 text-[13px]"
+                    className="flex-1 bg-transparent outline-none text-white placeholder:text-white/60 text-[13px]"
                     style={{ boxShadow: 'none' }}
                     autoFocus
                   />
@@ -212,7 +226,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                     <button
                       key={team.id}
                       onClick={() => { setActiveTeam(team.id); setTeamOpen(false); }}
-                      className={`w-full flex items-center justify-between px-4 py-3 text-[14px] transition-colors duration-100 cursor-pointer ${isActive ? 'text-white' : 'text-white/80 hover:bg-white/[0.05] hover:text-white/90'}`}
+                      className={`w-full flex items-center justify-between px-4 py-3 text-[14px] transition-colors duration-100 cursor-pointer ${isActive ? 'text-white' : 'text-white hover:bg-white/[0.05]'}`}
                     >
                       <span style={{ fontWeight: isActive ? 600 : 400 }}>{team.name}</span>
                       {isActive ? (
@@ -232,7 +246,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
       </div>
 
       {/* ── Navigation ── */}
-      <nav className={`flex-1 overflow-y-auto overflow-x-hidden ${isExpanded ? 'px-2 py-2' : 'px-1.5 py-3'}`}>
+      <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-2 ${isExpanded ? 'px-2' : 'px-0'}`}>
         <div className="space-y-0.5">
 
           {/* Top actions */}
@@ -245,17 +259,17 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
           {/* ── PROGRAMS ── */}
           <Divider label="Programs" expanded={isExpanded} />
 
-          <NavItem icon={Calendar} label="Planning" active={view === 'audit-planning'} expanded={isExpanded} onClick={() => setView('audit-planning')} />
-          <NavItem icon={Building2} label="Process Hub" active={view === 'business-processes' || view === 'bp-detail'} expanded={isExpanded} onClick={() => setView('business-processes')} />
-          <NavItem icon={AlertTriangle} label="Risk Register" active={view === 'audit-risk-register'} expanded={isExpanded} onClick={() => setView('audit-risk-register')} badge="14" />
-          <NavItem icon={Shield} label="Control Library" active={view === 'governance-controls' || view === 'governance-control-detail'} expanded={isExpanded} onClick={() => setView('governance-controls')} />
+          <NavItem icon={Calendar} label="Audit Planning" active={view === 'audit-planning'} expanded={isExpanded} onClick={() => setView('audit-planning')} />
+          <NavItem icon={Layers} label="Process Hub" active={view === 'programs' || view === 'business-processes' || view === 'bp-detail'} expanded={isExpanded} onClick={() => setView('programs')} />
+          <NavItem icon={AlertTriangle} label="Risks" active={view === 'audit-risk-register'} expanded={isExpanded} onClick={() => setView('audit-risk-register')} badge="14" />
 
           {/* ── GLOBAL ── */}
           <Divider label="Global" expanded={isExpanded} />
 
           <NavItem icon={LayoutDashboard} label="Dashboard" active={view === 'dashboards'} expanded={isExpanded} onClick={() => setView('dashboards')} />
           <NavItem icon={FileBarChart} label="Report" active={view === 'reports' || view === 'report-history' || view === 'report-builder'} expanded={isExpanded} onClick={() => setView('reports')} />
-          <NavItem icon={Workflow} label="Workflow Library" active={workflowViews.includes(view)} expanded={isExpanded} onClick={() => setView('workflow-templates')} />
+          <NavItem icon={Shield} label="Control Library" active={view === 'governance-controls' || view === 'governance-control-detail'} expanded={isExpanded} onClick={() => setView('governance-controls')} />
+          <NavItem icon={Workflow} label="Workflow Library" active={workflowViews.includes(view)} expanded={isExpanded} onClick={() => setView('workflow-library')} />
           <NavItem icon={Wand2} label="AI Concierge" active={aiConciergeViews.includes(view)} expanded={isExpanded} onClick={() => setView('ai-concierge')} />
 
           {/* ── SYSTEM ── */}
@@ -268,7 +282,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
       </nav>
 
       {/* ── User profile ── */}
-      <div className={`border-t border-sidebar-border shrink-0 relative ${isExpanded ? 'px-3 py-3' : 'px-2 py-2'}`} ref={userMenuRef}>
+      <div className={`border-t border-sidebar-border shrink-0 relative py-3 ${isExpanded ? 'px-3' : 'px-0'}`} ref={userMenuRef}>
         <AnimatePresence>
           {isExpanded && (
             <motion.div
@@ -282,11 +296,11 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-semibold text-sidebar-accent truncate">John Doe</div>
-                <div className="text-[12px] text-sidebar-text-dim truncate">Lead Auditor</div>
+                <div className="text-[12px] text-white truncate">Lead Auditor</div>
               </div>
               <button
-                onClick={(e) => { e.stopPropagation(); setUserMenuOpen(p => !p); setSignOutConfirm(false); }}
-                className="p-1 rounded-md hover:bg-white/[0.08] transition-colors text-sidebar-text-muted hover:text-sidebar-text cursor-pointer"
+                onClick={(e) => { e.stopPropagation(); setUserMenuOpen(p => !p); setSignOutConfirm(false); setHelpOpen(false); }}
+                className="p-1 rounded-md hover:bg-white/[0.08] transition-colors text-white hover:text-sidebar-text cursor-pointer"
               >
                 <MoreHorizontal size={16} />
               </button>
@@ -302,7 +316,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 4, scale: 0.98 }}
               transition={{ duration: 0.12 }}
-              className="absolute left-3 right-3 bottom-full mb-1.5 rounded-xl z-50 overflow-hidden border border-white/[0.12] bg-sidebar-bg shadow-2xl"
+              className="absolute left-3 right-3 bottom-full mb-0 rounded-xl z-50 overflow-hidden border border-white/[0.12] bg-sidebar-bg shadow-2xl"
             >
               {signOutConfirm ? (
                 <div className="p-4">
@@ -324,22 +338,50 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
                   </div>
                 </div>
               ) : (
-                <div className="py-1.5">
-                  <button
-                    onClick={() => { setUserMenuOpen(false); window.open('https://irame.ai', '_blank'); }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white/80 hover:bg-white/[0.06] hover:text-white transition-colors cursor-pointer"
-                  >
-                    <HelpCircle size={14} className="text-white/50" />
-                    Help & Support
-                  </button>
-                  <div className="h-px mx-3 my-1 bg-white/[0.08]" />
-                  <button
-                    onClick={() => setSignOutConfirm(true)}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-risk-700 hover:bg-white/[0.06] hover:text-risk transition-colors cursor-pointer"
-                  >
-                    <LogOut size={14} />
-                    Sign Out
-                  </button>
+                <div>
+                  <div className="py-1.5">
+                    <div className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white cursor-not-allowed">
+                      <Building2 size={14} className="text-white" />
+                      Irame Labs Pvt Ltd
+                    </div>
+                    <button
+                      onClick={() => setHelpOpen(p => !p)}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                    >
+                      <HelpCircle size={14} className="text-white" />
+                      <span className="flex-1 text-left">Help & Support</span>
+                      <ChevronDown size={12} className={`text-white transition-transform duration-150 ${helpOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {helpOpen && (
+                      <>
+                        <div className="h-px mx-3 bg-white/[0.08]" />
+                        <div className="py-1">
+                          {[
+                            { label: 'Get Started', url: 'https://irame.ai/get-started' },
+                            { label: 'Term of Use', url: 'https://irame.ai/terms' },
+                            { label: 'Privacy Policy', url: 'https://irame.ai/privacy' },
+                          ].map(item => (
+                            <button
+                              key={item.label}
+                              onClick={() => { setUserMenuOpen(false); setHelpOpen(false); window.open(item.url, '_blank'); }}
+                              className="w-full flex items-center justify-between px-4 py-2.5 text-[13px] text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                            >
+                              {item.label}
+                              <ExternalLink size={12} className="text-white" />
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    <div className="h-px mx-3 my-1 bg-white/[0.08]" />
+                    <button
+                      onClick={() => setSignOutConfirm(true)}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-red-400 hover:bg-white/[0.06] hover:text-red-300 transition-colors cursor-pointer"
+                    >
+                      <LogOut size={14} />
+                      Sign Out
+                    </button>
+                  </div>
                 </div>
               )}
             </motion.div>
@@ -349,7 +391,7 @@ export default function Sidebar({ view, setView, expanded, toggleSidebar }: Side
         {!isExpanded && (
           <button
             onClick={toggleSidebar}
-            className="w-full flex items-center justify-center text-sidebar-text-muted hover:text-sidebar-text transition-colors p-1.5 rounded-lg hover:bg-sidebar-surface-hover cursor-pointer"
+            className="w-full flex items-center justify-center text-white hover:text-sidebar-text transition-colors p-1.5 rounded-lg hover:bg-sidebar-surface-hover cursor-pointer"
             title="Expand"
             aria-label="Expand sidebar"
           >

@@ -8,17 +8,19 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "setup-hooks": "git config core.hooksPath .githooks && echo 'pre-push hook enabled (.githooks/pre-push)'",
+    "setup-hooks": "git config core.hooksPath .githooks && echo 'git hooks enabled (.githooks/pre-commit, .githooks/pre-push)'",
     "review:local": "bash tools/preflight-review.sh"
   },
   "dependencies": {
     "@rive-app/react-canvas": "^4.27.2",
     "@rive-app/react-webgl2": "^4.27.2",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.577.0",
     "motion": "^12.38.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-markdown": "^10.1.0"
+    "react-markdown": "^10.1.0",
+    "recharts": "^3.8.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

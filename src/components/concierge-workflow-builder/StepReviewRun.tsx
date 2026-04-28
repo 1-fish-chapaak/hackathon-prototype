@@ -4,10 +4,11 @@ import {
   CheckCircle2,
   AlertTriangle,
   AlertOctagon,
-  Database,
-  ChevronDown,
+  Check,
+  Shapes,
+  Play,
 } from 'lucide-react';
-import { useState } from 'react';
+import { type Dispatch, type SetStateAction } from 'react';
 import type {
   WorkflowDraft,
   JourneyFiles,
@@ -18,23 +19,30 @@ import type {
 
 interface Props {
   workflow: WorkflowDraft;
-  files: JourneyFiles;
-  mappings: JourneyMappings;
+  setWorkflow?: Dispatch<SetStateAction<WorkflowDraft | null>>;
+  files?: JourneyFiles;
+  mappings?: JourneyMappings;
+  setMappings?: Dispatch<SetStateAction<JourneyMappings>>;
   running: boolean;
   result: RunResult | null;
+  expandedSource?: string | null;
+  setExpandedSource?: Dispatch<SetStateAction<string | null>>;
+  onViewWorkspace?: () => void;
+  onValidate?: () => void;
+  validateDisabled?: boolean;
 }
 
 const STEP_BADGE: Record<
   StepSpec['type'],
   { label: string; bg: string; text: string }
 > = {
-  extract: { label: 'Ingestion', bg: 'bg-brand-50', text: 'text-brand-700' },
-  analyze: { label: 'Analysis', bg: 'bg-evidence-50', text: 'text-evidence-700' },
-  compare: { label: 'Comparison', bg: 'bg-brand-50', text: 'text-brand-700' },
-  flag: { label: 'Flagging', bg: 'bg-risk-50', text: 'text-risk-700' },
-  validate: { label: 'Validation', bg: 'bg-evidence-50', text: 'text-evidence-700' },
-  summarize: { label: 'Summary', bg: 'bg-compliant-50', text: 'text-compliant-700' },
-  calculate: { label: 'Calculation', bg: 'bg-mitigated-50', text: 'text-mitigated-700' },
+  extract: { label: 'INGESTION', bg: 'bg-brand-50', text: 'text-brand-700' },
+  analyze: { label: 'ANALYSIS', bg: 'bg-brand-600', text: 'text-white' },
+  compare: { label: 'COMPARISON', bg: 'bg-brand-50', text: 'text-brand-700' },
+  flag: { label: 'FLAGGING', bg: 'bg-risk-50', text: 'text-risk-700' },
+  validate: { label: 'VALIDATION', bg: 'bg-evidence-50', text: 'text-evidence-700' },
+  summarize: { label: 'SUMMARY', bg: 'bg-compliant-50', text: 'text-compliant-700' },
+  calculate: { label: 'CALCULATION', bg: 'bg-mitigated-50', text: 'text-mitigated-700' },
 };
 
 const STAT_TONE: Record<NonNullable<RunResult['stats'][number]['tone']>, string> = {
@@ -64,12 +72,15 @@ const ROW_ICON_TONE: Record<'flagged' | 'warning' | 'ok', string> = {
 
 export default function StepReviewRun({
   workflow,
-  files,
-  mappings,
   running,
   result,
+  onViewWorkspace,
+  onValidate,
+  validateDisabled,
 }: Props) {
-  const [expanded, setExpanded] = useState<string | null>(workflow.steps[0]?.id ?? null);
+  const stepCount = workflow.steps.length;
+  const estimateSeconds = Math.max(8, stepCount * 3);
+  const expectedRows = result?.rows.length ?? 5;
 
   return (
     <motion.div
@@ -78,107 +89,86 @@ export default function StepReviewRun({
       transition={{ duration: 0.3 }}
       className="flex flex-col gap-3"
     >
-      {/* Summary */}
-      <section className="rounded-xl border border-canvas-border bg-canvas-elevated p-4">
-        <span className="text-[12px] font-bold text-brand-600">
-          {workflow.category}
-        </span>
-        <h3 className="text-[15px] font-semibold text-ink-800 mt-0.5">
-          {workflow.name}
-        </h3>
-        <p className="text-[12px] text-ink-500 leading-relaxed mt-1">{workflow.description}</p>
-        <div className="rounded-lg bg-canvas border border-canvas-border p-3 mt-3">
-          <div className="text-[12px] text-ink-400 font-bold mb-1">
-            Prompt
+      {/* Workflow plan — header + 1-line step summaries + output footer.
+          Detailed step view lives in the right Plan tab. */}
+      <section className="rounded-xl border border-canvas-border bg-canvas-elevated overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-canvas-border/60">
+          <div className="flex items-baseline gap-2 min-w-0">
+            <span className="text-[13.5px] font-semibold text-ink-800">
+              Workflow plan
+            </span>
+            <span className="text-[11.5px] text-ink-400 truncate">
+              {stepCount} step{stepCount === 1 ? '' : 's'} · ~{estimateSeconds}s
+            </span>
           </div>
-          <p className="text-[12px] text-ink-800 leading-relaxed whitespace-pre-wrap">
-            {workflow.logicPrompt}
-          </p>
+          <span className="text-[11px] text-ink-400 shrink-0">
+            View full plan in the Plan tab
+          </span>
         </div>
-      </section>
 
-      {/* Steps (collapsible) */}
-      {workflow.steps.map((step, idx) => {
-        const badge = STEP_BADGE[step.type];
-        const relevantInputs = workflow.inputs.filter((i) =>
-          step.dataFiles.includes(i.id),
-        );
-        const isOpen = expanded === step.id;
-        return (
-          <section
-            key={step.id}
-            className="rounded-xl border border-canvas-border bg-canvas-elevated"
-          >
-            <button
-              type="button"
-              onClick={() => setExpanded(isOpen ? null : step.id)}
-              className="w-full flex items-center justify-between gap-3 px-4 py-3 cursor-pointer"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="w-6 h-6 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-[12px] font-bold shrink-0">
+        <ol className="list-none p-0 m-0">
+          {workflow.steps.map((step, idx) => {
+            const badge = STEP_BADGE[step.type];
+            return (
+              <li
+                key={step.id}
+                className="flex items-center gap-2.5 px-4 py-2 border-t border-canvas-border first:border-t-0"
+              >
+                <span className="w-5 h-5 rounded-full bg-ink-900 text-white flex items-center justify-center text-[10.5px] font-bold shrink-0 tabular-nums">
                   {idx + 1}
                 </span>
+                <span className="text-[13px] font-medium text-ink-800 truncate flex-1 min-w-0">
+                  {step.name}
+                </span>
                 <span
-                  className={`text-[12px] font-bold rounded-full px-1.5 py-0.5 ${badge.bg} ${badge.text}`}
+                  className={`text-[9.5px] font-bold tracking-wider rounded px-1.5 py-0.5 shrink-0 ${badge.bg} ${badge.text}`}
                 >
                   {badge.label}
                 </span>
-                <span className="text-[13px] font-semibold text-ink-800 truncate">
-                  {step.name}
-                </span>
-              </div>
-              <ChevronDown
-                size={14}
-                className={`text-ink-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-              />
-            </button>
-            {isOpen && (
-              <div className="px-4 pb-4">
-                <p className="text-[12px] text-ink-600 leading-relaxed mb-3">
-                  {step.description}
-                </p>
-                <div className="text-[12px] font-bold text-ink-400 mb-1.5">
-                  Data sources used
-                </div>
-                <ul className="space-y-1.5">
-                  {relevantInputs.map((input) => {
-                    const mapped = mappings[step.id]?.[input.id] ?? [];
-                    const count = (files[input.id] ?? []).length;
-                    return (
-                      <li
-                        key={input.id}
-                        className="flex items-center gap-2 bg-canvas rounded-md border border-canvas-border px-3 py-1.5"
-                      >
-                        <Database size={12} className="text-brand-600 shrink-0" />
-                        <span className="text-[12px] font-semibold text-ink-800 truncate">
-                          {input.name}
-                        </span>
-                        <span className="text-[12px] text-ink-400 ml-auto">
-                          {count} file{count === 1 ? '' : 's'} · {mapped.length} column
-                          {mapped.length === 1 ? '' : 's'}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
-          </section>
-        );
-      })}
+              </li>
+            );
+          })}
+        </ol>
 
-      {/* Output intent */}
-      <section className="rounded-xl border border-compliant/40 bg-compliant-50 p-4">
-        <div className="text-[12px] font-bold text-compliant-700 mb-1">
-          {workflow.output.type} output
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-compliant-50/60 border-t border-compliant/30">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-4 h-4 rounded-full bg-compliant text-white flex items-center justify-center shrink-0">
+              <Check size={10} strokeWidth={3} />
+            </span>
+            <span className="text-[12px] text-ink-500 shrink-0">Output</span>
+            <span className="text-[12.5px] font-semibold text-ink-800 truncate">
+              {workflow.output.title}
+            </span>
+          </div>
+          <span className="text-[11.5px] text-ink-500 whitespace-nowrap shrink-0">
+            ~{expectedRows} rows
+          </span>
         </div>
-        <div className="text-[14px] font-semibold text-ink-800 leading-tight mb-1">
-          {workflow.output.title}
-        </div>
-        <p className="text-[12px] text-ink-600 leading-relaxed">
-          {workflow.output.description}
-        </p>
       </section>
+
+      <div className="flex items-center justify-between gap-2">
+        {onValidate ? (
+          <button
+            type="button"
+            onClick={onValidate}
+            disabled={validateDisabled}
+            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-semibold text-white bg-gradient-to-br from-brand-600 to-fuchsia-600 hover:from-brand-500 hover:to-fuchsia-500 shadow-[0_8px_16px_-10px_rgba(106,18,205,0.5)] disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+          >
+            <Play size={13} />
+            Validate workflow
+          </button>
+        ) : (
+          <span />
+        )}
+        <button
+          type="button"
+          onClick={() => onViewWorkspace?.()}
+          className="inline-flex items-center gap-1.5 rounded-md border border-canvas-border bg-canvas-elevated hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50/40 px-3 py-1.5 text-[12px] font-semibold text-ink-700 transition-colors cursor-pointer"
+        >
+          <Shapes size={13} />
+          View Workspace
+        </button>
+      </div>
 
       {/* Running / Result */}
       {running && (
