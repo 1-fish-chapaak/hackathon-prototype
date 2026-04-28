@@ -2379,7 +2379,6 @@ export default function AuditPlanningView({ onNavigateToExecution, embedded = fa
   const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
     { id: 'racm', label: 'RACM', icon: LayoutGrid },
     { id: 'execution', label: 'Execution', icon: Zap },
-    { id: 'timeline', label: 'Timeline', icon: Calendar },
   ];
 
   const processFilterOptions = ['All', ...PROCESSES];
@@ -2433,7 +2432,7 @@ export default function AuditPlanningView({ onNavigateToExecution, embedded = fa
             <div className="text-[12px] text-text-muted">{plan.length} engagement{plan.length !== 1 ? 's' : ''}</div>
             <button onClick={openCreateDrawer}
               className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
-              <Plus size={14} />New Engagement
+              <Plus size={14} />Plan Engagement
             </button>
           </div>
         )}

@@ -93,6 +93,14 @@ export const WORKFLOWS = [
 
 // ─── Report Templates ───
 export const REPORT_TEMPLATES = [
+  { id: "rt-internal-audit", name: "Internal Audit Report", desc: "End-to-end audit report with executive summary, audit queries, findings, and recommendations", category: "Audit", icon: "file-text", sections: [
+    { name: 'Executive Summary', icon: 'file-text' },
+    { name: 'Audit Queries', icon: 'check-circle' },
+    { name: 'Findings & Observations', icon: 'alert-triangle' },
+    { name: 'Risk Analysis', icon: 'shield' },
+    { name: 'Recommendations', icon: 'trending-up' },
+    { name: 'Appendix', icon: 'file-text' },
+  ]},
   { id: "rt-001", name: "SOX Compliance Report", desc: "Comprehensive SOX compliance status with control testing results", category: "Compliance", icon: "shield", sections: [
     { name: 'Executive Summary', icon: 'file-text' },
     { name: 'Scope & Objectives', icon: 'file-text' },
@@ -101,61 +109,60 @@ export const REPORT_TEMPLATES = [
     { name: 'Remediation Status', icon: 'shield' },
     { name: 'Appendix', icon: 'file-text' },
   ]},
-  { id: "rt-002", name: "Risk Assessment Summary", desc: "Overview of all identified risks, their ratings, and mitigation status", category: "Risk", icon: "alert-triangle", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Risk Identification', icon: 'alert-triangle' },
-    { name: 'Risk Matrix', icon: 'shield' },
-    { name: 'Mitigation Strategies', icon: 'check-circle' },
-    { name: 'Trend Analysis', icon: 'trending-up' },
-    { name: 'Recommendations', icon: 'file-text' },
-  ]},
-  { id: "rt-003", name: "Control Effectiveness Report", desc: "Detailed analysis of control effectiveness across all business processes", category: "Controls", icon: "check-circle", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Control Environment Overview', icon: 'shield' },
-    { name: 'Testing Methodology', icon: 'file-text' },
-    { name: 'Effectiveness Ratings', icon: 'check-circle' },
-    { name: 'Gap Analysis', icon: 'alert-triangle' },
-    { name: 'Improvement Plan', icon: 'trending-up' },
-  ]},
-  { id: "rt-004", name: "Workflow Analytics Report", desc: "Performance metrics and insights from automated workflow executions", category: "Analytics", icon: "bar-chart", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Workflow Performance Metrics', icon: 'bar-chart' },
-    { name: 'Exception Trends', icon: 'trending-up' },
-    { name: 'Processing Efficiency', icon: 'check-circle' },
-    { name: 'Anomaly Detection Results', icon: 'alert-triangle' },
-    { name: 'Recommendations', icon: 'file-text' },
-  ]},
-  { id: "rt-005", name: "Deficiency Tracker", desc: "Status of all identified deficiencies with remediation progress", category: "Audit", icon: "file-text", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Key Findings', icon: 'alert-triangle' },
-    { name: 'Deficiency Details', icon: 'shield' },
-    { name: 'Remediation Progress', icon: 'check-circle' },
-    { name: 'Timeline & Milestones', icon: 'trending-up' },
-    { name: 'Appendix', icon: 'file-text' },
-  ]},
-  { id: "rt-006", name: "Executive Dashboard Export", desc: "Board-ready summary of GRC posture and key metrics", category: "Executive", icon: "trending-up", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Key Metrics Dashboard', icon: 'bar-chart' },
-    { name: 'Risk Heatmap', icon: 'alert-triangle' },
-    { name: 'Compliance Scorecard', icon: 'shield' },
-    { name: 'Strategic Recommendations', icon: 'check-circle' },
-    { name: 'Outlook & Next Steps', icon: 'trending-up' },
-  ]},
-  { id: "rt-007", name: "Action Taken Report", desc: "Summary of exception actions, risk owner responses, and resolution status", category: "Audit", icon: "clipboard-check", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Exception Overview', icon: 'alert-triangle' },
-    { name: 'Actions Taken', icon: 'check-circle' },
-    { name: 'Risk Owner Responses', icon: 'shield' },
+  { id: "rt-007", name: "ATR Report", desc: "Action Taken Report with query summary, risk details, action plan, and resolution status", category: "Audit", icon: "clipboard-check", sections: [
+    { name: 'Report Information', icon: 'file-text' },
+    { name: 'Query Summary', icon: 'file-text' },
+    { name: 'Risk Details', icon: 'alert-triangle' },
+    { name: 'Action Plan', icon: 'check-circle' },
     { name: 'Resolution Status', icon: 'clipboard-check' },
-    { name: 'Pending Items', icon: 'file-text' },
   ]},
+  // { id: "rt-002", name: "Risk Assessment Summary", desc: "Overview of all identified risks, their ratings, and mitigation status", category: "Risk", icon: "alert-triangle", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Risk Identification', icon: 'alert-triangle' },
+  //   { name: 'Risk Matrix', icon: 'shield' },
+  //   { name: 'Mitigation Strategies', icon: 'check-circle' },
+  //   { name: 'Trend Analysis', icon: 'trending-up' },
+  //   { name: 'Recommendations', icon: 'file-text' },
+  // ]},
+  // { id: "rt-003", name: "Control Effectiveness Report", desc: "Detailed analysis of control effectiveness across all business processes", category: "Controls", icon: "check-circle", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Control Environment Overview', icon: 'shield' },
+  //   { name: 'Testing Methodology', icon: 'file-text' },
+  //   { name: 'Effectiveness Ratings', icon: 'check-circle' },
+  //   { name: 'Gap Analysis', icon: 'alert-triangle' },
+  //   { name: 'Improvement Plan', icon: 'trending-up' },
+  // ]},
+  // { id: "rt-004", name: "Workflow Analytics Report", desc: "Performance metrics and insights from automated workflow executions", category: "Analytics", icon: "bar-chart", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Workflow Performance Metrics', icon: 'bar-chart' },
+  //   { name: 'Exception Trends', icon: 'trending-up' },
+  //   { name: 'Processing Efficiency', icon: 'check-circle' },
+  //   { name: 'Anomaly Detection Results', icon: 'alert-triangle' },
+  //   { name: 'Recommendations', icon: 'file-text' },
+  // ]},
+  // { id: "rt-005", name: "Deficiency Tracker", desc: "Status of all identified deficiencies with remediation progress", category: "Audit", icon: "file-text", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Key Findings', icon: 'alert-triangle' },
+  //   { name: 'Deficiency Details', icon: 'shield' },
+  //   { name: 'Remediation Progress', icon: 'check-circle' },
+  //   { name: 'Timeline & Milestones', icon: 'trending-up' },
+  //   { name: 'Appendix', icon: 'file-text' },
+  // ]},
+  // { id: "rt-006", name: "Executive Dashboard Export", desc: "Board-ready summary of GRC posture and key metrics", category: "Executive", icon: "trending-up", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Key Metrics Dashboard', icon: 'bar-chart' },
+  //   { name: 'Risk Heatmap', icon: 'alert-triangle' },
+  //   { name: 'Compliance Scorecard', icon: 'shield' },
+  //   { name: 'Strategic Recommendations', icon: 'check-circle' },
+  //   { name: 'Outlook & Next Steps', icon: 'trending-up' },
+  // ]},
 ];
 
 // ─── Generated Reports ───
 export const GENERATED_REPORTS = [
   { id: "gr-001", templateId: "rt-001", name: "FY26 Q1 SOX Compliance Report", tag: "Internal Audit", generatedBy: "Karan Mehta", generatedAt: "Mar 20, 2026", status: "final", pages: 24 },
-  { id: "gr-002", templateId: "rt-002", name: "P2P Risk Assessment — March 2026", tag: "Bulk Audit", generatedBy: "Tushar Goel", generatedAt: "Mar 18, 2026", status: "draft", pages: 12 },
-  { id: "gr-003", templateId: "rt-004", name: "Workflow Performance — Feb 2026", tag: "Internal Audit", generatedBy: "AI Copilot", generatedAt: "Mar 1, 2026", status: "final", pages: 8 },
+  { id: "gr-002", templateId: "ct-custom-01", name: "P2P Risk Assessment — March 2026", tag: "Bulk Audit", generatedBy: "Tushar Goel", generatedAt: "Mar 18, 2026", status: "draft", pages: 12 },
+  { id: "gr-003", templateId: "ct-custom-02", name: "Workflow Performance — Feb 2026", tag: "Internal Audit", generatedBy: "AI Copilot", generatedAt: "Mar 1, 2026", status: "final", pages: 8 },
 ];
 
 export const SHARED_REPORTS = [

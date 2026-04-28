@@ -16,7 +16,7 @@ import RiskRegister from './components/audit/RiskRegister';
 import AuditExecution from './components/audit/AuditExecution';
 import DashboardView from './components/dashboard/DashboardView';
 import DashboardListPage from './components/dashboard/DashboardListPage';
-import ReportsView from './components/reports/ReportsView';
+import ReportsView, { CUSTOM_TEMPLATES } from './components/reports/ReportsView';
 import HomeView from './components/home/HomeView';
 import RecentsView from './components/recents/RecentsView';
 import KnowledgeHubView from './components/knowledge/KnowledgeHubView';
@@ -26,6 +26,7 @@ import ShareModal from './components/modals/ShareModal';
 import PowerBIImportWizard from './components/modals/PowerBIImportWizard';
 import ReportBuilder from './components/reports/ReportBuilder';
 import AuditPlanningView from './components/audit/AuditPlanningView';
+import AuditPlanningPage from './components/audit/AuditPlanningPage';
 import ProgramsView from './components/audit/ProgramsView';
 // New pages
 import RACMView from './components/governance/RACMView';
@@ -43,6 +44,11 @@ import ManageExceptionsView from './components/exceptions/ManageExceptionsView';
 import WorkingPaperPanel from './components/execution/WorkingPaperPanel';
 import WorkflowExecutionPanel from './components/execution/WorkflowExecutionPanel';
 import TraceabilityPanel from './components/execution/TraceabilityPanel';
+
+const LAUNCHED_FROM_REPORT =
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).has('from') &&
+  new URLSearchParams(window.location.search).get('view') === 'manage-exceptions';
 
 export default function App() {
   const {
@@ -84,6 +90,9 @@ export default function App() {
   const [viewLoading, setViewLoading] = useState(false);
   const [controlDrawerId, setControlDrawerId] = useState<string | null>(null);
   const [engagementBackView, setEngagementBackView] = useState<'programs' | 'audit-planning' | 'business-processes'>('programs');
+  type CustomTemplate = typeof CUSTOM_TEMPLATES[number];
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>(CUSTOM_TEMPLATES);
+  const addCustomTemplate = (t: CustomTemplate) => setCustomTemplates(prev => [t, ...prev]);
 
   useEffect(() => {
     if (mainScrollRef.current) {
@@ -220,8 +229,6 @@ export default function App() {
           <WorkflowDetail
             workflowId={state.selectedWorkflowId!}
             onBack={() => fromLibrary ? setView('workflow-library') : setSelectedWorkflow(null)}
-            onViewDashboard={() => setView('dashboards')}
-            onGenerateReport={() => openReportBuilder('new')}
             onOpenExecutor={() => openWorkflowExecutor(state.selectedWorkflowId!)}
             onEditInChat={() => enterWorkflowMode({ workflowId: state.selectedWorkflowId! })}
           />
@@ -326,6 +333,12 @@ export default function App() {
             onOpenBuilder={() => openReportBuilder('new')}
             onShare={(id) => setShowShareModal(true, { type: 'report', id })}
             onManageExceptions={() => setView('manage-exceptions')}
+            onOpenQuery={(q) => {
+              setChatInitialQuery(`Open the ${q.id} duplicate invoice query`);
+              setView('chat');
+            }}
+            customTemplates={customTemplates}
+            onAddCustomTemplate={addCustomTemplate}
           />
         );
 
@@ -335,6 +348,7 @@ export default function App() {
             role={state.exceptionRole}
             setRole={setExceptionRole}
             onBack={() => setView('reports')}
+            embedded={LAUNCHED_FROM_REPORT}
           />
         );
 
@@ -343,11 +357,12 @@ export default function App() {
           <ReportBuilder
             context={state.reportBuilderContext}
             onBack={() => setView('reports')}
+            onSaveAsTemplate={addCustomTemplate}
           />
         );
 
       case 'audit-planning':
-        return <AuditPlanningView onNavigateToExecution={(engId) => {
+        return <AuditPlanningPage onNavigateToExecution={(engId) => {
           setEngagementBackView('audit-planning');
           openAuditExecution(engId);
           setView('engagement-detail' as any);
@@ -439,13 +454,15 @@ export default function App() {
     <ToastProvider>
       <BulkRunProgressProvider>
       <div className="flex h-screen w-full bg-canvas overflow-hidden">
-        <Sidebar
-          view={state.view}
-          setView={setView}
-          expanded={state.sidebarExpanded}
-          toggleSidebar={toggleSidebar}
-          setSidebarExpanded={setSidebarExpanded}
-        />
+        {!(LAUNCHED_FROM_REPORT && state.view === 'manage-exceptions') && (
+          <Sidebar
+            view={state.view}
+            setView={setView}
+            expanded={state.sidebarExpanded}
+            toggleSidebar={toggleSidebar}
+            setSidebarExpanded={setSidebarExpanded}
+          />
+        )}
         <main ref={mainScrollRef} className="flex-1 flex flex-col overflow-hidden">
           <AnimatePresence mode="wait">
             <motion.div

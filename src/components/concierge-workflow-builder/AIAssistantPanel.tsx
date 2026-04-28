@@ -1,12 +1,12 @@
-import { useEffect, useRef, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useCallback, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Paperclip, Send, Sparkles, ArrowLeft, Link2, Check, Info, SlidersHorizontal, DollarSign, Play, RotateCcw, Loader2 } from 'lucide-react';
-import type { JourneyStep } from './Stepper';
+import { Paperclip, Send, ArrowLeft, Link2, Check, Info, SlidersHorizontal, DollarSign, Play, RotateCcw, Loader2, CornerDownLeft, Eye } from 'lucide-react';
 import StepUploadFiles from './StepUploadFiles';
 import StepMapData from './StepMapData';
 import StepReviewRun from './StepReviewRun';
 import StepOutputView from './StepOutputView';
 import type {
+  ClarifyQuestion,
   InputSpec,
   JourneyAlignments,
   JourneyFiles,
@@ -35,10 +35,15 @@ export interface ToleranceCardProps {
 
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant' | 'event' | 'card';
+  role: 'user' | 'assistant' | 'event' | 'card' | 'loader';
   text: string;
   tone?: EventTone;
-  cardType?: 'tolerance' | 'upload' | 'map' | 'review' | 'output';
+  cardType?: 'tolerance' | 'upload' | 'map' | 'review' | 'output' | 'view-preview';
+}
+
+export interface ViewPreviewCardProps {
+  onClick: () => void;
+  revealed?: boolean;
 }
 
 export interface UploadCardProps {
@@ -48,6 +53,8 @@ export interface UploadCardProps {
   onLinkSource?: (sourceName: string, inputName: string) => void;
   onFocusInput?: (input: InputSpec) => void;
   focusedInputId?: string | null;
+  view?: 'full' | 'upload-only' | 'list-only';
+  onOpenUploadModal?: () => void;
 }
 
 export interface MapCardProps {
@@ -57,6 +64,9 @@ export interface MapCardProps {
   alignments: JourneyAlignments;
   expandedInputId?: string | null;
   onToggleExpand?: (inputId: string) => void;
+  onConfirm?: () => void;
+  confirmDisabled?: boolean;
+  onViewWorkspace?: () => void;
 }
 
 export interface ReviewCardProps {
@@ -69,12 +79,17 @@ export interface ReviewCardProps {
   result: RunResult | null;
   expandedSource?: string | null;
   setExpandedSource?: Dispatch<SetStateAction<string | null>>;
+  onViewWorkspace?: () => void;
+  onValidate?: () => void;
+  validateDisabled?: boolean;
 }
 
 export interface OutputCardProps {
   workflow: WorkflowDraft;
   result: RunResult | null;
   running: boolean;
+  onSave?: () => void;
+  saved?: boolean;
 }
 
 export interface QuickReply {
@@ -98,21 +113,25 @@ export interface PrimaryAction {
   hint?: string;
 }
 
+export interface InlineClarifyProps {
+  question: ClarifyQuestion;
+  index: number;
+  total: number;
+  stepLabel?: string;
+  onAnswer: (questionId: string, answer: string) => void;
+  onSkip: (questionId: string) => void;
+}
+
 interface Props {
-  step: JourneyStep;
-  stepTitle?: string;
-  workflowName?: string;
   messages: ChatMessage[];
   quickReplies?: QuickReply[];
   contextChip?: ContextChip;
   primaryAction?: PrimaryAction;
   placeholder?: string;
   onSend: (text: string) => void;
-  onOpenGuideMe: () => void;
+  onOpenAttach?: () => void;
   input: string;
   setInput: (v: string) => void;
-  completed?: Set<JourneyStep>;
-  onJump?: (s: JourneyStep) => void;
   onBack?: () => void;
   isTyping?: boolean;
   toleranceCard?: ToleranceCardProps;
@@ -120,29 +139,20 @@ interface Props {
   mapCard?: MapCardProps;
   reviewCard?: ReviewCardProps;
   outputCard?: OutputCardProps;
+  viewPreviewCard?: ViewPreviewCardProps;
+  inlineClarify?: InlineClarifyProps;
 }
 
-const STEPS: { id: JourneyStep; label: string }[] = [
-  { id: 1, label: 'Write Prompt' },
-  { id: 2, label: 'Upload Files' },
-  { id: 3, label: 'Map Data' },
-  { id: 4, label: 'Review & Run' },
-];
-
 export default function AIAssistantPanel({
-  step,
-  stepTitle,
   messages,
   quickReplies,
   contextChip,
   primaryAction,
   placeholder,
   onSend,
-  onOpenGuideMe,
+  onOpenAttach,
   input,
   setInput,
-  completed,
-  onJump,
   onBack,
   isTyping,
   toleranceCard,
@@ -150,6 +160,8 @@ export default function AIAssistantPanel({
   mapCard,
   reviewCard,
   outputCard,
+  viewPreviewCard,
+  inlineClarify,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -176,77 +188,27 @@ export default function AIAssistantPanel({
 
   return (
     <aside className="flex flex-col h-full w-full bg-canvas-elevated border-r border-canvas-border min-h-0">
-      {/* Header */}
-      <div className="px-4 pt-3 pb-3 border-b border-canvas-border shrink-0">
-        {onBack && (
+      {/* Header — slim back-link only; stepper + Ira branding intentionally omitted */}
+      {onBack && (
+        <div className="px-4 pt-3 pb-2 shrink-0">
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-ink-500 hover:text-brand-600 transition-colors cursor-pointer mb-3"
+            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-ink-500 hover:text-brand-600 transition-colors cursor-pointer"
           >
             <ArrowLeft size={13} />
             Back to AI Concierge
           </button>
-        )}
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center shrink-0">
-              <Sparkles size={15} className="text-white" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-[13px] font-semibold text-ink-800 leading-tight truncate">
-                Ira
-              </div>
-              <div className="text-[12px] text-ink-400 leading-tight truncate">
-                Audit workflow copilot
-              </div>
-            </div>
-          </div>
-          <span className="text-[12px] font-semibold text-brand-700 whitespace-nowrap shrink-0 mt-1">
-            Step {step} of {STEPS.length}
-          </span>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            {STEPS.map((s, i) => {
-              const isDone = s.id < step;
-              const isActive = s.id === step;
-              const canJump = !!onJump && (s.id <= step || (completed?.has(s.id) ?? false));
-              return (
-                <div key={s.id} className="flex items-center flex-1">
-                  <button
-                    type="button"
-                    onClick={() => canJump && onJump?.(s.id)}
-                    disabled={!canJump}
-                    aria-label={`Go to step ${s.id}: ${s.label}`}
-                    aria-current={isActive ? 'step' : undefined}
-                    className={[
-                      'w-2.5 h-2.5 rounded-full shrink-0 transition-transform',
-                      isActive ? 'bg-brand-600' : isDone ? 'bg-compliant' : 'bg-brand-200',
-                      canJump ? 'cursor-pointer hover:scale-125' : 'cursor-not-allowed',
-                    ].join(' ')}
-                  />
-                  {i < STEPS.length - 1 && (
-                    <span
-                      className={`h-[2px] flex-1 rounded-full ml-1 ${
-                        isDone ? 'bg-compliant/40' : 'bg-brand-200/60'
-                      }`}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <span className="text-[13px] font-semibold text-brand-700 whitespace-nowrap shrink-0">
-            {stepTitle ?? STEPS[step - 1]?.label}
-          </span>
-        </div>
-      </div>
+      )}
 
       {/* Messages */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-5 min-h-0"
+        className={[
+          'flex-1 overflow-y-auto px-4 py-5 min-h-0 transition-opacity',
+          inlineClarify ? 'opacity-55 pointer-events-none' : '',
+        ].join(' ')}
       >
         <AnimatePresence initial={false}>
           {messages.map((m, i) => {
@@ -368,6 +330,67 @@ export default function AIAssistantPanel({
               );
             }
 
+            if (m.role === 'card' && m.cardType === 'view-preview' && viewPreviewCard) {
+              return (
+                <motion.div
+                  key={m.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                  className={`flex justify-start ${topGap}`}
+                >
+                  <div className="max-w-[92%] min-w-0 w-full">
+                    {isFirstOfRun && (
+                      <div className="mb-1 font-mono text-[10.5px] text-ink-400 uppercase tracking-[0.14em]">
+                        Ira
+                      </div>
+                    )}
+                    <ViewPreviewCard {...viewPreviewCard} />
+                  </div>
+                </motion.div>
+              );
+            }
+
+            if (m.role === 'loader') {
+              return (
+                <motion.div
+                  key={m.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={`flex justify-start ${topGap}`}
+                >
+                  <div className="max-w-[78%] min-w-0">
+                    {isFirstOfRun && (
+                      <div className="mb-1 font-mono text-[10.5px] text-ink-400 uppercase tracking-[0.14em]">
+                        Ira
+                      </div>
+                    )}
+                    <div className="inline-flex items-center gap-2">
+                      <motion.span
+                        animate={{ scale: [1, 1.35, 1], opacity: [0.55, 1, 0.55] }}
+                        transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+                        className="w-2 h-2 rounded-full bg-brand-500"
+                      />
+                      <span
+                        className="text-[13.5px] font-medium leading-[1.65] bg-clip-text text-transparent"
+                        style={{
+                          backgroundImage:
+                            'linear-gradient(90deg, rgba(31,28,46,0.35) 0%, rgba(31,28,46,0.95) 50%, rgba(31,28,46,0.35) 100%)',
+                          backgroundSize: '200% 100%',
+                          animation: 'ira-shimmer 1.6s linear infinite',
+                        }}
+                      >
+                        {m.text || 'Working…'}
+                      </span>
+                    </div>
+                    <style>{`@keyframes ira-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+                  </div>
+                </motion.div>
+              );
+            }
+
             if (m.role === 'event') {
               const Icon =
                 m.tone === 'success' ? Check : m.tone === 'info' ? Info : Link2;
@@ -478,7 +501,12 @@ export default function AIAssistantPanel({
         )}
       </div>
 
-      {/* Composer */}
+      {/* Composer (replaced by inline clarify card when active) */}
+      {inlineClarify ? (
+        <div className="p-3 border-t border-canvas-border shrink-0">
+          <InlineClarifyCard {...inlineClarify} />
+        </div>
+      ) : (
       <div className="p-3 border-t border-canvas-border shrink-0">
         {/* Context chip (e.g. "Match invoice to PO") — hidden for now; may reuse later.
         <AnimatePresence initial={false}>
@@ -576,20 +604,13 @@ export default function AIAssistantPanel({
               className="w-full bg-transparent border-none outline-none resize-none pt-3 pb-10 px-3 text-[13px] text-ink-800 placeholder:text-ink-400 min-h-[44px] max-h-[140px] rounded-[12px]"
             />
             <div className="absolute left-2 bottom-2 flex items-center gap-1">
-              <label
-                className="cursor-pointer w-7 h-7 rounded-lg text-ink-400 hover:bg-brand-50 hover:text-brand-600 flex items-center justify-center transition-colors"
-                aria-label="Attach"
-              >
-                <Paperclip size={13} />
-                <input type="file" multiple className="hidden" />
-              </label>
               <button
                 type="button"
-                onClick={onOpenGuideMe}
-                className="inline-flex items-center gap-1 rounded-full bg-brand-50 hover:bg-brand-100 text-brand-700 text-[12px] font-semibold px-2.5 py-1 transition-colors cursor-pointer"
+                onClick={onOpenAttach}
+                className="cursor-pointer w-7 h-7 rounded-lg text-ink-400 hover:bg-brand-50 hover:text-brand-600 flex items-center justify-center transition-colors"
+                aria-label="Attach data"
               >
-                <Sparkles size={12} />
-                Guide me
+                <Paperclip size={13} />
               </button>
             </div>
             <div className="absolute right-2 bottom-2">
@@ -611,7 +632,173 @@ export default function AIAssistantPanel({
           </div>
         </div>
       </div>
+      )}
     </aside>
+  );
+}
+
+function InlineClarifyCard({
+  question,
+  index,
+  total,
+  stepLabel,
+  onAnswer,
+  onSkip,
+}: InlineClarifyProps) {
+  const [selected, setSelected] = useState(0);
+  const [customText, setCustomText] = useState('');
+
+  useEffect(() => {
+    setSelected(0);
+    setCustomText('');
+  }, [question.id]);
+
+  const submit = useCallback(
+    (answer: string) => {
+      onAnswer(question.id, answer);
+    },
+    [question.id, onAnswer],
+  );
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const active = document.activeElement;
+      const typing =
+        active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
+
+      if (!typing && e.key >= '1' && e.key <= String(question.options.length)) {
+        const i = parseInt(e.key, 10) - 1;
+        setSelected(i);
+        e.preventDefault();
+        submit(question.options[i]);
+        return;
+      }
+      if (!typing && e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelected((s) => Math.min(s + 1, question.options.length - 1));
+        return;
+      }
+      if (!typing && e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelected((s) => Math.max(s - 1, 0));
+        return;
+      }
+      if (e.key === 'Enter' && !typing) {
+        e.preventDefault();
+        submit(question.options[selected] ?? '');
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onSkip(question.id);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [question, selected, submit, onSkip]);
+
+  return (
+    <motion.div
+      key={question.id}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+      className="rounded-2xl border border-canvas-border bg-canvas-elevated overflow-hidden shadow-[0_14px_36px_-18px_rgba(106,18,205,0.3)]"
+    >
+      <div className="px-4 pt-3.5 pb-3">
+        {stepLabel && (
+          <div className="text-[10.5px] font-bold text-brand-600 uppercase tracking-[0.14em] mb-2">
+            {stepLabel}
+          </div>
+        )}
+        <div className="flex items-start justify-between gap-3">
+          <div className="text-[14px] font-semibold text-ink-800 leading-snug">
+            {question.title}
+          </div>
+          {total > 1 && (
+            <div className="text-[11.5px] text-ink-400 whitespace-nowrap tabular-nums shrink-0 mt-0.5">
+              {index + 1} of {total}
+            </div>
+          )}
+        </div>
+      </div>
+      <ul>
+        {question.options.map((opt, i) => {
+          const isSelected = selected === i;
+          return (
+            <li key={opt}>
+              <button
+                type="button"
+                onClick={() => submit(opt)}
+                onMouseEnter={() => setSelected(i)}
+                className={[
+                  'w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-t border-canvas-border cursor-pointer',
+                  isSelected ? 'bg-brand-50/60' : 'hover:bg-canvas',
+                ].join(' ')}
+              >
+                <span className="flex-1 text-[13.5px] text-ink-800">{opt}</span>
+                {isSelected && (
+                  <span className="text-ink-400">
+                    <CornerDownLeft size={13} />
+                  </span>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="flex items-center gap-3 px-4 py-2.5 border-t border-canvas-border">
+        <input
+          type="text"
+          value={customText}
+          onChange={(e) => setCustomText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && customText.trim()) {
+              e.preventDefault();
+              submit(customText.trim());
+            }
+          }}
+          placeholder="Type something else..."
+          className="flex-1 bg-transparent border-none outline-none text-[13px] text-ink-800 placeholder:text-ink-400"
+        />
+        <button
+          type="button"
+          onClick={() => onSkip(question.id)}
+          className="text-[12.5px] font-semibold text-ink-600 hover:text-ink-800 underline underline-offset-2 cursor-pointer"
+        >
+          Skip
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+function ViewPreviewCard({ onClick, revealed }: ViewPreviewCardProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="flex items-center gap-2"
+    >
+      <span className="text-[12.5px] text-ink-600 leading-snug">
+        Review the output schema on the right, then open the preview when ready.
+      </span>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={revealed}
+        className={[
+          'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-semibold transition-all shrink-0',
+          revealed
+            ? 'bg-brand-50 text-brand-400 cursor-not-allowed'
+            : 'text-white bg-gradient-to-br from-brand-600 to-fuchsia-600 hover:from-brand-500 hover:to-fuchsia-500 shadow-[0_8px_16px_-10px_rgba(106,18,205,0.5)] cursor-pointer',
+        ].join(' ')}
+      >
+        <Eye size={13} />
+        {revealed ? 'Preview opened' : 'View Preview'}
+      </button>
+    </motion.div>
   );
 }
 
