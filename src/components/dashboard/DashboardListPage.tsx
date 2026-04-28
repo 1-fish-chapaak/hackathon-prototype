@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Search, Clock, Plus, ChevronDown, LayoutGrid, MoreVertical,
   Trash2, Check, Download, Share2, X, MessageSquare, Upload, Database, CloudUpload,
-  Star, Layers, FileText
+  Star, Layers, FileText, GripVertical, BarChart3
 } from 'lucide-react';
 import { useToast } from '../shared/Toast';
 import { SEED, TYPE_META, formatDate, type DataSource } from '../data-sources/sources';
@@ -179,6 +179,76 @@ const QUERY_TEMPLATES = [
 
 // ─── Create Dashboard Modal ─────────────────────────────────────────────────
 
+// ─── File Tree Component (Navigator sidebar) ────────────────────────────────
+
+function NavFileTree({ files }: { files: { name: string; sheets: { name: string; columns: string[] }[] }[] }) {
+  const [expandedFiles, setExpandedFiles] = useState<Record<string, boolean>>({ [files[0]?.name]: true });
+  const [expandedSheets, setExpandedSheets] = useState<Record<string, boolean>>({ [`${files[0]?.name}::${files[0]?.sheets[0]?.name}`]: true });
+
+  return (
+    <div className="space-y-2">
+      {files.map(file => {
+        const isFileOpen = expandedFiles[file.name] ?? false;
+        return (
+          <div key={file.name} className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
+            <button
+              onClick={() => setExpandedFiles(p => ({ ...p, [file.name]: !p[file.name] }))}
+              className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-[#faf5ff] to-white hover:from-[#f5f0ff] transition-all cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <FileText size={14} className="text-[#6a12cd]" />
+                <span className="text-[12px] font-semibold text-[#26064a]">{file.name}</span>
+              </div>
+              <ChevronDown
+                size={14}
+                className="text-[#6a12cd] transition-transform"
+                style={{ transform: isFileOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+              />
+            </button>
+            {isFileOpen && (
+              <div className="border-t border-[#f0f0f0]">
+                {file.sheets.map(sheet => {
+                  const key = `${file.name}::${sheet.name}`;
+                  const isSheetOpen = expandedSheets[key] ?? false;
+                  return (
+                    <div key={key}>
+                      <button
+                        onClick={() => setExpandedSheets(p => ({ ...p, [key]: !p[key] }))}
+                        className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#faf5ff] transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <LayoutGrid size={12} className="text-ink-400" />
+                          <span className="text-[11px] font-medium text-ink-700">{sheet.name}</span>
+                          <span className="text-[10px] text-ink-400">({sheet.columns.length})</span>
+                        </div>
+                        <ChevronDown
+                          size={12}
+                          className="text-ink-400 transition-transform"
+                          style={{ transform: isSheetOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                        />
+                      </button>
+                      {isSheetOpen && (
+                        <div className="pb-1">
+                          {sheet.columns.map(col => (
+                            <div key={col} className="flex items-center gap-2.5 px-6 py-1.5 hover:bg-[#f0ecff] transition-colors cursor-default">
+                              <GripVertical size={11} className="text-ink-300 shrink-0" />
+                              <span className="text-[11px] text-ink-600">{col}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 type CreateStep = 'details' | 'add-data' | 'navigator';
 type AddDataTab = 'recent' | 'saved' | 'upload' | 'all' | 'files' | 'db';
 
@@ -199,6 +269,7 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
   const [dragging, setDragging] = useState(false);
   const [selectedSheets, setSelectedSheets] = useState<string[]>(['Sheet 1']);
   const [activeSheet, setActiveSheet] = useState('Sheet 1');
+  const [fileTreeExpanded, setFileTreeExpanded] = useState(true);
   const [parsedHeaders, setParsedHeaders] = useState<string[]>([]);
   const [parsedRows, setParsedRows] = useState<string[][]>([]);
   const [sheetNames, setSheetNames] = useState<string[]>(['Sheet 1']);
@@ -260,7 +331,7 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
             exit={{ opacity: 0, scale: 0.96, y: 10 }}
             transition={{ duration: 0.2 }}
             className={`relative bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl flex flex-col overflow-hidden ${
-              isNavigator ? 'w-[1100px] max-h-[85vh]' : isAddData ? 'w-[820px] h-[600px]' : 'w-[680px] max-h-[85vh]'
+              isNavigator ? 'w-[1100px] h-[80vh]' : isAddData ? 'w-[820px] h-[600px]' : 'w-[680px] max-h-[85vh]'
             }`}
             onClick={e => e.stopPropagation()}
           >
@@ -330,7 +401,7 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
             )}
 
             {/* Content */}
-            <div className={`flex-1 overflow-y-auto ${isNavigator ? '' : 'px-7 py-6'}`}>
+            <div className={`flex-1 overflow-hidden ${isNavigator ? '' : 'overflow-y-auto px-7 py-6'}`}>
               <AnimatePresence mode="wait">
                 {/* ── Step 1: Details ── */}
                 {step === 'details' && (
@@ -512,7 +583,7 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
 
                 {/* ── Step 4: Navigator — real parsed data ── */}
                 {step === 'navigator' && (
-                  <motion.div key="navigator" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.15 }} className="flex gap-0 -mx-7 -my-6" style={{ height: '520px' }}>
+                  <motion.div key="navigator" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="flex h-full">
                     {/* Left sidebar — file tree */}
                     <div className="w-[280px] shrink-0 border-r border-canvas-border flex flex-col overflow-hidden">
                       <div className="px-4 pt-4 pb-3 shrink-0">
@@ -522,31 +593,21 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
                         </div>
                       </div>
                       <div className="flex-1 overflow-y-auto px-4 pb-4">
-                        {/* Uploaded file */}
                         <div className="mb-2">
-                          <div className="flex items-center gap-2 py-1.5 cursor-pointer">
-                            <ChevronDown size={14} className="text-ink-400" />
-                            <LayoutGrid size={14} className="text-brand-600" />
-                            <span className="text-[12px] font-medium text-brand-700 truncate max-w-[180px] block" title={uploadedFile?.name}>{uploadedFile?.name || 'Uploaded_Data.xlsx'}</span>
-                          </div>
+                          <button
+                            onClick={() => {
+                              if (allSheetsSelected) setSelectedSheets([]);
+                              else setSelectedSheets([...sheetNames]);
+                            }}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors cursor-pointer hover:bg-surface-2"
+                          >
+                            <div className={`size-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${allSheetsSelected ? 'bg-brand-600 border-brand-600' : someSheetsSelected ? 'bg-brand-300 border-brand-400' : 'border-ink-300 bg-white'}`}>
+                              {allSheetsSelected && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                              {someSheetsSelected && !allSheetsSelected && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M3 6H9" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>}
+                            </div>
+                            <span className="text-[12px] font-semibold text-brand-700 truncate" title={uploadedFile?.name}>{uploadedFile?.name || 'Uploaded_Data.xlsx'}</span>
+                          </button>
                           <div className="pl-6 space-y-0.5">
-                            {/* Select All checkbox */}
-                            <button
-                              onClick={() => {
-                                if (allSheetsSelected) {
-                                  setSelectedSheets([]);
-                                } else {
-                                  setSelectedSheets([...sheetNames]);
-                                }
-                              }}
-                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors cursor-pointer hover:bg-surface-2"
-                            >
-                              <div className={`size-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${allSheetsSelected ? 'bg-brand-600 border-brand-600' : someSheetsSelected ? 'bg-brand-300 border-brand-400' : 'border-ink-300 bg-white'}`}>
-                                {allSheetsSelected && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                                {someSheetsSelected && !allSheetsSelected && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M3 6H9" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>}
-                              </div>
-                              <span className="text-[12px] font-semibold text-ink-700">Select All ({sheetNames.length} sheets)</span>
-                            </button>
                             {sheetNames.map(sheet => {
                               const isSelected = selectedSheets.includes(sheet);
                               return (
@@ -563,7 +624,6 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
                                   <div className={`size-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-brand-600 border-brand-600' : 'border-ink-300 bg-white'}`}>
                                     {isSelected && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                                   </div>
-                                  <LayoutGrid size={13} className="text-ink-400 shrink-0" />
                                   <span className="text-[12px] truncate" title={sheet}>{sheet}</span>
                                 </button>
                               );
@@ -573,25 +633,13 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
                       </div>
                     </div>
 
-                    {/* Right — real data preview table with both scrolls */}
-                    <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                      <div className="px-5 py-3 border-b border-canvas-border shrink-0 flex items-center justify-between">
-                        <div>
-                          <span className="text-[14px] font-semibold text-ink-900">{activeSheet}</span>
-                          <span className="text-[12px] text-ink-500 ml-2">({parsedRows.length} rows)</span>
-                          {columnsTruncated && (
-                            <span className="text-[12px] text-ink-400 ml-3">Showing 50 of {totalColumns} columns</span>
-                          )}
-                        </div>
-                        {parsedRows.length > 50 && (
-                          <span className="text-[11px] text-ink-400">Showing 50 of {parsedRows.length} rows</span>
-                        )}
-                      </div>
-                      <div className="flex-1 overflow-auto">
+                    {/* Right — data preview table */}
+                    <div className="flex-1 flex flex-col min-w-0">
+                      <div className="flex-1 overflow-auto bg-white">
                         {displayHeaders.length > 0 ? (
-                          <table className="text-left" style={{ minWidth: `${displayHeaders.length * 180}px` }}>
-                            <thead className="sticky top-0 bg-brand-50/70 z-10">
-                              <tr>
+                          <table className="w-full text-left">
+                            <thead className="sticky top-0 z-10">
+                              <tr className="bg-brand-50">
                                 {displayHeaders.map((h, i) => (
                                   <th key={i} className="text-[11px] font-bold text-brand-800 uppercase tracking-wider px-5 py-3 border-b border-brand-200 whitespace-nowrap">{h}</th>
                                 ))}
@@ -599,11 +647,10 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
                             </thead>
                             <tbody>
                               {displayRows.map((row, i) => (
-                                <tr key={i} className="border-b border-canvas-border/50 hover:bg-brand-50/20 transition-colors">
+                                <tr key={i} className="border-b border-canvas-border/40 hover:bg-brand-50/20 transition-colors">
                                   {row.map((cell, j) => (
                                     <td key={j} className={`px-5 py-2.5 text-[13px] whitespace-nowrap ${j === 0 ? 'font-semibold text-ink-900' : 'text-ink-700'}`}>{cell}</td>
                                   ))}
-                                  {/* Pad if row has fewer cells than headers */}
                                   {row.length < displayHeaders.length && Array.from({ length: displayHeaders.length - row.length }).map((_, k) => (
                                     <td key={`pad-${k}`} className="px-5 py-2.5 text-[13px] text-ink-400">—</td>
                                   ))}
@@ -724,7 +771,7 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
               )}
               {isNavigator && (
                 <>
-                  <span className="text-[12px] text-ink-500 mr-auto">{selectedSheets.length} sheet(s) selected</span>
+                  <span className="text-[12px] text-ink-500 mr-auto">{displayRows.length}{parsedRows.length > 50 ? ` of ${parsedRows.length}` : ''} rows</span>
                   <button onClick={() => setStep('add-data')} className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 transition-colors cursor-pointer border border-canvas-border rounded-xl">
                     Back
                   </button>

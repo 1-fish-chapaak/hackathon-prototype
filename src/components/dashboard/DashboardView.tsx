@@ -12,7 +12,9 @@ import {
   Search, LineChart, AreaChart, ListChecks,
   Database, Link2, Zap, ArrowRight, Unlink,
   Bell, Columns,
-  MessageSquare, Star, Upload, Layers, CloudUpload, Check
+  MessageSquare, Star, Upload, Layers, CloudUpload, Check,
+  Hash, GripVertical, PieChart as PieChartIcon, LayoutGrid,
+  Bold, Italic, Underline, MoveVertical, Palette, Type
 } from 'lucide-react';
 import Orb from '../shared/Orb';
 import { useToast, type ToastType } from '../shared/Toast';
@@ -816,1882 +818,110 @@ const AGG_OPTIONS = [
   { value: 'max', label: 'Max', symbol: '↑' },
 ];
 
-// ─── Add Data modal data ─────────────────────────────────────────────────
-const ADD_DATA_QUERY_SESSIONS = [
-  { group: 'TODAY', items: [
-    'What are the top 5 performing categories?',
-    'Compare year-over-year growth across all states',
-  ]},
-  { group: 'YESTERDAY', items: [
-    'Show customer acquisition cost by channel',
-    'What is the average order value by product category?',
-  ]},
-  { group: 'LAST 7 DAYS', items: [
-    'Analyze revenue trends for the last 12 months',
-    'Which sales person has the highest conversion rate?',
-    'Show me the distribution of products across different regions',
-    'What is the total revenue by country?',
-    'Compare Q1 vs Q2 performance metrics',
-  ]},
+// ─── Common File Tree Data & Component ───────────────────────────────────
+
+interface FileTreeSheet { name: string; columns: string[]; }
+interface FileTreeFile { name: string; icon?: 'excel' | 'csv'; sheets: FileTreeSheet[]; }
+
+const FILE_TREE_DATA: FileTreeFile[] = [
+  {
+    name: 'Invoice_Master.xlsx',
+    icon: 'excel',
+    sheets: [
+      { name: 'Sheet1', columns: ['Date', 'Month', 'Week', 'Year', 'Region', 'State', 'Vendor Name', 'Status', 'Category', 'Invoice Amount (₹)', 'Duplicate Count', 'Duplicate Score (%)'] },
+      { name: 'Sheet2', columns: ['Order ID', 'Order Date', 'Ship Date', 'Priority', 'Quantity'] },
+    ],
+  },
+  {
+    name: 'Vendor_Finance.xlsx',
+    icon: 'excel',
+    sheets: [
+      { name: 'Sheet1', columns: ['Vendor ID', 'Vendor Name', 'Payment Terms', 'Credit Limit', 'Outstanding Amount', 'Risk Score'] },
+    ],
+  },
 ];
 
-const ADD_DATA_FAVOURITES = [
-  { group: '', items: [
-    'Monthly revenue breakdown by region',
-    'Top 10 vendors by invoice volume',
-    'Compliance score trends Q1–Q4',
-    'Duplicate invoice detection summary',
-    'Department-wise spend analysis',
-    'Year-over-year procurement savings',
-  ]},
-];
+function FileTreeView({ files, search, draggable, fieldIdMap }: { files: FileTreeFile[]; search?: string; draggable?: boolean; fieldIdMap?: Record<string, string> }) {
+  const [expandedFiles, setExpandedFiles] = useState<Record<string, boolean>>({ [files[0]?.name]: true });
+  const [expandedSheets, setExpandedSheets] = useState<Record<string, boolean>>({ [`${files[0]?.name}::${files[0]?.sheets[0]?.name}`]: true });
 
-function AddWidgetModal({ open, onClose, addToast, customFields, onAddWidget, editData }: {
-  open: boolean;
-  onClose: (widgetAdded?: boolean) => void;
-  addToast: (t: { message: string; type: ToastType }) => void;
-  customFields?: string[] | null;
-  onAddWidget?: (widget: { chartType: string; title: string; xField: string; yField: string; color?: string; fontFamily?: string; seriesColors?: Record<string, string> }) => void;
-  editData?: { chartType: string; title: string; xField: string; yField: string; color?: string; fontFamily?: string; seriesColors?: Record<string, string> } | null;
-}) {
-  const [selectedChart, setSelectedChart] = useState<ChartTypeDef | null>(null);
-  const [chartTypeCollapsed, setChartTypeCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<'data' | 'format'>('data');
-  const [fieldSearch, setFieldSearch] = useState('');
-  const [xFields, setXFields] = useState<string[]>([]);
-  const [yFields, setYFields] = useState<string[]>([]);
-  const [yAggs, setYAggs] = useState<Record<string, string>>({});
-  const [widgetName, setWidgetName] = useState('');
-  const [widgetDesc, setWidgetDesc] = useState('');
-  const [file1Open, setFile1Open] = useState(true);
-  const [file2Open, setFile2Open] = useState(false);
-  const [dragOver, setDragOver] = useState<'x' | 'y' | 'yindex' | 'legend' | null>(null);
-  const [yIndexFields, setYIndexFields] = useState<string[]>([]);
-  const [legendFields, setLegendFields] = useState<string[]>([]);
-  const [aggDropdownOpen, setAggDropdownOpen] = useState<string | null>(null);
-  const [showAddDataModal, setShowAddDataModal] = useState(false);
-  const [addDataTab, setAddDataTab] = useState<'recent' | 'saved' | 'upload' | 'all' | 'files' | 'db'>('recent');
-  const [addDataSearch, setAddDataSearch] = useState('');
-  const [addDataSelectedQuery, setAddDataSelectedQuery] = useState<string | null>(null);
-  const [addDataSelectedSource, setAddDataSelectedSource] = useState<string | null>(null);
-  const [addDataUploadedFile, setAddDataUploadedFile] = useState<File | null>(null);
-  const [addDataDragging, setAddDataDragging] = useState(false);
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadStep, setUploadStep] = useState<'upload' | 'review'>('upload');
-  const [uploadedFileName, setUploadedFileName] = useState('');
-  const [uploadedHeaders, setUploadedHeaders] = useState<string[]>([]);
-  const [showQueryModal, setShowQueryModal] = useState(false);
-  const [querySearch, setQuerySearch] = useState('');
-  const [selectedQuery, setSelectedQuery] = useState<string | null>(null);
-  // Customize tab state
-  const [selectedBaseColor, setSelectedBaseColor] = useState('#6a12cd');
-  const [seriesColors, setSeriesColors] = useState<Record<string, string>>({});
-  const [editingSeriesField, setEditingSeriesField] = useState<string | null>(null);
-  const [isBold, setIsBold] = useState(false);
-  const [isItalic, setIsItalic] = useState(false);
-  const [isUnderline, setIsUnderline] = useState(false);
-  const [generalOpen, setGeneralOpen] = useState(true);
-  const [xAxisFmtOpen, setXAxisFmtOpen] = useState(false);
-  const [yAxisFmtOpen, setYAxisFmtOpen] = useState(false);
-  const [legendsFmtOpen, setLegendsFmtOpen] = useState(false);
-  const [dataLabelsFmtOpen, setDataLabelsFmtOpen] = useState(false);
-  const [rangeFmtOpen, setRangeFmtOpen] = useState(false);
-  const [condFmtOpen, setCondFmtOpen] = useState(false);
-  const [seriesFmtOpen, setSeriesFmtOpen] = useState(false);
-  const [xAxisTitle, setXAxisTitle] = useState('');
-  const [yAxisTitle, setYAxisTitle] = useState('');
-  const [xBold, setXBold] = useState(false);
-  const [xItalic, setXItalic] = useState(false);
-  const [xUnder, setXUnder] = useState(false);
-  const [yBold, setYBold] = useState(false);
-  const [yItalic, setYItalic] = useState(false);
-  const [yUnder, setYUnder] = useState(false);
-  const [legendPos, setLegendPos] = useState('bottom');
-  const [showLegendToggle, setShowLegendToggle] = useState(true);
-  const [rangeMin, setRangeMin] = useState('');
-  const [rangeMax, setRangeMax] = useState('');
-  const [autoScale, setAutoScale] = useState(true);
-  const [dataLabelShow, setDataLabelShow] = useState(true);
-  const [yIndexFmtOpen, setYIndexFmtOpen] = useState(false);
-  const [yIndexTitle, setYIndexTitle] = useState('');
-  const [yIdxBold, setYIdxBold] = useState(false);
-  const [yIdxItalic, setYIdxItalic] = useState(false);
-  const [yIdxUnder, setYIdxUnder] = useState(false);
-  const [yIndexRangeFmtOpen, setYIndexRangeFmtOpen] = useState(false);
-  const [yIndexRangeMin, setYIndexRangeMin] = useState('');
-  const [yIndexRangeMax, setYIndexRangeMax] = useState('');
-  const [yIndexInvert, setYIndexInvert] = useState(true);
-  const [condRules, setCondRules] = useState([{ id: '1', field: '', condition: 'greater', value: '', color: '#ef4444' }]);
-  // Filter state
-  const [filterDateRange, setFilterDateRange] = useState('last-30-days');
-  const [filterStatus, setFilterStatus] = useState<string[]>([]);
-  const [filterRisk, setFilterRisk] = useState<string[]>([]);
-  const [filterDept, setFilterDept] = useState<string[]>([]);
-  const [filterWidgetFields, setFilterWidgetFields] = useState<string[]>([]);
-  const [filterPageFields, setFilterPageFields] = useState<string[]>([]);
-  const [filterWidgetDragOver, setFilterWidgetDragOver] = useState(false);
-  const [filterPageDragOver, setFilterPageDragOver] = useState(false);
-  const toggleFilterItem = (arr: string[], item: string) =>
-    arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item];
+  const toggleFile = (name: string) => setExpandedFiles(p => ({ ...p, [name]: !p[name] }));
+  const toggleSheet = (key: string) => setExpandedSheets(p => ({ ...p, [key]: !p[key] }));
 
-  // Reset on open or pre-populate with edit data
-  useEffect(() => {
-    if (open) {
-      if (editData) {
-        // Pre-populate with existing widget data
-        const chart = CHART_TYPES.find(c => c.id === editData.chartType) || null;
-        setSelectedChart(chart);
-        setChartTypeCollapsed(true);
-        setWidgetName(editData.title);
-        // Find field IDs from labels or ids, fallback to dummy fields
-        const xField = DRAG_FIELDS.find(f => f.label === editData.xField || f.id === editData.xField);
-        const yField = DRAG_FIELDS.find(f => f.label === editData.yField || f.id === editData.yField);
-        // Use matched fields or assign dummy dimension/measure fields
-        const xId = xField ? xField.id : DRAG_FIELDS.find(f => f.kind === 'dimension')?.id || '';
-        const yId = yField ? yField.id : DRAG_FIELDS.find(f => f.kind === 'measure')?.id || '';
-        setXFields(xId ? [xId] : []);
-        setYFields(yId ? [yId] : []);
-        setYAggs(yId ? { [yId]: 'count_d' } : {});
-        // Pre-fill legends with a dummy dimension field
-        const legendField = DRAG_FIELDS.find(f => f.kind === 'dimension' && f.id !== xId);
-        setLegendFields(legendField ? [legendField.id] : []);
-      } else {
-        setSelectedChart(null);
-        setChartTypeCollapsed(false);
-        setXFields([]);
-        setYFields([]);
-        setYAggs({});
-        setWidgetName('');
-        setLegendFields([]);
-      }
-      setActiveTab('data');
-      setYIndexFields([]);
-      setWidgetDesc('');
-      setFieldSearch('');
-    }
-  }, [open, editData]);
-
-  const filteredFields = DRAG_FIELDS.filter(f =>
-    f.label.toLowerCase().includes(fieldSearch.toLowerCase())
-  );
-  const dimensionFields = filteredFields.filter(f => f.kind === 'dimension');
-  const measureFields = filteredFields.filter(f => f.kind === 'measure');
-
-  const handleDrop = (zone: 'x' | 'y' | 'yindex' | 'legend', e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(null);
-    const fieldId = e.dataTransfer.getData('fieldId');
-    if (!fieldId) return;
-    if (zone === 'x') {
-      if (xFields.length >= 3 || xFields.includes(fieldId)) return;
-      setXFields(prev => [...prev, fieldId]);
-    } else if (zone === 'y') {
-      if (yFields.length >= 3 || yFields.includes(fieldId)) return;
-      setYFields(prev => [...prev, fieldId]);
-      setYAggs(prev => ({ ...prev, [fieldId]: 'count_d' }));
-    } else if (zone === 'yindex') {
-      if (yIndexFields.length >= 3 || yIndexFields.includes(fieldId)) return;
-      setYIndexFields(prev => [...prev, fieldId]);
-    } else if (zone === 'legend') {
-      if (legendFields.length >= 3 || legendFields.includes(fieldId)) return;
-      setLegendFields(prev => [...prev, fieldId]);
-    }
-  };
-
-  const removeXField = (id: string) => setXFields(prev => prev.filter(f => f !== id));
-  const removeYField = (id: string) => {
-    setYFields(prev => prev.filter(f => f !== id));
-    setYAggs(prev => { const n = { ...prev }; delete n[id]; return n; });
-  };
-  const removeYIndexField = (id: string) => setYIndexFields(prev => prev.filter(f => f !== id));
-  const removeLegendField = (id: string) => setLegendFields(prev => prev.filter(f => f !== id));
-
-  // Dynamic labels per chart type
-  const getAxisLabels = () => {
-    if (!selectedChart) return { x: 'X - Axis', y: 'Y - Axis' };
-    const id = selectedChart.id;
-    if (id === 'kpi') return { x: 'Trend', y: 'Value' };
-    if (id === 'pie') return { x: 'Legend', y: 'Values' };
-    if (id === 'stacked-bar' || id === 'clustered-bar') return { x: 'Y - Axis', y: 'X - Axis' };
-    if (id === 'table') return { x: 'Columns', y: 'Columns' };
-    return { x: 'X - Axis', y: 'Y - Axis' };
-  };
-  const axisLabels = getAxisLabels();
-  const showYIndex = selectedChart && (selectedChart.id === 'clustered-col' || selectedChart.id === 'line' || selectedChart.id === 'waterfall');
-  const showLegend = selectedChart && selectedChart.id !== 'kpi';
-
-  const getFieldLabel = (id: string) => {
-    if (id.startsWith('custom_') && customFields) {
-      const idx = parseInt(id.split('_')[1]);
-      return customFields[idx] || id;
-    }
-    return DRAG_FIELDS.find(f => f.id === id)?.label || id;
-  };
-
-  const handleAdd = () => {
-    if (onAddWidget && selectedChart) {
-      onAddWidget({
-        chartType: selectedChart.id,
-        title: widgetName || selectedChart.title,
-        xField: xFields.length > 0 ? getFieldLabel(xFields[0]) : '',
-        yField: yFields.length > 0 ? getFieldLabel(yFields[0]) : '',
-      });
-    }
-    addToast({ message: editData ? 'Widget updated' : `${selectedChart?.title || 'Widget'} added to dashboard`, type: 'success' });
-    onClose(true);
-  };
-
-  // Simple preview chart based on selected type
-  // Preview data
-  const PV_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-  const PV_ACTUAL = [93, 95, 96, 95.5, 97, 97.5];
-  const PV_TARGET = [95.5, 96, 96.5, 97, 97.5, 98];
-  const PV_BARS = [
-    { l: 'Jan', d: 45, r: 42, p: 3 }, { l: 'Feb', d: 52, r: 48, p: 4 }, { l: 'Mar', d: 38, r: 35, p: 3 },
-    { l: 'Apr', d: 61, r: 55, p: 6 }, { l: 'May', d: 48, r: 46, p: 2 }, { l: 'Jun', d: 55, r: 50, p: 5 },
-  ];
-  const PV_PIE = [
-    { label: 'Exact Match', value: 40, color: '#7C3AED' },
-    { label: 'Vendor Match', value: 25, color: '#0369A1' },
-    { label: 'PO Match', value: 18, color: '#B45309' },
-    { label: 'ML Detection', value: 12, color: '#15803D' },
-    { label: 'Manual Flag', value: 5, color: '#B42318' },
-  ];
-  const PV_SCATTER = [
-    [40,160],[80,120],[130,90],[170,140],[220,60],[260,110],[310,80],[350,130],[100,50],[200,100],[280,70],[150,150],
-  ];
-  const PV_WATERFALL = [
-    { l: 'Revenue', v: 90, type: 'up' }, { l: 'COGS', v: -30, type: 'down' }, { l: 'Gross', v: 60, type: 'total' },
-    { l: 'OpEx', v: -20, type: 'down' }, { l: 'Tax', v: -8, type: 'down' }, { l: 'Net', v: 32, type: 'total' },
-  ];
-  const PV_TABLE_ROWS = [
-    ['INV-005790', 'Acme Global', '₹11,853', 'Pending', 'High'],
-    ['INV-025832', 'Korean Tech', '₹4,564', 'Review', 'Medium'],
-    ['INV-007194', '3tones Letter', '₹3,835', 'Resolved', 'Low'],
-    ['INV-040083', 'Chintamani', '₹3,410', 'Pending', 'High'],
-    ['INV-027203', 'M Cargo', '₹1,457', 'Resolved', 'Low'],
-  ];
-
-  const hasFields = xFields.length > 0 || yFields.length > 0;
-  const xLabel = xFields.length > 0 ? getFieldLabel(xFields[0]) : '';
-  const yLabel = yFields.length > 0 ? getFieldLabel(yFields[0]) : '';
-  const axisCaption = hasFields ? `${yLabel || 'Y-Axis'} by ${xLabel || 'X-Axis'}` : '';
-
-  // Shared axis + legend footer
-  const AxisFooter = ({ labels, legend }: { labels: string[]; legend?: { label: string; color: string; dashed?: boolean }[] }) => (
-    <div className="mt-2">
-      {/* X-axis data labels */}
-      {labels.length > 0 && (
-        <div className="flex justify-between text-[10px] text-ink-400 px-1">
-          {labels.map(l => <span key={l}>{l}</span>)}
-        </div>
-      )}
-      {/* X-axis title */}
-      {xLabel && (
-        <div className="text-center mt-1.5">
-          <span className="text-[10px] font-semibold text-brand-600 bg-brand-50 px-2 py-0.5 rounded">{xLabel}</span>
-        </div>
-      )}
-      {/* Legend */}
-      {legend && (
-        <div className="flex items-center justify-center gap-4 mt-2.5">
-          {legend.map(lg => (
-            <div key={lg.label} className="flex items-center gap-1.5">
-              {lg.dashed ? (
-                <svg width="16" height="2"><line x1="0" y1="1" x2="16" y2="1" stroke={lg.color} strokeWidth="2" strokeDasharray="3 2" /></svg>
-              ) : (
-                <div className="w-3 h-2 rounded-sm" style={{ background: lg.color }} />
-              )}
-              <span className="text-[10px] text-ink-500">{lg.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      {/* Caption: "Y by X" */}
-      {axisCaption && <div className="text-[10px] text-ink-400 text-center mt-2">{axisCaption}</div>}
-    </div>
-  );
-
-  const renderPreview = () => {
-    if (!selectedChart) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-ink-300">
-          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="mb-4 text-ink-200">
-            <rect x="4" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="2" />
-            <rect x="26" y="4" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="2" />
-            <rect x="4" y="26" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="2" />
-            <rect x="26" y="26" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="2" />
-          </svg>
-          <p className="text-[14px] text-ink-400">Select a chart type to begin</p>
-        </div>
-      );
-    }
-
-    const W = 480, H = 240;
-    const id = selectedChart.id;
-
-    // ── KPI Cards ──
-    if (id === 'kpi') {
-      return (
-        <div className="flex items-center justify-center h-full gap-5">
-          {[
-            { label: yLabel || 'Invoices Scanned', value: '12,450', change: '+8.2%', spark: [30,45,38,52,48,60,55,68] },
-            { label: 'Compliance Rate', value: '94.2%', change: '+1.4%', spark: [80,82,81,85,88,87,90,94] },
-          ].map((kpi, i) => (
-            <div key={i} className="bg-canvas-elevated border border-canvas-border rounded-xl p-5 min-w-[200px]">
-              <p className="text-[11px] text-ink-500 font-medium uppercase tracking-wider mb-1">{kpi.label}</p>
-              <p className="text-[32px] font-bold text-ink-900 leading-none">{kpi.value}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-[11px] text-compliant font-semibold flex items-center gap-0.5"><TrendingUp size={10} />{kpi.change}</span>
-                <svg width="60" height="20" viewBox="0 0 60 20">
-                  <polyline points={kpi.spark.map((v,j) => `${j*(60/(kpi.spark.length-1))},${20-((v-Math.min(...kpi.spark))/(Math.max(...kpi.spark)-Math.min(...kpi.spark)))*18}`).join(' ')} fill="none" stroke="var(--color-brand-400)" strokeWidth="1.5" />
-                </svg>
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    // ── Pie / Donut ──
-    if (id === 'pie') {
-      const total = PV_PIE.reduce((a, s) => a + s.value, 0);
-      let off = 0;
-      return (
-        <div className="flex items-center justify-center gap-10 h-full">
-          <svg width="180" height="180" viewBox="0 0 100 100">
-            {PV_PIE.map(s => {
-              const pct = (s.value / total) * 100;
-              const da = `${pct * 2.51327} ${251.327 - pct * 2.51327}`;
-              const doff = -off * 2.51327;
-              off += pct;
-              return <circle key={s.label} cx="50" cy="50" r="38" fill="none" stroke={s.color} strokeWidth="12" strokeDasharray={da} strokeDashoffset={doff} strokeLinecap="round" transform="rotate(-90 50 50)" />;
-            })}
-            <text x="50" y="47" textAnchor="middle" className="fill-ink-900 font-bold" fontSize="16">{total}</text>
-            <text x="50" y="59" textAnchor="middle" className="fill-ink-500" fontSize="8">Total</text>
-          </svg>
-          <div className="space-y-2.5">
-            {PV_PIE.map(s => (
-              <div key={s.label} className="flex items-center gap-2.5">
-                <div className="w-3 h-3 rounded-full shrink-0" style={{ background: s.color }} />
-                <span className="text-[12px] text-ink-700 w-24">{s.label}</span>
-                <span className="text-[13px] font-bold text-ink-900">{s.value}%</span>
-              </div>
-            ))}
-          </div>
-          {axisCaption && <div className="absolute bottom-3 left-0 right-0 text-center text-[10px] text-ink-400">{axisCaption}</div>}
-        </div>
-      );
-    }
-
-    // ── Line Chart ──
-    if (id === 'line') {
-      const aMax = Math.max(...PV_ACTUAL, ...PV_TARGET);
-      const pts = (data: number[]) => data.map((v, i) => `${40 + i * ((W-80)/(data.length-1))},${H - 30 - ((v - 85) / (aMax - 85)) * (H - 60)}`).join(' ');
-      return (
-        <div className="flex flex-col justify-center h-full px-4 relative">
-          {/* Y axis label */}
-          {yLabel && (
-            <div className="absolute -left-1 top-1/2 -translate-y-1/2 -rotate-90 origin-center">
-              <span className="text-[9px] font-semibold text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded whitespace-nowrap">{yLabel}</span>
-            </div>
-          )}
-          {/* Y axis values */}
-          <div className="absolute left-4 top-4 bottom-10 flex flex-col justify-between text-[9px] text-ink-400">
-            {[98, 96, 94, 92].map(v => <span key={v}>{v}%</span>)}
-          </div>
-          <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
-            {/* Grid lines */}
-            {[0.2, 0.4, 0.6, 0.8].map(p => <line key={p} x1="40" y1={H - 30 - p * (H-60)} x2={W-10} y2={H - 30 - p * (H-60)} stroke="var(--color-canvas-border)" strokeWidth="0.5" />)}
-            {/* Target dashed */}
-            <polyline points={pts(PV_TARGET)} fill="none" stroke="var(--color-evidence)" strokeWidth="2" strokeDasharray="6 3" strokeLinecap="round" />
-            {/* Actual solid */}
-            <polyline points={pts(PV_ACTUAL)} fill="none" stroke="var(--color-brand-500)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            {PV_ACTUAL.map((v, i) => <circle key={i} cx={40 + i * ((W-80)/(PV_ACTUAL.length-1))} cy={H - 30 - ((v - 85) / (aMax - 85)) * (H - 60)} r="4" fill="var(--color-brand-600)" stroke="white" strokeWidth="2" />)}
-          </svg>
-          <AxisFooter labels={PV_LABELS} legend={[{ label: 'Actual', color: '#7C3AED' }, { label: 'Target', color: '#0369A1', dashed: true }]} />
-        </div>
-      );
-    }
-
-    // ── Area Chart ──
-    if (id === 'area') {
-      const aMax = Math.max(...PV_ACTUAL, ...PV_TARGET);
-      const toY = (v: number) => H - 30 - ((v - 85) / (aMax - 85)) * (H - 60);
-      const pts = PV_ACTUAL.map((v, i) => `${40 + i * ((W-80)/(PV_ACTUAL.length-1))},${toY(v)}`).join(' ');
-      return (
-        <div className="flex flex-col justify-center h-full px-4 relative">
-          <div className="absolute left-4 top-4 bottom-10 flex flex-col justify-between text-[9px] text-ink-400">
-            {[98, 96, 94, 92].map(v => <span key={v}>{v}%</span>)}
-          </div>
-          <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
-            <defs><linearGradient id="aGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#7C3AED" stopOpacity="0.18" /><stop offset="100%" stopColor="#7C3AED" stopOpacity="0.02" /></linearGradient></defs>
-            {[0.2, 0.4, 0.6, 0.8].map(p => <line key={p} x1="40" y1={H - 30 - p * (H-60)} x2={W-10} y2={H - 30 - p * (H-60)} stroke="var(--color-canvas-border)" strokeWidth="0.5" />)}
-            <polyline points={`40,${H-30} ${pts} ${W-10},${H-30}`} fill="url(#aGrad)" />
-            <polyline points={PV_TARGET.map((v, i) => `${40 + i * ((W-80)/(PV_TARGET.length-1))},${toY(v)}`).join(' ')} fill="none" stroke="var(--color-evidence)" strokeWidth="2" strokeDasharray="6 3" />
-            <polyline points={pts} fill="none" stroke="var(--color-brand-500)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            {PV_ACTUAL.map((v, i) => <circle key={i} cx={40 + i * ((W-80)/(PV_ACTUAL.length-1))} cy={toY(v)} r="4" fill="var(--color-brand-600)" stroke="white" strokeWidth="2" />)}
-          </svg>
-          <AxisFooter labels={PV_LABELS} legend={[{ label: 'Actual', color: '#7C3AED' }, { label: 'Target', color: '#0369A1', dashed: true }]} />
-        </div>
-      );
-    }
-
-    // ── Stacked Bar (horizontal) ──
-    if (id === 'stacked-bar') {
-      const bMax = Math.max(...PV_BARS.map(b => b.d));
-      return (
-        <div className="flex flex-col justify-center h-full px-6">
-          <div className="space-y-3">
-            {PV_BARS.map(b => (
-              <div key={b.l} className="flex items-center gap-3">
-                <span className="text-[11px] text-ink-500 w-8 text-right">{b.l}</span>
-                <div className="flex-1 flex h-5 rounded overflow-hidden">
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${(b.r / bMax) * 100}%` }} transition={{ duration: 0.5 }} className="h-full" style={{ background: '#7C3AED' }} />
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${(b.p / bMax) * 100}%` }} transition={{ duration: 0.5, delay: 0.1 }} className="h-full" style={{ background: '#0369A1' }} />
-                </div>
-                <span className="text-[10px] text-ink-500 w-6">{b.d}</span>
-              </div>
-            ))}
-          </div>
-          <AxisFooter labels={[]} legend={[{ label: 'Resolved', color: '#7C3AED' }, { label: 'Pending', color: '#0369A1' }]} />
-        </div>
-      );
-    }
-
-    // ── Clustered Bar (horizontal) ──
-    if (id === 'clustered-bar') {
-      const bMax = Math.max(...PV_BARS.map(b => b.d));
-      return (
-        <div className="flex flex-col justify-center h-full px-6">
-          <div className="space-y-2">
-            {PV_BARS.map(b => (
-              <div key={b.l} className="flex items-center gap-3">
-                <span className="text-[11px] text-ink-500 w-8 text-right">{b.l}</span>
-                <div className="flex-1 space-y-1">
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${(b.d / bMax) * 100}%` }} transition={{ duration: 0.5 }} className="h-3 rounded" style={{ background: '#7C3AED' }} />
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${(b.r / bMax) * 100}%` }} transition={{ duration: 0.5, delay: 0.05 }} className="h-3 rounded" style={{ background: '#0369A1' }} />
-                </div>
-              </div>
-            ))}
-          </div>
-          <AxisFooter labels={[]} legend={[{ label: 'Duplicates', color: '#7C3AED' }, { label: 'Resolved', color: '#0369A1' }]} />
-        </div>
-      );
-    }
-
-    // ── Clustered Column (vertical grouped) ──
-    if (id === 'clustered-col') {
-      const bMax = Math.max(...PV_BARS.map(b => b.d));
-      return (
-        <div className="flex flex-col justify-end h-full px-4 pb-2">
-          <div className="flex items-end gap-3 flex-1">
-            {PV_BARS.map((b, i) => (
-              <div key={b.l} className="flex-1 flex items-end gap-0.5 justify-center" style={{ height: '100%' }}>
-                <motion.div initial={{ height: 0 }} animate={{ height: `${(b.d / bMax) * 85}%` }} transition={{ duration: 0.4, delay: i * 0.04 }} className="w-3 rounded-t" style={{ background: '#7C3AED' }} />
-                <motion.div initial={{ height: 0 }} animate={{ height: `${(b.r / bMax) * 85}%` }} transition={{ duration: 0.4, delay: i * 0.04 + 0.05 }} className="w-3 rounded-t" style={{ background: '#0369A1' }} />
-                <motion.div initial={{ height: 0 }} animate={{ height: `${(b.p / bMax) * 85}%` }} transition={{ duration: 0.4, delay: i * 0.04 + 0.1 }} className="w-3 rounded-t min-h-[2px]" style={{ background: '#B45309' }} />
-              </div>
-            ))}
-          </div>
-          <AxisFooter labels={PV_LABELS} legend={[{ label: 'Duplicates', color: '#7C3AED' }, { label: 'Resolved', color: '#0369A1' }, { label: 'Pending', color: '#B45309' }]} />
-        </div>
-      );
-    }
-
-    // ── Stacked Column (vertical stacked) ──
-    if (id === 'stacked-col') {
-      const bMax = Math.max(...PV_BARS.map(b => b.d));
-      return (
-        <div className="flex flex-col justify-end h-full px-4 pb-2">
-          <div className="flex items-end gap-4 flex-1">
-            {PV_BARS.map((b, i) => (
-              <div key={b.l} className="flex-1 flex flex-col-reverse items-center" style={{ height: '100%' }}>
-                <motion.div initial={{ height: 0 }} animate={{ height: `${(b.r / bMax) * 80}%` }} transition={{ duration: 0.4, delay: i * 0.04 }} className="w-8 rounded-b" style={{ background: '#7C3AED' }} />
-                <motion.div initial={{ height: 0 }} animate={{ height: `${(b.p / bMax) * 80}%` }} transition={{ duration: 0.4, delay: i * 0.04 + 0.1 }} className="w-8 rounded-t min-h-[2px]" style={{ background: '#B45309' }} />
-              </div>
-            ))}
-          </div>
-          <AxisFooter labels={PV_LABELS} legend={[{ label: 'Resolved', color: '#7C3AED' }, { label: 'Pending', color: '#B45309' }]} />
-        </div>
-      );
-    }
-
-    // ── Line & Clustered Column ──
-    if (id === 'line-clustered') {
-      const bMax = Math.max(...PV_BARS.map(b => b.d));
-      const lnPts = PV_BARS.map((b, i) => `${40 + i * ((W-80)/(PV_BARS.length-1))},${H - 30 - (b.r / bMax) * (H-60)}`).join(' ');
-      return (
-        <div className="flex flex-col justify-end h-full px-4 pb-2 relative">
-          <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} className="absolute inset-0" style={{ top: 0 }}>
-            <polyline points={lnPts} fill="none" stroke="var(--color-compliant)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            {PV_BARS.map((b, i) => <circle key={i} cx={40 + i * ((W-80)/(PV_BARS.length-1))} cy={H - 30 - (b.r / bMax) * (H-60)} r="3.5" fill="var(--color-compliant)" stroke="white" strokeWidth="2" />)}
-          </svg>
-          <div className="flex items-end gap-4 flex-1 relative z-10">
-            {PV_BARS.map((b, i) => (
-              <div key={b.l} className="flex-1 flex flex-col items-center gap-1">
-                <motion.div initial={{ height: 0 }} animate={{ height: `${(b.d / bMax) * 70}%` }} transition={{ duration: 0.4, delay: i * 0.04 }} className="w-7 rounded-t min-h-[3px]" style={{ background: '#7C3AED' }} />
-              </div>
-            ))}
-          </div>
-          <AxisFooter labels={PV_LABELS} legend={[{ label: 'Volume', color: '#7C3AED' }, { label: 'Trend', color: '#15803D' }]} />
-        </div>
-      );
-    }
-
-    // ── Scatter ──
-    if (id === 'scatter') {
-      return (
-        <div className="flex flex-col justify-center h-full px-4 relative">
-          <div className="absolute left-4 top-4 bottom-10 flex flex-col justify-between text-[9px] text-ink-400">
-            {['High', '', 'Med', '', 'Low'].map((v,i) => <span key={i}>{v}</span>)}
-          </div>
-          <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
-            {/* Grid */}
-            {[0.25, 0.5, 0.75].map(p => <line key={p} x1="40" y1={p * H} x2={W-10} y2={p * H} stroke="var(--color-canvas-border)" strokeWidth="0.5" />)}
-            {[0.25, 0.5, 0.75].map(p => <line key={p} x1={40 + p * (W-50)} y1="10" x2={40 + p * (W-50)} y2={H-10} stroke="var(--color-canvas-border)" strokeWidth="0.5" />)}
-            {PV_SCATTER.map(([x, y], i) => (
-              <motion.circle key={i} cx={x} cy={y} r="6" fill="var(--color-brand-500)" fillOpacity="0.6" stroke="var(--color-brand-600)" strokeWidth="1.5"
-                initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: i * 0.04, type: 'spring' }} />
-            ))}
-          </svg>
-          <AxisFooter labels={[]} legend={[{ label: 'Data Points', color: '#7C3AED' }]} />
-        </div>
-      );
-    }
-
-    // ── Waterfall ──
-    if (id === 'waterfall') {
-      let cumulative = 0;
-      const wfData = PV_WATERFALL.map(w => {
-        const start = w.type === 'total' ? 0 : cumulative;
-        cumulative = w.type === 'total' ? w.v : cumulative + w.v;
-        return { ...w, start, end: cumulative };
-      });
-      const wfMax = Math.max(...wfData.map(d => Math.max(d.start, d.end)));
-      return (
-        <div className="flex flex-col justify-end h-full px-6 pb-2">
-          <div className="flex items-end gap-4 flex-1">
-            {wfData.map((d, i) => {
-              const bottom = (Math.min(d.start, d.end) / wfMax) * 70;
-              const height = (Math.abs(d.end - d.start) / wfMax) * 70;
-              const color = d.type === 'total' ? '#7C3AED' : d.type === 'up' ? '#15803D' : '#B42318';
-              return (
-                <div key={d.l} className="flex-1 flex flex-col items-center relative" style={{ height: '100%' }}>
-                  <div className="flex-1" />
-                  <motion.div
-                    initial={{ height: 0 }} animate={{ height: `${height}%` }} transition={{ duration: 0.4, delay: i * 0.06 }}
-                    className="w-10 rounded-t"
-                    style={{ background: color, marginBottom: `${bottom}%` }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-          <AxisFooter labels={PV_WATERFALL.map(w => w.l)} legend={[{ label: 'Increase', color: '#15803D' }, { label: 'Decrease', color: '#B42318' }, { label: 'Total', color: '#7C3AED' }]} />
-        </div>
-      );
-    }
-
-    // ── Table ──
-    if (id === 'table') {
-      return (
-        <div className="flex flex-col h-full p-2">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-canvas-border">
-                {['Invoice ID', 'Vendor', 'Amount', 'Status', 'Risk'].map(h => (
-                  <th key={h} className="text-[11px] font-bold text-ink-500 uppercase tracking-wider px-3 py-2.5">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {PV_TABLE_ROWS.map((row, i) => (
-                <motion.tr key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }} className="border-b border-canvas-border/50 hover:bg-brand-50/30">
-                  <td className="px-3 py-2.5 text-[12px] font-semibold text-brand-700">{row[0]}</td>
-                  <td className="px-3 py-2.5 text-[12px] text-ink-700">{row[1]}</td>
-                  <td className="px-3 py-2.5 text-[12px] font-medium text-ink-900">{row[2]}</td>
-                  <td className="px-3 py-2.5"><span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${row[3] === 'Resolved' ? 'bg-green-50 text-green-700' : row[3] === 'Pending' ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-blue-700'}`}>{row[3]}</span></td>
-                  <td className="px-3 py-2.5"><span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${row[4] === 'High' ? 'bg-red-50 text-red-700' : row[4] === 'Medium' ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700'}`}>{row[4]}</span></td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-          {axisCaption && <div className="text-[10px] text-ink-400 text-center mt-3">{axisCaption}</div>}
-        </div>
-      );
-    }
-
-    // ── Default fallback (any remaining bar variants) ──
-    const bMax = Math.max(...PV_BARS.map(b => b.d));
-    return (
-      <div className="flex flex-col justify-end h-full px-4 pb-2">
-        <div className="flex items-end gap-4 flex-1">
-          {PV_BARS.map((b, i) => (
-            <div key={b.l} className="flex-1 flex flex-col items-center gap-1">
-              <span className="text-[10px] text-ink-500">{b.d}</span>
-              <motion.div initial={{ height: 0 }} animate={{ height: `${(b.d / bMax) * 80}%` }} transition={{ duration: 0.4, delay: i * 0.04 }} className="w-full rounded-t min-h-[3px]" style={{ background: '#7C3AED' }} />
-            </div>
-          ))}
-        </div>
-        <AxisFooter labels={PV_LABELS} legend={[{ label: 'Duplicates', color: '#7C3AED' }, { label: 'Resolved', color: '#0369A1' }, { label: 'Pending', color: '#B45309' }]} />
-      </div>
-    );
-  };
-
-  if (!open) return null;
+  const filteredFiles = files.map(f => ({
+    ...f,
+    sheets: f.sheets.map(s => ({
+      ...s,
+      columns: search ? s.columns.filter(c => c.toLowerCase().includes(search.toLowerCase())) : s.columns,
+    })).filter(s => !search || s.columns.length > 0),
+  })).filter(f => !search || f.sheets.length > 0 || f.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <>
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center"
-          onClick={() => onClose()}
-        >
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 10 }}
-            transition={{ duration: 0.2 }}
-            className="relative bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl flex flex-col overflow-hidden"
-            style={{ width: 'min(1200px, 96vw)', height: 'min(775px, 85vh)' }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b border-canvas-border">
-              <div className="flex items-center gap-2.5">
-                <div className="bg-brand-50 rounded-lg size-7 flex items-center justify-center">
-                  <BarChart3 size={14} className="text-brand-600" />
-                </div>
-                <span className="text-[15px] font-semibold text-ink-900">{editData ? 'Edit Widget' : 'Add New Widget'}</span>
-              </div>
-              <button onClick={() => onClose()} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
-                <X size={18} className="text-ink-500" />
-              </button>
-            </div>
-
-            {/* Body — two columns */}
-            <div className="flex flex-1 overflow-hidden min-h-0">
-              {/* Left — Drop Zones + Preview */}
-              <div className="flex-1 flex flex-col bg-white min-w-0 order-1 overflow-hidden">
-                {/* Drop Zones — only when chart type selected */}
-                {selectedChart && <div className="shrink-0 px-6 py-3 space-y-2 border-b border-canvas-border bg-white">
-                  {/* Row 1: X-Axis */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-[70px] shrink-0">
-                      <span className="text-[12px] font-bold text-ink-700">{axisLabels.x}</span>
-                    </div>
-                    <DropZone
-                      label=""
-                      placeholder={selectedChart?.id === 'table' ? 'Drop columns here' : 'Drop a field here'}
-                      active={dragOver === 'x'}
-                      onDragOver={() => setDragOver('x')}
-                      onDragLeave={() => setDragOver(null)}
-                      onDrop={e => handleDrop('x', e)}
-                      fields={xFields}
-                      getLabel={getFieldLabel}
-                      onRemove={removeXField}
-                      className="flex-1"
-                    />
-                  </div>
-
-                  {/* Row 2: Y-Axis + Y-Index */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-[70px] shrink-0">
-                      <span className="text-[12px] font-bold text-ink-700">{axisLabels.y}</span>
-                    </div>
-                    <div className="flex-1 flex gap-3">
-                      <DropZone
-                        label=""
-                        placeholder="Drop a field here"
-                        active={dragOver === 'y'}
-                        onDragOver={() => setDragOver('y')}
-                        onDragLeave={() => setDragOver(null)}
-                        onDrop={e => handleDrop('y', e)}
-                        fields={yFields}
-                        getLabel={getFieldLabel}
-                        onRemove={removeYField}
-                        showAgg
-                        yAggs={yAggs}
-                        aggDropdownOpen={aggDropdownOpen}
-                        setAggDropdownOpen={setAggDropdownOpen}
-                        setYAggs={setYAggs}
-                        className="flex-1"
-                      />
-                      {showYIndex && (
-                        <DropZone
-                          label=""
-                          placeholder="Y-axis Index"
-                          active={dragOver === 'yindex'}
-                          onDragOver={() => setDragOver('yindex')}
-                          onDragLeave={() => setDragOver(null)}
-                          onDrop={e => handleDrop('yindex', e)}
-                          fields={yIndexFields}
-                          getLabel={getFieldLabel}
-                          onRemove={removeYIndexField}
-                          className="flex-1"
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Suggestion banner */}
-                  {(yFields.length >= 2 || yIndexFields.length > 0) && (
-                    <div className="flex items-center gap-3 px-4 py-2.5 bg-surface-2 rounded-lg ml-[86px]">
-                      <Sparkles size={14} className="text-brand-600 shrink-0" />
-                      <div className="flex items-center gap-1.5">
-                        {[
-                          { id: 'clustered-col', label: 'Bar', icon: BarChart3 },
-                          { id: 'line', label: 'Line', icon: LineChart },
-                          { id: 'area', label: 'Area', icon: AreaChart },
-                        ].map(s => (
-                          <button
-                            key={s.id}
-                            onClick={() => { const ct = CHART_TYPES.find(c => c.id === s.id); if (ct) setSelectedChart(ct); }}
-                            className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium cursor-pointer transition-colors ${
-                              selectedChart?.id === s.id ? 'bg-brand-600 text-white' : 'text-ink-600 hover:bg-brand-50'
-                            }`}
-                          >
-                            <s.icon size={11} /> {s.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Row 3: Legends */}
-                  {showLegend && (
-                    <div className="flex items-center gap-4">
-                      <div className="w-[70px] shrink-0">
-                        <span className="text-[12px] font-bold text-ink-700">Legends</span>
-                      </div>
-                      <DropZone
-                        label=""
-                        placeholder="Drop a field here"
-                        active={dragOver === 'legend'}
-                        onDragOver={() => setDragOver('legend')}
-                        onDragLeave={() => setDragOver(null)}
-                        onDrop={e => handleDrop('legend', e)}
-                        fields={legendFields}
-                        getLabel={getFieldLabel}
-                        onRemove={removeLegendField}
-                        className="flex-1"
-                      />
-                    </div>
-                  )}
-                </div>}
-
-                {/* Preview */}
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  <div className="py-2 px-6 border-t border-b border-canvas-border shrink-0">
-                    <span className="text-[12px] font-medium uppercase tracking-[1px] text-ink-900">Preview</span>
-                  </div>
-                  <div className="flex-1 overflow-auto flex items-center justify-center p-6">
-                    {renderPreview()}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right — Sidebar config */}
-              <div className="w-[340px] shrink-0 border-l border-canvas-border flex flex-col overflow-hidden order-2" style={{ background: 'rgba(249,250,251,0.5)' }}>
-                {/* Tab switcher */}
-                <div className="shrink-0 bg-white border-b border-canvas-border px-3 py-[2px]">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setActiveTab('data')}
-                      className={`flex-1 flex items-center justify-center gap-2 font-medium rounded-md px-4 py-1 text-[14px] transition-all cursor-pointer ${
-                        activeTab === 'data' ? 'text-brand-700 bg-brand-50' : 'text-ink-900 hover:text-brand-700 hover:bg-canvas'
-                      }`}
-                    >
-                      <Database size={16} strokeWidth={2.5} />
-                      Data Source
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('format')}
-                      className={`flex-1 flex items-center justify-center gap-2 font-medium rounded-md px-4 py-1 text-[14px] transition-all cursor-pointer ${
-                        activeTab === 'format' ? 'text-brand-700 bg-brand-50' : 'text-ink-900 hover:text-brand-700 hover:bg-canvas'
-                      }`}
-                    >
-                      <Settings size={16} strokeWidth={2.5} />
-                      Customize
-                    </button>
-                  </div>
-                </div>
-
-                {/* Scrollable config content */}
-                <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
-                  {activeTab === 'data' && (
-                    <>
-                      {/* Chart Type Section */}
-                      <div className="bg-white rounded-lg border border-canvas-border overflow-hidden shadow-sm">
-                        <button
-                          onClick={() => setChartTypeCollapsed(!chartTypeCollapsed)}
-                          className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-brand-50 to-white border-b border-canvas-border/50 hover:from-brand-100/50 hover:to-white transition-all cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2">
-                            <BarChart3 size={12} className="text-brand-600" />
-                            <span className="text-[12px] font-bold uppercase tracking-[0.8px] text-ink-900 truncate w-[180px] text-left">
-                              {selectedChart ? selectedChart.title : 'Chart Type'}
-                            </span>
-                          </div>
-                          <ChevronDown size={14} className={`text-brand-600 transition-transform duration-200 ${chartTypeCollapsed ? '' : 'rotate-180'}`} />
-                        </button>
-                        {!chartTypeCollapsed && (
-                          <div className="max-h-[300px] overflow-y-auto py-1">
-                            {CHART_TYPES.map(ct => (
-                              <button
-                                key={ct.id}
-                                onClick={() => setSelectedChart(ct)}
-                                className={`w-full flex items-center gap-3 px-3 py-2 text-[12px] transition-all cursor-pointer ${
-                                  selectedChart?.id === ct.id ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-ink-900 hover:bg-canvas'
-                                }`}
-                              >
-                                <ct.icon size={16} className="text-brand-600 shrink-0" strokeWidth={1.5} />
-                                <span className="font-medium whitespace-nowrap">{ct.title}</span>
-                                {selectedChart?.id === ct.id && <CheckCircle2 size={14} className="ml-auto text-brand-600" />}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Data Source Section */}
-                      <div className="bg-white rounded-lg border border-canvas-border overflow-hidden shadow-sm">
-                        <div className="flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-brand-50 to-white border-b border-canvas-border/50">
-                          <div className="flex items-center gap-2">
-                            <Database size={12} className="text-brand-600" />
-                            <span className="text-[12px] font-bold uppercase tracking-[0.8px] text-ink-900">Data Source</span>
-                          </div>
-                          <button
-                            onClick={() => setShowAddDataModal(true)}
-                            className="bg-brand-600 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded cursor-pointer hover:bg-brand-500 transition-colors"
-                          >
-                            Add Data
-                          </button>
-                        </div>
-
-
-                        {/* Search */}
-                        <div className="px-2.5 pt-2.5 pb-2">
-                          <div className="relative">
-                            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" />
-                            <input
-                              type="text"
-                              placeholder="Search fields..."
-                              value={fieldSearch}
-                              onChange={e => setFieldSearch(e.target.value)}
-                              className="w-full h-8 pl-8 pr-3 bg-canvas-elevated border border-canvas-border rounded-md text-[12px] text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Custom fields from uploaded file OR default files */}
-                        {customFields && customFields.length > 0 ? (
-                          <div className="mx-2.5 mb-2.5 bg-canvas-elevated rounded-md border border-brand-200 overflow-hidden">
-                            <button
-                              onClick={() => setFile1Open(!file1Open)}
-                              className="w-full flex items-center justify-between px-2.5 py-2 bg-brand-50 border-b border-brand-200 hover:bg-brand-100/50 transition-colors cursor-pointer"
-                            >
-                              <div className="flex items-center gap-1.5">
-                                <FileText size={12} className="text-brand-600" />
-                                <span className="text-[11px] font-semibold text-brand-700">Uploaded Dataset</span>
-                                <span className="text-[10px] text-brand-500 ml-1">({customFields.length} columns)</span>
-                              </div>
-                              <ChevronDown size={12} className={`text-brand-600 transition-transform ${file1Open ? 'rotate-180' : ''}`} />
-                            </button>
-                            {file1Open && (
-                              <div className="px-1.5 py-1 max-h-[300px] overflow-y-auto">
-                                {customFields.filter(f => f.toLowerCase().includes(fieldSearch.toLowerCase())).map((col, i) => {
-                                  const fieldId = `custom_${i}`;
-                                  return (
-                                    <div
-                                      key={fieldId}
-                                      draggable
-                                      onDragStart={e => { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('fieldId', fieldId); }}
-                                      className="flex items-center gap-2 px-2 py-1.5 rounded cursor-grab hover:bg-brand-50/50 transition-colors active:cursor-grabbing"
-                                    >
-                                      <svg className="shrink-0 size-3 text-ink-300" viewBox="0 0 12 12" fill="currentColor">
-                                        <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
-                                        <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
-                                        <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
-                                      </svg>
-                                      <span className="text-[12px] text-ink-700">{col}</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <>
-                        {/* File 1: Dimensions */}
-                        <div className="mx-2.5 mb-2 bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
-                          <button
-                            onClick={() => setFile1Open(!file1Open)}
-                            className="w-full flex items-center justify-between px-2.5 py-2 bg-gradient-to-r from-brand-50 to-white border-b border-canvas-border hover:from-brand-100/50 hover:to-white transition-all cursor-pointer"
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <FileText size={12} className="text-brand-600" />
-                              <span className="text-[11px] font-semibold text-ink-800">Invoice_Master.xlsx</span>
-                            </div>
-                            <ChevronDown size={12} className={`text-brand-600 transition-transform ${file1Open ? 'rotate-180' : ''}`} />
-                          </button>
-                          {file1Open && (
-                            <div className="px-1.5 py-1">
-                              {dimensionFields.map(f => (
-                                <div
-                                  key={f.id}
-                                  draggable
-                                  onDragStart={e => { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('fieldId', f.id); }}
-                                  className="flex items-center gap-2 px-2 py-1.5 rounded cursor-grab hover:bg-brand-50/50 transition-colors active:cursor-grabbing"
-                                >
-                                  <svg className="shrink-0 size-3 text-ink-300" viewBox="0 0 12 12" fill="currentColor">
-                                    <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
-                                    <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
-                                    <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
-                                  </svg>
-                                  <span className="text-[12px] text-ink-700">{f.label}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* File 2: Measures */}
-                        <div className="mx-2.5 mb-2.5 bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
-                          <button
-                            onClick={() => setFile2Open(!file2Open)}
-                            className="w-full flex items-center justify-between px-2.5 py-2 bg-gradient-to-r from-brand-50 to-white border-b border-canvas-border hover:from-brand-100/50 hover:to-white transition-all cursor-pointer"
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <FileText size={12} className="text-brand-600" />
-                              <span className="text-[11px] font-semibold text-ink-800">Vendor_Finance.xlsx</span>
-                            </div>
-                            <ChevronDown size={12} className={`text-brand-600 transition-transform ${file2Open ? 'rotate-180' : ''}`} />
-                          </button>
-                          {file2Open && (
-                            <div className="px-1.5 py-1">
-                              {measureFields.map(f => (
-                                <div
-                                  key={f.id}
-                                  draggable
-                                  onDragStart={e => { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('fieldId', f.id); }}
-                                  className="flex items-center gap-2 px-2 py-1.5 rounded cursor-grab hover:bg-brand-50/50 transition-colors active:cursor-grabbing"
-                                >
-                                  <svg className="shrink-0 size-3 text-ink-300" viewBox="0 0 12 12" fill="currentColor">
-                                    <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
-                                    <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
-                                    <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
-                                  </svg>
-                                  <span className="text-[12px] text-ink-700">{f.label}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Widget Info */}
-                      <div className="space-y-2.5">
-                        <input
-                          type="text"
-                          value={widgetName}
-                          onChange={e => setWidgetName(e.target.value)}
-                          placeholder="Widget name"
-                          className="w-full px-3 py-2 text-[12px] border border-canvas-border rounded-lg bg-canvas-elevated text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
-                        />
-                        <input
-                          type="text"
-                          value={widgetDesc}
-                          onChange={e => setWidgetDesc(e.target.value)}
-                          placeholder="Description (optional)"
-                          className="w-full px-3 py-2 text-[12px] border border-canvas-border rounded-lg bg-canvas-elevated text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {activeTab === 'format' && (
-                    <div className="space-y-3">
-                      {/* 1. General — Color + B/I/U */}
-                      <FmtSection title="General" icon={<Settings size={12} />} open={generalOpen} onToggle={() => setGeneralOpen(!generalOpen)}>
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {['#6a12cd', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981', '#84cc16', '#f59e0b', '#f97316'].map(c => (
-                              <button
-                                key={c}
-                                onClick={() => setSelectedBaseColor(c)}
-                                className={`size-7 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
-                                  selectedBaseColor === c ? 'ring-2 ring-brand-600 ring-offset-2' : 'hover:ring-2 hover:ring-brand-400/40 hover:ring-offset-2'
-                                }`}
-                                style={{ background: c }}
-                              >
-                                {selectedBaseColor === c && (
-                                  <svg viewBox="0 0 12 12" fill="none" className="size-3.5"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                )}
-                              </button>
-                            ))}
-                            {/* Hex display */}
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-canvas-elevated border border-canvas-border rounded-md">
-                              <div className="size-3 rounded-sm" style={{ background: selectedBaseColor }} />
-                              <span className="text-[11px] font-medium text-ink-700 uppercase">{selectedBaseColor}</span>
-                            </div>
-                          </div>
-                          <BIUButtons bold={isBold} italic={isItalic} underline={isUnderline} onBold={() => setIsBold(!isBold)} onItalic={() => setIsItalic(!isItalic)} onUnderline={() => setIsUnderline(!isUnderline)} />
-                        </div>
-                      </FmtSection>
-
-                      {/* 2. X Axis */}
-                      <FmtSection title="X Axis" icon={<TrendingUp size={12} />} open={xAxisFmtOpen} onToggle={() => setXAxisFmtOpen(!xAxisFmtOpen)}>
-                        <div className="space-y-3">
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[11px] font-medium text-ink-600">Title</label>
-                            <input type="text" value={xAxisTitle} onChange={e => setXAxisTitle(e.target.value)} placeholder="Enter X Axis Title" className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors" />
-                          </div>
-                          <BIUButtons bold={xBold} italic={xItalic} underline={xUnder} onBold={() => setXBold(!xBold)} onItalic={() => setXItalic(!xItalic)} onUnderline={() => setXUnder(!xUnder)} />
-                        </div>
-                      </FmtSection>
-
-                      {/* 3. Y Axis */}
-                      <FmtSection title="Y Axis" icon={<TrendingDown size={12} />} open={yAxisFmtOpen} onToggle={() => setYAxisFmtOpen(!yAxisFmtOpen)}>
-                        <div className="space-y-3">
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[11px] font-medium text-ink-600">Title</label>
-                            <input type="text" value={yAxisTitle} onChange={e => setYAxisTitle(e.target.value)} placeholder="Enter Y Axis Title" className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors" />
-                          </div>
-                          <BIUButtons bold={yBold} italic={yItalic} underline={yUnder} onBold={() => setYBold(!yBold)} onItalic={() => setYItalic(!yItalic)} onUnderline={() => setYUnder(!yUnder)} />
-                        </div>
-                      </FmtSection>
-
-                      {/* 3b. Y-axis Index — only for clustered-col, line, waterfall */}
-                      {showYIndex && (
-                        <FmtSection title="Y-axis Index" icon={<TrendingDown size={12} />} open={yIndexFmtOpen} onToggle={() => setYIndexFmtOpen(!yIndexFmtOpen)}>
-                          <div className="space-y-3">
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[11px] font-medium text-ink-600">Title</label>
-                              <input type="text" value={yIndexTitle} onChange={e => setYIndexTitle(e.target.value)} placeholder="Enter Y-axis Index Title" className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors" />
-                            </div>
-                            <BIUButtons bold={yIdxBold} italic={yIdxItalic} underline={yIdxUnder} onBold={() => setYIdxBold(!yIdxBold)} onItalic={() => setYIdxItalic(!yIdxItalic)} onUnderline={() => setYIdxUnder(!yIdxUnder)} />
-                          </div>
-                        </FmtSection>
-                      )}
-
-                      {/* 4. Legend */}
-                      <FmtSection title="Legend" icon={<FileText size={12} />} open={legendsFmtOpen} onToggle={() => setLegendsFmtOpen(!legendsFmtOpen)}>
-                        <div className="space-y-3">
-                          {/* Position dropdown */}
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[11px] font-semibold text-ink-700">Position</label>
-                            <select value={legendPos} onChange={e => setLegendPos(e.target.value)} className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 outline-none focus:border-brand-400 cursor-pointer appearance-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
-                              <option value="top">Top</option>
-                              <option value="right">Right</option>
-                              <option value="bottom">Bottom</option>
-                              <option value="left">Left</option>
-                            </select>
-                          </div>
-                          {/* Legend Format + Text Color */}
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[11px] font-semibold text-ink-700">Legend Format</label>
-                              <div className="flex items-center bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
-                                <button onClick={() => setIsBold(!isBold)} className={`flex-1 flex items-center justify-center px-3 py-2 border-r border-canvas-border transition-colors cursor-pointer ${isBold ? 'bg-brand-600 text-white' : 'text-ink-600 hover:bg-brand-50'}`}>
-                                  <span className="text-[12px] font-bold">B</span>
-                                </button>
-                                <button onClick={() => setIsItalic(!isItalic)} className={`flex-1 flex items-center justify-center px-3 py-2 transition-colors cursor-pointer ${isItalic ? 'bg-brand-600 text-white' : 'text-ink-600 hover:bg-brand-50'}`}>
-                                  <span className="text-[12px] italic">I</span>
-                                </button>
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[11px] font-semibold text-ink-700">Text Color</label>
-                              <div className="flex items-center gap-2 px-3 py-1.5 bg-canvas-elevated border border-canvas-border rounded-lg cursor-pointer">
-                                <div className="size-4 rounded-sm border border-canvas-border" style={{ background: selectedBaseColor }} />
-                                <span className="text-[11px] font-medium text-ink-700 flex-1 uppercase">{selectedBaseColor}</span>
-                                <ChevronDown size={12} className="text-ink-400" />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </FmtSection>
-
-                      {/* 5. Data Labels — toggle in header, no content */}
-                      <div className="bg-canvas-elevated rounded-lg border border-canvas-border overflow-hidden">
-                        <div className="flex items-center justify-between px-3 py-2.5 bg-brand-50/30">
-                          <div className="flex items-center gap-2">
-                            <span className="text-brand-600"><FileText size={12} /></span>
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-700">Data Labels</span>
-                          </div>
-                          <button onClick={() => setDataLabelShow(!dataLabelShow)} className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${dataLabelShow ? 'bg-brand-600' : 'bg-ink-200'}`}>
-                            <div className={`absolute top-0.5 size-4 bg-white rounded-full shadow transition-all ${dataLabelShow ? 'left-[18px]' : 'left-0.5'}`} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* 6. Range (Y Axis) */}
-                      <FmtSection title="Range (Y Axis)" icon={<TrendingDown size={12} />} open={rangeFmtOpen} onToggle={() => setRangeFmtOpen(!rangeFmtOpen)}>
-                        <div className="space-y-3">
-                          {/* Min / Max always visible */}
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[12px] font-medium text-ink-700">Minimum</label>
-                              <input type="text" value={rangeMin} onChange={e => setRangeMin(e.target.value)} placeholder="Auto" className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors" />
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                              <label className="text-[12px] font-medium text-ink-700">Maximum</label>
-                              <input type="text" value={rangeMax} onChange={e => setRangeMax(e.target.value)} placeholder="Auto" className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors" />
-                            </div>
-                          </div>
-                          {/* Invert Range toggle */}
-                          <div className="flex items-center justify-between">
-                            <span className="text-[12px] font-medium text-ink-700">Invert Range</span>
-                            <button onClick={() => setAutoScale(!autoScale)} className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${autoScale ? 'bg-brand-600' : 'bg-ink-200'}`}>
-                              <div className={`absolute top-0.5 size-4 bg-white rounded-full shadow transition-all ${autoScale ? 'left-[18px]' : 'left-0.5'}`} />
-                            </button>
-                          </div>
-                        </div>
-                      </FmtSection>
-
-                      {/* 6b. Y-axis Index Range — only for clustered-col, line, waterfall */}
-                      {showYIndex && (
-                        <FmtSection title="Range (Y-axis Index)" icon={<TrendingDown size={12} />} open={yIndexRangeFmtOpen} onToggle={() => setYIndexRangeFmtOpen(!yIndexRangeFmtOpen)}>
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="flex flex-col gap-1.5">
-                                <label className="text-[12px] font-medium text-ink-700">Minimum</label>
-                                <input type="text" value={yIndexRangeMin} onChange={e => setYIndexRangeMin(e.target.value)} placeholder="Auto" className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors" />
-                              </div>
-                              <div className="flex flex-col gap-1.5">
-                                <label className="text-[12px] font-medium text-ink-700">Maximum</label>
-                                <input type="text" value={yIndexRangeMax} onChange={e => setYIndexRangeMax(e.target.value)} placeholder="Auto" className="w-full px-3 py-2 text-[12px] bg-canvas-elevated border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors" />
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-[12px] font-medium text-ink-700">Invert Range</span>
-                              <button onClick={() => setYIndexInvert(!yIndexInvert)} className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${yIndexInvert ? 'bg-brand-600' : 'bg-ink-200'}`}>
-                                <div className={`absolute top-0.5 size-4 bg-white rounded-full shadow transition-all ${yIndexInvert ? 'left-[18px]' : 'left-0.5'}`} />
-                              </button>
-                            </div>
-                          </div>
-                        </FmtSection>
-                      )}
-
-                      {/* 7. Conditional Formatting — full rule builder */}
-                      <FmtSection title="Conditional Formatting" icon={<AlertTriangle size={12} />} open={condFmtOpen} onToggle={() => setCondFmtOpen(!condFmtOpen)}>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[12px] font-bold text-brand-700">Rules</span>
-                            <span className="text-[11px] text-ink-500">{condRules.length} active</span>
-                          </div>
-
-                          {condRules.map((rule, idx) => (
-                            <div key={rule.id} className="bg-canvas-elevated border border-canvas-border rounded-xl p-3.5 space-y-3 relative">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[12px] font-bold text-ink-800">Rule {idx + 1}</span>
-                                {condRules.length > 1 && (
-                                  <button onClick={() => setCondRules(prev => prev.filter(r => r.id !== rule.id))} className="p-1 rounded hover:bg-red-50 cursor-pointer"><X size={12} className="text-ink-400 hover:text-red-500" /></button>
-                                )}
-                              </div>
-
-                              {/* Evaluate Field */}
-                              <div className="space-y-1.5">
-                                <label className="text-[11px] font-bold text-ink-700">Evaluate Field</label>
-                                <select value={rule.field} onChange={e => setCondRules(prev => prev.map(r => r.id === rule.id ? { ...r, field: e.target.value } : r))} className="w-full px-3 py-2 text-[12px] bg-surface-2/50 border border-canvas-border rounded-lg text-ink-800 outline-none focus:border-brand-400 cursor-pointer appearance-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
-                                  <option value="">Select field to evaluate...</option>
-                                  {xFields.length > 0 && <optgroup label="X-Axis">{xFields.map(f => <option key={f} value={f}>{getFieldLabel(f)}</option>)}</optgroup>}
-                                  {yFields.length > 0 && <optgroup label="Y-Axis">{yFields.map(f => <option key={f} value={f}>{getFieldLabel(f)}</option>)}</optgroup>}
-                                  {xFields.length === 0 && yFields.length === 0 && <>
-                                    <option value="inv_amount">Invoice Amount (₹)</option>
-                                    <option value="dup_count">Duplicate Count</option>
-                                    <option value="dup_score">Duplicate Score (%)</option>
-                                    <option value="risk_amt">Amount at Risk (₹)</option>
-                                  </>}
-                                </select>
-                              </div>
-
-                              {/* Condition */}
-                              <div className="space-y-1.5">
-                                <label className="text-[11px] font-bold text-ink-700">Condition</label>
-                                <select value={rule.condition} onChange={e => setCondRules(prev => prev.map(r => r.id === rule.id ? { ...r, condition: e.target.value } : r))} className="w-full px-3 py-2 text-[12px] bg-surface-2/50 border border-canvas-border rounded-lg text-ink-800 outline-none focus:border-brand-400 cursor-pointer appearance-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
-                                  <option value="isNull">Is null</option>
-                                  <option value="isNotNull">Is not null</option>
-                                  <option value="greater">Greater than</option>
-                                  <option value="greaterEqual">Greater than or equal</option>
-                                  <option value="less">Less than</option>
-                                  <option value="lessEqual">Less than or equal</option>
-                                  <option value="equal">Is equal to</option>
-                                  <option value="notEqual">Is not equal</option>
-                                  <option value="between">Is between</option>
-                                  <option value="contains">Contains</option>
-                                  <option value="notContain">Does not contain</option>
-                                </select>
-                              </div>
-
-                              {/* Value + Color */}
-                              <div className="grid grid-cols-2 gap-2.5">
-                                <div className="space-y-1.5">
-                                  <label className="text-[11px] font-bold text-ink-700">Value</label>
-                                  <input type="text" value={rule.value} onChange={e => setCondRules(prev => prev.map(r => r.id === rule.id ? { ...r, value: e.target.value } : r))} placeholder="Enter value" className="w-full px-3 py-2 text-[12px] bg-surface-2/50 border border-canvas-border rounded-lg text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400" />
-                                </div>
-                                <div className="space-y-1.5">
-                                  <label className="text-[11px] font-bold text-ink-700">Color</label>
-                                  <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-2/50 border border-canvas-border rounded-lg">
-                                    <div className="size-5 rounded shrink-0 border border-canvas-border" style={{ background: rule.color }} />
-                                    <span className="text-[11px] font-medium text-ink-700 uppercase flex-1">{rule.color}</span>
-                                    <ChevronDown size={12} className="text-ink-400" />
-                                  </div>
-                                  {/* Color swatches row */}
-                                  <div className="flex gap-1.5 mt-1.5">
-                                    {['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6a12cd', '#ec4899'].map(c => (
-                                      <button
-                                        key={c}
-                                        onClick={() => setCondRules(prev => prev.map(r => r.id === rule.id ? { ...r, color: c } : r))}
-                                        className={`size-5 rounded-full flex items-center justify-center cursor-pointer transition-all shrink-0 ${rule.color === c ? 'ring-2 ring-brand-600 ring-offset-1' : 'hover:ring-2 hover:ring-ink-300 hover:ring-offset-1'}`}
-                                        style={{ background: c }}
-                                      >
-                                        {rule.color === c && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-
-                          <button
-                            onClick={() => setCondRules(prev => [...prev, { id: String(Date.now()), field: '', condition: 'greater', value: '', color: '#ef4444' }])}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-3 border-2 border-dashed border-brand-300 rounded-xl text-[12px] font-semibold text-brand-600 hover:bg-brand-50 transition-colors cursor-pointer"
-                          >
-                            <Plus size={14} /> Add Condition
-                          </button>
-                        </div>
-                      </FmtSection>
-
-                      {/* 8. Customize Data Colors — card-based like Conditional Formatting */}
-                      <FmtSection title="Customize Data Colors" icon={<BarChart3 size={12} />} open={seriesFmtOpen} onToggle={() => setSeriesFmtOpen(!seriesFmtOpen)}>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[12px] font-bold text-brand-700">Series</span>
-                            <span className="text-[11px] text-ink-500">{Object.keys(seriesColors).length || yFields.length} configured</span>
-                          </div>
-
-                          {(yFields.length > 0 ? yFields : Object.keys(seriesColors)).map((fId, idx) => {
-                            const label = getFieldLabel(fId);
-                            const defaultColors = ['#6a12cd', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316'];
-                            const color = seriesColors[fId] || defaultColors[idx % defaultColors.length];
-                            const spacing = (seriesColors[`${fId}_spacing`] as unknown as string) || '0';
-                            return (
-                              <div key={fId} className="bg-canvas-elevated border border-canvas-border rounded-xl p-3.5 space-y-3 relative">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[12px] font-bold text-ink-800">Series {idx + 1}</span>
-                                  <button onClick={() => setSeriesColors(prev => { const n = { ...prev }; delete n[fId]; delete n[`${fId}_spacing`]; return n; })} className="p-1 rounded hover:bg-red-50 cursor-pointer"><X size={12} className="text-ink-400 hover:text-red-500" /></button>
-                                </div>
-
-                                {/* Field */}
-                                <div className="space-y-1.5">
-                                  <label className="text-[11px] font-bold text-ink-700">Field</label>
-                                  <select value={fId} disabled className="w-full px-3 py-2 text-[12px] bg-surface-2/50 border border-canvas-border rounded-lg text-ink-800 outline-none cursor-default appearance-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}>
-                                    <option value={fId}>{label}</option>
-                                  </select>
-                                </div>
-
-                                {/* Color + Spacing */}
-                                <div className="grid grid-cols-2 gap-2.5">
-                                  <div className="space-y-1.5">
-                                    <label className="text-[11px] font-bold text-ink-700">Color</label>
-                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-2/50 border border-canvas-border rounded-lg">
-                                      <div className="size-5 rounded shrink-0 border border-canvas-border" style={{ background: color }} />
-                                      <span className="text-[11px] font-medium text-ink-700 uppercase flex-1">{color}</span>
-                                      <ChevronDown size={12} className="text-ink-400" />
-                                    </div>
-                                    <div className="flex gap-1.5 mt-1.5">
-                                      {defaultColors.map(c => (
-                                        <button
-                                          key={c}
-                                          onClick={() => setSeriesColors(prev => ({ ...prev, [fId]: c }))}
-                                          className={`size-5 rounded-full flex items-center justify-center cursor-pointer transition-all shrink-0 ${color === c ? 'ring-2 ring-brand-600 ring-offset-1' : 'hover:ring-2 hover:ring-ink-300 hover:ring-offset-1'}`}
-                                          style={{ background: c }}
-                                        >
-                                          {color === c && <svg viewBox="0 0 12 12" fill="none" className="size-2.5"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <label className="text-[11px] font-bold text-ink-700">Spacing</label>
-                                    <select
-                                      value={spacing}
-                                      onChange={e => setSeriesColors(prev => ({ ...prev, [`${fId}_spacing`]: e.target.value as any }))}
-                                      className="w-full px-3 py-2 text-[12px] bg-surface-2/50 border border-canvas-border rounded-lg text-ink-800 outline-none focus:border-brand-400 cursor-pointer appearance-none"
-                                      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
-                                    >
-                                      <option value="0">0%</option>
-                                      <option value="10">10%</option>
-                                      <option value="20">20%</option>
-                                      <option value="30">30%</option>
-                                      <option value="40">40%</option>
-                                      <option value="50">50%</option>
-                                    </select>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-
-                          <button
-                            onClick={() => {
-                              const allFields = DRAG_FIELDS.filter(f => f.kind === 'measure');
-                              const unused = allFields.find(f => !yFields.includes(f.id) && !seriesColors[f.id]);
-                              if (unused) {
-                                const defaultColors = ['#6a12cd', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316'];
-                                setSeriesColors(prev => ({ ...prev, [unused.id]: defaultColors[Object.keys(prev).filter(k => !k.includes('_')).length % defaultColors.length] }));
-                              }
-                            }}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-3 border-2 border-dashed border-brand-300 rounded-xl text-[12px] font-semibold text-brand-600 hover:bg-brand-50 transition-colors cursor-pointer"
-                          >
-                            <Plus size={14} /> Add Series
-                          </button>
-                        </div>
-                      </FmtSection>
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer — Add button */}
-                <div className="shrink-0 border-t border-canvas-border px-4 py-3">
-                  <button
-                    onClick={handleAdd}
-                    disabled={!selectedChart}
-                    className="w-full py-2.5 bg-brand-600 hover:bg-brand-500 disabled:bg-ink-200 text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    {editData ? 'Save Changes' : 'Add to Dashboard'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-
-    {/* Upload Dataset Modal */}
-    {showUploadModal && (
-      <>
-        <div className="fixed inset-0 z-[10000] bg-black/30 backdrop-blur-sm" onClick={() => setShowUploadModal(false)} />
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[560px] max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-canvas-border/40 shrink-0">
-              <div>
-                <h2 className="text-[16px] font-bold text-ink-900">{uploadStep === 'upload' ? 'Upload Dataset' : 'Review Data'}</h2>
-                <p className="text-[12px] text-ink-400 mt-0.5">{uploadStep === 'upload' ? 'Step 1 of 2' : 'Step 2 of 2'}</p>
-              </div>
-              <button onClick={() => setShowUploadModal(false)} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
-                <X size={18} className="text-ink-500" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="px-6 py-6">
-              {uploadStep === 'upload' ? (
-                <label className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-brand-300 rounded-2xl bg-brand-50/20 cursor-pointer hover:bg-brand-50/40 transition-colors">
-                  <div className="size-14 rounded-full bg-canvas-elevated border border-canvas-border flex items-center justify-center mb-4">
-                    <Download size={22} className="text-brand-600 rotate-180" />
-                  </div>
-                  <p className="text-[15px] font-semibold text-ink-900">Upload Dataset</p>
-                  <p className="text-[13px] text-ink-400 mt-1 text-center max-w-xs">Drag and drop your .xlsx or .csv file here, or click to browse.</p>
-                  <div className="flex items-center gap-3 mt-5">
-                    <span className="px-5 py-2 border border-brand-300 text-brand-600 rounded-full text-[12px] font-semibold">Choose Existing</span>
-                    <span className="px-5 py-2 bg-brand-600 text-white rounded-full text-[12px] font-semibold">Browse Files</span>
-                  </div>
-                  <input
-                    type="file"
-                    accept=".xlsx,.csv,.xls"
-                    className="hidden"
-                    onChange={e => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setUploadedFileName(file.name);
-                        setUploadedHeaders(['Invoice ID', 'Vendor', 'Amount', 'Date', 'Status', 'Department', 'Risk', 'Category']);
-                        setUploadStep('review');
-                      }
-                    }}
-                  />
-                </label>
-              ) : (
-                <div>
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="size-9 rounded-lg bg-brand-50 flex items-center justify-center shrink-0">
-                      <FileText size={18} className="text-brand-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[14px] font-semibold text-ink-900 truncate">{uploadedFileName}</p>
-                    </div>
-                    <span className="text-[12px] text-brand-600 font-medium shrink-0">{uploadedHeaders.length} columns detected</span>
-                  </div>
-                  <div className="border border-canvas-border rounded-xl overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="bg-surface-2/50">
-                          {uploadedHeaders.slice(0, 7).map(h => (
-                            <th key={h} className="text-[11px] font-semibold text-ink-500 uppercase tracking-wider px-4 py-3 border-b border-canvas-border whitespace-nowrap">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[
-                          ['INV-001', 'Acme Corp', '₹11,853', '20-Mar-25', 'Pending', 'Operations', 'High'],
-                          ['INV-002', 'Global Tech', '₹4,564', '15-Dec-24', 'Review', 'Procurement', 'Medium'],
-                          ['INV-003', '3tones Ltd', '₹3,835', '31-Dec-24', 'Resolved', 'Finance', 'Low'],
-                        ].map((row, i) => (
-                          <tr key={i} className="border-b border-canvas-border/50 last:border-0">
-                            {row.map((cell, j) => (
-                              <td key={j} className={`text-[12px] px-4 py-3 whitespace-nowrap ${j === 0 ? 'font-medium text-brand-600' : 'text-ink-600'}`}>{cell}</td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-canvas-border/40 shrink-0">
-              <button
-                onClick={() => {
-                  if (uploadStep === 'review') setUploadStep('upload');
-                  else setShowUploadModal(false);
-                }}
-                className="px-4 py-2 text-[13px] font-semibold text-ink-700 hover:bg-surface-2 rounded-lg transition-colors cursor-pointer"
-              >
-                Back
-              </button>
-              <button
-                onClick={() => {
-                  if (uploadStep === 'upload') return;
-                  addToast({ message: `"${uploadedFileName}" added as data source`, type: 'success' });
-                  setShowUploadModal(false);
-                }}
-                disabled={uploadStep === 'upload'}
-                className="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 disabled:bg-ink-200 text-white rounded-full text-[13px] font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
-              >
-                {uploadStep === 'upload' ? 'Review Data' : 'Add to Data Source'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </>
-    )}
-
-    {/* Query Session Modal */}
-    {showQueryModal && (
-      <>
-        <div className="fixed inset-0 z-[10000] bg-black/30 backdrop-blur-sm" onClick={() => setShowQueryModal(false)} />
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[580px] max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-canvas-border/40 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="size-9 rounded-xl bg-brand-50 flex items-center justify-center">
-                  <ListChecks size={18} className="text-brand-600" />
-                </div>
-                <div>
-                  <h2 className="text-[16px] font-bold text-ink-900">Choose a Query Session</h2>
-                  <p className="text-[12px] text-ink-400 mt-0.5">Select one session to proceed.</p>
-                </div>
-              </div>
-              <button onClick={() => setShowQueryModal(false)} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer">
-                <X size={18} className="text-ink-500" />
-              </button>
-            </div>
-
-            {/* Search + New Query */}
-            <div className="flex items-center gap-3 px-6 py-4 shrink-0">
-              <div className="relative flex-1">
-                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
-                <input
-                  type="text"
-                  placeholder="Search query sessions"
-                  value={querySearch}
-                  onChange={e => setQuerySearch(e.target.value)}
-                  className="w-full h-10 pl-10 pr-3 border border-canvas-border rounded-xl text-[13px] text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
-                />
-              </div>
-              <button className="px-4 h-10 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-[12px] font-semibold transition-colors cursor-pointer shrink-0">
-                New Query
-              </button>
-            </div>
-
-            {/* Query list */}
-            <div className="flex-1 overflow-y-auto px-6 pb-4">
-              {[
-                { group: 'Used in Dashboard', queries: [
-                  'How can transaction anomalies signal a risk of financial misstatement?',
-                  'How do industry standards help in assessing fraud risk in business processes?',
-                  'What internal controls can mitigate the risk of fraud in financial reporting?',
-                  'How can regular audits help in identifying high-risk business processes?',
-                ]},
-                { group: 'Other Sessions', queries: [
-                  'What are the top 5 performing categories?',
-                  'Compare year-over-year growth across all states',
-                  'Show customer acquisition cost by channel',
-                  'What is the average order value by product category?',
-                  'Analyze revenue trends for the last 12 months',
-                ]},
-              ].map(section => {
-                const filtered = section.queries.filter(q => q.toLowerCase().includes(querySearch.toLowerCase()));
-                if (filtered.length === 0) return null;
-                return (
-                  <div key={section.group} className="mb-4">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-brand-600 mb-2">{section.group}</p>
-                    <div className="space-y-2">
-                      {filtered.map(q => (
-                        <button
-                          key={q}
-                          onClick={() => setSelectedQuery(selectedQuery === q ? null : q)}
-                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all cursor-pointer ${
-                            selectedQuery === q
-                              ? 'border-brand-400 bg-brand-50/50 shadow-sm'
-                              : 'border-canvas-border hover:border-brand-200 hover:bg-surface-2/50'
-                          }`}
-                        >
-                          <ListChecks size={16} className={selectedQuery === q ? 'text-brand-600' : 'text-ink-400'} />
-                          <span className={`text-[13px] ${selectedQuery === q ? 'text-brand-700 font-medium' : 'text-ink-700'}`}>{q}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-canvas-border/40 shrink-0">
-              <button
-                onClick={() => setShowQueryModal(false)}
-                className="px-4 py-2 text-[13px] font-semibold text-ink-700 hover:bg-surface-2 rounded-lg transition-colors cursor-pointer"
-              >
-                Back
-              </button>
-              <button
-                onClick={() => {
-                  if (selectedQuery) {
-                    addToast({ message: `Query "${selectedQuery.slice(0, 30)}..." selected`, type: 'success' });
-                    setShowQueryModal(false);
-                    setSelectedQuery(null);
-                  }
-                }}
-                disabled={!selectedQuery}
-                className="px-5 py-2 bg-brand-600 hover:bg-brand-500 disabled:bg-ink-200 text-white rounded-xl text-[13px] font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      </>
-    )}
-
-    {/* ── Add Data Modal ── */}
-    {showAddDataModal && (() => {
-      const allSources = SEED;
-      const fileSources = allSources.filter(s => s.type === 'file');
-      const dbSources = allSources.filter(s => s.type === 'database' || s.type === 'api' || s.type === 'cloud');
-      const closeAddData = () => {
-        setShowAddDataModal(false);
-        setAddDataTab('recent');
-        setAddDataSearch('');
-        setAddDataSelectedQuery(null);
-        setAddDataSelectedSource(null);
-        setAddDataUploadedFile(null);
-        setAddDataDragging(false);
-      };
-      return (
-        <>
-          <div className="fixed inset-0 z-[10000] bg-black/30 backdrop-blur-sm" onClick={closeAddData} />
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center pointer-events-none">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 10 }}
-              transition={{ duration: 0.2 }}
-              className="pointer-events-auto bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[820px] h-[600px] flex flex-col overflow-hidden"
-              onClick={e => e.stopPropagation()}
+    <div className="space-y-2">
+      {filteredFiles.map(file => {
+        const isFileOpen = expandedFiles[file.name] ?? false;
+        return (
+          <div key={file.name} className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
+            <button
+              onClick={() => toggleFile(file.name)}
+              className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-[#faf5ff] to-white hover:from-[#f5f0ff] transition-all cursor-pointer"
             >
-              {/* Header */}
-              <div className="flex items-center justify-between px-7 py-5 border-b border-canvas-border">
-                <h2 className="text-[16px] font-bold text-ink-900 shrink-0">Add data</h2>
-                <div className="flex-1 mx-5 relative">
-                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
-                  <input
-                    type="text"
-                    value={addDataSearch}
-                    onChange={e => setAddDataSearch(e.target.value)}
-                    placeholder={addDataTab === 'upload' ? 'Drop files below to upload...' : 'Search...'}
-                    className="w-full pl-10 pr-4 py-2 text-[13px] border border-canvas-border rounded-full bg-canvas-elevated text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
-                  />
-                </div>
-                <button
-                  onClick={closeAddData}
-                  className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer shrink-0"
-                >
-                  <X size={20} className="text-ink-400" />
-                </button>
+              <div className="flex items-center gap-2">
+                <FileText size={14} className="text-[#6a12cd]" />
+                <span className="text-[12px] font-semibold text-[#26064a]">{file.name}</span>
               </div>
-
-              {/* Tab bar */}
-              <div className="flex gap-5 px-7 border-b border-canvas-border">
-                {([
-                  { id: 'recent' as const, label: 'Recent Chats', icon: MessageSquare, count: ADD_DATA_QUERY_SESSIONS.reduce((n, g) => n + g.items.length, 0) },
-                  { id: 'saved' as const, label: 'Favourites', icon: Star, count: ADD_DATA_FAVOURITES.reduce((n, g) => n + g.items.length, 0) },
-                  { id: 'upload' as const, label: 'Upload', icon: Upload, count: 0 },
-                  { id: 'all' as const, label: 'All Data', icon: Layers, count: allSources.length },
-                  { id: 'files' as const, label: 'Files', icon: FileText, count: fileSources.length },
-                  { id: 'db' as const, label: 'DB', icon: Database, count: dbSources.length },
-                ]).map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => { setAddDataTab(tab.id); setAddDataSelectedQuery(null); setAddDataSelectedSource(null); }}
-                    className={`flex items-center gap-1.5 pb-3 pt-3 text-[13px] font-semibold transition-colors cursor-pointer relative whitespace-nowrap ${
-                      addDataTab === tab.id ? 'text-brand-700' : 'text-ink-400 hover:text-ink-600'
-                    }`}
-                  >
-                    <tab.icon size={14} />
-                    {tab.label}
-                    {tab.count > 0 && <span className="text-[11px] text-ink-400 font-normal">{tab.count}</span>}
-                    {addDataTab === tab.id && (
-                      <motion.div layoutId="add-data-widget-tab" className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-600 rounded-full" />
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto px-7 py-6">
-                <AnimatePresence mode="wait">
-                  {/* Recent Chats / Favourites */}
-                  {(addDataTab === 'recent' || addDataTab === 'saved') && (() => {
-                    const groups = addDataTab === 'recent' ? ADD_DATA_QUERY_SESSIONS : ADD_DATA_FAVOURITES;
-                    const hasResults = groups.some(g => g.items.some(q => q.toLowerCase().includes(addDataSearch.toLowerCase())));
-                    return (
-                      <motion.div key={addDataTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
-                        {hasResults ? (
-                          <div className="space-y-4 max-h-[400px] overflow-y-auto">
-                            {groups.map(group => {
-                              const filtered = group.items.filter(q => q.toLowerCase().includes(addDataSearch.toLowerCase()));
-                              if (filtered.length === 0) return null;
-                              return (
-                                <div key={group.group || 'ungrouped'}>
-                                  {group.group && <div className="text-[11px] font-bold text-ink-500 uppercase tracking-wider mb-2">{group.group}</div>}
-                                  <div className="space-y-2">
-                                    {filtered.map(q => (
-                                      <button
-                                        key={q}
-                                        onClick={() => setAddDataSelectedQuery(q)}
-                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer text-left ${
-                                          addDataSelectedQuery === q ? 'border-brand-500 bg-brand-50' : 'border-canvas-border bg-canvas-elevated hover:border-brand-200'
-                                        }`}
-                                      >
-                                        {addDataTab === 'recent' && <MessageSquare size={14} className={addDataSelectedQuery === q ? 'text-brand-600' : 'text-ink-400'} />}
-                                        {addDataTab === 'saved' && <Star size={14} className={addDataSelectedQuery === q ? 'text-brand-600' : 'text-ink-400'} />}
-                                        <span className={`text-[13px] ${addDataSelectedQuery === q ? 'text-brand-700 font-medium' : 'text-ink-700'}`}>{q}</span>
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center py-16 text-center">
-                            {addDataTab === 'recent' ? <MessageSquare size={32} className="text-ink-200 mb-3" /> : <Star size={32} className="text-ink-200 mb-3" />}
-                            <p className="text-[14px] font-medium text-ink-500 mb-1">
-                              {addDataTab === 'recent' ? 'No chats found' : 'No favourites found'}
-                            </p>
-                            <p className="text-[12px] text-ink-400">
-                              {addDataSearch ? 'Try a different search term.' : addDataTab === 'recent' ? 'Start a new chat to see it here.' : 'Star a chat to add it to favourites.'}
-                            </p>
-                          </div>
-                        )}
-                      </motion.div>
-                    );
-                  })()}
-
-                  {/* Upload tab */}
-                  {addDataTab === 'upload' && (
-                    <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
-                      <input
-                        id="add-data-modal-file-input"
-                        type="file"
-                        accept=".xlsx,.xls,.csv"
-                        className="hidden"
-                        onChange={e => { const f = e.target.files?.[0]; if (f) setAddDataUploadedFile(f); }}
-                      />
-                      <div
-                        onDragOver={e => { e.preventDefault(); setAddDataDragging(true); }}
-                        onDragLeave={() => setAddDataDragging(false)}
-                        onDrop={e => { e.preventDefault(); setAddDataDragging(false); const f = e.dataTransfer.files[0]; if (f) setAddDataUploadedFile(f); }}
-                        onClick={() => !addDataUploadedFile && document.getElementById('add-data-modal-file-input')?.click()}
-                        className={`border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center text-center transition-all min-h-[300px] ${
-                          addDataDragging
-                            ? 'border-brand-500 bg-brand-50'
-                            : addDataUploadedFile
-                              ? 'border-compliant bg-green-50/30 cursor-default'
-                              : 'border-ink-200 bg-surface-2/30 cursor-pointer hover:border-brand-300 hover:bg-brand-50/20'
-                        }`}
+              <ChevronDown
+                size={14}
+                className="text-[#6a12cd] transition-transform"
+                style={{ transform: isFileOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+              />
+            </button>
+            {isFileOpen && (
+              <div className="border-t border-[#f0f0f0]">
+                {file.sheets.map(sheet => {
+                  const sheetKey = `${file.name}::${sheet.name}`;
+                  const isSheetOpen = expandedSheets[sheetKey] ?? false;
+                  return (
+                    <div key={sheetKey}>
+                      <button
+                        onClick={() => toggleSheet(sheetKey)}
+                        className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#faf5ff] transition-colors cursor-pointer"
                       >
-                        {addDataUploadedFile ? (
-                          <div>
-                            <CloudUpload size={28} className="text-green-600 mx-auto mb-3" />
-                            <h3 className="text-[15px] font-bold text-ink-900 mb-1">{addDataUploadedFile.name}</h3>
-                            <p className="text-[13px] text-compliant font-medium mb-1">
-                              {(addDataUploadedFile.size / 1024).toFixed(1)} KB — File ready
-                            </p>
-                            <button
-                              onClick={e => { e.stopPropagation(); setAddDataUploadedFile(null); }}
-                              className="text-[12px] text-ink-400 hover:text-red-500 transition-colors cursor-pointer mt-1"
+                        <div className="flex items-center gap-2">
+                          <LayoutGrid size={12} className="text-ink-400" />
+                          <span className="text-[11px] font-medium text-ink-700">{sheet.name}</span>
+                          <span className="text-[10px] text-ink-400">({sheet.columns.length})</span>
+                        </div>
+                        <ChevronDown
+                          size={12}
+                          className="text-ink-400 transition-transform"
+                          style={{ transform: isSheetOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                        />
+                      </button>
+                      {isSheetOpen && (
+                        <div className="pb-1">
+                          {sheet.columns.map(col => (
+                            <div
+                              key={col}
+                              draggable={!!draggable}
+                              onDragStart={draggable ? (e) => { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('fieldId', fieldIdMap?.[col] || col); } : undefined}
+                              className={`flex items-center gap-2.5 px-6 py-1.5 hover:bg-[#f0ecff] transition-colors ${draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
                             >
-                              Remove file
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <Upload size={28} className="text-ink-300 mb-3" />
-                            <h3 className="text-[14px] font-semibold text-ink-800 mb-1">Drop files here</h3>
-                            <p className="text-[13px] text-ink-400 mb-4">or pick from your computer</p>
-                            <button
-                              onClick={e => { e.stopPropagation(); document.getElementById('add-data-modal-file-input')?.click(); }}
-                              className="flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-[13px] font-semibold rounded-lg transition-colors cursor-pointer"
-                            >
-                              <Upload size={14} />
-                              Choose files
-                            </button>
-                            <p className="text-[11px] text-ink-400 mt-3">CSV · Excel · 50 MB each</p>
-                          </>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* All Data / Files / DB tabs */}
-                  {(addDataTab === 'all' || addDataTab === 'files' || addDataTab === 'db') && (() => {
-                    const sources = (addDataTab === 'all' ? allSources : addDataTab === 'files' ? fileSources : dbSources)
-                      .filter(s => s.name.toLowerCase().includes(addDataSearch.toLowerCase()));
-                    const tabLabel = addDataTab === 'all' ? 'data sources' : addDataTab === 'files' ? 'files' : 'databases';
-                    return (
-                      <motion.div key={addDataTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
-                        {sources.length > 0 ? (
-                          <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
-                            {sources.map(source => {
-                              const { icon: Icon, tone } = TYPE_META[source.type];
-                              const isSelected = addDataSelectedSource === source.id;
-                              return (
-                                <button
-                                  key={source.id}
-                                  onClick={() => setAddDataSelectedSource(isSelected ? null : source.id)}
-                                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer text-left ${
-                                    isSelected ? 'border-brand-500 bg-brand-50' : 'border-canvas-border bg-canvas-elevated hover:border-brand-200'
-                                  }`}
-                                >
-                                  <div className={`size-8 rounded-md flex items-center justify-center shrink-0 ${tone}`}>
-                                    <Icon size={14} />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-[13px] font-medium text-ink-900 truncate">{source.name}</div>
-                                    <div className="text-[11px] text-ink-400">{source.subtype} · {formatDate(source.createdAt)}</div>
-                                  </div>
-                                  {isSelected && <Check size={16} className="text-brand-600 shrink-0" />}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center py-16 text-center">
-                            <Search size={32} className="text-ink-200 mb-3" />
-                            <p className="text-[14px] font-medium text-ink-500 mb-1">No {tabLabel} found</p>
-                            <p className="text-[12px] text-ink-400">
-                              {addDataSearch ? 'Try a different search term.' : `No ${tabLabel} available.`}
-                            </p>
-                          </div>
-                        )}
-                      </motion.div>
-                    );
-                  })()}
-                </AnimatePresence>
+                              <GripVertical size={11} className="text-ink-300 shrink-0" />
+                              <span className="text-[11px] text-ink-600">{col}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-end gap-3 px-7 py-4 border-t border-canvas-border">
-                <p className="text-[12px] text-ink-400 mr-auto">Pick sources or files to attach.</p>
-                <button onClick={closeAddData} className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 transition-colors cursor-pointer">
-                  Cancel
-                </button>
-                {(addDataTab === 'recent' || addDataTab === 'saved') && (
-                  <button
-                    onClick={() => {
-                      if (addDataSelectedQuery) {
-                        addToast({ message: 'Data source attached', type: 'success' });
-                        closeAddData();
-                      }
-                    }}
-                    disabled={!addDataSelectedQuery}
-                    className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
-                      addDataSelectedQuery ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
-                    }`}
-                  >
-                    <MessageSquare size={14} />
-                    Open in Chat
-                  </button>
-                )}
-                {addDataTab === 'upload' && (
-                  <button
-                    onClick={() => {
-                      if (addDataUploadedFile) {
-                        addToast({ message: 'Data source attached', type: 'success' });
-                        closeAddData();
-                      }
-                    }}
-                    disabled={!addDataUploadedFile}
-                    className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
-                      addDataUploadedFile ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
-                    }`}
-                  >
-                    <Check size={14} />
-                    Attach
-                  </button>
-                )}
-                {(addDataTab === 'all' || addDataTab === 'files' || addDataTab === 'db') && (
-                  <button
-                    onClick={() => {
-                      if (addDataSelectedSource) {
-                        addToast({ message: 'Data source attached', type: 'success' });
-                        closeAddData();
-                      }
-                    }}
-                    disabled={!addDataSelectedSource}
-                    className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
-                      addDataSelectedSource ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
-                    }`}
-                  >
-                    <Check size={14} />
-                    Attach
-                  </button>
-                )}
-              </div>
-            </motion.div>
+            )}
           </div>
-        </>
-      );
-    })()}
-    </>
+        );
+      })}
+    </div>
   );
 }
 
@@ -2992,71 +1222,14 @@ function FilterPanel({
                   />
                 </div>
 
-                {/* File 1: Dimensions */}
-                <div className="bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
-                  <button
-                    onClick={() => setFpFile1Open(!fpFile1Open)}
-                    className="w-full flex items-center justify-between px-2.5 py-2 bg-gradient-to-r from-brand-50 to-white border-b border-canvas-border hover:from-brand-100/50 hover:to-white transition-all cursor-pointer"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <FileText size={12} className="text-brand-600" />
-                      <span className="text-[11px] font-semibold text-ink-800">Invoice_Master.xlsx</span>
-                    </div>
-                    <ChevronDown size={12} className={`text-brand-600 transition-transform ${fpFile1Open ? 'rotate-180' : ''}`} />
-                  </button>
-                  {fpFile1Open && (
-                    <div className="px-1.5 py-1">
-                      {fpFilteredDimensions.map(f => (
-                        <div
-                          key={f.id}
-                          draggable
-                          onDragStart={e => { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('fieldId', f.id); }}
-                          className="flex items-center gap-2 px-2 py-1.5 rounded cursor-grab hover:bg-brand-50/50 transition-colors active:cursor-grabbing"
-                        >
-                          <svg className="shrink-0 size-3 text-ink-300" viewBox="0 0 12 12" fill="currentColor">
-                            <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
-                            <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
-                            <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
-                          </svg>
-                          <span className="text-[12px] text-ink-700">{f.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* File 2: Measures */}
-                <div className="bg-canvas-elevated rounded-md border border-canvas-border overflow-hidden">
-                  <button
-                    onClick={() => setFpFile2Open(!fpFile2Open)}
-                    className="w-full flex items-center justify-between px-2.5 py-2 bg-gradient-to-r from-brand-50 to-white border-b border-canvas-border hover:from-brand-100/50 hover:to-white transition-all cursor-pointer"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <FileText size={12} className="text-brand-600" />
-                      <span className="text-[11px] font-semibold text-ink-800">Vendor_Finance.xlsx</span>
-                    </div>
-                    <ChevronDown size={12} className={`text-brand-600 transition-transform ${fpFile2Open ? 'rotate-180' : ''}`} />
-                  </button>
-                  {fpFile2Open && (
-                    <div className="px-1.5 py-1">
-                      {fpFilteredMeasures.map(f => (
-                        <div
-                          key={f.id}
-                          draggable
-                          onDragStart={e => { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('fieldId', f.id); }}
-                          className="flex items-center gap-2 px-2 py-1.5 rounded cursor-grab hover:bg-brand-50/50 transition-colors active:cursor-grabbing"
-                        >
-                          <svg className="shrink-0 size-3 text-ink-300" viewBox="0 0 12 12" fill="currentColor">
-                            <circle cx="4" cy="3" r="1" /><circle cx="8" cy="3" r="1" />
-                            <circle cx="4" cy="6" r="1" /><circle cx="8" cy="6" r="1" />
-                            <circle cx="4" cy="9" r="1" /><circle cx="8" cy="9" r="1" />
-                          </svg>
-                          <span className="text-[12px] text-ink-700">{f.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <FileTreeView
+                  files={[
+                    { name: 'Invoice_Master.xlsx', icon: 'excel', sheets: [{ name: 'Sheet1', columns: fpFilteredDimensions.map(f => f.label) }] },
+                    { name: 'Vendor_Finance.xlsx', icon: 'excel', sheets: [{ name: 'Sheet1', columns: fpFilteredMeasures.map(f => f.label) }] },
+                  ]}
+                  draggable
+                  fieldIdMap={Object.fromEntries(DRAG_FIELDS.map(f => [f.label, f.id]))}
+                />
 
                 {/* Cross-Data section */}
                 {dataLinks.length > 0 && (<>
@@ -3316,6 +1489,24 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
   const [expandTitle, setExpandTitle] = useState(title);
   const [showExpandDeleteConfirm, setShowExpandDeleteConfirm] = useState(false);
   useEffect(() => { setExpandTitle(title); setEditingExpandTitle(false); }, [title]);
+  const [showEditSidebar, setShowEditSidebar] = useState(false);
+  const [editSidebarTab, setEditSidebarTab] = useState<'datasource' | 'customize'>('datasource');
+  const [editChartType, setEditChartType] = useState('clustered-column');
+  const [editChartTypeOpen, setEditChartTypeOpen] = useState(true);
+  const [editDataSourceOpen, setEditDataSourceOpen] = useState(true);
+  const [editDataSearch, setEditDataSearch] = useState('');
+  const [editExpandedFiles, setEditExpandedFiles] = useState<Record<string, boolean>>({ 'Invoice_Master.xlsx': true });
+  const [editGeneralOpen, setEditGeneralOpen] = useState(true);
+  const [editLegendOpen, setEditLegendOpen] = useState(false);
+  const [editDataLabelsOpen, setEditDataLabelsOpen] = useState(false);
+  const [editRangeOpen, setEditRangeOpen] = useState(false);
+  const [editFontFamily, setEditFontFamily] = useState('Inter');
+  const [editIsBold, setEditIsBold] = useState(false);
+  const [editIsItalic, setEditIsItalic] = useState(false);
+  const [editIsUnderline, setEditIsUnderline] = useState(false);
+  const [editMinimum, setEditMinimum] = useState('');
+  const [editMaximum, setEditMaximum] = useState('');
+  const [editInvertRange, setEditInvertRange] = useState(false);
   const [showVizFilter, setShowVizFilter] = useState(false);
   const [vizFilterSelections, setVizFilterSelections] = useState<Record<string, string[]>>({});
   const [vizFilterOpen, setVizFilterOpen] = useState<Record<string, boolean>>({});
@@ -3341,8 +1532,19 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
       setActiveTab('visualization');
       setSearchQuery('');
       setTimePeriod('30D');
+      setShowEditSidebar(false);
     }
   }, [open]);
+
+  // Close edit sidebar on Escape
+  useEffect(() => {
+    if (!showEditSidebar) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowEditSidebar(false);
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [showEditSidebar]);
 
   const filteredRecords = EXPANDED_RECORDS.filter(r => {
     if (!searchQuery) return true;
@@ -3445,7 +1647,7 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                         <div className="absolute top-full right-0 z-40 mt-1 w-[180px] bg-white border border-canvas-border rounded-xl shadow-xl py-1.5">
                           {onEdit && (
                             <button
-                              onClick={() => { setShowExpandMenu(false); onEdit(); }}
+                              onClick={() => { setShowExpandMenu(false); setShowEditSidebar(true); setEditSidebarTab('datasource'); }}
                               className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-ink-700 hover:bg-surface-2 transition-colors text-left cursor-pointer"
                             >
                               <Edit size={15} className="text-ink-500" />
@@ -3750,7 +1952,9 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
             </div>
 
             {/* ── Content ── */}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 flex overflow-hidden">
+              {/* Main scrollable content */}
+              <div className="flex-1 overflow-auto">
               <AnimatePresence mode="wait">
                 {/* VISUALIZATION */}
                 {activeTab === 'visualization' && (
@@ -3900,6 +2104,303 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                           </div>
                         </div>
                       </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              </div>
+
+              {/* ── Edit Widget Sidebar ── */}
+              <AnimatePresence>
+                {showEditSidebar && (
+                  <motion.div
+                    key="edit-sidebar"
+                    initial={{ x: 340, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: 340, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 340, damping: 34 }}
+                    className="flex flex-col border-l border-canvas-border bg-white shrink-0 overflow-hidden"
+                    style={{ width: 340 }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {/* Tabs */}
+                    <div className="flex shrink-0 border-b border-canvas-border">
+                      {([['datasource', 'Data Source'], ['customize', 'Customize']] as const).map(([tab, label]) => (
+                        <button
+                          key={tab}
+                          onClick={() => setEditSidebarTab(tab)}
+                          className={`flex-1 py-2.5 text-[12px] font-medium border-b-2 transition-colors cursor-pointer ${
+                            editSidebarTab === tab
+                              ? 'border-brand-600 text-brand-700'
+                              : 'border-transparent text-ink-500 hover:text-ink-700'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Tab content — scrollable */}
+                    <div className="flex-1 overflow-y-auto">
+                      {editSidebarTab === 'datasource' && (() => {
+                        const CHART_TYPES = [
+                          { id: 'kpi', label: 'KPI Cards', Icon: Hash },
+                          { id: 'clustered-column', label: 'Clustered Column Chart', Icon: BarChart3 },
+                          { id: 'stacked-column', label: 'Stacked Column Chart', Icon: BarChart3 },
+                          { id: 'clustered-bar', label: 'Clustered Bar Chart', Icon: BarChart3 },
+                          { id: 'stacked-bar', label: 'Stacked Bar Chart', Icon: BarChart3 },
+                          { id: 'line', label: 'Line Chart', Icon: LineChart },
+                          { id: 'area', label: 'Area Chart', Icon: AreaChart },
+                          { id: 'pie', label: 'Pie Chart', Icon: PieChartIcon },
+                          { id: 'line-clustered', label: 'Line & Clustered Column Chart', Icon: LineChart },
+                        ];
+
+                        return (
+                          <div className="p-3 space-y-2">
+                            {/* CHART TYPE section */}
+                            <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
+                              <button
+                                onClick={() => setEditChartTypeOpen(!editChartTypeOpen)}
+                                className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-[#faf5ff] to-white hover:from-[#f5f0ff] hover:to-[#fefefe] transition-all border-b border-[#f0f0f0]"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <BarChart3 className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
+                                  <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">Chart Type</span>
+                                </div>
+                                <ChevronDown
+                                  className="size-[14px] text-[#6a12cd] transition-transform duration-200"
+                                  style={{ transform: editChartTypeOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                                />
+                              </button>
+                              {editChartTypeOpen && (
+                                <div className="bg-[#fafafa] py-1">
+                                  {CHART_TYPES.map(({ id, label, Icon }) => (
+                                    <button
+                                      key={id}
+                                      onClick={() => setEditChartType(id)}
+                                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-[12px] transition-colors cursor-pointer text-left ${
+                                        editChartType === id
+                                          ? 'bg-brand-50 text-brand-700 font-medium'
+                                          : 'text-ink-700 hover:bg-surface-2'
+                                      }`}
+                                    >
+                                      <Icon size={14} className={editChartType === id ? 'text-brand-600' : 'text-ink-400'} />
+                                      {label}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* DATA SOURCE section */}
+                            <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
+                              <div className="flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-[#faf5ff] to-white border-b border-[#f0f0f0]">
+                                <div className="flex items-center gap-2">
+                                  <Database className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
+                                  <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">Data Source</span>
+                                </div>
+                                <button
+                                  onClick={() => addToast({ message: 'Add data source', type: 'info' })}
+                                  className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-white bg-brand-600 hover:bg-brand-500 rounded-md transition-colors cursor-pointer shrink-0"
+                                >
+                                  <Plus size={10} />
+                                  Add Data
+                                </button>
+                              </div>
+                              <div className="px-3 pt-2.5 pb-2">
+                                <div className="relative mb-2">
+                                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" />
+                                  <input
+                                    type="text"
+                                    placeholder="Search fields..."
+                                    value={editDataSearch}
+                                    onChange={e => setEditDataSearch(e.target.value)}
+                                    className="w-full pl-7 pr-3 py-1.5 text-[11px] bg-white border border-[#e5e7eb] rounded-[6px] text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-200 transition-all"
+                                  />
+                                </div>
+                                <FileTreeView files={FILE_TREE_DATA} search={editDataSearch} />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {editSidebarTab === 'customize' && (
+                        <div className="p-3 space-y-2">
+                          {/* GENERAL section */}
+                          <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
+                            <button
+                              onClick={() => setEditGeneralOpen(!editGeneralOpen)}
+                              className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-[#faf5ff] to-white hover:from-[#f5f0ff] hover:to-[#fefefe] transition-all border-b border-[#f0f0f0]"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Palette className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
+                                <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">General</span>
+                              </div>
+                              <ChevronDown
+                                className="size-[14px] text-[#6a12cd] transition-transform duration-200"
+                                style={{ transform: editGeneralOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                              />
+                            </button>
+                            {editGeneralOpen && (
+                              <div className="bg-[#fafafa] p-2.5 space-y-3">
+                                {/* Font Family */}
+                                <div className="flex flex-col gap-1.5">
+                                  <label className="text-[12px] font-semibold text-[#26064a]">Font Family</label>
+                                  <div className="relative">
+                                    <select
+                                      value={editFontFamily}
+                                      onChange={e => setEditFontFamily(e.target.value)}
+                                      className="w-full h-[32px] px-2.5 py-1.5 text-[11px] bg-white border border-[#e5e7eb] rounded-[6px] text-[#26064a] focus:outline-none focus:border-[#6a12cd] focus:ring-1 focus:ring-[#6a12cd] transition-all shadow-sm appearance-none cursor-pointer pr-7"
+                                    >
+                                      {['Inter', 'Poppins', 'Roboto', 'Open Sans', 'Montserrat', 'Lato', 'Nunito', 'Raleway', 'PT Sans', 'Merriweather', 'Playfair Display'].map(f => (
+                                        <option key={f} value={f}>{f}</option>
+                                      ))}
+                                    </select>
+                                    <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#64748b] pointer-events-none" />
+                                  </div>
+                                </div>
+                                {/* Bold / Italic / Underline */}
+                                <div className="flex items-center bg-white rounded-[6px] border border-[#e5e7eb] overflow-hidden">
+                                  <button
+                                    onClick={() => setEditIsBold(!editIsBold)}
+                                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border-r border-[#e5e7eb] transition-all duration-200 cursor-pointer ${editIsBold ? 'bg-[#6a12cd] text-white' : 'bg-white text-[#26064a] hover:bg-[#faf5ff]'}`}
+                                  >
+                                    <Bold className={`size-[14px] ${editIsBold ? 'text-white' : 'text-[#6a12cd]'}`} />
+                                    <span className="text-[11px] font-medium">Bold</span>
+                                  </button>
+                                  <button
+                                    onClick={() => setEditIsItalic(!editIsItalic)}
+                                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border-r border-[#e5e7eb] transition-all duration-200 cursor-pointer ${editIsItalic ? 'bg-[#6a12cd] text-white' : 'bg-white text-[#26064a] hover:bg-[#faf5ff]'}`}
+                                  >
+                                    <Italic className={`size-[14px] ${editIsItalic ? 'text-white' : 'text-[#6a12cd]'}`} />
+                                    <span className="text-[11px] font-medium">Italic</span>
+                                  </button>
+                                  <button
+                                    onClick={() => setEditIsUnderline(!editIsUnderline)}
+                                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 transition-all duration-200 cursor-pointer ${editIsUnderline ? 'bg-[#6a12cd] text-white' : 'bg-white text-[#26064a] hover:bg-[#faf5ff]'}`}
+                                  >
+                                    <Underline className={`size-[14px] ${editIsUnderline ? 'text-white' : 'text-[#6a12cd]'}`} />
+                                    <span className="text-[11px] font-medium">Underline</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* LEGEND section */}
+                          <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
+                            <button
+                              onClick={() => setEditLegendOpen(!editLegendOpen)}
+                              className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-[#faf5ff] to-white hover:from-[#f5f0ff] hover:to-[#fefefe] transition-all border-b border-[#f0f0f0]"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Type className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
+                                <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">Legend</span>
+                              </div>
+                              <ChevronDown
+                                className="size-[14px] text-[#6a12cd] transition-transform duration-200"
+                                style={{ transform: editLegendOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                              />
+                            </button>
+                            {editLegendOpen && (
+                              <div className="bg-[#fafafa] p-3">
+                                <p className="text-[11px] text-ink-400">Legend configuration options will appear here.</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* DATA LABELS section */}
+                          <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
+                            <button
+                              onClick={() => setEditDataLabelsOpen(!editDataLabelsOpen)}
+                              className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-[#faf5ff] to-white hover:from-[#f5f0ff] hover:to-[#fefefe] transition-all border-b border-[#f0f0f0]"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Hash className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
+                                <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">Data Labels</span>
+                              </div>
+                              <ChevronDown
+                                className="size-[14px] text-[#6a12cd] transition-transform duration-200"
+                                style={{ transform: editDataLabelsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                              />
+                            </button>
+                            {editDataLabelsOpen && (
+                              <div className="bg-[#fafafa] p-3">
+                                <p className="text-[11px] text-ink-400">Data label configuration options will appear here.</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* RANGE (Y AXIS) section */}
+                          <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
+                            <button
+                              onClick={() => setEditRangeOpen(!editRangeOpen)}
+                              className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-[#faf5ff] to-white hover:from-[#f5f0ff] hover:to-[#fefefe] transition-all border-b border-[#f0f0f0]"
+                            >
+                              <div className="flex items-center gap-2">
+                                <MoveVertical className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
+                                <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">Range (Y Axis)</span>
+                              </div>
+                              <ChevronDown
+                                className="size-[14px] text-[#6a12cd] transition-transform duration-200"
+                                style={{ transform: editRangeOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                              />
+                            </button>
+                            {editRangeOpen && (
+                              <div className="p-2.5 bg-[#fafafa] space-y-3">
+                                <div className="flex gap-2">
+                                  <div className="flex-1 flex flex-col gap-1.5">
+                                    <label className="text-[12px] font-medium text-[#26064a]">Minimum</label>
+                                    <input
+                                      type="text"
+                                      value={editMinimum}
+                                      onChange={e => setEditMinimum(e.target.value)}
+                                      placeholder="Auto"
+                                      className="w-full px-3.5 py-2 text-[12px] bg-white border border-[rgba(38,6,74,0.2)] rounded-[8px] text-[#26064a] placeholder:text-[rgba(38,6,74,0.2)] focus:outline-none focus:border-[#6a12cd] focus:ring-1 focus:ring-[#6a12cd] transition-all shadow-sm"
+                                    />
+                                  </div>
+                                  <div className="flex-1 flex flex-col gap-1.5">
+                                    <label className="text-[12px] font-medium text-[#26064a]">Maximum</label>
+                                    <input
+                                      type="text"
+                                      value={editMaximum}
+                                      onChange={e => setEditMaximum(e.target.value)}
+                                      placeholder="Auto"
+                                      className="w-full px-3.5 py-2 text-[12px] bg-white border border-[rgba(38,6,74,0.2)] rounded-[8px] text-[#26064a] placeholder:text-[rgba(38,6,74,0.2)] focus:outline-none focus:border-[#6a12cd] focus:ring-1 focus:ring-[#6a12cd] transition-all shadow-sm"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <p className="text-[12px] font-medium text-[#26064a]">Invert Range</p>
+                                  <button
+                                    onClick={() => setEditInvertRange(!editInvertRange)}
+                                    className={`relative w-[36px] h-[20px] rounded-[12px] transition-all cursor-pointer ${editInvertRange ? 'bg-[#6a12cd]' : 'bg-[#e5e7eb]'}`}
+                                  >
+                                    <div
+                                      className="absolute top-[2px] w-[16px] h-[16px] bg-white rounded-full shadow-sm transition-all"
+                                      style={{ left: editInvertRange ? '18px' : '2px' }}
+                                    />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bottom CTA */}
+                    <div className="shrink-0 px-4 py-3 border-t border-canvas-border bg-white">
+                      <button
+                        onClick={() => {
+                          addToast({ message: 'Widget updated', type: 'success' });
+                          setShowEditSidebar(false);
+                        }}
+                        className="w-full py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-[13px] font-semibold rounded-xl transition-colors cursor-pointer"
+                      >
+                        Update Widget
+                      </button>
                     </div>
                   </motion.div>
                 )}
