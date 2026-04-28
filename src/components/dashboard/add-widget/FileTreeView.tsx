@@ -74,7 +74,6 @@ export function FileTreeView({ files, search, draggable, fieldIdMap }: {
                         className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#faf5ff] transition-colors cursor-pointer"
                       >
                         <div className="flex items-center gap-2">
-                          <LayoutGrid size={12} className="text-[#9ca3af]" />
                           <span className="text-[11px] font-medium text-[#374151]">{sheet.name}</span>
                           <span className="text-[10px] text-[#9ca3af]">({sheet.columns.length})</span>
                         </div>
