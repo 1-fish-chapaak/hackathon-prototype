@@ -1,27 +1,27 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, ChevronRight, Pencil, Send, Check } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Paperclip, Pencil, Send, Check } from 'lucide-react';
 import type { EditClarificationStep } from './types';
 
 interface Props {
-  workflowName: string;
   steps: EditClarificationStep[];
   onBack: () => void;
   onComplete: (answers: Record<number, string>) => void;
 }
 
-export default function EditClarificationStage({ workflowName, steps, onBack, onComplete }: Props) {
+export default function EditClarificationStage({ steps, onBack, onComplete }: Props) {
   const [currentPage, setCurrentPage] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [customMode, setCustomMode] = useState(false);
   const [customText, setCustomText] = useState('');
+  const [chatInput, setChatInput] = useState('');
 
   const total = steps.length;
   const current = steps[currentPage];
   const answeredCount = Object.keys(answers).length;
   const allAnswered = answeredCount >= total;
 
-  // Keyboard nav: 1-9 select, ↑/↓ navigate, Enter complete-if-done, Esc skip
+  // Keyboard: 1-9 select, ↑↓/←→ navigate, Esc skip
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (customMode) return;
@@ -31,14 +31,12 @@ export default function EditClarificationStage({ workflowName, steps, onBack, on
         return;
       }
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-        if (currentPage < total - 1) setCurrentPage(p => p + 1);
+        if (currentPage < total - 1) setCurrentPage((p) => p + 1);
       }
       if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-        if (currentPage > 0) setCurrentPage(p => p - 1);
+        if (currentPage > 0) setCurrentPage((p) => p - 1);
       }
-      if (e.key === 'Escape') {
-        handleSkip();
-      }
+      if (e.key === 'Escape') handleSkip();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -49,19 +47,19 @@ export default function EditClarificationStage({ workflowName, steps, onBack, on
     if (currentPage < total - 1) {
       setCustomMode(false);
       setCustomText('');
-      setTimeout(() => setCurrentPage(p => p + 1), 220);
+      setTimeout(() => setCurrentPage((p) => p + 1), 220);
     }
   };
 
   const handleOptionClick = (option: string) => {
-    setAnswers(prev => ({ ...prev, [currentPage]: option }));
+    setAnswers((prev) => ({ ...prev, [currentPage]: option }));
     advance();
   };
 
   const handleCustomSubmit = () => {
     const text = customText.trim();
     if (!text) return;
-    setAnswers(prev => ({ ...prev, [currentPage]: text }));
+    setAnswers((prev) => ({ ...prev, [currentPage]: text }));
     setCustomMode(false);
     setCustomText('');
     advance();
@@ -69,19 +67,29 @@ export default function EditClarificationStage({ workflowName, steps, onBack, on
 
   const handleSkip = () => {
     if (currentPage < total - 1) {
-      setCurrentPage(p => p + 1);
+      setCurrentPage((p) => p + 1);
     } else {
       onComplete(answers);
     }
   };
 
+  const handleChatSend = () => {
+    const text = chatInput.trim();
+    if (!text) return;
+    // Treat free-form chat input as the answer to the current question and advance.
+    setAnswers((prev) => ({ ...prev, [currentPage]: text }));
+    setChatInput('');
+    if (currentPage < total - 1) {
+      setTimeout(() => setCurrentPage((p) => p + 1), 220);
+    } else {
+      onComplete({ ...answers, [currentPage]: text });
+    }
+  };
+
   return (
-    <div
-      className="flex-1 overflow-y-auto"
-      style={{ background: 'linear-gradient(180deg, #f8f5ff 0%, #fafafa 280px)' }}
-    >
+    <div className="flex flex-col h-full bg-canvas">
       {/* Top breadcrumb */}
-      <div className="px-8 pt-6">
+      <div className="px-8 pt-6 shrink-0">
         <button
           type="button"
           onClick={onBack}
@@ -92,9 +100,9 @@ export default function EditClarificationStage({ workflowName, steps, onBack, on
         </button>
       </div>
 
-      {/* Hero */}
-      <div className="max-w-[860px] mx-auto px-8 pt-16 pb-10 text-center">
-        <div className="inline-flex items-center gap-1.5 text-[12.5px] text-ink-500 mb-6">
+      {/* Hero — pinned to top of the chat area */}
+      <div className="shrink-0 px-8 pt-12 pb-4 max-w-[860px] mx-auto w-full text-center">
+        <div className="inline-flex items-center gap-1.5 text-[12.5px] text-ink-500 mb-4">
           <ChevronRight size={13} />
           Identified ambiguity, asking for inputs
         </div>
@@ -102,34 +110,33 @@ export default function EditClarificationStage({ workflowName, steps, onBack, on
           One quick check before I edit{' '}
           <span className="text-ink-700">— pick what fits, or type your own.</span>
         </h1>
-        <p className="text-[13.5px] text-ink-500 mt-4">
-          Editing <span className="font-semibold text-ink-700">{workflowName}</span>. I&apos;ll only
-          touch the parts you confirm here.
-        </p>
       </div>
 
-      {/* Card pinned to bottom-ish */}
-      <div className="max-w-[820px] mx-auto px-8 pb-16">
+      {/* Empty chat area — flex spacer (where messages would land) */}
+      <div className="flex-1 min-h-0" />
+
+      {/* Bottom dock — clarification card joined to chat input */}
+      <div className="shrink-0 px-4 sm:px-6 pb-5 max-w-3xl mx-auto w-full">
         <motion.div
           key={currentPage}
-          initial={{ y: 16, opacity: 0 }}
+          initial={{ y: 12, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ type: 'spring', damping: 30, stiffness: 320 }}
-          className="rounded-2xl bg-white border border-canvas-border overflow-hidden"
-          style={{ boxShadow: '0 12px 40px rgba(106,18,205,0.06), 0 1px 0 rgba(255,255,255,0.6) inset' }}
+          className="rounded-t-2xl rounded-b-none border border-b-0 border-canvas-border bg-white overflow-hidden"
+          style={{ boxShadow: '0 -8px 32px rgba(106,18,205,0.05)' }}
         >
           {/* Header */}
-          <div className="px-5 pt-4 pb-3 border-b border-canvas-border flex items-center justify-between gap-4">
-            <h3 className="text-[15px] font-semibold text-ink-900 leading-snug truncate">
+          <div className="px-5 pt-4 pb-2.5 flex items-center justify-between gap-4">
+            <h3 className="text-[14px] font-semibold text-ink-900 leading-snug truncate flex items-baseline gap-2">
               {current.question}
+              <span className="text-[11.5px] font-medium text-ink-400 tabular-nums shrink-0">
+                · {currentPage + 1} of {total}
+              </span>
             </h3>
-            <span className="text-[12px] text-ink-400 font-semibold shrink-0 tabular-nums">
-              {currentPage + 1} of {total}
-            </span>
           </div>
 
           {/* Options */}
-          <div className="py-2">
+          <div>
             {current.options.map((option, idx) => {
               const selected = answers[currentPage] === option;
               return (
@@ -138,17 +145,14 @@ export default function EditClarificationStage({ workflowName, steps, onBack, on
                   type="button"
                   onClick={() => handleOptionClick(option)}
                   className={[
-                    'w-full flex items-center gap-3 px-5 py-3 text-left transition-colors cursor-pointer',
-                    'border-t border-canvas-border first:border-t-0',
+                    'w-full flex items-center gap-3 px-5 py-3 text-left transition-colors cursor-pointer border-t border-canvas-border',
                     selected ? 'bg-brand-50/60' : 'hover:bg-canvas',
                   ].join(' ')}
                 >
                   <span
                     className={[
                       'w-6 h-6 rounded-md flex items-center justify-center text-[11.5px] font-bold shrink-0',
-                      selected
-                        ? 'bg-brand-600 text-white'
-                        : 'bg-brand-50 text-brand-700',
+                      selected ? 'bg-brand-600 text-white' : 'bg-brand-50 text-brand-700',
                     ].join(' ')}
                   >
                     {selected ? <Check size={11} /> : idx + 1}
@@ -159,28 +163,27 @@ export default function EditClarificationStage({ workflowName, steps, onBack, on
               );
             })}
 
-            {/* Something else */}
+            {/* Something else / Skip row */}
             {!customMode ? (
-              <button
-                type="button"
-                onClick={() => setCustomMode(true)}
-                className="w-full flex items-center gap-3 px-5 py-3 text-left transition-colors cursor-pointer border-t border-canvas-border hover:bg-canvas"
-              >
-                <span className="w-6 h-6 rounded-md flex items-center justify-center bg-canvas border border-canvas-border shrink-0">
-                  <Pencil size={11} className="text-ink-400" />
-                </span>
-                <span className="flex-1 text-[13px] text-ink-400">Something else</span>
+              <div className="flex items-center gap-3 px-5 py-3 border-t border-canvas-border">
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSkip();
-                  }}
-                  className="text-[12.5px] font-semibold text-ink-500 hover:text-ink-700 transition-colors px-2 py-1 cursor-pointer"
+                  onClick={() => setCustomMode(true)}
+                  className="flex-1 flex items-center gap-3 text-left cursor-pointer"
+                >
+                  <span className="w-6 h-6 rounded-md flex items-center justify-center bg-canvas border border-canvas-border shrink-0">
+                    <Pencil size={11} className="text-ink-400" />
+                  </span>
+                  <span className="text-[13px] text-ink-400">Something else</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSkip}
+                  className="text-[12.5px] font-semibold text-ink-500 hover:text-ink-700 transition-colors px-3 py-1.5 rounded-lg border border-canvas-border bg-white cursor-pointer"
                 >
                   Skip
                 </button>
-              </button>
+              </div>
             ) : (
               <div className="flex items-center gap-2 px-4 py-3 border-t border-canvas-border bg-canvas/40">
                 <input
@@ -225,6 +228,48 @@ export default function EditClarificationStage({ workflowName, steps, onBack, on
             )}
           </div>
         </motion.div>
+
+        {/* Chat input — visually joined to the card above */}
+        <div className="rounded-b-2xl border border-t-0 border-canvas-border bg-white">
+          <div className="relative">
+            <textarea
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleChatSend();
+                }
+              }}
+              rows={1}
+              placeholder={`Or just type — I&apos;ll treat it as your answer to question ${currentPage + 1}.`}
+              className="w-full bg-transparent border-none outline-none resize-none py-3 pl-4 pr-24 text-[13.5px] text-ink-800 placeholder:text-ink-400 min-h-[44px] max-h-[160px] rounded-b-2xl"
+            />
+            <div className="absolute right-2 bottom-1.5 flex items-center gap-1">
+              <button
+                type="button"
+                className="p-2 text-ink-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors cursor-pointer"
+                aria-label="Attach"
+              >
+                <Paperclip size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={handleChatSend}
+                disabled={!chatInput.trim()}
+                className={[
+                  'p-2 rounded-lg transition-colors',
+                  chatInput.trim()
+                    ? 'bg-brand-600 hover:bg-brand-500 text-white cursor-pointer'
+                    : 'bg-canvas-border text-ink-400 cursor-not-allowed',
+                ].join(' ')}
+                aria-label="Send"
+              >
+                <Send size={13} />
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Footer hints */}
         <div className="flex items-center justify-between mt-3 text-[11.5px] text-ink-400">

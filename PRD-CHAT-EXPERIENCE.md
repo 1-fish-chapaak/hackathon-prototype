@@ -25,11 +25,6 @@ When a user clicks **`Save as workflow`** below a complete query result, the cha
 2. **`Build a workflow` button on Workflows library** — opens chat with workflow-mode toggle pre-on.
 3. **`Save as workflow` action below a complete query result** — flips toggle on mid-thread, swaps workspace, runs checkpoint inline.
 
-### Why merge
-- The previous PRDs treated query and workflow as adjacent surfaces. In practice users want a query **first**, then to operationalize it. Forcing them to copy a prompt across surfaces breaks the thread.
-- The workflow-builder journey (4 steps: Describe → Upload → Map → Review) becomes a **specialization** of the chat — the `Workflow Plan` accordion expands into the 4 sub-cards; everything else (composer, conversation, citations) is shared.
-- One save flow, one BP·RACM taxonomy, one citation registry, one upload modal.
-
 ---
 
 ## 2. User journey
@@ -414,21 +409,6 @@ All surfaces below are **adjacent to or built into Auditify Chat**. Anything `Re
 | 10 | Column alignment service | Stub-only for v1 | ML | `POST /align {source_columns, target_columns}` → `[{id, source, target, confidence, breakdown, reason}]`. | `mockApi.ts → seedAlignments()` deterministic per-input; confidence randomized in stable buckets. |
 | 11 | Templates + sample workflows | Built inside chat | Auditify team | `GET /templates` → `WorkflowDraft[]`. | `sampleWorkflows.ts` ships 6+ canned templates. Recent rail wired to `WORKFLOWS` mock. |
 
-### Out of scope for v1 / v1.1
-- **Engagements:** attach Auditify Chat thread or saved workflow to a specific audit engagement.
-- **Findings:** one-click create Finding entity from chat output.
-- **Notification inbox:** workflow run completions / failures route to durable inbox (not just toasts).
-- **External auditor RBAC:** read-only chat threads, no save/run, no `Build a workflow` chip.
-- **Real connector registry:** beyond Tally Sync stub.
-- **Edit-saved-workflow flow:** opening a saved workflow back into the builder for edits.
-- **Workflow versioning:** edit creates new version vs. in-place mutation.
-- **Streaming workflow run progress:** per-step progress events surfaced in Result Preview.
-- **Custom step authoring:** user-defined `StepSpec` beyond the 7 canonical types (`extract` / `analyze` / `compare` / `flag` / `summarize` / `calculate` / `validate`).
-- **Multi-RACM assignment:** one workflow → one RACM in v1.
-- **Cross-workspace template sharing.**
-- **PII redaction on uploaded data.**
-- **Mode-switch off (workflow → query within a thread):** explicitly not supported. New chat required.
-
 ---
 
 ## 7. Open questions + assumptions
@@ -485,3 +465,59 @@ All surfaces below are **adjacent to or built into Auditify Chat**. Anything `Re
 23. **Mode commitment locks the thread.** Once committed (chip click, library entry, save-as-workflow flip), the thread cannot return to mode-agnostic. New chat required.
 24. **Path C seeds, doesn't re-execute.** The query already ran; the workflow inherits the SQL/output without re-running the data fetch. Result Preview generates from sample data only.
 25. **Workspace tile archival on flip is in-place.** Query tiles do not move to a side panel or get deleted — they fade to `Stale` styling, remain expandable for reading, and stay above the new workflow tiles in the same accordion.
+
+---
+
+## Appendix — Workflow Builder user journey (detailed)
+
+### Step 1: Describe your workflow
+
+1. The user lands on 'Ask Ira'. The `Workflow Builder` toggle inside the chat input box is on.
+2. The user types a workflow description, picks a template (which pre-fills `logicPrompt`), or clicks `+` to attach data first.
+3. `Audit on Chat` is enabled when the prompt has text. Click → Auditify generates a `WorkflowDraft` (name, inputs, steps, output) and routes to Step 2 with the **initial clarify overlay**.
+
+### Initial clarify (gates Step 2)
+
+1. If the user has not added any files, clarifications are shown only for the prompt input, if any.
+2. A full-screen `ClarificationPanel` overlays the journey, one question at a time.
+3. Auditify asks 2–4 questions (matching logic preset, tolerance preset, date scope) sourced from `getClarifyQuestions(draft)`. Each question is multi-choice, with `Skip` allowed.
+4. On the last answer, the overlay dismisses and Step 2 chat appears with the assistant message *"Got it — locked those in. Drop the required data files into the upload window so I can map them."*
+
+### Step 2: Upload Data Files
+
+1. `UploadDataModal` auto-opens once per workflow, unless Step 1 carry-forward already fills every required input.
+2. The modal has 4 tabs: `Upload` (drag-drop) · `All Data` · `Files` · `DB`. Each pick maps to the next empty required input; extras stack on the first input.
+3. Closing the modal returns the user to chat. An **Upload card** in chat lists the files added per input and includes a reopen trigger.
+4. **Auto-verify:** when every required input has at least one file, chat shows a `Verifying files…` loader (3s), then the assistant message *"Files verified — moving to data mapping."* Step advances to 3.
+5. The right-side panel shows the Input config tab and displays the added folders and files.
+
+### Step 3: Select columns
+
+1. The layout splits into **chat (50% screen)** + **Right workspace (50% screen)**.
+2. Chat shows a **Map card** listing each input as a collapsed row. The user clicks `Edit` → the row expands → a column-alignment table appears inside it (source col → target col, confidence %, reason chips for `unmapped` / `low_confidence` / `type_mismatch`).
+3. The right panel mirrors the focused input's schema (input config); columns can be selected or unselected for use in the workflow builder.
+4. [optional] Quick-reply chips above the composer adapt to focus: `Recommend columns` · `Explain a column` · `Preview sample rows`.
+5. The user clicks `Confirm & Proceed` (inside the Map card) → 3s `Confirming mappings…` loader → assistant *"Mappings confirmed — opening review."* → Step 4.
+
+### Step 4: Review & Run
+
+1. The **Review card** in chat shows each step (`extract` / `compare` / `validate` / `flag` / `summarize`) as an accordion with linked data sources beneath.
+2. The right panel switches to the Plan tab: workflow references (column inputs), coder toggle, and an editable, rearrangeable workflow plan.
+3. The user clicks `Validate Plan` (inside the Review card) → triggers **validate clarify** inline in chat (matching logic confirm + tolerance preset).
+
+### Step 5: View Preview
+
+1. On the final clarify answer (from validate plan) → the output config appears on the right side.
+2. Chat surfaces a **View Preview** chip card. Click → reveals the **Output card** (KPI tiles + table). The Output card has a `Save Workflow` button.
+3. While running: the Review card shows a `Running…` skeleton. On completion: chat posts *"Finished. The Duplicate invoice flags is ready — 24 rows, 4,820 records scanned."*
+
+### Save flow
+
+1. `Save Workflow` opens `SaveWorkflowModal`. Fields: name, **Business Process** (P2P / O2C / S2C / R2R), **RACM** (filtered by BP), and description.
+2. Confirm → workflow persisted under that BP + RACM, chat posts an event line *"Duplicate invoice flags saved to Procure to Pay · FY26 P2P — Vendor Payment."*
+3. The Save button reverts to `Saved ✓`. Re-saving in the same session is blocked (use Workflows library to edit a saved copy).
+
+### Cross-step rules
+
+- **No back navigation between steps; the journey is forward-only.** `← Back to AI Concierge` exits the workflow builder setup.
+- **Chat history persists across steps.** Step-card messages (`upload` / `map` / `review` / `output` / `view-preview`) are pushed once per workflow id; they do not duplicate on revisit.

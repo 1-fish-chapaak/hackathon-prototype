@@ -1,25 +1,48 @@
 import { useEffect, useRef } from 'react';
-import { Bot, Link2, Send, ShieldCheck, Sparkles, Workflow } from 'lucide-react';
-import type { EditChatMessage } from './types';
+import { ArrowLeft, Bot, CheckCircle2, Eye, Link2, Play, Send, ShieldCheck, Sparkles } from 'lucide-react';
+import InlineClarifyCard from './InlineClarifyCard';
+import StepOutputView from '../concierge-workflow-builder/StepOutputView';
+import type { RunResult, WorkflowDraft } from '../concierge-workflow-builder/types';
+import type { EditChatMessage, InlineClarifyState, WorkflowPlanCard } from './types';
 
 interface Props {
-  workflowName: string;
   messages: EditChatMessage[];
   input: string;
   setInput: (v: string) => void;
   onSend: (text: string) => void;
+  onBack?: () => void;
   onConfirmProceed: () => void;
   onViewWorkspace: () => void;
+  onValidateWorkflow?: () => void;
+  onViewPreview?: () => void;
+  inlineClarify?: InlineClarifyState | null;
+  onClarifyAnswer?: (questionId: string, answer: string) => void;
+  onClarifySkip?: (questionId: string) => void;
+  // For rendering the AI Summary block inside an IRA bubble when
+  // `msg.outputSummary` is set.
+  draft?: WorkflowDraft;
+  editResult?: RunResult | null;
+  onSaveEdits?: () => void;
+  editsSaved?: boolean;
 }
 
 export default function EditChatPanel({
-  workflowName,
   messages,
   input,
   setInput,
   onSend,
+  onBack,
   onConfirmProceed,
   onViewWorkspace,
+  onValidateWorkflow,
+  onViewPreview,
+  inlineClarify,
+  onClarifyAnswer,
+  onClarifySkip,
+  draft,
+  editResult,
+  onSaveEdits,
+  editsSaved,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -36,20 +59,19 @@ export default function EditChatPanel({
 
   return (
     <aside className="flex flex-col h-full bg-canvas-elevated border-r border-canvas-border min-h-0">
-      {/* Header */}
-      <div className="px-4 pt-4 pb-3 border-b border-canvas-border shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center">
-            <Workflow size={15} className="text-white" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-[13px] font-semibold text-ink-800 leading-tight truncate">
-              Editing — {workflowName}
-            </div>
-            <div className="text-[12px] text-ink-400 leading-tight">Chat-based edit session</div>
-          </div>
+      {/* Header — slim back-link only, matching the AI Concierge builder pattern */}
+      {onBack && (
+        <div className="px-4 pt-3 pb-2 shrink-0">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-ink-500 hover:text-brand-600 transition-colors cursor-pointer"
+          >
+            <ArrowLeft size={13} />
+            Back to Workflow
+          </button>
         </div>
-      </div>
+      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
@@ -59,8 +81,26 @@ export default function EditChatPanel({
             msg={m}
             onConfirmProceed={onConfirmProceed}
             onViewWorkspace={onViewWorkspace}
+            onValidateWorkflow={onValidateWorkflow}
+            onViewPreview={onViewPreview}
+            draft={draft}
+            editResult={editResult}
+            onSaveEdits={onSaveEdits}
+            editsSaved={editsSaved}
           />
         ))}
+
+        {inlineClarify && onClarifyAnswer && onClarifySkip && (
+          <InlineClarifyCard
+            key={inlineClarify.questions[inlineClarify.index].id}
+            question={inlineClarify.questions[inlineClarify.index]}
+            index={inlineClarify.index}
+            total={inlineClarify.questions.length}
+            stepLabel={inlineClarify.stepLabel}
+            onAnswer={onClarifyAnswer}
+            onSkip={onClarifySkip}
+          />
+        )}
       </div>
 
       {/* Input */}
@@ -105,15 +145,27 @@ function ChatBubble({
   msg,
   onConfirmProceed,
   onViewWorkspace,
+  onValidateWorkflow,
+  onViewPreview,
+  draft,
+  editResult,
+  onSaveEdits,
+  editsSaved,
 }: {
   msg: EditChatMessage;
   onConfirmProceed: () => void;
   onViewWorkspace: () => void;
+  onValidateWorkflow?: () => void;
+  onViewPreview?: () => void;
+  draft?: WorkflowDraft;
+  editResult?: RunResult | null;
+  onSaveEdits?: () => void;
+  editsSaved?: boolean;
 }) {
   if (msg.role === 'user') {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[88%] rounded-2xl rounded-br-sm bg-brand-600 text-white text-[12.5px] leading-relaxed px-3 py-2">
+        <div className="max-w-[88%] rounded-full bg-brand-50 border border-brand-100 text-ink-800 text-[12.5px] leading-relaxed px-4 py-1.5">
           {msg.text}
         </div>
       </div>
@@ -182,7 +234,24 @@ function ChatBubble({
           </div>
         )}
 
-        {(msg.showConfirmProceed || msg.showViewWorkspace) && (
+        {msg.workflowPlan && <WorkflowPlanBlock plan={msg.workflowPlan} />}
+
+        {msg.outputSummary && draft && editResult && (
+          <StepOutputView
+            workflow={draft}
+            result={editResult}
+            running={false}
+            onSave={onSaveEdits}
+            saved={editsSaved}
+            saveLabel="Save edits"
+            savedLabel="Edits saved"
+          />
+        )}
+
+        {(msg.showConfirmProceed ||
+          msg.showViewWorkspace ||
+          msg.showValidateWorkflow ||
+          msg.showViewPreview) && (
           <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
             {msg.showConfirmProceed ? (
               <button
@@ -192,6 +261,32 @@ function ChatBubble({
               >
                 <ShieldCheck size={13} />
                 Confirm &amp; Proceed
+              </button>
+            ) : msg.showValidateWorkflow ? (
+              <button
+                type="button"
+                onClick={onValidateWorkflow}
+                className="inline-flex items-center gap-1.5 rounded-xl text-white text-[12.5px] font-semibold px-3.5 py-2 transition-opacity cursor-pointer hover:opacity-90"
+                style={{
+                  background: 'linear-gradient(135deg, #6a12cd 0%, #8b5cf6 100%)',
+                  boxShadow: '0 1px 3px rgba(106,18,205,0.3)',
+                }}
+              >
+                <Play size={13} />
+                Validate workflow
+              </button>
+            ) : msg.showViewPreview ? (
+              <button
+                type="button"
+                onClick={onViewPreview}
+                className="inline-flex items-center gap-1.5 rounded-xl text-white text-[12.5px] font-semibold px-3.5 py-2 transition-opacity cursor-pointer hover:opacity-90"
+                style={{
+                  background: 'linear-gradient(135deg, #6a12cd 0%, #8b5cf6 100%)',
+                  boxShadow: '0 1px 3px rgba(106,18,205,0.3)',
+                }}
+              >
+                <Eye size={13} />
+                View Preview
               </button>
             ) : (
               <span />
@@ -213,13 +308,75 @@ function ChatBubble({
   );
 }
 
+const PLAN_BADGE_TONE: Record<string, string> = {
+  INGESTION: 'bg-brand-50 text-brand-700',
+  COMPARISON: 'bg-compliant-50 text-compliant-700',
+  VALIDATION: 'bg-evidence-50 text-evidence-700',
+  FLAGGING: 'bg-mitigated-50 text-mitigated-700',
+  ANALYSIS: 'bg-brand-600 text-white',
+  SUMMARY: 'bg-compliant-50 text-compliant-700',
+  CALCULATION: 'bg-mitigated-50 text-mitigated-700',
+};
+
+function WorkflowPlanBlock({ plan }: { plan: WorkflowPlanCard }) {
+  return (
+    <div className="rounded-2xl border border-canvas-border bg-white overflow-hidden">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-canvas-border">
+        <div className="min-w-0">
+          <div className="text-[13px] font-semibold text-ink-900 leading-tight">
+            Workflow plan
+          </div>
+          <div className="text-[11px] text-ink-400 mt-0.5">
+            {plan.totalSteps} steps · {plan.durationLabel}
+          </div>
+        </div>
+        <span className="text-[11px] text-ink-400 shrink-0">View full plan in the Plan tab</span>
+      </div>
+      <ol>
+        {plan.steps.map((s, i) => (
+          <li
+            key={i}
+            className="flex items-center gap-3 px-4 py-2.5 border-b border-canvas-border last:border-0"
+          >
+            <span className="w-6 h-6 rounded-full bg-ink-900 text-white flex items-center justify-center text-[11px] font-bold shrink-0">
+              {i + 1}
+            </span>
+            <span className="flex-1 text-[12.5px] font-medium text-ink-800 truncate">
+              {s.name}
+            </span>
+            <span
+              className={`text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0 ${PLAN_BADGE_TONE[s.badge] ?? 'bg-paper-50 text-ink-500'}`}
+            >
+              {s.badge}
+            </span>
+          </li>
+        ))}
+        <li className="flex items-center gap-3 px-4 py-2.5 bg-compliant-50/40">
+          <span className="w-6 h-6 rounded-full bg-compliant text-white flex items-center justify-center shrink-0">
+            <CheckCircle2 size={12} />
+          </span>
+          <span className="text-[11.5px] font-semibold uppercase tracking-wider text-compliant-700 shrink-0">
+            Output
+          </span>
+          <span className="flex-1 text-[12.5px] font-medium text-ink-800 truncate">
+            {plan.outputLabel}
+          </span>
+          <span className="text-[10.5px] font-semibold text-ink-400 tabular-nums shrink-0">
+            {plan.outputRows}
+          </span>
+        </li>
+      </ol>
+    </div>
+  );
+}
+
 // Lightweight markdown-ish: **bold** only.
 function renderRich(text: string) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((p, i) => {
     if (p.startsWith('**') && p.endsWith('**')) {
       return (
-        <strong key={i} className="font-semibold text-ink-900">
+        <strong key={i} className="font-semibold text-brand-700">
           {p.slice(2, -2)}
         </strong>
       );

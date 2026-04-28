@@ -1,11 +1,17 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ArrowLeft, ShieldCheck, Sparkles } from 'lucide-react';
 import { WORKFLOWS } from '../../data/mockData';
+import { LIBRARY_WORKFLOWS } from '../workflow/WorkflowLibraryView';
+import DataSourcePanel from '../concierge-workflow-builder/DataSourcePanel';
+import { SAMPLE_WORKFLOWS } from '../concierge-workflow-builder/sampleWorkflows';
+import type { JourneyFiles, RunResult, StepSpec } from '../concierge-workflow-builder/types';
 import EditClarificationStage from './EditClarificationStage';
 import EditChatPanel from './EditChatPanel';
-import EditConfigPanel from './EditConfigPanel';
-import EditCanvas from './EditCanvas';
-import type { EditChatMessage, EditClarificationStep, EditWorkspaceTab } from './types';
+import type {
+  EditChatMessage,
+  EditClarificationStep,
+  PlanStep,
+  ValidateClarifyQuestion,
+} from './types';
 
 interface Props {
   workflowId: string;
@@ -58,33 +64,92 @@ const CLARIFICATION_STEPS: EditClarificationStep[] = [
   },
 ];
 
+// Pre-run ambiguities surfaced when the user kicks off Validate Workflow —
+// mirrors the AI Concierge builder's VALIDATE_QUESTIONS so the experience
+// is consistent across journeys.
+const VALIDATE_QUESTIONS: ValidateClarifyQuestion[] = [
+  {
+    id: 'matching-logic',
+    title: 'What matching logic should I use?',
+    options: [
+      'Exact field matching',
+      'Fuzzy match with tolerance',
+      'AI-powered pattern detection',
+      "Custom rules (I'll define)",
+    ],
+  },
+  {
+    id: 'tolerance-preset',
+    title: 'What tolerance should I apply for amount comparisons?',
+    options: ['Strict (±1%)', 'Moderate (±5%)', 'Relaxed (±10%)', 'Custom'],
+  },
+];
+
+function tolerancePctFromAnswer(answer?: string): string {
+  if (!answer) return '±5%';
+  if (answer.startsWith('Strict')) return '±1%';
+  if (answer.startsWith('Moderate')) return '±5%';
+  if (answer.startsWith('Relaxed')) return '±10%';
+  return answer;
+}
+
 let _msgCounter = 0;
 const nextMsgId = () => `edit-${++_msgCounter}`;
 
-export default function WorkflowEditInChatJourney({ workflowId, onBack }: Props) {
+function resolveWorkflowName(workflowId: string): string | null {
   const wf = WORKFLOWS.find((w) => w.id === workflowId);
-  const workflowName = wf?.name ?? 'Workflow';
+  if (wf) return wf.name;
+  const lib = LIBRARY_WORKFLOWS.find((w) => w.id === workflowId);
+  if (lib) return lib.name;
+  return null;
+}
+
+export default function WorkflowEditInChatJourney({ workflowId, onBack }: Props) {
+  const workflowName = resolveWorkflowName(workflowId);
 
   const [phase, setPhase] = useState<'clarify' | 'editor'>('clarify');
+  // Editor sub-stage. mapping = step 3 (Input Config tab); review = step 4
+  // (Plan tab) — mirrors the AI Concierge builder's Map Data → Review & Run.
+  const [editorStage, setEditorStage] = useState<'mapping' | 'review'>('mapping');
   const [chatInput, setChatInput] = useState('');
   const [rightOpen, setRightOpen] = useState(true);
-  const [editorActiveTab, setEditorActiveTab] = useState<EditWorkspaceTab>('input');
+  const [previewRevealed, setPreviewRevealed] = useState(false);
+  const [editsSaved, setEditsSaved] = useState(false);
+  // Synthetic result populated after Validate clarifications complete. Drives
+  // DataSourcePanel to auto-jump to Output Config (and Preview once revealed).
+  const [editResult, setEditResult] = useState<RunResult | null>(null);
+  const [validateClarify, setValidateClarify] = useState<{
+    index: number;
+    answers: Record<string, string>;
+  } | null>(null);
+
+  // Hydrate the right-side workspace from the canonical Vendor Contract
+  // Compliance sample so it ships with the same Folders / Files / Plan /
+  // Output config the AI Concierge builder shows at the Map Data step.
+  const draft = useMemo(() => SAMPLE_WORKFLOWS[0], []);
+  const [editFiles, setEditFiles] = useState<JourneyFiles>(() => {
+    // Pre-seed each input with a placeholder file so the panel shows the
+    // mapped state instead of an empty drop-zone.
+    const seeded: JourneyFiles = {};
+    draft.inputs.forEach((i) => {
+      seeded[i.id] = [
+        { name: `${i.name.toLowerCase().replace(/\s+/g, '_')}_current.${i.type === 'pdf' ? 'pdf' : 'csv'}`, size: 84_000 },
+      ];
+    });
+    return seeded;
+  });
+  // DataSourcePanel auto-selects the tab from `step`: 3 = Input Config,
+  // 4 = Plan. Manual tab clicks still take precedence after the transition.
+  const panelStep = editorStage === 'review' ? 4 : 3;
 
   const initialMessages = useMemo<EditChatMessage[]>(
-    () => buildInitialMessages(workflowName),
+    () => buildInitialMessages(workflowName ?? 'Workflow'),
     [workflowName],
   );
   const [messages, setMessages] = useState<EditChatMessage[]>(initialMessages);
 
   const handleClarificationsComplete = useCallback(
     (a: Record<number, string>) => {
-      // Determine which tab to land on based on answered focus areas.
-      const focus = CLARIFICATION_STEPS.reduce<EditWorkspaceTab>((acc, step, idx) => {
-        if (a[idx]) return step.highlightTab;
-        return acc;
-      }, 'input');
-      setEditorActiveTab(focus);
-
       // Synthesize a recap message at the top of the editor chat so the
       // editor is grounded in what the user just chose.
       const summary = CLARIFICATION_STEPS.map((s, i) => {
@@ -105,6 +170,7 @@ export default function WorkflowEditInChatJourney({ workflowId, onBack }: Props)
       };
       setMessages([recap, ...initialMessages]);
       setPhase('editor');
+      setEditorStage('mapping');
     },
     [initialMessages],
   );
@@ -122,36 +188,160 @@ export default function WorkflowEditInChatJourney({ workflowId, onBack }: Props)
   }, []);
 
   const handleConfirmProceed = useCallback(() => {
+    // Mirror the AI Concierge builder journey: Map Data → Review & Run.
+    // Flip the editor stage to review (panel auto-jumps to the Plan tab via
+    // panelStep=4) and post a workflow-plan card + Validate workflow CTA.
+    setEditorStage('review');
+    setRightOpen(true);
+
+    const planSteps = draft.steps.map((s) => ({
+      name: s.name,
+      badge: badgeForStepType(s.type),
+    }));
+
     setMessages((prev) => [
       ...prev,
       {
         id: nextMsgId(),
         role: 'ira',
-        text: `Saved your edits to **${workflowName}**. The workflow is ready — open the executor when you want to run it.`,
+        text: 'Mappings confirmed — opening review.',
+      },
+      {
+        id: nextMsgId(),
+        role: 'ira',
+        workflowPlan: {
+          totalSteps: draft.steps.length,
+          durationLabel: '~12s',
+          steps: planSteps,
+          outputLabel: draft.output.title,
+          outputRows: '~5 rows',
+        },
+        showValidateWorkflow: true,
+        showViewWorkspace: true,
       },
     ]);
-  }, [workflowName]);
+  }, [draft]);
 
-  if (!wf) {
-    return (
-      <div className="flex flex-col h-full items-center justify-center bg-canvas">
-        <div className="text-[14px] font-semibold text-ink-800 mb-2">Workflow not found</div>
-        <button
-          type="button"
-          onClick={onBack}
-          className="text-[12.5px] text-brand-700 hover:text-brand-500 cursor-pointer"
-        >
-          ← Back
-        </button>
-      </div>
-    );
-  }
+  const handleValidateWorkflow = useCallback(() => {
+    // Surface pre-run clarifications inline before kicking off the validation
+    // pass. Mirrors the AI Concierge builder's Validate-step ambiguity check.
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: nextMsgId(),
+        role: 'ira',
+        text: "Before I kick off the run, I've spotted a couple of ambiguities — pick what fits below.",
+      },
+    ]);
+    setValidateClarify({ index: 0, answers: {} });
+  }, []);
+
+  const finishValidateClarifications = useCallback(
+    (answers: Record<string, string>) => {
+      setValidateClarify(null);
+
+      const tolerance = tolerancePctFromAnswer(answers['tolerance-preset']);
+
+      // Push a recap + output-schema CTA + finished receipt, then drop a
+      // synthetic result so DataSourcePanel auto-jumps to Output Config.
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: nextMsgId(),
+          role: 'ira',
+          text: `Got it — running with **${tolerance}** amount tolerance.`,
+        },
+        {
+          id: nextMsgId(),
+          role: 'ira',
+          text: 'Review the output schema on the right, then open the preview when ready.',
+          showViewPreview: true,
+        },
+        {
+          id: nextMsgId(),
+          role: 'ira',
+          text: `Finished. The **${draft.output.title}** is ready — 5 rows, 12375 records scanned.`,
+        },
+      ]);
+
+      // Synthetic RunResult — its presence flips DataSourcePanel to Output
+      // Config (and to Preview once previewRevealed=true).
+      setEditResult({
+        outputType: draft.output.type,
+        title: draft.output.title,
+        description: draft.output.description,
+        stats: [
+          { label: 'Records Scanned', value: '12,375', tone: 'primary' },
+          { label: 'Flags', value: '8', tone: 'risk' },
+          { label: 'Amount at Risk', value: '₹6.16L', tone: 'warning' },
+          { label: 'Confidence', value: '72%', tone: 'ok' },
+        ],
+        columns: ['Invoice', 'Vendor', 'Amount', 'Issue', 'Severity'],
+        rows: [
+          { cells: ['INV-4521', 'Acme Corp', '₹45,200', 'Duplicate of INV-3102', 'Critical'], status: 'flagged' },
+          { cells: ['INV-4533', 'Global Supplies', '₹1,28,750', 'No matching PO', 'High'], status: 'flagged' },
+          { cells: ['INV-4558', 'TechVendor', '₹67,400', 'Out-of-scope line', 'Medium'], status: 'warning' },
+          { cells: ['INV-4589', 'Pinnacle', '₹89,600', 'Off-policy GL code', 'Medium'], status: 'warning' },
+          { cells: ['INV-4612', 'Atlas Mfg', '₹23,100', 'Clean', 'Low'], status: 'ok' },
+        ],
+      });
+    },
+    [draft],
+  );
+
+  const handleClarifyAnswer = useCallback(
+    (questionId: string, answer: string) => {
+      // Echo the answer as a user bubble.
+      setMessages((prev) => [
+        ...prev,
+        { id: nextMsgId(), role: 'user', text: answer },
+      ]);
+      // Side effects must live outside the setState updater so React StrictMode's
+      // double-invoke of the updater doesn't fire them twice.
+      if (!validateClarify) return;
+      const nextAnswers = { ...validateClarify.answers, [questionId]: answer };
+      const nextIdx = validateClarify.index + 1;
+      if (nextIdx >= VALIDATE_QUESTIONS.length) {
+        setValidateClarify(null);
+        finishValidateClarifications(nextAnswers);
+      } else {
+        setValidateClarify({ index: nextIdx, answers: nextAnswers });
+      }
+    },
+    [validateClarify, finishValidateClarifications],
+  );
+
+  const handleClarifySkip = useCallback(
+    () => {
+      if (!validateClarify) return;
+      const nextIdx = validateClarify.index + 1;
+      if (nextIdx >= VALIDATE_QUESTIONS.length) {
+        setValidateClarify(null);
+        finishValidateClarifications(validateClarify.answers);
+      } else {
+        setValidateClarify({ ...validateClarify, index: nextIdx });
+      }
+    },
+    [validateClarify, finishValidateClarifications],
+  );
+
+  const handleViewPreview = useCallback(() => {
+    setPreviewRevealed(true);
+    setMessages((prev) => [
+      ...prev,
+      { id: nextMsgId(), role: 'user', text: 'View Preview' },
+      { id: nextMsgId(), role: 'ira', outputSummary: true },
+    ]);
+  }, []);
+
+  const handleSaveEdits = useCallback(() => {
+    setEditsSaved(true);
+  }, []);
 
   if (phase === 'clarify') {
     return (
       <div className="flex flex-col h-full bg-canvas">
         <EditClarificationStage
-          workflowName={workflowName}
           steps={CLARIFICATION_STEPS}
           onBack={onBack}
           onComplete={handleClarificationsComplete}
@@ -162,63 +352,50 @@ export default function WorkflowEditInChatJourney({ workflowId, onBack }: Props)
 
   return (
     <div className="flex flex-col h-full bg-canvas">
-      {/* Header */}
-      <header className="h-14 shrink-0 border-b border-canvas-border bg-canvas-elevated flex items-center justify-between px-4 gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-500 hover:text-brand-600 transition-colors cursor-pointer"
-          >
-            <ArrowLeft size={14} />
-            Back to Workflow
-          </button>
-          <span className="h-5 w-px bg-canvas-border" />
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center shrink-0">
-            <Sparkles size={15} className="text-white" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-[14px] font-semibold text-ink-800 tracking-tight truncate">
-              Edit in Chat
-            </div>
-            <div className="text-[11px] text-ink-500 truncate">{workflowName}</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleConfirmProceed}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-[12.5px] font-semibold px-3 py-1.5 transition-colors cursor-pointer"
-          >
-            <ShieldCheck size={13} />
-            Save edits
-          </button>
-        </div>
-      </header>
-
-      {/* Body — 3 columns */}
+      {/* Body — 50% chat / 50% workspace (mirrors the AI Concierge builder journey from Map Data step onward) */}
       <div
         className="flex-1 min-h-0 grid transition-[grid-template-columns] duration-300"
         style={{
-          gridTemplateColumns: rightOpen ? '30% 1fr 28%' : '30% 1fr 48px',
+          gridTemplateColumns: rightOpen ? '50% 50%' : '1fr 48px',
         }}
       >
         <EditChatPanel
-          workflowName={workflowName}
           messages={messages}
           input={chatInput}
           setInput={setChatInput}
           onSend={handleSend}
+          onBack={onBack}
           onConfirmProceed={handleConfirmProceed}
           onViewWorkspace={() => setRightOpen(true)}
+          onValidateWorkflow={handleValidateWorkflow}
+          onViewPreview={handleViewPreview}
+          draft={draft}
+          editResult={editResult}
+          onSaveEdits={handleSaveEdits}
+          editsSaved={editsSaved}
+          inlineClarify={
+            validateClarify
+              ? {
+                  questions: VALIDATE_QUESTIONS,
+                  index: validateClarify.index,
+                  stepLabel: 'Step 4 · Validate Workflow',
+                }
+              : null
+          }
+          onClarifyAnswer={handleClarifyAnswer}
+          onClarifySkip={handleClarifySkip}
         />
 
-        <EditCanvas />
-
-        <EditConfigPanel
-          initialTab={editorActiveTab}
-          open={rightOpen}
-          onToggleOpen={() => setRightOpen((v) => !v)}
+        {/* Use the AI Concierge builder's own DataSourcePanel so the
+            Input Config / Plan / Output Config / Preview tabs are visually
+            and structurally identical to the builder journey. */}
+        <DataSourcePanel
+          workflow={draft}
+          files={editFiles}
+          setFiles={setEditFiles}
+          result={editResult}
+          step={panelStep}
+          previewRevealed={previewRevealed}
         />
       </div>
     </div>
@@ -275,4 +452,25 @@ function buildInitialMessages(workflowName: string): EditChatMessage[] {
       showViewWorkspace: true,
     },
   ];
+}
+
+function badgeForStepType(type: StepSpec['type']): PlanStep['badge'] {
+  switch (type) {
+    case 'extract':
+      return 'INGESTION';
+    case 'compare':
+      return 'COMPARISON';
+    case 'validate':
+      return 'VALIDATION';
+    case 'flag':
+      return 'FLAGGING';
+    case 'analyze':
+      return 'ANALYSIS';
+    case 'summarize':
+      return 'SUMMARY';
+    case 'calculate':
+      return 'CALCULATION';
+    default:
+      return 'INGESTION';
+  }
 }
