@@ -12,6 +12,7 @@ import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
 import EngagementSetupPanel from '../engagement/EngagementSetupPanel';
 import RacmMappingWorkspace from './RacmMappingWorkspace';
+import { computeRacmState, RACM_STATUS_STYLES, RACM_READINESS_STYLES, RACM_ACTION_STYLES, type RacmSummaryInput, type ComputedRacmState } from './racmStateEngine';
 
 // ─── Types (Finalized Engagement Model) ──────────────────────────────────────
 
@@ -233,12 +234,12 @@ function getRacmDisplayName(eng: { businessProcess: ProcessType; auditType: Audi
 }
 
 const PROCESS_BADGE_COLORS: Record<ProcessType, string> = {
-  P2P: 'bg-[#6a12cd]/10 text-[#6a12cd] border-[#6a12cd]/20',
-  O2C: 'bg-[#0284c7]/10 text-[#0284c7] border-[#0284c7]/20',
-  R2R: 'bg-[#d97706]/10 text-[#d97706] border-[#d97706]/20',
-  S2C: 'bg-[#059669]/10 text-[#059669] border-[#059669]/20',
-  ITGC: 'bg-[#16a34a]/10 text-[#16a34a] border-[#16a34a]/20',
-  Cross: 'bg-[#7c3aed]/10 text-[#7c3aed] border-[#7c3aed]/20',
+  P2P: 'bg-gray-100 text-gray-600 border-gray-200/60',
+  O2C: 'bg-gray-100 text-gray-600 border-gray-200/60',
+  R2R: 'bg-gray-100 text-gray-600 border-gray-200/60',
+  S2C: 'bg-gray-100 text-gray-600 border-gray-200/60',
+  ITGC: 'bg-gray-100 text-gray-600 border-gray-200/60',
+  Cross: 'bg-gray-100 text-gray-600 border-gray-200/60',
 };
 
 function getCurrentMonth(): number { return 11; }
@@ -263,14 +264,14 @@ function lifecycleLabel(s: EngagementLifecycle): string {
 
 function lifecycleTone(s: EngagementLifecycle): string {
   const map: Record<EngagementLifecycle, string> = {
-    'draft': 'bg-draft-50 text-draft-700',
-    'planned': 'bg-evidence-50 text-evidence-700',
-    'frozen': 'bg-brand-50 text-brand-700',
-    'signed-off': 'bg-compliant-50 text-compliant-700',
-    'active': 'bg-compliant-50 text-compliant-700',
-    'in-progress': 'bg-evidence-50 text-evidence-700',
-    'pending-review': 'bg-high-50 text-high-700',
-    'closed': 'bg-draft-50 text-draft-700',
+    'draft': 'bg-gray-100 text-gray-600',
+    'planned': 'bg-gray-100 text-gray-600',
+    'frozen': 'bg-blue-50 text-blue-700',
+    'signed-off': 'bg-emerald-50 text-emerald-700',
+    'active': 'bg-emerald-50 text-emerald-700',
+    'in-progress': 'bg-blue-50 text-blue-700',
+    'pending-review': 'bg-amber-50 text-amber-700',
+    'closed': 'bg-gray-100 text-gray-500',
   };
   return map[s];
 }
@@ -370,31 +371,32 @@ function KpiCard({ label, value, icon: Icon, color, index }: {
 interface RacmEntry {
   id: string; name: string; version: string; process: string; framework: string;
   risks: number; controls: number; mappedRisks: number; unmappedRisks: number;
-  keyControls: number; workflowCoverage: number;
-  status: 'Draft' | 'Working' | 'Active' | 'Locked';
-  readiness: 'Not Ready' | 'Needs Mapping' | 'Ready for Execution';
+  keyControls: number; workflowCoverage: number; attributesCoverage: number;
+  isValidated: boolean; linkedToEngagement: boolean;
+}
+
+// Helper: get computed state for any RACM entry
+function getRacmComputed(racm: RacmEntry): ComputedRacmState {
+  return computeRacmState({
+    risks: racm.risks,
+    controls: racm.controls,
+    mappedRisks: racm.mappedRisks,
+    unmappedRisks: racm.unmappedRisks,
+    keyControls: racm.keyControls,
+    workflowCoverage: racm.workflowCoverage,
+    attributesCoverage: racm.attributesCoverage,
+    isValidated: racm.isValidated,
+    linkedToEngagement: racm.linkedToEngagement,
+  });
 }
 
 const MOCK_RACMS: RacmEntry[] = [
-  { id: 'racm-001', name: 'FY26 P2P — Vendor Payment', version: 'v2.1', process: 'P2P', framework: 'SOX ICFR', risks: 9, controls: 24, mappedRisks: 9, unmappedRisks: 0, keyControls: 6, workflowCoverage: 92, status: 'Locked', readiness: 'Ready for Execution' },
-  { id: 'racm-002', name: 'FY26 O2C — Revenue & AR', version: 'v2.1', process: 'O2C', framework: 'SOX ICFR', risks: 7, controls: 18, mappedRisks: 6, unmappedRisks: 1, keyControls: 4, workflowCoverage: 78, status: 'Active', readiness: 'Needs Mapping' },
-  { id: 'racm-003', name: 'FY26 R2R — Financial Close', version: 'v2.1', process: 'R2R', framework: 'SOX ICFR', risks: 11, controls: 31, mappedRisks: 10, unmappedRisks: 1, keyControls: 8, workflowCoverage: 85, status: 'Locked', readiness: 'Ready for Execution' },
-  { id: 'racm-004', name: 'FY26 S2C — Contract Review', version: 'v1.8', process: 'S2C', framework: 'Internal Policy', risks: 5, controls: 14, mappedRisks: 3, unmappedRisks: 2, keyControls: 2, workflowCoverage: 60, status: 'Working', readiness: 'Needs Mapping' },
-  { id: 'racm-005', name: 'FY26 ITGC — Access & Change', version: 'v2.1', process: 'ITGC', framework: 'ISO 27001', risks: 6, controls: 15, mappedRisks: 6, unmappedRisks: 0, keyControls: 5, workflowCoverage: 100, status: 'Locked', readiness: 'Ready for Execution' },
+  { id: 'racm-001', name: 'FY26 P2P — Vendor Payment', version: 'v2.1', process: 'P2P', framework: 'SOX ICFR', risks: 9, controls: 24, mappedRisks: 9, unmappedRisks: 0, keyControls: 6, workflowCoverage: 92, attributesCoverage: 88, isValidated: true, linkedToEngagement: true },
+  { id: 'racm-002', name: 'FY26 O2C — Revenue & AR', version: 'v2.1', process: 'O2C', framework: 'SOX ICFR', risks: 7, controls: 18, mappedRisks: 6, unmappedRisks: 1, keyControls: 4, workflowCoverage: 78, attributesCoverage: 65, isValidated: false, linkedToEngagement: false },
+  { id: 'racm-003', name: 'FY26 R2R — Financial Close', version: 'v2.1', process: 'R2R', framework: 'SOX ICFR', risks: 11, controls: 31, mappedRisks: 10, unmappedRisks: 1, keyControls: 8, workflowCoverage: 85, attributesCoverage: 80, isValidated: true, linkedToEngagement: true },
+  { id: 'racm-004', name: 'FY26 S2C — Contract Review', version: 'v1.8', process: 'S2C', framework: 'Internal Policy', risks: 5, controls: 14, mappedRisks: 3, unmappedRisks: 2, keyControls: 2, workflowCoverage: 60, attributesCoverage: 45, isValidated: false, linkedToEngagement: false },
+  { id: 'racm-005', name: 'FY26 ITGC — Access & Change', version: 'v2.1', process: 'ITGC', framework: 'ISO 27001', risks: 6, controls: 15, mappedRisks: 6, unmappedRisks: 0, keyControls: 5, workflowCoverage: 100, attributesCoverage: 100, isValidated: true, linkedToEngagement: true },
 ];
-
-const RACM_STATUS_CLS: Record<string, string> = {
-  Draft: 'bg-draft-50 text-draft-700',
-  Working: 'bg-evidence-50 text-evidence-700',
-  Active: 'bg-compliant-50 text-compliant-700',
-  Locked: 'bg-brand-50 text-brand-700',
-};
-
-const READINESS_CLS: Record<string, { cls: string; icon: React.ElementType }> = {
-  'Not Ready': { cls: 'bg-risk-50 text-risk-700', icon: XCircle },
-  'Needs Mapping': { cls: 'bg-mitigated-50 text-mitigated-700', icon: AlertTriangle },
-  'Ready for Execution': { cls: 'bg-compliant-50 text-compliant-700', icon: CheckCircle2 },
-};
 
 const BP_DOT_COLORS: Record<string, string> = { P2P: '#6a12cd', O2C: '#0284c7', R2R: '#d97706', S2C: '#059669', ITGC: '#16a34a' };
 
@@ -652,65 +654,33 @@ function RacmDashboard({ engagements, onGoToExecution }: { engagements: { source
   const [showImportDrawer, setShowImportDrawer] = useState(false);
   const [importedRows, setImportedRows] = useState<ImportedRacmRow[]>([]);
   const [showMappingWorkspace, setShowMappingWorkspace] = useState(false);
-  const [showValidateModal, setShowValidateModal] = useState(false);
+  const [mappingRacm, setMappingRacm] = useState<RacmEntry | null>(null);
   const [showCreateRacmModal, setShowCreateRacmModal] = useState(false);
   const [racmList, setRacmList] = useState<RacmEntry[]>(MOCK_RACMS);
   const [selectedRacmId, setSelectedRacmId] = useState<string | null>(null);
 
-  // RACM lifecycle state
-  const [racmStatus, setRacmStatus] = useState<'Draft' | 'Working' | 'Active' | 'Locked'>('Working');
-  const [racmReadiness, setRacmReadiness] = useState<'Not Ready' | 'Needs Mapping' | 'Ready for Execution'>('Needs Mapping');
-  const [mappingChanged, setMappingChanged] = useState(false);
-
   const handleImport = (rows: ImportedRacmRow[]) => {
     setImportedRows(rows);
     setShowImportDrawer(false);
-    setRacmStatus('Working');
-    setRacmReadiness('Needs Mapping');
     addToast({ message: `${rows.length} rows imported — review and map controls below`, type: 'success' });
   };
 
   const handleMapRow = (idx: number) => {
     setImportedRows(prev => prev.map((r, i) => i === idx ? { ...r, mappingStatus: 'Mapped' } : r));
-    if (racmStatus === 'Active') {
-      setRacmStatus('Working');
-      setRacmReadiness('Needs Mapping');
-      setMappingChanged(true);
-    }
     addToast({ message: `Control mapped to Control Library`, type: 'success' });
   };
 
-  const handleValidate = () => {
-    setRacmStatus('Active');
-    setRacmReadiness('Ready for Execution');
-    setMappingChanged(false);
-    setShowValidateModal(false);
-    addToast({ message: 'RACM validated — ready for engagement execution', type: 'success' });
-  };
-
-  // Summary KPIs
+  // Summary KPIs (all derived from data)
   const totalRacms = racmList.length;
   const totalRisks = racmList.reduce((s, r) => s + r.risks, 0);
   const totalControls = racmList.reduce((s, r) => s + r.controls, 0);
   const totalUnmapped = racmList.reduce((s, r) => s + r.unmappedRisks, 0);
-  const readyCount = racmList.filter(r => r.readiness === 'Ready for Execution').length;
+  const computedStates = racmList.map(r => getRacmComputed(r));
+  const readyCount = computedStates.filter(s => s.readiness === 'Ready').length;
   const avgCoverage = totalRacms > 0 ? Math.round(racmList.reduce((s, r) => s + r.workflowCoverage, 0) / totalRacms) : 0;
 
   const mappedImportCount = importedRows.filter(r => r.mappingStatus === 'Mapped').length;
   const unmappedImportCount = importedRows.filter(r => r.mappingStatus === 'Not Mapped').length;
-
-  // Validation checklist
-  const checks = [
-    { label: 'All risks reviewed', done: true },
-    { label: 'All risks have at least one mapped control', done: totalUnmapped === 0 },
-    { label: 'Key controls identified', done: MOCK_RACMS.every(r => r.keyControls > 0) },
-    { label: 'Controls have linked workflows', done: avgCoverage >= 80 },
-    { label: 'Required workflow attributes configured', done: avgCoverage >= 70 },
-    { label: 'No unmapped imported control references', done: unmappedImportCount === 0 || importedRows.length === 0 },
-    { label: 'Dataset requirements known', done: true },
-  ];
-  const checksDone = checks.filter(c => c.done).length;
-  const allChecksPassed = checks.every(c => c.done);
 
   const MAP_STATUS_CLS: Record<string, string> = {
     'Not Mapped': 'bg-draft-50 text-draft-700',
@@ -724,21 +694,25 @@ function RacmDashboard({ engagements, onGoToExecution }: { engagements: { source
     return <RacmSetupWorkspace
       racm={selectedRacm}
       onBack={() => setSelectedRacmId(null)}
-      onStartMapping={() => { setSelectedRacmId(null); setShowMappingWorkspace(true); }}
+      onStartMapping={() => { setMappingRacm(selectedRacm); setSelectedRacmId(null); setShowMappingWorkspace(true); }}
       onImport={() => { setSelectedRacmId(null); setShowImportDrawer(true); }}
     />;
   }
 
   // If mapping workspace is open, render it instead of the dashboard
-  if (showMappingWorkspace) {
-    return <RacmMappingWorkspace onBack={() => {
-      setShowMappingWorkspace(false);
-      if (racmStatus === 'Active') {
-        setRacmStatus('Working');
-        setRacmReadiness('Needs Mapping');
-        setMappingChanged(true);
-      }
-    }} onGoToExecution={() => { setShowMappingWorkspace(false); onGoToExecution(); }} />;
+  if (showMappingWorkspace && mappingRacm) {
+    const mappingState = getRacmComputed(mappingRacm);
+    return <RacmMappingWorkspace
+      racmId={mappingRacm.id}
+      racmName={mappingRacm.name}
+      racmProcess={mappingRacm.process}
+      isEmpty={mappingRacm.risks === 0 && mappingState.status === 'Draft'}
+      onBack={() => {
+        setShowMappingWorkspace(false);
+        setMappingRacm(null);
+      }}
+      onGoToExecution={() => { setShowMappingWorkspace(false); setMappingRacm(null); onGoToExecution(); }}
+    />;
   }
 
   return (
@@ -751,7 +725,10 @@ function RacmDashboard({ engagements, onGoToExecution }: { engagements: { source
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer">
             <Upload size={13} />Import RACM
           </button>
-          <button onClick={() => setShowMappingWorkspace(true)}
+          <button onClick={() => {
+              const needsMapping = racmList.find(r => r.unmappedRisks > 0) || racmList[0];
+              if (needsMapping) { setMappingRacm(needsMapping); setShowMappingWorkspace(true); }
+            }}
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer">
             <Target size={13} />Start Mapping
           </button>
@@ -788,7 +765,11 @@ function RacmDashboard({ engagements, onGoToExecution }: { engagements: { source
             <span className="text-[12px] font-semibold text-high-700">{totalUnmapped} risk{totalUnmapped !== 1 ? 's' : ''} not mapped to controls.</span>
             <span className="text-[12px] text-high-700/70 ml-1">Complete mapping before engagement execution.</span>
           </div>
-          <button onClick={() => setShowMappingWorkspace(true)}
+          <button onClick={() => {
+              const needsMapping = racmList.find(r => r.unmappedRisks > 0) || racmList[0];
+              setMappingRacm(needsMapping);
+              setShowMappingWorkspace(true);
+            }}
             className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-high-50 text-high-700 text-[11px] font-semibold hover:bg-high/10 transition-colors cursor-pointer shrink-0">
             <Target size={11} />Start Mapping
           </button>
@@ -808,63 +789,55 @@ function RacmDashboard({ engagements, onGoToExecution }: { engagements: { source
             </thead>
             <tbody>
               {racmList.map((racm, i) => {
-                const rd = READINESS_CLS[racm.readiness];
-                const RdIcon = rd.icon;
-                const dotColor = BP_DOT_COLORS[racm.process] || '#6B5D82';
+                const computed = getRacmComputed(racm);
                 return (
                   <motion.tr key={racm.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
-                    className="border-b border-border/50 hover:bg-brand-50/20 transition-colors">
+                    className="border-b border-border/50 hover:bg-gray-50/60 transition-colors">
                     <td className="px-3 py-3">
                       <div className="text-[12px] font-medium text-text">{racm.name}</div>
                       <div className="text-[10px] text-text-muted font-mono">{racm.version}</div>
                     </td>
                     <td className="px-3 py-3">
-                      <span className="inline-flex items-center gap-1.5 px-2 h-5 rounded-full text-[10px] font-bold border" style={{ background: `${dotColor}10`, color: dotColor, borderColor: `${dotColor}30` }}>
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: dotColor }} />{racm.process}
+                      <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200/60">
+                        {racm.process}
                       </span>
                     </td>
                     <td className="px-3 py-3"><span className="text-[11px] text-text-secondary">{racm.framework}</span></td>
                     <td className="px-3 py-3"><span className="text-[12px] font-semibold text-text tabular-nums">{racm.risks}</span></td>
                     <td className="px-3 py-3"><span className="text-[12px] font-semibold text-text tabular-nums">{racm.controls}</span></td>
-                    <td className="px-3 py-3"><span className="text-[12px] font-semibold text-brand-700 tabular-nums">{racm.keyControls}</span></td>
+                    <td className="px-3 py-3"><span className="text-[12px] font-medium text-gray-600 tabular-nums">{racm.keyControls}</span></td>
                     <td className="px-3 py-3">
                       {racm.unmappedRisks > 0
-                        ? <span className="text-[12px] font-bold text-high-700 tabular-nums">{racm.unmappedRisks}</span>
-                        : <span className="text-[11px] text-compliant-700 font-medium">0</span>}
+                        ? <span className="text-[12px] font-bold text-red-600 tabular-nums">{racm.unmappedRisks}</span>
+                        : <span className="text-[11px] text-gray-400 font-medium">0</span>}
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-2 min-w-[60px]">
-                        <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${racm.workflowCoverage}%` }} />
+                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full bg-gray-400 transition-all" style={{ width: `${racm.workflowCoverage}%` }} />
                         </div>
-                        <span className="text-[10px] font-bold text-text-muted tabular-nums w-7 text-right">{racm.workflowCoverage}%</span>
+                        <span className="text-[10px] text-gray-400 tabular-nums w-7 text-right">{racm.workflowCoverage}%</span>
                       </div>
                     </td>
                     <td className="px-3 py-3">
-                      <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${RACM_STATUS_CLS[racm.status]}`}>{racm.status}</span>
+                      <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${RACM_STATUS_STYLES[computed.status]}`}>{computed.status}</span>
                     </td>
                     <td className="px-3 py-3">
-                      <span className={`inline-flex items-center gap-1 px-2 h-5 rounded-full text-[9px] font-semibold ${rd.cls}`}>
-                        <RdIcon size={9} />{racm.readiness === 'Ready for Execution' ? 'Ready' : racm.readiness}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3">
-                      {racm.readiness === 'Needs Mapping' ? (
-                        <button onClick={() => setShowMappingWorkspace(true)}
-                          className="px-2 py-1 rounded-lg text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/15 cursor-pointer transition-colors inline-flex items-center gap-1">
-                          <Target size={9} />Map <ChevronRight size={8} />
-                        </button>
-                      ) : racm.status === 'Locked' ? (
-                        <button onClick={() => addToast({ message: `Validate RACM ${racm.name} — all checks passed`, type: 'success' })}
-                          className="px-2 py-1 rounded-lg text-[10px] font-bold text-compliant-700 bg-compliant-50 hover:bg-compliant-50/80 cursor-pointer transition-colors inline-flex items-center gap-1">
-                          <CheckCircle2 size={9} />Validated
-                        </button>
+                      {computed.readiness !== 'Ready' ? (
+                        <span className={`inline-flex items-center px-2 h-5 rounded-full text-[9px] font-semibold ${RACM_READINESS_STYLES[computed.readiness]}`}>
+                          {computed.readiness}
+                        </span>
                       ) : (
-                        <button onClick={() => addToast({ message: `View ${racm.name}`, type: 'info' })}
-                          className="px-2 py-1 rounded-lg text-[10px] font-bold text-brand-700 bg-brand-50 hover:bg-brand-50/80 cursor-pointer transition-colors inline-flex items-center gap-1">
-                          View <ChevronRight size={8} />
-                        </button>
+                        <span className={`inline-flex items-center gap-1 px-2 h-5 rounded-full text-[9px] font-semibold ${RACM_READINESS_STYLES.Ready}`}>
+                          <CheckCircle2 size={9} />Ready
+                        </span>
                       )}
+                    </td>
+                    <td className="px-3 py-3">
+                      <button onClick={() => { setMappingRacm(racm); setShowMappingWorkspace(true); }}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors inline-flex items-center gap-1 ${RACM_ACTION_STYLES[computed.action]}`}>
+                        {computed.action}<ChevronRight size={8} />
+                      </button>
                     </td>
                   </motion.tr>
                 );
@@ -874,12 +847,6 @@ function RacmDashboard({ engagements, onGoToExecution }: { engagements: { source
         </div>
         <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-surface-2/30">
           <span className="text-[11px] text-text-muted">{racmList.length} RACM{racmList.length !== 1 ? 's' : ''}</span>
-          <div className="flex items-center gap-2">
-            <button onClick={() => addToast({ message: 'Validate all RACMs — checking mapping completeness', type: 'info' })}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 text-[11px] font-semibold text-primary hover:bg-primary/5 transition-colors cursor-pointer">
-              <FileCheck size={11} />Validate All
-            </button>
-          </div>
         </div>
       </div>
 
@@ -938,80 +905,6 @@ function RacmDashboard({ engagements, onGoToExecution }: { engagements: { source
         </div>
       )}
 
-      {/* ── Mapping Changed Warning ── */}
-      {mappingChanged && (
-        <div className="rounded-xl border border-high/30 bg-high-50/30 px-4 py-3 flex items-center gap-3">
-          <AlertTriangle size={15} className="text-high-700 shrink-0" />
-          <div>
-            <span className="text-[12px] font-semibold text-high-700">RACM mapping changed</span>
-            <span className="text-[12px] text-high-700/70 ml-1">Execution readiness must be revalidated.</span>
-          </div>
-          <button onClick={() => setShowValidateModal(true)}
-            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-[11px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer shrink-0">
-            <FileCheck size={11} />Revalidate
-          </button>
-        </div>
-      )}
-
-      {/* ── RACM Validation Checklist ── */}
-      <div className="glass-card rounded-xl p-5">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <FileCheck size={14} className="text-brand-600" />
-            <h3 className="text-[13px] font-bold text-text">RACM Validation</h3>
-            <span className={`px-2 h-5 rounded-full text-[10px] font-semibold inline-flex items-center ${RACM_STATUS_CLS[racmStatus]}`}>{racmStatus}</span>
-            <span className={`px-2 h-5 rounded-full text-[10px] font-semibold inline-flex items-center ${
-              racmReadiness === 'Ready for Execution' ? 'bg-compliant-50 text-compliant-700' : racmReadiness === 'Needs Mapping' ? 'bg-mitigated-50 text-mitigated-700' : 'bg-risk-50 text-risk-700'
-            }`}>{racmReadiness}</span>
-          </div>
-          <div className="text-[11px] text-text-muted">{checksDone}/{checks.length} checks passed</div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 mb-4">
-          {checks.map((c, i) => (
-            <div key={i} className="flex items-center gap-2 py-1">
-              {c.done
-                ? <CheckCircle2 size={13} className="text-compliant-700 shrink-0" />
-                : <XCircle size={13} className="text-risk-700 shrink-0" />}
-              <span className={`text-[12px] ${c.done ? 'text-text-secondary' : 'text-text font-medium'}`}>{c.label}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {racmStatus !== 'Active' && racmStatus !== 'Locked' && (
-            <button onClick={() => setShowValidateModal(true)} disabled={!allChecksPassed}
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
-              <FileCheck size={13} />Validate RACM
-            </button>
-          )}
-          {racmStatus === 'Active' && (
-            <span className="flex items-center gap-1.5 text-[12px] font-semibold text-compliant-700"><CheckCircle2 size={14} />RACM Validated</span>
-          )}
-          {!allChecksPassed && racmStatus !== 'Active' && (
-            <span className="text-[11px] text-risk-700">Resolve remaining checks before validation</span>
-          )}
-        </div>
-      </div>
-
-      {/* ── Handoff Panel ── */}
-      {racmStatus === 'Active' && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border-2 border-compliant/20 bg-gradient-to-br from-compliant-50/30 to-white p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-compliant"><Zap size={16} className="text-white" /></div>
-            <div>
-              <h3 className="text-[14px] font-bold text-compliant-700">Ready for Execution</h3>
-              <p className="text-[12px] text-compliant-700/70 mt-0.5">This RACM defines what controls need to be executed. Execution will happen in the Execution tab using the linked workflows and selected datasets.</p>
-            </div>
-          </div>
-          <button onClick={onGoToExecution}
-            className="mt-2 flex items-center gap-1.5 px-4 py-2 bg-compliant hover:bg-compliant-700 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
-            <ArrowRight size={13} />Go to Execution
-          </button>
-        </motion.div>
-      )}
-
       {/* Governance notice */}
       <div className="rounded-lg border border-canvas-border bg-canvas px-4 py-3 flex items-start gap-2.5">
         <ShieldCheck size={13} className="text-ink-400 mt-0.5 shrink-0" />
@@ -1028,46 +921,6 @@ function RacmDashboard({ engagements, onGoToExecution }: { engagements: { source
         )}
       </AnimatePresence>
 
-      {/* Validate RACM Modal */}
-      <AnimatePresence>
-        {showValidateModal && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/30 backdrop-blur-sm" onClick={() => setShowValidateModal(false)}>
-              <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ duration: 0.2 }} className="bg-white rounded-2xl shadow-xl border border-canvas-border w-full max-w-[440px] p-6" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 rounded-xl bg-brand-50"><FileCheck size={20} className="text-brand-600" /></div>
-                  <h2 className="text-[16px] font-bold text-text">Validate RACM</h2>
-                </div>
-                <p className="text-[13px] text-text-secondary mb-2">You are about to validate these risk-control mappings.</p>
-                <div className="rounded-lg bg-surface-2/50 border border-border px-3 py-2.5 mb-4">
-                  <p className="text-[12px] text-text leading-relaxed">
-                    I confirm these risk-control mappings are correct and ready for engagement execution.
-                    Once validated, RACM status changes to <strong>Active</strong> and execution can begin.
-                  </p>
-                </div>
-                <div className="grid grid-cols-3 gap-3 mb-4 text-center">
-                  <div className="glass-card rounded-lg p-2"><div className="text-lg font-bold text-text">{totalRisks}</div><div className="text-[10px] text-text-muted">Risks</div></div>
-                  <div className="glass-card rounded-lg p-2"><div className="text-lg font-bold text-text">{totalControls}</div><div className="text-[10px] text-text-muted">Controls</div></div>
-                  <div className="glass-card rounded-lg p-2"><div className="text-lg font-bold text-text">{avgCoverage}%</div><div className="text-[10px] text-text-muted">Coverage</div></div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button onClick={handleValidate}
-                    className="flex-1 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
-                    Confirm & Validate
-                  </button>
-                  <button onClick={() => setShowValidateModal(false)}
-                    className="px-4 py-2.5 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer">
-                    Cancel
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
       {/* Create RACM Modal */}
       <AnimatePresence>
         {showCreateRacmModal && (
@@ -1076,9 +929,7 @@ function RacmDashboard({ engagements, onGoToExecution }: { engagements: { source
             onCreate={(newRacm) => {
               setRacmList(prev => [newRacm, ...prev]);
               setShowCreateRacmModal(false);
-              setRacmStatus('Draft');
-              setRacmReadiness('Needs Mapping');
-              addToast({ message: `RACM "${newRacm.name}" created as Draft`, type: 'success' });
+              addToast({ message: `RACM "${newRacm.name}" created — status: Draft`, type: 'success' });
               setSelectedRacmId(newRacm.id);
             }}
           />
@@ -1099,7 +950,8 @@ function RacmSetupWorkspace({ racm, onBack, onStartMapping, onImport }: {
   onImport: () => void;
 }) {
   const { addToast } = useToast();
-  const statusCls = RACM_STATUS_CLS[racm.status] || RACM_STATUS_CLS.Draft;
+  const computed = getRacmComputed(racm);
+  const statusCls = RACM_STATUS_STYLES[computed.status];
 
   const [localRisks, setLocalRisks] = useState<SetupRisk[]>([]);
   const [showAddRisk, setShowAddRisk] = useState(false);
@@ -1110,11 +962,11 @@ function RacmSetupWorkspace({ racm, onBack, onStartMapping, onImport }: {
 
   const kpis = [
     { label: 'Total Risks', value: totalRisks, color: totalRisks > 0 ? 'text-text' : 'text-text-muted' },
-    { label: 'Mapped Risks', value: racm.mappedRisks, color: racm.mappedRisks > 0 ? 'text-compliant-700' : 'text-text-muted' },
-    { label: 'Unmapped Risks', value: totalRisks - racm.mappedRisks, color: totalRisks > racm.mappedRisks ? 'text-risk-700' : 'text-text-muted' },
-    { label: 'Controls Linked', value: racm.controls, color: racm.controls > 0 ? 'text-evidence-700' : 'text-text-muted' },
-    { label: 'Workflow Coverage', value: `${racm.workflowCoverage}%`, color: racm.workflowCoverage >= 80 ? 'text-compliant-700' : racm.workflowCoverage > 0 ? 'text-mitigated-700' : 'text-text-muted' },
-    { label: 'Readiness', value: racm.readiness === 'Ready for Execution' ? 'Ready' : racm.readiness, color: racm.readiness === 'Ready for Execution' ? 'text-compliant-700' : 'text-mitigated-700' },
+    { label: 'Mapped Risks', value: racm.mappedRisks, color: racm.mappedRisks > 0 ? 'text-emerald-700' : 'text-text-muted' },
+    { label: 'Unmapped Risks', value: totalRisks - racm.mappedRisks, color: totalRisks > racm.mappedRisks ? 'text-red-600' : 'text-text-muted' },
+    { label: 'Controls Linked', value: racm.controls, color: racm.controls > 0 ? 'text-text' : 'text-text-muted' },
+    { label: 'Workflow Coverage', value: `${racm.workflowCoverage}%`, color: racm.workflowCoverage >= 80 ? 'text-emerald-700' : racm.workflowCoverage > 0 ? 'text-amber-600' : 'text-text-muted' },
+    { label: 'Readiness', value: computed.readiness, color: computed.readiness === 'Ready' ? 'text-emerald-700' : 'text-amber-600' },
   ];
 
   const handleAddRisk = () => {
@@ -1158,7 +1010,7 @@ function RacmSetupWorkspace({ racm, onBack, onStartMapping, onImport }: {
             <div className="flex items-center gap-2">
               <h2 className="text-[16px] font-bold text-text">{racm.name}</h2>
               <span className="text-[11px] font-mono text-ink-400">{racm.version}</span>
-              <span className={`px-2 h-5 rounded-full text-[10px] font-semibold inline-flex items-center ${statusCls}`}>{racm.status}</span>
+              <span className={`px-2 h-5 rounded-full text-[10px] font-semibold inline-flex items-center ${statusCls}`}>{computed.status}</span>
             </div>
             <div className="flex items-center gap-3 text-[12px] text-text-muted mt-0.5">
               <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: BP_DOT_COLORS[racm.process] || '#6B5D82' }} />{racm.process}</span>
@@ -1319,8 +1171,9 @@ function CreateRacmModal({ onClose, onCreate }: { onClose: () => void; onCreate:
       unmappedRisks: 0,
       keyControls: 0,
       workflowCoverage: 0,
-      status: 'Draft',
-      readiness: 'Not Ready',
+      attributesCoverage: 0,
+      isValidated: false,
+      linkedToEngagement: false,
     });
   };
 
@@ -2539,11 +2392,11 @@ export default function AuditPlanningView({ onNavigateToExecution, embedded = fa
             });
 
             const getNextAction = (eng: AuditEngagement): { label: string; cls: string } => {
-              if (eng.status === 'draft') return { label: 'Configure', cls: 'bg-draft-50 text-draft-700 hover:bg-draft-50/80' };
-              if (['planned', 'frozen', 'signed-off'].includes(eng.status)) return { label: 'Activate', cls: 'bg-brand-50 text-brand-700 hover:bg-brand-50/80' };
-              if (eng.pendingReview > 0) return { label: 'Review Pending', cls: 'bg-mitigated-50 text-mitigated-700 hover:bg-mitigated-50/80' };
-              if (eng.controlsFailed > 0) return { label: 'View Failed', cls: 'bg-risk-50 text-risk-700 hover:bg-risk-50/80' };
-              if (eng.controlsTested < eng.controls) return { label: 'Continue Testing', cls: 'bg-evidence-50 text-evidence-700 hover:bg-evidence-50/80' };
+              if (eng.status === 'draft') return { label: 'Configure', cls: 'bg-gray-100 text-gray-600 hover:bg-gray-200/70' };
+              if (['planned', 'frozen', 'signed-off'].includes(eng.status)) return { label: 'Activate', cls: 'bg-primary/10 text-primary hover:bg-primary/20' };
+              if (eng.controlsFailed > 0) return { label: 'View Failed', cls: 'bg-red-50 text-red-700 hover:bg-red-100/70' };
+              if (eng.pendingReview > 0) return { label: 'Review Pending', cls: 'bg-gray-100 text-gray-600 hover:bg-gray-200/70' };
+              if (eng.controlsTested < eng.controls) return { label: 'Continue Testing', cls: 'bg-primary/10 text-primary hover:bg-primary/20' };
               return { label: 'View Execution', cls: 'bg-primary/10 text-primary hover:bg-primary/20' };
             };
 
@@ -2627,14 +2480,13 @@ export default function AuditPlanningView({ onNavigateToExecution, embedded = fa
                                 if (isActive && onNavigateToExecution) onNavigateToExecution(eng.id);
                                 else openEditDrawer(eng);
                               }}
-                              className={`border-b border-border/50 hover:bg-brand-50/30 transition-colors cursor-pointer group ${eng.isOverdue ? 'border-l-[3px] border-l-risk' : ''}`}>
+                              className={`border-b border-border/50 hover:bg-gray-50/60 transition-colors cursor-pointer group ${eng.isOverdue ? 'border-l-[3px] border-l-red-400' : ''}`}>
                               <td className="px-3 py-2.5">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: eng.color, opacity: isActive ? 1 : 0.4 }} />
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-1.5">
                                       <span className="text-[12px] font-semibold text-text truncate">{eng.name}</span>
-                                      {eng.isOverdue && <span className="px-1 h-4 rounded text-[8px] font-bold bg-risk-50 text-risk-700 inline-flex items-center animate-pulse shrink-0">OD</span>}
+                                      {eng.isOverdue && <span className="px-1 h-4 rounded text-[8px] font-bold bg-red-50 text-red-600 inline-flex items-center shrink-0">OD</span>}
                                     </div>
                                     <div className="text-[10px] text-text-muted mt-0.5 truncate max-w-[220px]">
                                       RACM: {getRacmDisplayName(eng)} · Scope: {getScopeLabel(eng)}
@@ -2643,7 +2495,7 @@ export default function AuditPlanningView({ onNavigateToExecution, embedded = fa
                                 </div>
                               </td>
                               <td className="px-3 py-2.5">
-                                <span className="px-2 h-5 rounded-full text-[9px] font-semibold bg-brand-50 text-brand-700 inline-flex items-center">{eng.auditType}</span>
+                                <span className="px-2 h-5 rounded-full text-[9px] font-medium bg-gray-50 text-gray-500 border border-gray-200/50 inline-flex items-center">{eng.auditType}</span>
                               </td>
                               <td className="px-3 py-2.5">
                                 <span className={`px-2.5 h-5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 ${PROCESS_BADGE_COLORS[eng.businessProcess]}`}>
@@ -2654,21 +2506,21 @@ export default function AuditPlanningView({ onNavigateToExecution, embedded = fa
                               <td className="px-3 py-2.5">
                                 {isActive ? (
                                   <div className="flex items-center gap-2 min-w-[80px]">
-                                    <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
-                                      <div className="h-full rounded-full" style={{ width: `${progress}%`, background: eng.color }} />
+                                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                      <div className="h-full rounded-full bg-gray-400" style={{ width: `${progress}%` }} />
                                     </div>
-                                    <span className="text-[10px] font-bold tabular-nums text-text-muted w-7 text-right">{progress}%</span>
+                                    <span className="text-[10px] tabular-nums text-gray-400 w-7 text-right">{progress}%</span>
                                   </div>
-                                ) : <span className="text-ink-300 text-[10px]">—</span>}
+                                ) : <span className="text-gray-300 text-[10px]">—</span>}
                               </td>
                               <td className="px-3 py-2.5">
-                                {isActive ? <span className={`text-[11px] font-bold tabular-nums ${eng.controlsEffective > 0 ? 'text-compliant-700' : 'text-text-muted'}`}>{eng.controlsEffective}</span> : <span className="text-ink-300 text-[10px]">—</span>}
+                                {isActive ? <span className="text-[11px] font-medium tabular-nums text-gray-600">{eng.controlsEffective}</span> : <span className="text-gray-300 text-[10px]">—</span>}
                               </td>
                               <td className="px-3 py-2.5">
-                                {isActive ? <span className={`text-[11px] font-bold tabular-nums ${eng.controlsFailed > 0 ? 'text-risk-700' : 'text-text-muted'}`}>{eng.controlsFailed}</span> : <span className="text-ink-300 text-[10px]">—</span>}
+                                {isActive ? <span className={`text-[11px] font-bold tabular-nums ${eng.controlsFailed > 0 ? 'text-red-600' : 'text-gray-400'}`}>{eng.controlsFailed}</span> : <span className="text-gray-300 text-[10px]">—</span>}
                               </td>
                               <td className="px-3 py-2.5">
-                                {isActive ? <span className={`text-[11px] font-bold tabular-nums ${eng.pendingReview > 0 ? 'text-mitigated-700' : 'text-text-muted'}`}>{eng.pendingReview}</span> : <span className="text-ink-300 text-[10px]">—</span>}
+                                {isActive ? <span className="text-[11px] font-medium tabular-nums text-gray-600">{eng.pendingReview}</span> : <span className="text-gray-300 text-[10px]">—</span>}
                               </td>
                               <td className="px-3 py-2.5">
                                 {isActive ? <span className="text-[11px] tabular-nums text-text-muted">{eng.controls - eng.controlsTested}</span> : <span className="text-[11px] tabular-nums text-text-muted">{eng.controls}</span>}
