@@ -246,8 +246,10 @@ const SEED_UPLOADED_FILES: UploadedFile[] = [
 ];
 
 interface Props {
-  onCreateWorkflow: () => void;
-  onSelectWorkflow: (id: string) => void;
+  onCreateWorkflow?: () => void;
+  onSelectWorkflow?: (id: string) => void;
+  /** When set, filters workflows by tag matching this process abbreviation */
+  processFilter?: string;
 }
 
 export type LibraryWorkflow = {
@@ -349,7 +351,7 @@ export const LIBRARY_WORKFLOWS: LibraryWorkflow[] = [
 
 const TOTAL_PAGES = 144;
 
-export default function WorkflowLibraryView({ onCreateWorkflow, onSelectWorkflow }: Props) {
+export default function WorkflowLibraryView({ onCreateWorkflow, onSelectWorkflow, processFilter }: Props) {
   const { addToast } = useToast();
   const [search, setSearch] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -382,6 +384,8 @@ export default function WorkflowLibraryView({ onCreateWorkflow, onSelectWorkflow
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return LIBRARY_WORKFLOWS.filter(w => {
+      // Process filter — match by tag (P2P, O2C, etc.)
+      if (processFilter && !w.tags.some(t => t.toUpperCase() === processFilter.toUpperCase())) return false;
       if (q && !w.name.toLowerCase().includes(q) && !w.description.toLowerCase().includes(q)) return false;
       if (bpFilter.size > 0 && !bpFilter.has(w.businessProcess)) return false;
       if (tagFilter.size > 0 && !w.tags.some(t => tagFilter.has(t))) return false;
@@ -449,7 +453,7 @@ export default function WorkflowLibraryView({ onCreateWorkflow, onSelectWorkflow
     if (bulkMode) {
       toggleSelect(id);
     } else {
-      onSelectWorkflow(id);
+      onSelectWorkflow?.(id);
     }
   };
 
@@ -491,7 +495,7 @@ export default function WorkflowLibraryView({ onCreateWorkflow, onSelectWorkflow
           </div>
           <div className="ml-auto flex items-center gap-3">
             <button
-              onClick={onCreateWorkflow}
+              onClick={() => onCreateWorkflow?.()}
               className="flex items-center gap-2 px-4 h-10 rounded-md bg-primary-xlight text-primary border border-primary/15 text-[13px] font-semibold hover:bg-primary/10 transition-colors cursor-pointer"
             >
               <Sparkles size={14} />
@@ -626,7 +630,7 @@ export default function WorkflowLibraryView({ onCreateWorkflow, onSelectWorkflow
                               onClick={e => {
                                 e.stopPropagation();
                                 if (bulkMode) toggleSelect(wf.id);
-                                else onSelectWorkflow(wf.id);
+                                else onSelectWorkflow?.(wf.id);
                               }}
                             >
                               {wf.name}

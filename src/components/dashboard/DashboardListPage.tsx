@@ -331,44 +331,28 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
             exit={{ opacity: 0, scale: 0.96, y: 10 }}
             transition={{ duration: 0.2 }}
             className={`relative bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl flex flex-col overflow-hidden ${
-              isNavigator ? 'w-[1100px] h-[80vh]' : isAddData ? 'w-[820px] h-[600px]' : 'w-[680px] max-h-[85vh]'
+              isNavigator ? 'w-[1100px] h-[80vh]' : isAddData ? 'w-[820px] h-[600px]' : 'w-[520px]'
             }`}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-7 py-5 border-b border-canvas-border">
-              {isAddData ? (
-                <>
-                  <h2 className="text-[16px] font-bold text-ink-900 shrink-0">Add data</h2>
-                  <div className="flex-1 mx-5 relative">
-                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
-                    <input
-                      type="text"
-                      value={querySearch}
-                      onChange={e => setQuerySearch(e.target.value)}
-                      placeholder={activeTab === 'upload' ? 'Drop files below to upload...' : 'Search...'}
-                      className="w-full pl-10 pr-4 py-2 text-[13px] border border-canvas-border rounded-full bg-canvas-elevated text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
-                    />
-                  </div>
-                  <button
-                    onClick={() => { handleClose(); onOpenChat?.(); }}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-[12px] font-semibold rounded-lg transition-colors cursor-pointer shrink-0"
-                  >
-                    <Plus size={14} />
-                    New Chat
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <h2 className="text-[16px] font-bold text-ink-900">{isNavigator ? 'Navigator' : 'Dashboard Details'}</h2>
-                    <p className="text-[12px] text-ink-500 mt-0.5">{isNavigator ? '' : 'Step 1 of 2'}</p>
-                  </div>
-                  <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer shrink-0">
-                    <X size={20} className="text-ink-400" />
-                  </button>
-                </>
+            <div className="flex items-center justify-between px-7 py-4 border-b border-canvas-border">
+              <h2 className="text-[16px] font-bold text-ink-900 shrink-0">{isNavigator ? 'Navigator' : 'Create Dashboard'}</h2>
+              {isAddData && (
+                <div className="flex-1 mx-5 relative">
+                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
+                  <input
+                    type="text"
+                    value={querySearch}
+                    onChange={e => setQuerySearch(e.target.value)}
+                    placeholder={activeTab === 'upload' ? 'Drop files below to upload...' : 'Search...'}
+                    className="w-full pl-10 pr-4 py-2 text-[13px] border border-canvas-border rounded-full bg-canvas-elevated text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors"
+                  />
+                </div>
               )}
+              <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer shrink-0">
+                <X size={20} className="text-ink-400" />
+              </button>
             </div>
 
             {/* Tab bar — only in add-data step */}
@@ -414,7 +398,7 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
                         onChange={e => setName(e.target.value)}
                         placeholder="e.g., Q3 Financial Overview"
                         autoFocus
-                        className="w-full px-4 py-3 text-[14px] border-2 border-canvas-border rounded-xl text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-500 transition-colors bg-canvas-elevated"
+                        className="w-full px-4 py-3 text-[14px] border border-canvas-border rounded-xl text-ink-800 placeholder:text-ink-400 outline-none focus:border-brand-400 transition-colors bg-canvas-elevated"
                       />
                     </div>
                     <div className="space-y-2">
@@ -673,15 +657,20 @@ function CreateDashboardModal({ open, onClose, onCreate, onOpenChat }: {
             {/* Footer */}
             <div className="flex items-center justify-end gap-3 px-7 py-4 border-t border-canvas-border">
               {step === 'details' && (
-                <button
-                  onClick={() => { if (name.trim()) setStep('add-data'); }}
-                  disabled={!name.trim()}
-                  className={`px-6 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
-                    name.trim() ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
-                  }`}
-                >
-                  Next Step
-                </button>
+                <>
+                  <button onClick={handleClose} className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 transition-colors cursor-pointer">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => { if (name.trim()) setStep('add-data'); }}
+                    disabled={!name.trim()}
+                    className={`px-6 py-2.5 rounded-xl text-[13px] font-semibold transition-colors cursor-pointer ${
+                      name.trim() ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-ink-100 text-ink-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Next
+                  </button>
+                </>
               )}
               {isAddData && (
                 <>
@@ -1059,6 +1048,56 @@ export default function DashboardListPage({ onDashboardClick, onImportPowerBI, c
             )}
           </div>
         )}
+
+      {/* ── Sample Dashboards ── */}
+      <div className="mt-8 mb-6">
+        <h2 className="text-[13px] font-bold text-ink-500 uppercase tracking-wide mb-4">Sample Dashboards</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={() => onDashboardClick('excel')}
+            className="glass-card rounded-xl p-5 cursor-pointer group relative flex flex-col"
+          >
+            {/* Icon */}
+            <div className="mb-4">
+              <div className="inline-flex p-2.5 rounded-lg bg-brand-50 text-brand-700">
+                <FileText size={18} />
+              </div>
+            </div>
+
+            {/* Title & Description */}
+            <div className="mb-4 flex-1">
+              <h3 className="text-[15px] font-semibold text-ink-900 group-hover:text-brand-700 transition-colors mb-1.5">
+                Excel Sample Example
+              </h3>
+              <p className="text-[12px] text-ink-500 leading-relaxed line-clamp-2">
+                Excel data quality — blank cells, duplicate rows, type mismatches, format errors, and sheet-level anomalies.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-3 border-t border-canvas-border mt-auto">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <Clock size={13} className="text-ink-400" />
+                  <span className="text-[12px] text-ink-400">30 minutes ago</span>
+                </div>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-green-50 text-green-700">
+                  <Upload size={8} />
+                  Excel
+                </span>
+              </div>
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-[12px] font-semibold text-brand-600">Open</span>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M6 12L10 8L6 4" stroke="currentColor" className="text-brand-600" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
       </div>
 
       {/* ── Delete Confirmation ── */}
@@ -1074,31 +1113,27 @@ export default function DashboardListPage({ onDashboardClick, onImportPowerBI, c
               className="relative bg-canvas-elevated rounded-2xl border border-canvas-border shadow-2xl w-[360px] p-6 mx-4"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="size-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
-                  <Trash2 size={18} className="text-red-500" />
-                </div>
-                <h3 className="text-[16px] font-bold text-ink-900">
-                  {activeTab === 'shared' ? 'Remove Dashboard' : 'Delete Dashboard'}
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-[16px] font-bold text-brand-900">
+                  {activeTab === 'shared' ? 'Remove Dashboard?' : 'Delete Dashboard?'}
                 </h3>
+                <button onClick={() => setDeleteConfirmId(null)} className="p-1 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer shrink-0">
+                  <X size={18} className="text-ink-400" />
+                </button>
               </div>
-              <p className="text-[13px] text-ink-500 mb-5">
-                Are you sure you want to {activeTab === 'shared' ? 'remove' : 'delete'}{' '}
-                <strong>
-                  "{currentDashboards.find(d => d.id === deleteConfirmId)?.name}"
-                </strong>
-                ? {activeTab === 'my' && 'This action cannot be undone.'}
+              <p className="text-[13px] text-ink-500 mb-6 leading-relaxed">
+                Are you sure you want to {activeTab === 'shared' ? 'remove' : 'delete'} this dashboard? This action cannot be undone and will remove all associated data.
               </p>
-              <div className="flex gap-3 justify-end">
+              <div className="flex gap-3 justify-center">
                 <button
                   onClick={() => setDeleteConfirmId(null)}
-                  className="px-5 py-2.5 text-[13px] font-semibold text-ink-600 hover:text-ink-800 border border-canvas-border rounded-xl transition-colors cursor-pointer"
+                  className="px-6 py-2.5 text-[13px] font-semibold text-ink-700 border border-canvas-border rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleDelete(deleteConfirmId)}
-                  className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-[13px] font-semibold rounded-xl transition-colors cursor-pointer"
+                  className="px-6 py-2.5 bg-risk text-white text-[13px] font-semibold rounded-lg hover:bg-risk-700 transition-colors cursor-pointer"
                 >
                   {activeTab === 'shared' ? 'Remove' : 'Delete'}
                 </button>

@@ -191,9 +191,9 @@ function AggDropdown({ value, onChange, fieldId }: { value: string; onChange: (v
   const openMenu = () => {
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      const dropH = isDateField ? (TEMPORAL_OPTIONS.length * 32 + 40) : (AGGREGATION_OPTIONS.length * 32 + 8);
+      const dropH = Math.min(300, isDateField ? (TEMPORAL_OPTIONS.length * 32 + 40) : (AGGREGATION_OPTIONS.length * 32 + 40));
       const below = window.innerHeight - r.bottom > dropH;
-      setPos({ top: below ? r.bottom + 2 : r.top - dropH - 2, left: r.left });
+      setPos({ top: below ? r.bottom + 2 : r.top - dropH - 2, left: Math.min(r.left, window.innerWidth - 180) });
     }
     setOpen(true);
   };
@@ -206,20 +206,22 @@ function AggDropdown({ value, onChange, fieldId }: { value: string; onChange: (v
   }, [open]);
 
   const handleTemporalToggle = (optValue: string) => {
-    const currentSelected = selectedTemporalOptions.includes(optValue)
-      ? selectedTemporalOptions.filter(v => v !== optValue)
-      : [...selectedTemporalOptions, optValue];
-    onChange(currentSelected.join(","));
+    const current = value ? value.split(",") : [];
+    const updated = current.includes(optValue)
+      ? current.filter(v => v !== optValue)
+      : [...current, optValue];
+    onChange(updated.join(","));
   };
 
-  // Display label for date field
   const getDateDisplayLabel = () => {
-    if (selectedTemporalOptions.length === 0) return "Select";
-    if (selectedTemporalOptions.length === 1) {
-      const opt = TEMPORAL_OPTIONS.find(o => o.value === selectedTemporalOptions[0]);
-      return opt?.label || "Select";
+    if (!value) return "Select";
+    const selected = value.split(",").filter(Boolean);
+    if (selected.length === TEMPORAL_OPTIONS.length) return "All";
+    if (selected.length === 1) {
+      const opt = TEMPORAL_OPTIONS.find(o => o.value === selected[0]);
+      return opt?.label || selected[0];
     }
-    return `${selectedTemporalOptions.length} selected`;
+    return `${selected.length} selected`;
   };
 
   return (
@@ -238,23 +240,24 @@ function AggDropdown({ value, onChange, fieldId }: { value: string; onChange: (v
           </>
         ) : (
           <>
-            <span className="text-[11px] font-bold text-[#6a12cd]">{current.symbol}</span>
-            {current.label && <span className="text-[10px] text-[#26064a]/70">{current.label}</span>}
+            {value && <span className="text-[11px] font-bold text-[#6a12cd]">{current.symbol}</span>}
+            {value && current.label && <span className="text-[10px] text-[#26064a]/70">{current.label}</span>}
             <ChevronDown className="size-[9px] text-[#6a12cd]" strokeWidth="0.75" />
           </>
         )}
       </button>
       {open && createPortal(
         <div
-          style={{ position: "fixed", top: pos.top, left: pos.left, width: 160, zIndex: 99999 }}
-          className="bg-white rounded-[8px] border border-[#e5e7eb] shadow-2xl py-1 overflow-hidden"
+          style={{ position: "fixed", top: pos.top, left: pos.left, width: 170, zIndex: 99999, maxHeight: '300px' }}
+          className="bg-white rounded-[8px] border border-[#e5e7eb] shadow-2xl py-1 overflow-y-auto"
           onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }}
         >
           {isDateField ? (
             <>
               <p className="px-3 pt-1.5 pb-1 text-[9px] font-semibold uppercase tracking-[0.8px] text-[#9ca3af]">Date Granularity</p>
               {TEMPORAL_OPTIONS.map(opt => {
-                const isSelected = selectedTemporalOptions.includes(opt.value);
+                const selected = value ? value.split(",") : [];
+                const isSelected = selected.includes(opt.value);
                 return (
                   <button
                     key={opt.value}
@@ -268,22 +271,18 @@ function AggDropdown({ value, onChange, fieldId }: { value: string; onChange: (v
                   </button>
                 );
               })}
-              {selectedTemporalOptions.length > 0 && (
-                <>
-                  <div className="border-t border-[#e5e7eb] my-1" />
-                  <button
-                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onChange(""); }}
-                    className="w-full flex items-center justify-center gap-1.5 px-3 py-[6px] text-left transition-colors hover:bg-[#fef2f2]"
-                  >
-                    <X className="size-[12px] text-[#ef4444]" strokeWidth={2} />
-                    <span className="text-[11px] text-[#ef4444] font-medium">Clear All</span>
-                  </button>
-                </>
-              )}
             </>
           ) : (
             <>
               <p className="px-3 pt-1.5 pb-1 text-[9px] font-semibold uppercase tracking-[0.8px] text-[#9ca3af]">Aggregation</p>
+              <button
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onChange(""); setOpen(false); }}
+                className={`w-full flex items-center gap-2 px-3 py-[6px] text-left transition-colors hover:bg-[#f5f0ff] ${!value ? "bg-[#faf5ff] text-[#6a12cd]" : "text-[#374151]"}`}
+              >
+                <span className="w-[18px] text-center text-[11px] font-bold shrink-0" style={{ color: !value ? "#6a12cd" : "#9ca3af" }}>—</span>
+                <span className="text-[12px]">None</span>
+                {!value && <Check className="size-[10px] ml-auto text-[#6a12cd]" />}
+              </button>
               {AGGREGATION_OPTIONS.filter(opt => opt.value !== "").map(opt => (
                 <button
                   key={opt.value}
@@ -390,6 +389,21 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
   const [yIndexItalic, setYIndexItalic] = useState(false);
   const [yIndexUnderline, setYIndexUnderline] = useState(false);
 
+  // Preview-linked state
+  const [showLabels, setShowLabels] = useState(false);
+  const [showLegend, setShowLegend] = useState(true);
+  const [legendPosition, setLegendPosition] = useState("top");
+  const [legendBold, setLegendBold] = useState(false);
+  const [legendItalic, setLegendItalic] = useState(false);
+  const [legendTextColor, setLegendTextColor] = useState("");
+  const [conditionalRules, setConditionalRules] = useState<{ id: string; evaluateField: string; condition: string; value: string; value2?: string; color: string }[]>([]);
+  const [rangeYMin, setRangeYMin] = useState("");
+  const [rangeYMax, setRangeYMax] = useState("");
+  const [rangeInvert, setRangeInvert] = useState(false);
+  const [rangeYIndexMin, setRangeYIndexMin] = useState("");
+  const [rangeYIndexMax, setRangeYIndexMax] = useState("");
+  const [rangeYIndexInvert, setRangeYIndexInvert] = useState(false);
+
   const baseColors = [
     "#6a12cd", // Purple (default)
     "#3b82f6", // Blue
@@ -430,9 +444,12 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
   /* Pre-select widget type when opening in edit mode */
   useEffect(() => {
     if (open && mode === 'edit' && initialWidgetType) {
+      const wt = initialWidgetType.toLowerCase();
       const match = WIDGETS.find(w =>
-        w.cardType.toLowerCase() === initialWidgetType.toLowerCase() ||
-        w.title.toLowerCase() === initialWidgetType.toLowerCase()
+        w.id.toLowerCase() === wt ||
+        w.cardType.toLowerCase() === wt ||
+        w.title.toLowerCase() === wt ||
+        w.builderType.toLowerCase() === wt
       );
       if (match) setSelected(match);
     }
@@ -446,7 +463,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
       if (initialYAxis) {
         const yId = resolveFieldId(initialYAxis);
         setYFieldIds([yId]);
-        setYAggs({ [yId]: "count_d" });
+        setYAggs({ [yId]: "" });
       } else {
         setYFieldIds([]);
         setYAggs({});
@@ -494,10 +511,27 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
 
   const editHasInitialValues = mode === 'edit' && !!(initialXAxis || initialYAxis);
   const previewReady = !needsFields || (xAxisValue !== "" && yAxisValue !== "") || editHasInitialValues;
+  const isTable = selected?.builderType === 'table';
+  const canCustomize = !!selected && (isTable ? xFieldIds.length > 0 || editHasInitialValues : previewReady);
   const canAdd = selected && (!needsFields || previewReady);
 
-  const resolvedXAxis = xAxisValue || (editHasInitialValues ? initialXAxis : undefined) || selected?.defaultX || "";
+  const rawXAxis = xAxisValue || (editHasInitialValues ? initialXAxis : undefined) || selected?.defaultX || "";
   const resolvedYAxis = yAxisValue || (editHasInitialValues ? initialYAxis : undefined) || selected?.defaultY || "";
+
+  // Map date granularity to effective X axis
+  const GRANULARITY_PRIORITY = ['day', 'month', 'quarterly', 'year'];
+  const GRANULARITY_TO_AXIS: Record<string, string> = { day: 'Day', month: 'Month', quarterly: 'Quarter', year: 'Year' };
+  const xFieldIsDate = xFieldIds[0] === 'date' || rawXAxis === 'Date';
+  const dateGranularity = xFieldIsDate ? (yAggs['date'] || 'month') : '';
+  const resolvedXAxis = (() => {
+    if (!xFieldIsDate || !dateGranularity) return rawXAxis;
+    const selected_g = dateGranularity.split(',').filter(Boolean);
+    if (selected_g.length === GRANULARITY_PRIORITY.length) return 'Date';
+    for (const g of GRANULARITY_PRIORITY) {
+      if (selected_g.includes(g)) return GRANULARITY_TO_AXIS[g] || rawXAxis;
+    }
+    return rawXAxis;
+  })();
 
   const handleAdd = () => {
     if (!selected) return;
@@ -511,7 +545,6 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
     if (xFieldIds.length >= 3) return;
     if (!xFieldIds.includes(fieldId)) {
       setXFieldIds(prev => [...prev, fieldId]);
-      // Set all temporal options selected by default for Date field
       if (fieldId === "date") {
         setYAggs(prev => ({ ...prev, [fieldId]: "year,quarterly,month,day" }));
       }
@@ -522,8 +555,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
     if (yFieldIds.length >= 3) return;
     if (!yFieldIds.includes(fieldId)) {
       setYFieldIds(prev => [...prev, fieldId]);
-      // Set all temporal options selected by default for Date field
-      setYAggs(prev => ({ ...prev, [fieldId]: fieldId === "date" ? "year,quarterly,month,day" : "count_d" }));
+      setYAggs(prev => ({ ...prev, [fieldId]: fieldId === "date" ? "year,quarterly,month,day" : "" }));
     }
   };
 
@@ -531,7 +563,6 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
     if (timeFieldIds.length >= 3) return;
     if (!timeFieldIds.includes(fieldId)) {
       setTimeFieldIds(prev => [...prev, fieldId]);
-      // Set all temporal options selected by default for Date field
       if (fieldId === "date") {
         setYAggs(prev => ({ ...prev, [fieldId]: "year,quarterly,month,day" }));
       }
@@ -622,23 +653,25 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
           <div className="w-[340px] shrink-0 bg-[rgba(249,250,251,0.5)] border-l border-[#f3f4f6] flex flex-col overflow-hidden order-2">
             
             {/* ── Tab Switcher ── */}
-            <div className="w-[340px] shrink-0 bg-white border-b border-[#e5e7eb] px-[12px] py-[4px]">
-              <div className="flex items-center gap-2 bg-[#00000000]">
-                <button
-                  onClick={() => setActiveTab("data")}
-                  className={`flex-1 flex items-center justify-center gap-2 font-medium transition-all rounded-md ${ activeTab === "data" ? "text-[#6a12cd] bg-[#f4f0ff]" : "text-[#26064a] hover:text-[#6a12cd] hover:bg-[#f9fafb]" } px-[16px] py-[4px] text-[14px]`}
-                >
-                  <Database className="size-[16px]" strokeWidth={2.5} />
-                  Data Source
-                </button>
-                <button
-                  onClick={() => setActiveTab("format")}
-                  className={`flex-1 flex items-center justify-center gap-2 font-medium transition-all rounded-md ${ activeTab === "format" ? "text-[#6a12cd] bg-[#f4f0ff]" : "text-[#26064a] hover:text-[#6a12cd] hover:bg-[#f9fafb]" } text-[14px] px-[16px] py-[4px]`}
-                >
-                  <Settings className="size-[16px]" strokeWidth={2.5} />
-                  Customize
-                </button>
-              </div>
+            <div className="flex shrink-0 border-b border-canvas-border">
+              <button
+                onClick={() => setActiveTab("data")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[12px] font-medium border-b-2 transition-colors cursor-pointer ${
+                  activeTab === "data" ? "border-brand-600 text-brand-700" : "border-transparent text-ink-500 hover:text-ink-700"
+                }`}
+              >
+                <Database size={13} />
+                Data Source
+              </button>
+              <button
+                onClick={() => setActiveTab("format")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[12px] font-medium border-b-2 transition-colors cursor-pointer ${
+                  activeTab === "format" ? "border-brand-600 text-brand-700" : "border-transparent text-ink-500 hover:text-ink-700"
+                }`}
+              >
+                <Settings size={13} />
+                Customize
+              </button>
             </div>
             
             {activeTab === "data" && (
@@ -790,7 +823,29 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
               </div>
             )}
 
-            {activeTab === "format" && (
+            {activeTab === "format" && !canCustomize && (
+              <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+                <div className="size-12 rounded-xl bg-[#f4f0ff] flex items-center justify-center mb-4">
+                  <Settings className="size-5 text-[#6a12cd]" />
+                </div>
+                <h3 className="text-[14px] font-semibold text-[#26064a] mb-1.5">Nothing to customize yet</h3>
+                <p className="text-[12px] text-[#6b7280] leading-relaxed">
+                  {!selected
+                    ? "Select a chart type and add data fields first, then come back here to style your widget."
+                    : isTable
+                      ? "Add at least one column to your table first, then come back to customize."
+                      : "Drag data fields into the axis slots to render a preview, then customize your chart."
+                  }
+                </p>
+                <button
+                  onClick={() => setActiveTab("data")}
+                  className="mt-4 px-4 py-2 text-[12px] font-semibold text-[#6a12cd] bg-[#f4f0ff] hover:bg-[#ece5ff] rounded-lg transition-colors cursor-pointer"
+                >
+                  Go to Data Source
+                </button>
+              </div>
+            )}
+            {activeTab === "format" && canCustomize && (
               <div className="flex-1 flex flex-col overflow-hidden px-3 py-3">
                 {/* Scrollable content area */}
                 <div className="flex-1 overflow-y-auto space-y-3 pr-1 pb-2">
@@ -886,7 +941,8 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                   )}
                   </div>
 
-                  {/* ── X AXIS section ── */}
+                  {/* ── X AXIS section — hidden for Table, KPI, Pie ── */}
+                  {selected && !isTable && selected.builderType !== 'kpi' && selected.builderType !== 'pie' && (
                   <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
                     <button
                       onClick={() => setXAxisFormatOpen(!xAxisFormatOpen)}
@@ -913,7 +969,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                             type="text"
                             value={xAxisTitle}
                             onChange={(e) => setXAxisTitle(e.target.value)}
-                            placeholder="Enter X Axis Title"
+                            placeholder={resolvedXAxis || "Enter X Axis Title"}
                             className="w-full px-3.5 py-2 text-[12px] bg-white border border-[rgba(38,6,74,0.2)] rounded-[8px] text-[#26064a] placeholder:text-[rgba(38,6,74,0.2)] focus:outline-none focus:border-[#6a12cd] focus:ring-1 focus:ring-[#6a12cd] transition-all shadow-sm"
                           />
                         </div>
@@ -963,8 +1019,10 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                       </div>
                     )}
                   </div>
+                  )}
 
-                  {/* ── Y AXIS section ── */}
+                  {/* ── Y AXIS section — hidden for Table, KPI, Pie ── */}
+                  {selected && !isTable && selected.builderType !== 'kpi' && selected.builderType !== 'pie' && (
                   <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm mt-3">
                     <button
                       onClick={() => setYAxisFormatOpen(!yAxisFormatOpen)}
@@ -991,7 +1049,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                             type="text"
                             value={yAxisTitle}
                             onChange={(e) => setYAxisTitle(e.target.value)}
-                            placeholder="Enter Y Axis Title"
+                            placeholder={resolvedYAxis || "Enter Y Axis Title"}
                             className="w-full px-3.5 py-2 text-[12px] bg-white border border-[rgba(38,6,74,0.2)] rounded-[8px] text-[#26064a] placeholder:text-[rgba(38,6,74,0.2)] focus:outline-none focus:border-[#6a12cd] focus:ring-1 focus:ring-[#6a12cd] transition-all shadow-sm"
                           />
                         </div>
@@ -1041,9 +1099,10 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                       </div>
                     )}
                   </div>
+                  )}
 
                   {/* ── Y AXIS INDEX section — only for charts with secondaryY ── */}
-                  {selected && selected.dimensions.some(d => d.key === 'secondaryY') && (
+                  {selected && (secondaryYFieldIds.length > 0 || yFieldIds.length > 1) && (
                   <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm mt-3">
                     <button
                       onClick={() => setYIndexFormatOpen(!yIndexFormatOpen)}
@@ -1100,28 +1159,35 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                   </div>
                   )}
 
-                  {/* ── LEGENDS section ── */}
-                  <LegendSection />
+                  {/* ── LEGENDS section — hidden for KPI, Table ── */}
+                  {selected && selected.builderType !== 'kpi' && !isTable && selected.builderType !== 'scatter' && (
+                    <LegendSection showLegend={showLegend} onShowLegendChange={setShowLegend} legendPosition={legendPosition} onLegendPositionChange={setLegendPosition} legendBold={legendBold} onLegendBoldChange={setLegendBold} legendItalic={legendItalic} onLegendItalicChange={setLegendItalic} legendTextColor={legendTextColor} onLegendTextColorChange={setLegendTextColor} />
+                  )}
 
-                  {/* ── DATA LABELS section ── */}
-                <TypographySection />
+                  {/* ── DATA LABELS section — hidden for Table, Scatter ── */}
+                  {selected && !isTable && selected.builderType !== 'scatter' && (
+                    <TypographySection showLabels={showLabels} onShowLabelsChange={setShowLabels} />
+                  )}
 
-                {/* ── RANGE (Y AXIS) section ── */}
-                <RangeYAxisSection />
+                  {/* ── RANGE (Y AXIS) section — hidden for Pie, KPI, Table ── */}
+                  {selected && !isTable && selected.builderType !== 'kpi' && selected.builderType !== 'pie' && (
+                    <RangeYAxisSection yMin={rangeYMin} yMax={rangeYMax} invertRange={rangeInvert} onYMinChange={setRangeYMin} onYMaxChange={setRangeYMax} onInvertChange={setRangeInvert} />
+                  )}
 
-                {/* ── RANGE (Y AXIS INDEX) section ── */}
-                {yIndexFieldIds.length > 0 && (
-                  <RangeYAxisSection label="Range (Y Axis Index)" />
-                )}
+                  {/* ── RANGE (Y AXIS INDEX) section — when Y Axis Index or multiple Y fields ── */}
+                  {(secondaryYFieldIds.length > 0 || yFieldIds.length > 1) && (
+                    <RangeYAxisSection label="Range (Y Axis Index)" yMin={rangeYIndexMin} yMax={rangeYIndexMax} invertRange={rangeYIndexInvert} onYMinChange={setRangeYIndexMin} onYMaxChange={setRangeYIndexMax} onInvertChange={setRangeYIndexInvert} />
+                  )}
 
                 {/* ── CONDITIONAL FORMATTING section ── */}
-                <ConditionalFormattingSection 
+                <ConditionalFormattingSection
                   xAxisFields={xFieldIds.map(id => FIELDS.find(f => f.id === id)?.label || id)}
                   yAxisFields={yFieldIds.map(id => FIELDS.find(f => f.id === id)?.label || id)}
+                  onRulesChange={setConditionalRules}
                 />
 
                 {/* ── DATA SERIES FORMATTING section ── */}
-                <DataSeriesFormattingSection
+                {!isTable && <DataSeriesFormattingSection
                   series={(() => {
                     if (!selected) return [];
                     const bt = selected.builderType;
@@ -1153,7 +1219,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                       setBarSpacing(vals.length > 0 ? String(Math.max(...vals)) : "0");
                     }
                   }}
-                />
+                />}
                 </div>
               </div>
             )}
@@ -1222,7 +1288,7 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                             {slot.ids.map((fid) => {
                               const field = FIELDS.find(f => f.id === fid);
                               if (!field) return null;
-                              const agg = yAggs[fid] || "count_d";
+                              const agg = yAggs[fid] || "";
                               return (
                                 <div key={fid} className="flex items-center gap-1.5 h-[28px] px-2.5 bg-[#faf5ff] rounded-[4px] border border-[#6a12cd]/30 shrink-0">
                                   <span className="text-[12px] font-medium text-[#26064a] whitespace-nowrap">{field.label}</span>
@@ -1309,10 +1375,29 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
 
             {/* ── PREVIEW Section ── */}
             <div className="flex-1 overflow-hidden flex flex-col">
-              <div className="flex items-center justify-between border-b border-[#f0f0f0] px-[16px] pt-[8px] pb-[8px]">
+              <div className="flex items-center justify-between border-b border-canvas-border px-[16px] py-2.5">
                 <p className="text-[12px] font-medium uppercase tracking-[1px] text-[#26064a]">Preview</p>
                 {selected && <span className="text-[12px] font-medium text-[#6a12cd]">{selected.title}</span>}
               </div>
+              {/* Y Axis Index suggestion — suggest combo chart */}
+              {selected && (secondaryYFieldIds.length > 0 || yFieldIds.length > 1) && ['bar', 'line', 'area'].includes(selected.builderType) && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-[#f4f0ff] border-b border-[#e5e7eb]">
+                  <Lightbulb size={14} className="text-[#6a12cd] shrink-0" />
+                  <p className="text-[11px] text-[#26064a] flex-1">You have a secondary Y axis. Try a dual chart:</p>
+                  <button
+                    onClick={() => { const combo = WIDGETS.find(w => w.id === 'line-clustered'); if (combo) setSelected(combo); }}
+                    className="text-[11px] font-semibold text-[#6a12cd] hover:underline cursor-pointer whitespace-nowrap"
+                  >
+                    Line & Column
+                  </button>
+                  <button
+                    onClick={() => { const combo = WIDGETS.find(w => w.id === 'line-stacked'); if (combo) setSelected(combo); }}
+                    className="text-[11px] font-semibold text-[#6a12cd] hover:underline cursor-pointer whitespace-nowrap"
+                  >
+                    Line & Stacked
+                  </button>
+                </div>
+              )}
               
               <div className="flex-1 overflow-auto p-6">
                 {previewReady && selected && (
@@ -1358,6 +1443,23 @@ export function AddCardModal({ open, onOpenChange, onSelectCard, mode = 'add', i
                         barSpacing={barSpacing}
                         pieSpacingMap={selected?.builderType === 'pie' ? spacingMap : undefined}
                         fontFamily={fontFamily}
+                        bold={isBold}
+                        italic={isItalic}
+                        underline={isUnderline}
+                        xAxisTitle={xAxisTitle || resolvedXAxis}
+                        yAxisTitle={yAxisTitle || resolvedYAxis}
+                        showLabels={showLabels}
+                        showLegend={showLegend}
+                        legendPosition={legendPosition}
+                        legendBold={legendBold}
+                        legendItalic={legendItalic}
+                        legendTextColor={legendTextColor}
+                        yMin={rangeYMin}
+                        yMax={rangeYMax}
+                        invertRange={rangeInvert}
+                        conditionalRules={conditionalRules}
+                        aggregation={yFieldIds[0] ? (yAggs[yFieldIds[0]] || undefined) : undefined}
+                        tableColumns={isTable ? [...xFieldIds, ...yFieldIds].map(id => FIELDS.find(f => f.id === id)?.label || id) : undefined}
                       />
                     )}
                   </div>

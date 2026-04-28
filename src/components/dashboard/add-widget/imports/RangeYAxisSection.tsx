@@ -1,11 +1,23 @@
 import { useState } from "react";
 import { ChevronDown, MoveVertical } from "lucide-react";
 
-export default function RangeYAxisSection({ label = "Range (Y Axis)" }: { label?: string } = {}) {
+export default function RangeYAxisSection({ label = "Range (Y Axis)", yMin, yMax, invertRange, onYMinChange, onYMaxChange, onInvertChange }: {
+  label?: string;
+  yMin?: string;
+  yMax?: string;
+  invertRange?: boolean;
+  onYMinChange?: (v: string) => void;
+  onYMaxChange?: (v: string) => void;
+  onInvertChange?: (v: boolean) => void;
+} = {}) {
   const [rangeOpen, setRangeOpen] = useState(false);
-  const [invertRange, setInvertRange] = useState(true);
-  const [minimum, setMinimum] = useState("");
-  const [maximum, setMaximum] = useState("");
+  const [localInvert, setLocalInvert] = useState(false);
+  const [localMin, setLocalMin] = useState("");
+  const [localMax, setLocalMax] = useState("");
+
+  const minimum = yMin ?? localMin;
+  const maximum = yMax ?? localMax;
+  const invert = invertRange ?? localInvert;
 
   return (
     <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm mt-3">
@@ -26,14 +38,13 @@ export default function RangeYAxisSection({ label = "Range (Y Axis)" }: { label?
       </button>
       {rangeOpen && (
         <div className="p-2.5 bg-[#fafafa] space-y-3">
-          {/* Minimum and Maximum inputs */}
           <div className="flex gap-2">
             <div className="flex-1 flex flex-col gap-1.5">
               <label className="text-[12px] font-medium text-[#26064a]">Minimum</label>
               <input
                 type="text"
                 value={minimum}
-                onChange={(e) => setMinimum(e.target.value)}
+                onChange={(e) => { setLocalMin(e.target.value); onYMinChange?.(e.target.value); }}
                 placeholder="Auto"
                 className="w-full px-3.5 py-2 text-[12px] bg-white border border-[rgba(38,6,74,0.2)] rounded-[8px] text-[#26064a] placeholder:text-[rgba(38,6,74,0.2)] focus:outline-none focus:border-[#6a12cd] focus:ring-1 focus:ring-[#6a12cd] transition-all shadow-sm"
               />
@@ -43,27 +54,24 @@ export default function RangeYAxisSection({ label = "Range (Y Axis)" }: { label?
               <input
                 type="text"
                 value={maximum}
-                onChange={(e) => setMaximum(e.target.value)}
+                onChange={(e) => { setLocalMax(e.target.value); onYMaxChange?.(e.target.value); }}
                 placeholder="Auto"
                 className="w-full px-3.5 py-2 text-[12px] bg-white border border-[rgba(38,6,74,0.2)] rounded-[8px] text-[#26064a] placeholder:text-[rgba(38,6,74,0.2)] focus:outline-none focus:border-[#6a12cd] focus:ring-1 focus:ring-[#6a12cd] transition-all shadow-sm"
               />
             </div>
           </div>
-
-          {/* Invert Range toggle */}
           <div className="flex items-center justify-between">
             <p className="text-[12px] font-medium text-[#26064a]">Invert Range</p>
             <button
-              onClick={() => setInvertRange(!invertRange)}
+              onClick={() => { setLocalInvert(!invert); onInvertChange?.(!invert); }}
               className={`relative w-[36px] h-[20px] rounded-[12px] transition-all ${
-                invertRange ? "bg-[#6a12cd]" : "bg-[#e5e7eb]"
+                invert ? "bg-[#6a12cd]" : "bg-[#e5e7eb]"
               }`}
             >
               <div
-                className="absolute top-[2px] w-[16px] h-[16px] bg-white rounded-full shadow-sm transition-all"
-                style={{
-                  left: invertRange ? "18px" : "2px",
-                }}
+                className={`absolute top-[2px] w-[16px] h-[16px] bg-white rounded-full shadow-sm transition-all ${
+                  invert ? "left-[18px]" : "left-[2px]"
+                }`}
               />
             </button>
           </div>

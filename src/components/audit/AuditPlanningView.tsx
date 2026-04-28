@@ -13,6 +13,7 @@ import { useToast } from '../shared/Toast';
 import EngagementSetupPanel from '../engagement/EngagementSetupPanel';
 import RacmMappingWorkspace from './RacmMappingWorkspace';
 import { computeRacmState, RACM_STATUS_STYLES, RACM_READINESS_STYLES, RACM_ACTION_STYLES, type RacmSummaryInput, type ComputedRacmState } from './racmStateEngine';
+import { RACM_SEED_DATA, type RacmEntry } from './RacmListTable';
 
 // ─── Types (Finalized Engagement Model) ──────────────────────────────────────
 
@@ -368,12 +369,7 @@ function KpiCard({ label, value, icon: Icon, color, index }: {
 
 // ─── RACM Dashboard (governance setup tab) ──────────────────────────────────
 
-interface RacmEntry {
-  id: string; name: string; version: string; process: string; framework: string;
-  risks: number; controls: number; mappedRisks: number; unmappedRisks: number;
-  keyControls: number; workflowCoverage: number; attributesCoverage: number;
-  isValidated: boolean; linkedToEngagement: boolean;
-}
+// RacmEntry type and RACM_SEED_DATA imported from RacmListTable
 
 // Helper: get computed state for any RACM entry
 function getRacmComputed(racm: RacmEntry): ComputedRacmState {
@@ -390,13 +386,7 @@ function getRacmComputed(racm: RacmEntry): ComputedRacmState {
   });
 }
 
-const MOCK_RACMS: RacmEntry[] = [
-  { id: 'racm-001', name: 'FY26 P2P — Vendor Payment', version: 'v2.1', process: 'P2P', framework: 'SOX ICFR', risks: 9, controls: 24, mappedRisks: 9, unmappedRisks: 0, keyControls: 6, workflowCoverage: 92, attributesCoverage: 88, isValidated: true, linkedToEngagement: true },
-  { id: 'racm-002', name: 'FY26 O2C — Revenue & AR', version: 'v2.1', process: 'O2C', framework: 'SOX ICFR', risks: 7, controls: 18, mappedRisks: 6, unmappedRisks: 1, keyControls: 4, workflowCoverage: 78, attributesCoverage: 65, isValidated: false, linkedToEngagement: false },
-  { id: 'racm-003', name: 'FY26 R2R — Financial Close', version: 'v2.1', process: 'R2R', framework: 'SOX ICFR', risks: 11, controls: 31, mappedRisks: 10, unmappedRisks: 1, keyControls: 8, workflowCoverage: 85, attributesCoverage: 80, isValidated: true, linkedToEngagement: true },
-  { id: 'racm-004', name: 'FY26 S2C — Contract Review', version: 'v1.8', process: 'S2C', framework: 'Internal Policy', risks: 5, controls: 14, mappedRisks: 3, unmappedRisks: 2, keyControls: 2, workflowCoverage: 60, attributesCoverage: 45, isValidated: false, linkedToEngagement: false },
-  { id: 'racm-005', name: 'FY26 ITGC — Access & Change', version: 'v2.1', process: 'ITGC', framework: 'ISO 27001', risks: 6, controls: 15, mappedRisks: 6, unmappedRisks: 0, keyControls: 5, workflowCoverage: 100, attributesCoverage: 100, isValidated: true, linkedToEngagement: true },
-];
+const MOCK_RACMS = RACM_SEED_DATA;
 
 const BP_DOT_COLORS: Record<string, string> = { P2P: '#6a12cd', O2C: '#0284c7', R2R: '#d97706', S2C: '#059669', ITGC: '#16a34a' };
 
