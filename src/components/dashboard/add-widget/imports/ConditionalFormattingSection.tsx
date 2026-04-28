@@ -13,20 +13,39 @@ interface Rule {
   color: string;
 }
 
+export interface ConditionalRule {
+  id: string;
+  evaluateField: string;
+  condition: string;
+  value: string;
+  value2?: string;
+  color: string;
+}
+
 interface ConditionalFormattingSectionProps {
   xAxisFields?: string[];
   yAxisFields?: string[];
+  rules?: ConditionalRule[];
+  onRulesChange?: (rules: ConditionalRule[]) => void;
 }
 
-export default function ConditionalFormattingSection({ 
-  xAxisFields = [], 
-  yAxisFields = [] 
+export default function ConditionalFormattingSection({
+  xAxisFields = [],
+  yAxisFields = [],
+  rules: rulesProp,
+  onRulesChange,
 }: ConditionalFormattingSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [evaluateField, setEvaluateField] = useState("");
-  const [rules, setRules] = useState<Rule[]>([
+  const [localRules, setLocalRules] = useState<Rule[]>([
     { id: "1", evaluateField: "", condition: "greater", value: "", color: "#ef4444" }
   ]);
+  const rules = rulesProp ?? localRules;
+  const setRules = (newRules: Rule[] | ((prev: Rule[]) => Rule[])) => {
+    const resolved = typeof newRules === 'function' ? newRules(rules) : newRules;
+    setLocalRules(resolved);
+    onRulesChange?.(resolved);
+  };
 
   // Legend state
   const [isLegendOpen, setIsLegendOpen] = useState(false);

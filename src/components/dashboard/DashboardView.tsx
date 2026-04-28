@@ -19,12 +19,18 @@ import {
 import Orb from '../shared/Orb';
 import { useToast, type ToastType } from '../shared/Toast';
 import { AddCardModal } from './add-widget/AddCardModal';
+import { AddDataModal } from './AddDataModal';
+import { WhiteDropdown } from './add-widget/WhiteDropdown';
 import { ConfigurableChart } from './add-widget/ConfigurableChart';
+import LegendSection from './add-widget/imports/LegendSection';
+import TypographySection from './add-widget/imports/TypographySection-1760-98';
+import ConditionalFormattingSection from './add-widget/imports/ConditionalFormattingSection';
+import DataSeriesFormattingSection from './add-widget/imports/DataSeriesFormattingSection';
 import { SEED, TYPE_META, formatDate } from '../data-sources/sources';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-type DashboardId = 'p2p' | 'o2c' | 's2c' | 'grc';
+type DashboardId = 'p2p' | 'o2c' | 's2c' | 'grc' | 'excel';
 
 interface KpiDef {
   title: string;
@@ -272,6 +278,71 @@ const DASHBOARDS: DashboardDef[] = [
       ],
     },
   },
+  {
+    id: 'excel',
+    name: 'Excel Sample Example',
+    icon: FileText,
+    accent: 'from-emerald-500 to-green-500',
+    accentHue: 140,
+    subtitle: 'Excel data quality & insights',
+    kpis: [
+      { title: 'Total Rows', value: '24,806', change: '', trend: 'up', icon: Layers, color: 'text-evidence-700 bg-evidence-50' },
+      { title: 'Blank Cells', value: 342, change: '', trend: 'up', icon: AlertTriangle, color: 'text-high-700 bg-high-50' },
+      { title: 'Duplicate Rows', value: 89, change: '', trend: 'up', icon: Copy, color: 'text-risk-700 bg-risk-50' },
+      { title: 'Data Completeness', value: '96.8%', change: '', trend: 'up', icon: Shield, color: 'text-compliant bg-compliant-50' },
+    ],
+    donut: {
+      title: 'Data Quality Breakdown',
+      centerLabel: '24.8K',
+      segments: [
+        { label: 'Clean', value: 92, color: 'var(--color-compliant)' },
+        { label: 'Blanks', value: 4, color: 'var(--color-mitigated)' },
+        { label: 'Duplicates', value: 2, color: 'var(--color-risk)' },
+        { label: 'Type Errors', value: 2, color: 'var(--color-high)' },
+      ],
+    },
+    lineTrend: {
+      title: 'Issues by Type',
+      data: [48, 35, 42, 29, 21, 17],
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+      color: 'var(--color-risk)',
+    },
+    progress: {
+      title: 'Row Count by Sheet',
+      data: [
+        { label: 'Invoices', value: 82, color: 'var(--color-evidence)' },
+        { label: 'Vendors', value: 65, color: 'var(--color-compliant)' },
+        { label: 'Payments', value: 48, color: 'var(--color-brand-500)' },
+        { label: 'Contracts', value: 35, color: 'var(--color-mitigated)' },
+      ],
+    },
+    bars: {
+      title: 'Issues by Sheet',
+      color: 'var(--color-evidence)',
+      data: [
+        { label: 'Invoices', value: 142 },
+        { label: 'Vendors', value: 87 },
+        { label: 'Payments', value: 54 },
+        { label: 'Contracts', value: 38 },
+        { label: 'Assets', value: 21 },
+        { label: 'Summary', value: 9 },
+      ],
+    },
+    table: {
+      title: 'Excel Issues Log',
+      headers: ['Row', 'Sheet', 'Column', 'Issue Type', 'Severity', 'Cell Value', 'Expected', 'Status'],
+      rows: [
+        { cells: ['Row 142', 'Invoices', 'Amount', 'Type Mismatch', 'High', '"12,500 INR"', 'Number', 'Open'] },
+        { cells: ['Row 87', 'Vendors', 'Email', 'Blank Cell', 'Medium', '—', 'Email', 'Open'] },
+        { cells: ['Row 203', 'Invoices', 'Date', 'Format Error', 'High', '13/25/2025', 'DD-MM-YYYY', 'Open'] },
+        { cells: ['Row 56', 'Payments', 'Invoice ID', 'Duplicate', 'Critical', 'INV-005790', 'Unique', 'Flagged'] },
+        { cells: ['Row 312', 'Invoices', 'Vendor Name', 'Blank Cell', 'Medium', '—', 'Text', 'Open'] },
+        { cells: ['Row 441', 'Contracts', 'Expiry Date', 'Past Date', 'Low', '15-Jan-2024', 'Future Date', 'Reviewed'] },
+        { cells: ['Row 98', 'Vendors', 'GST Number', 'Format Error', 'High', 'ABCDE1234Z', '15-char GSTIN', 'Open'] },
+        { cells: ['Row 167', 'Payments', 'Amount', 'Outlier', 'Medium', '₹9,84,500', 'Range 1K-50K', 'Flagged'] },
+      ],
+    },
+  },
 ];
 
 // ─── Daily Digest Data ───────────────────────────────────────────────────────
@@ -301,6 +372,7 @@ const DAILY_DIGESTS: Record<DashboardId, Array<{ type: 'change' | 'alert' | 'imp
     { type: 'improvement', text: 'Workflow automation saved 45 person-hours this month', time: '1d ago' },
     { type: 'new', text: 'New risk RSK-012 identified in R2R process — GL balance discrepancy', time: '2d ago' },
   ],
+  excel: [],
 };
 
 // ─── AI Summaries for each dashboard ────────────────────────────────────────
@@ -310,6 +382,7 @@ const DASHBOARD_SUMMARIES: Record<DashboardId, string> = {
   o2c: "2 high-value invoices ($180K+) exceeded SLA for approval — escalation needed. DSO improved to 38 days after collection drive. Revenue recognition check flagged a Q4 timing discrepancy that needs review before close. Disputed orders down 15% — positive trend continuing.",
   s2c: "4 contracts expiring within 30 days, 2 are high-value (>$500K) — renegotiation must start this week. Cost savings are tracking ahead at $2.8M vs $2.4M target. 3 vendors downgraded to Medium risk after score refresh. Legal added new compliance clause to templates.",
   grc: "Material weakness DEF-002 is 6 days from deadline — remediation evidence pending. SOX progress moved to 58% after 3 controls tested yesterday. Workflow automation saved 45 person-hours this month. New risk RSK-012 identified in R2R — GL balance discrepancy across subsidiaries.",
+  excel: "",
 };
 
 const SHARE_EMAIL_TEMPLATES: Record<DashboardId, { subject: string; body: string }> = {
@@ -328,6 +401,10 @@ const SHARE_EMAIL_TEMPLATES: Record<DashboardId, { subject: string; body: string
   grc: {
     subject: 'GRC Alert — DEF-002 Remediation Due in 6 Days',
     body: `Hi Team,\n\nHere's today's GRC audit summary from Auditify Copilot:\n\nCRITICAL\n• Material weakness DEF-002 remediation due in 6 days\n• New risk RSK-012 identified — GL balance discrepancy\n\nPROGRESS\n• SOX audit progress: 58% (14/24 controls tested)\n• 3 controls tested since yesterday\n• Workflow automation saved 45 person-hours this month\n\nRECOMMENDED ACTIONS\n1. Escalate DEF-002 to ensure Mar 31 deadline is met\n2. Assign controls for RSK-012 in R2R process\n3. Prioritize remaining 10 untested controls\n\nGenerated by Auditify Copilot`,
+  },
+  excel: {
+    subject: 'Excel Data Quality Report — Issues Found',
+    body: `Hi Team,\n\nHere's the Excel data quality report from Auditify:\n\nFILE: Invoice_Master.xlsx\n• Total rows: 24,806 across 6 sheets\n• Blank cells: 342\n• Duplicate rows: 89\n• Type mismatches: 47\n• Data completeness: 96.8%\n\nTOP ISSUES\n1. 142 issues in Invoices sheet — mostly type mismatches in Amount column\n2. 87 issues in Vendors sheet — missing email addresses\n3. Date format inconsistencies in 23 rows\n\nGenerated by Auditify`,
   },
 };
 
@@ -363,6 +440,7 @@ const AI_SUMMARIES: Record<DashboardId, string> = {
   o2c: 'DSO improved by 2 days to 38 days. 5 customers account for 65% of outstanding receivables totalling ₹4.2Cr. Dispute rate trending upward in APAC region — 12 new disputes this week. Cash application automation rate hit 91%.',
   s2c: '12 contracts expire within 30 days across 3 business units. Vendor TechParts Ltd compliance score dropped below 75% threshold. 4 contracts pending legal review — recommend prioritizing the ₹2.1Cr IT services renewal.',
   grc: '2 critical risks in P2P have zero controls mapped. SOD violation detected in AP module — user JSmith has both invoice approval and payment release access. 3 audit findings from Q1 remain open past remediation deadline.',
+  excel: '',
 };
 
 function EmptyAlertsPanel() {
@@ -1341,6 +1419,55 @@ const EXPANDED_RECORDS = [
   { id: 'INV-044521', vendor: 'Atlas Manufacturing', amount: '₹15,200', date: '18-Mar-25', status: 'Under Review', department: 'Finance', risk: 'High', match: 'INV-044520' },
 ];
 
+const EXPANDED_TABLE_ROWS: { cells: string[] }[] = [
+  { cells: ['INV-005790', 'Acme Global Imaging', '₹11,853', '20-Mar-25', 'Pending Review', 'Operations', 'High', 'INV-005791'] },
+  { cells: ['INV-025832', 'Korean Technologies', '₹4,564', '15-Dec-24', 'Under Review', 'Procurement', 'Medium', 'INV-025831'] },
+  { cells: ['INV-007194', '3tones Letter Co.', '₹3,835', '31-Dec-24', 'Resolved', 'Finance', 'Low', 'None'] },
+  { cells: ['INV-040083', 'Chintamani Paper Products', '₹3,410', '13-Dec-24', 'Pending Review', 'Operations', 'High', 'INV-040082'] },
+  { cells: ['INV-027203', 'M Cargo Logistics', '₹1,457', '12-Jan-25', 'Auto-Resolved', 'Logistics', 'Low', 'None'] },
+  { cells: ['INV-031456', 'TechParts Ltd', '₹8,920', '05-Feb-25', 'Flagged', 'IT', 'Critical', 'INV-031455'] },
+  { cells: ['INV-018927', 'Global Supplies Inc', '₹6,340', '22-Jan-25', 'Resolved', 'Procurement', 'Low', 'INV-018926'] },
+  { cells: ['INV-044521', 'Atlas Manufacturing', '₹15,200', '18-Mar-25', 'Under Review', 'Finance', 'High', 'INV-044520'] },
+  { cells: ['INV-052340', 'PrintWorks', '₹3,400', '15-Mar-25', 'Flagged', 'Procurement', 'Critical', 'INV-052339'] },
+  { cells: ['INV-061201', 'SecureNet', '₹18,500', '28-Mar-25', 'Auto-Resolved', 'IT', 'Low', 'None'] },
+  { cells: ['INV-045123', 'TechParts Ltd', '₹11,200', '12-Mar-25', 'Pending Review', 'IT', 'High', 'INV-045122'] },
+  { cells: ['INV-038901', 'CloudHost Inc', '₹8,900', '01-Feb-25', 'Under Review', 'Operations', 'Medium', 'INV-038900'] },
+  { cells: ['INV-029876', 'DataPipe Co', '₹24,000', '20-Jan-25', 'Resolved', 'Finance', 'Low', 'None'] },
+  { cells: ['INV-067432', 'NexGen Supplies', '₹5,780', '05-Apr-25', 'Pending Review', 'HR', 'Medium', 'INV-067431'] },
+  { cells: ['INV-071890', 'Rapid Logistics', '₹2,340', '10-Apr-25', 'Resolved', 'Logistics', 'Low', 'None'] },
+  { cells: ['INV-034567', 'Vertex Solutions', '₹19,400', '25-Feb-25', 'Under Review', 'IT', 'High', 'INV-034566'] },
+  { cells: ['INV-058213', 'BrightEdge Corp', '₹7,650', '08-Mar-25', 'Auto-Resolved', 'Finance', 'Low', 'None'] },
+  { cells: ['INV-042198', 'Summit Industries', '₹31,200', '17-Feb-25', 'Flagged', 'Procurement', 'Critical', 'INV-042197'] },
+  { cells: ['INV-076543', 'OmniTech Ltd', '₹4,120', '14-Apr-25', 'Resolved', 'Operations', 'Low', 'INV-076542'] },
+  { cells: ['INV-019874', 'Pacific Trading Co', '₹16,800', '09-Jan-25', 'Under Review', 'Sales', 'High', 'INV-019873'] },
+  { cells: ['INV-083210', 'CoreLink Systems', '₹9,350', '22-Apr-25', 'Pending Review', 'IT', 'Medium', 'INV-083209'] },
+  { cells: ['INV-055678', 'Greenfield Supplies', '₹6,200', '02-Mar-25', 'Resolved', 'HR', 'Low', 'None'] },
+  { cells: ['INV-047891', 'Pinnacle Services', '₹13,750', '27-Feb-25', 'Flagged', 'Finance', 'High', 'INV-047890'] },
+  { cells: ['INV-062345', 'AlphaWare Inc', '₹2,890', '19-Mar-25', 'Auto-Resolved', 'Legal', 'Low', 'None'] },
+  { cells: ['INV-039012', 'Stellar Dynamics', '₹22,100', '04-Feb-25', 'Under Review', 'Operations', 'High', 'INV-039011'] },
+];
+
+const EXCEL_RAW_HEADERS = ['Row #', 'Invoice ID', 'Vendor Name', 'Amount', 'Date', 'Department', 'GST Number', 'Payment Mode', 'Sheet'];
+
+const EXCEL_RAW_ROWS = [
+  { row: 1, invoiceId: 'INV-005790', vendor: 'Acme Global Imaging', amount: '₹11,853', date: '20-Mar-25', department: 'Operations', gst: '27AABCA1234F1ZP', payment: 'NEFT', sheet: 'Invoices' },
+  { row: 2, invoiceId: 'INV-025832', vendor: 'Korean Technologies', amount: '₹4,564', date: '15-Dec-24', department: 'Procurement', gst: '29AABCK5678G1Z5', payment: 'RTGS', sheet: 'Invoices' },
+  { row: 3, invoiceId: 'INV-007194', vendor: '3tones Letter Co.', amount: '₹3,835', date: '31-Dec-24', department: 'Finance', gst: '07AABC3456H1ZQ', payment: 'Cheque', sheet: 'Invoices' },
+  { row: 4, invoiceId: 'INV-040083', vendor: 'Chintamani Paper', amount: '₹3,410', date: '13-Dec-24', department: 'Operations', gst: '24AABCC7890J1Z3', payment: 'NEFT', sheet: 'Invoices' },
+  { row: 5, invoiceId: 'INV-027203', vendor: 'M Cargo Logistics', amount: '₹1,457', date: '12-Jan-25', department: 'Logistics', gst: '33AABCM2345K1Z8', payment: 'UPI', sheet: 'Invoices' },
+  { row: 6, invoiceId: 'INV-031456', vendor: 'TechParts Ltd', amount: '₹8,920', date: '05-Feb-25', department: 'IT', gst: '06AABCT6789L1Z1', payment: 'NEFT', sheet: 'Invoices' },
+  { row: 7, invoiceId: 'INV-018927', vendor: 'Global Supplies Inc', amount: '₹6,340', date: '22-Jan-25', department: 'Procurement', gst: '27AABCG1234M1ZP', payment: 'RTGS', sheet: 'Invoices' },
+  { row: 8, invoiceId: 'INV-044521', vendor: 'Atlas Manufacturing', amount: '₹15,200', date: '18-Mar-25', department: 'Finance', gst: '29AABCA5678N1Z5', payment: 'NEFT', sheet: 'Invoices' },
+  { row: 9, invoiceId: 'INV-052340', vendor: 'PrintWorks', amount: '12,500 INR', date: '15-Mar-25', department: 'Procurement', gst: 'ABCDE1234Z', payment: 'Cheque', sheet: 'Invoices' },
+  { row: 10, invoiceId: 'INV-061201', vendor: 'SecureNet', amount: '₹18,500', date: '13/25/2025', department: 'IT', gst: '06AABCS9012P1Z7', payment: 'NEFT', sheet: 'Invoices' },
+  { row: 11, invoiceId: 'INV-045123', vendor: '', amount: '₹11,200', date: '12-Mar-25', department: 'IT', gst: '27AABCT3456Q1ZP', payment: 'RTGS', sheet: 'Invoices' },
+  { row: 12, invoiceId: 'INV-038901', vendor: 'CloudHost Inc', amount: '₹8,900', date: '01-Feb-25', department: '', gst: '29AABCC7890R1Z5', payment: 'UPI', sheet: 'Vendors' },
+  { row: 13, invoiceId: 'INV-029876', vendor: 'DataPipe Co', amount: '₹24,000', date: '20-Jan-25', department: 'Finance', gst: '07AABCD1234S1ZQ', payment: 'NEFT', sheet: 'Payments' },
+  { row: 14, invoiceId: 'INV-067432', vendor: 'NexGen Supplies', amount: '₹5,780', date: '05-Apr-25', department: 'HR', gst: '24AABCN5678T1Z3', payment: 'Cheque', sheet: 'Payments' },
+  { row: 15, invoiceId: 'INV-005790', vendor: 'Acme Global Imaging', amount: '₹11,853', date: '20-Mar-25', department: 'Operations', gst: '27AABCA1234F1ZP', payment: 'NEFT', sheet: 'Invoices' },
+  { row: 16, invoiceId: 'INV-071890', vendor: 'Rapid Logistics', amount: '₹9,84,500', date: '10-Apr-25', department: 'Logistics', gst: '33AABCR9012U1Z8', payment: 'RTGS', sheet: 'Payments' },
+];
+
 const STATUS_COLORS: Record<string, string> = {
   'Pending Review': 'bg-amber-50 text-amber-700 border-amber-200',
   'Under Review': 'bg-blue-50 text-blue-700 border-blue-200',
@@ -1358,7 +1485,7 @@ const RISK_COLORS: Record<string, string> = {
 
 const TIME_PERIODS = ['Today', '7D', '30D', '3M', '6M', '12M'];
 
-function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit, onDelete, onPrev, onNext, hasPrev, hasNext, isTable, autoOpenEditSidebar, onEditSidebarOpened }: {
+function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit, onDelete, onPrev, onNext, hasPrev, hasNext, isTable, autoOpenEditSidebar, onEditSidebarOpened, onOpenAddData, widgetChartType, customizeState, onCustomizeChange, xField, yField, legendField, onXFieldChange, onYFieldChange, onLegendFieldChange, isExcelDashboard }: {
   open: boolean;
   onClose: () => void;
   title: string;
@@ -1373,6 +1500,17 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
   isTable?: boolean;
   autoOpenEditSidebar?: boolean;
   onEditSidebarOpened?: () => void;
+  onOpenAddData?: () => void;
+  widgetChartType?: string;
+  customizeState?: { fontFamily: string; bold: boolean; italic: boolean; underline: boolean; xAxisTitle: string; yAxisTitle: string; yMin: string; yMax: string; invertRange: boolean };
+  onCustomizeChange?: (key: string, value: any) => void;
+  xField?: string;
+  yField?: string;
+  legendField?: string;
+  onXFieldChange?: (v: string) => void;
+  onYFieldChange?: (v: string) => void;
+  onLegendFieldChange?: (v: string) => void;
+  isExcelDashboard?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<'visualization' | 'records' | 'summary'>(isTable ? 'records' : 'visualization');
   const [timePeriod, setTimePeriod] = useState('30D');
@@ -1402,7 +1540,7 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
     }
     if (!open) prevAutoOpen.current = false;
   }, [autoOpenEditSidebar, open]);
-  const [editChartType, setEditChartType] = useState('clustered-column');
+  const [editChartType, setEditChartType] = useState(widgetChartType || 'clustered-column');
   const [editChartTypeOpen, setEditChartTypeOpen] = useState(true);
   const [editDataSourceOpen, setEditDataSourceOpen] = useState(true);
   const [editDataSearch, setEditDataSearch] = useState('');
@@ -1411,13 +1549,27 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
   const [editLegendOpen, setEditLegendOpen] = useState(false);
   const [editDataLabelsOpen, setEditDataLabelsOpen] = useState(false);
   const [editRangeOpen, setEditRangeOpen] = useState(false);
-  const [editFontFamily, setEditFontFamily] = useState('Inter');
-  const [editIsBold, setEditIsBold] = useState(false);
-  const [editIsItalic, setEditIsItalic] = useState(false);
-  const [editIsUnderline, setEditIsUnderline] = useState(false);
-  const [editMinimum, setEditMinimum] = useState('');
-  const [editMaximum, setEditMaximum] = useState('');
-  const [editInvertRange, setEditInvertRange] = useState(false);
+  const [editFieldsOpen, setEditFieldsOpen] = useState(true);
+  const [editXAxisOpen, setEditXAxisOpen] = useState(false);
+  const [editYAxisOpen, setEditYAxisOpen] = useState(false);
+  const [editConditionalOpen, setEditConditionalOpen] = useState(false);
+  const [editDataSeriesOpen, setEditDataSeriesOpen] = useState(false);
+  const editFontFamily = customizeState?.fontFamily ?? 'Inter';
+  const editIsBold = customizeState?.bold ?? false;
+  const editIsItalic = customizeState?.italic ?? false;
+  const editIsUnderline = customizeState?.underline ?? false;
+  const editMinimum = customizeState?.yMin ?? '';
+  const editMaximum = customizeState?.yMax ?? '';
+  const editInvertRange = customizeState?.invertRange ?? false;
+  const editXAxisTitleVal = customizeState?.xAxisTitle ?? '';
+  const editYAxisTitleVal = customizeState?.yAxisTitle ?? '';
+  const setEditFontFamily = (v: string) => onCustomizeChange?.('fontFamily', v);
+  const setEditIsBold = (v: boolean) => onCustomizeChange?.('bold', v);
+  const setEditIsItalic = (v: boolean) => onCustomizeChange?.('italic', v);
+  const setEditIsUnderline = (v: boolean) => onCustomizeChange?.('underline', v);
+  const setEditMinimum = (v: string) => onCustomizeChange?.('yMin', v);
+  const setEditMaximum = (v: string) => onCustomizeChange?.('yMax', v);
+  const setEditInvertRange = (v: boolean) => onCustomizeChange?.('invertRange', v);
   const [showVizFilter, setShowVizFilter] = useState(false);
   const [vizFilterSelections, setVizFilterSelections] = useState<Record<string, string[]>>({});
   const [vizFilterOpen, setVizFilterOpen] = useState<Record<string, boolean>>({});
@@ -1440,7 +1592,8 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
-      setActiveTab('visualization');
+      setActiveTab(isTable || subtitle === 'KPI detail' ? 'records' : 'visualization');
+      setEditChartType(widgetChartType || 'clustered-column');
       setSearchQuery('');
       setTimePeriod('30D');
       setShowEditSidebar(false);
@@ -1456,6 +1609,25 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [showEditSidebar]);
+
+  const isKpiDetail = subtitle === 'KPI detail';
+  const kpiFilterTitle = isKpiDetail ? title.toLowerCase() : '';
+
+  const filteredExcelRows = EXCEL_RAW_ROWS.filter(r => {
+    // KPI-based filtering
+    if (isKpiDetail) {
+      if (kpiFilterTitle.includes('blank')) { if (r.vendor && r.department) return false; }
+      else if (kpiFilterTitle.includes('duplicate')) {
+        const dupes = EXCEL_RAW_ROWS.filter(x => x.invoiceId === r.invoiceId);
+        if (dupes.length <= 1) return false;
+      }
+      // 'total rows' and 'completeness' show all rows
+    }
+    // Search filtering
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return r.vendor.toLowerCase().includes(q) || r.invoiceId.toLowerCase().includes(q) || r.department.toLowerCase().includes(q) || r.sheet.toLowerCase().includes(q);
+  });
 
   const filteredRecords = EXPANDED_RECORDS.filter(r => {
     if (!searchQuery) return true;
@@ -1498,7 +1670,7 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
               <div className="flex items-center justify-between px-5 pt-2 pb-0">
                 {/* Tabs left */}
                 <div className="flex items-center gap-0">
-                  {(['visualization', 'records', 'summary'] as const).filter(tab => !(isTable && tab === 'visualization')).map(tab => {
+                  {(['visualization', 'records', 'summary'] as const).filter(tab => !((isTable || isKpiDetail) && tab === 'visualization') && !(isExcelDashboard && tab === 'summary')).map(tab => {
                     const Icon = tabIcons[tab];
                     const isActive = activeTab === tab;
                     return (
@@ -1518,29 +1690,19 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
 
                 {/* Actions right */}
                 <div className="flex items-center gap-1">
-                  {/* Download as PNG */}
-                  <button
-                    onClick={() => addToast({ message: 'Widget downloaded as PNG', type: 'success' })}
-                    className="p-2 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
-                    title="Download as PNG"
-                  >
-                    <Download size={18} className="text-ink-700" />
-                  </button>
-
-                  {/* Bell with badge */}
+                  {/* Bell with badge — hidden for Excel */}
+                  {!isExcelDashboard && (
                   <button
                     onClick={() => setShowAlertNotifications(true)}
                     className="relative p-2 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
                     title="Alert Notifications"
                   >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                    </svg>
+                    <Bell size={18} className="text-warning" />
                     {alerts.length > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 bg-[#6a12cd] text-white text-[9px] font-bold rounded-full flex items-center justify-center" style={{ width: 18, height: 18 }}>{alerts.length}</span>
+                      <span className="absolute top-0.5 right-0.5 bg-warning text-white text-[8px] font-bold rounded-full flex items-center justify-center size-4">{alerts.length}</span>
                     )}
                   </button>
+                  )}
 
                   {/* 3-dot menu */}
                   <div className="relative">
@@ -1631,39 +1793,9 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                           className="text-[13px] font-semibold text-ink-900 cursor-text hover:text-brand-600 transition-colors"
                           onClick={() => setEditingExpandTitle(true)}
                         >{expandTitle}</span>
-                        {(() => {
-                          const t = expandTitle.toLowerCase();
-                          if (t.includes('accuracy') || t.includes('detection')) return (
-                            <span className="flex items-center gap-1 text-[10px] text-ink-400">
-                              <Database size={10} className="text-[#6a12cd]" /> SQL · audit_controls_db
-                            </span>
-                          );
-                          if (t.includes('volume') && t.includes('trend')) return (
-                            <span className="flex items-center gap-1 text-[10px] text-ink-400">
-                              <FileText size={10} className="text-green-600" /> Excel · Invoice_Master.xlsx
-                            </span>
-                          );
-                          if (t.includes('monthly') || t.includes('volume')) return (
-                            <span className="flex items-center gap-1 text-[10px] text-ink-400">
-                              <FileText size={10} className="text-blue-500" /> CSV · Payment_Ledger.csv
-                            </span>
-                          );
-                          if (t.includes('status') || t.includes('pie')) return (
-                            <span className="flex items-center gap-1 text-[10px] text-ink-400">
-                              <Database size={10} className="text-amber-500" /> Query · status_distribution
-                            </span>
-                          );
-                          if (t.includes('record') || t.includes('table')) return (
-                            <span className="flex items-center gap-1 text-[10px] text-ink-400">
-                              <Database size={10} className="text-[#6a12cd]" /> SQL · invoice_records_db
-                            </span>
-                          );
-                          return (
-                            <span className="flex items-center gap-1 text-[10px] text-ink-400">
-                              <Database size={10} className="text-[#6a12cd]" /> SQL
-                            </span>
-                          );
-                        })()}
+                        <span className="flex items-center gap-1 text-[10px] text-ink-400">
+                          <FileText size={10} className="text-green-600" /> Excel · Invoice_Master.xlsx
+                        </span>
                       </span>
                     )}
                   </div>
@@ -1672,7 +1804,7 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                   {/* Right — conditional controls per tab */}
                   <div className="flex items-center shrink-0">
                     {/* Drill up/down/double — only on Visualization */}
-                    {activeTab === 'visualization' && (
+                    {activeTab === 'visualization' && !isTable && (
                       <>
                         <button onClick={() => addToast({ message: 'Drilled up', type: 'info' })} className="p-2.5 text-ink-400 hover:text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer" title="Drill up">
                           <IconDrillUp />
@@ -1692,8 +1824,8 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                     )}
 
 
-                    {/* Filter + Settings — hidden on Summary */}
-                    {activeTab !== 'summary' && (<>
+                    {/* Filter + Settings — hidden on Summary and KPI detail */}
+                    {activeTab !== 'summary' && !isKpiDetail && (<>
                     <div className="relative">
                       <button
                         ref={vizFilterBtnRef}
@@ -1849,6 +1981,59 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                   <motion.div key="records" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-5 h-full flex flex-col">
                     {isTable ? (
                       <div className="flex-1 overflow-auto chart-scroll">{children}</div>
+                    ) : isExcelDashboard ? (
+                    <>
+                    {/* Search */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="relative flex-1">
+                        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
+                        <input
+                          type="text"
+                          placeholder="Search by invoice, vendor, department, sheet..."
+                          value={searchQuery}
+                          onChange={e => setSearchQuery(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2.5 text-[13px] border border-canvas-border rounded-lg bg-canvas-elevated focus:outline-none focus:border-brand-400 transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Excel raw data table */}
+                    <div className="bg-canvas-elevated rounded-xl border border-canvas-border overflow-auto chart-scroll" style={{ maxHeight: '70vh' }}>
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="border-b border-canvas-border bg-surface-2/50">
+                            {EXCEL_RAW_HEADERS.map(h => (
+                              <th key={h} className="text-[11px] font-bold text-ink-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredExcelRows.map((r, i) => {
+                            const hasIssue = !r.vendor || !r.department || r.amount.includes('INR') || r.date.includes('/25/') || r.gst.length < 15 || r.amount.includes('9,84,500') || (i > 0 && filteredExcelRows.findIndex(x => x.invoiceId === r.invoiceId) !== i);
+                            return (
+                            <motion.tr
+                              key={`${r.row}-${i}`}
+                              initial={{ opacity: 0, y: 4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: i * 0.03 }}
+                              className={`border-b border-canvas-border/50 last:border-0 transition-colors cursor-pointer ${hasIssue ? 'bg-red-50/40 hover:bg-red-50/60' : 'hover:bg-brand-50/30'}`}
+                            >
+                              <td className="px-4 py-3 text-[12px] font-mono text-ink-400">{r.row}</td>
+                              <td className="px-4 py-3 text-[12px] font-semibold text-brand-700">{r.invoiceId}</td>
+                              <td className={`px-4 py-3 text-[12px] ${r.vendor ? 'text-ink-800' : 'text-red-400 italic'}`}>{r.vendor || '— blank —'}</td>
+                              <td className={`px-4 py-3 text-[12px] font-medium ${r.amount.includes('INR') || r.amount.includes('9,84,500') ? 'text-red-600' : 'text-ink-900'}`}>{r.amount}</td>
+                              <td className={`px-4 py-3 text-[12px] ${r.date.includes('/25/') ? 'text-red-600' : 'text-ink-600'}`}>{r.date}</td>
+                              <td className={`px-4 py-3 text-[12px] ${r.department ? 'text-ink-600' : 'text-red-400 italic'}`}>{r.department || '— blank —'}</td>
+                              <td className={`px-4 py-3 text-[12px] font-mono ${r.gst.length < 15 ? 'text-red-600' : 'text-ink-500'}`}>{r.gst}</td>
+                              <td className="px-4 py-3 text-[12px] text-ink-600">{r.payment}</td>
+                              <td className="px-4 py-3"><span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-brand-50 text-brand-700">{r.sheet}</span></td>
+                            </motion.tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    </>
                     ) : (
                     <>
                     {/* Search + Download */}
@@ -2002,19 +2187,24 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                   >
                     {/* Tabs */}
                     <div className="flex shrink-0 border-b border-canvas-border">
-                      {([['datasource', 'Data Source'], ['customize', 'Customize']] as const).map(([tab, label]) => (
-                        <button
-                          key={tab}
-                          onClick={() => setEditSidebarTab(tab)}
-                          className={`flex-1 py-2.5 text-[12px] font-medium border-b-2 transition-colors cursor-pointer ${
-                            editSidebarTab === tab
-                              ? 'border-brand-600 text-brand-700'
-                              : 'border-transparent text-ink-500 hover:text-ink-700'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
+                      <button
+                        onClick={() => setEditSidebarTab('datasource')}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[12px] font-medium border-b-2 transition-colors cursor-pointer ${
+                          editSidebarTab === 'datasource' ? 'border-brand-600 text-brand-700' : 'border-transparent text-ink-500 hover:text-ink-700'
+                        }`}
+                      >
+                        <Database size={13} />
+                        Data Source
+                      </button>
+                      <button
+                        onClick={() => setEditSidebarTab('customize')}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[12px] font-medium border-b-2 transition-colors cursor-pointer ${
+                          editSidebarTab === 'customize' ? 'border-brand-600 text-brand-700' : 'border-transparent text-ink-500 hover:text-ink-700'
+                        }`}
+                      >
+                        <Settings size={13} />
+                        Customize
+                      </button>
                     </div>
 
                     {/* Tab content — scrollable */}
@@ -2030,10 +2220,65 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                           { id: 'area', label: 'Area Chart', Icon: AreaChart },
                           { id: 'pie', label: 'Pie Chart', Icon: PieChartIcon },
                           { id: 'line-clustered', label: 'Line & Clustered Column Chart', Icon: LineChart },
+                          { id: 'table', label: 'Table', Icon: ListChecks },
                         ];
 
                         return (
                           <div className="p-3 space-y-2">
+                            {/* AXIS FIELDS section — on top, hidden for Table */}
+                            {editChartType !== 'table' && (
+                            <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
+                              <button
+                                onClick={() => setEditFieldsOpen(!editFieldsOpen)}
+                                className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-[#faf5ff] to-white hover:from-[#f5f0ff] hover:to-[#fefefe] transition-all border-b border-[#f0f0f0]"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Columns className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
+                                  <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">Fields</span>
+                                </div>
+                                <ChevronDown
+                                  className="size-[14px] text-[#6a12cd] transition-transform duration-200"
+                                  style={{ transform: editFieldsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                                />
+                              </button>
+                              {editFieldsOpen && (
+                              <div className="p-2.5 space-y-2.5">
+                                {editChartType !== 'pie' && editChartType !== 'kpi' && (
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[11px] font-semibold text-[#26064a]">X Axis</label>
+                                  <WhiteDropdown
+                                    value={xField || 'Month'}
+                                    onChange={v => onXFieldChange?.(v)}
+                                    options={['Month', 'Week', 'Year', 'Date', 'Region', 'State', 'Vendor Name', 'Status', 'Category', 'Department'].map(f => ({ value: f, label: f }))}
+                                    size="sm"
+                                  />
+                                </div>
+                                )}
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[11px] font-semibold text-[#26064a]">Y Axis</label>
+                                  <WhiteDropdown
+                                    value={yField || 'Duplicate Count'}
+                                    onChange={v => onYFieldChange?.(v)}
+                                    options={['Duplicate Count', 'Duplicate Score (%)', 'Invoice Amount (₹)', 'Amount at Risk (₹)', 'Invoices Scanned', 'Duplicates Found', 'Detection Accuracy (%)', 'Processing Time (d)'].map(f => ({ value: f, label: f }))}
+                                    size="sm"
+                                  />
+                                </div>
+                                {editChartType !== 'kpi' && (
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[11px] font-semibold text-[#26064a]">Legend</label>
+                                  <WhiteDropdown
+                                    value={legendField || ''}
+                                    onChange={v => onLegendFieldChange?.(v)}
+                                    options={[{ value: '', label: 'None' }, ...['Region', 'State', 'Vendor Name', 'Status', 'Category', 'Department'].map(f => ({ value: f, label: f }))]}
+                                    size="sm"
+                                  />
+                                </div>
+                                )}
+                              </div>
+                              )}
+                            </div>
+                            )}
+
                             {/* CHART TYPE section */}
                             <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
                               <button
@@ -2077,7 +2322,7 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                                   <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">Data Source</span>
                                 </div>
                                 <button
-                                  onClick={() => addToast({ message: 'Add data modal opening...', type: 'info' })}
+                                  onClick={() => onOpenAddData?.()}
                                   className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-white bg-brand-600 hover:bg-brand-500 rounded-md transition-colors cursor-pointer shrink-0"
                                 >
                                   <Plus size={10} />
@@ -2165,51 +2410,66 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                             )}
                           </div>
 
-                          {/* LEGEND section */}
+                          {/* X AXIS section — hidden for Pie, KPI, Table */}
+                          {editChartType !== 'pie' && editChartType !== 'kpi' && editChartType !== 'table' && !isTable && (
                           <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
                             <button
-                              onClick={() => setEditLegendOpen(!editLegendOpen)}
+                              onClick={() => setEditXAxisOpen(!editXAxisOpen)}
                               className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-[#faf5ff] to-white hover:from-[#f5f0ff] hover:to-[#fefefe] transition-all border-b border-[#f0f0f0]"
                             >
                               <div className="flex items-center gap-2">
-                                <Type className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
-                                <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">Legend</span>
+                                <ArrowRight className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
+                                <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">X Axis</span>
                               </div>
-                              <ChevronDown
-                                className="size-[14px] text-[#6a12cd] transition-transform duration-200"
-                                style={{ transform: editLegendOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                              />
+                              <ChevronDown className="size-[14px] text-[#6a12cd] transition-transform duration-200" style={{ transform: editXAxisOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                             </button>
-                            {editLegendOpen && (
-                              <div className="bg-[#fafafa] p-3">
-                                <p className="text-[11px] text-ink-400">Legend configuration options will appear here.</p>
+                            {editXAxisOpen && (
+                              <div className="bg-[#fafafa] p-2.5 space-y-3">
+                                <div className="flex flex-col gap-1.5">
+                                  <label className="text-[12px] font-medium text-[#26064a]">Title</label>
+                                  <input type="text" value={editXAxisTitleVal} onChange={e => onCustomizeChange?.('xAxisTitle', e.target.value)} placeholder="Enter X Axis Title" className="w-full px-3.5 py-2 text-[12px] bg-white border border-[rgba(38,6,74,0.2)] rounded-[8px] text-[#26064a] placeholder:text-[rgba(38,6,74,0.2)] focus:outline-none focus:border-[#6a12cd] focus:ring-1 focus:ring-[#6a12cd] transition-all shadow-sm" />
+                                </div>
                               </div>
                             )}
                           </div>
+                          )}
 
-                          {/* DATA LABELS section */}
+                          {/* Y AXIS section — hidden for Pie, KPI, Table */}
+                          {editChartType !== 'pie' && editChartType !== 'kpi' && editChartType !== 'table' && !isTable && (
                           <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
                             <button
-                              onClick={() => setEditDataLabelsOpen(!editDataLabelsOpen)}
+                              onClick={() => setEditYAxisOpen(!editYAxisOpen)}
                               className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-[#faf5ff] to-white hover:from-[#f5f0ff] hover:to-[#fefefe] transition-all border-b border-[#f0f0f0]"
                             >
                               <div className="flex items-center gap-2">
-                                <Hash className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
-                                <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">Data Labels</span>
+                                <MoveVertical className="size-[12px] text-[#6a12cd]" strokeWidth={2} />
+                                <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">Y Axis</span>
                               </div>
-                              <ChevronDown
-                                className="size-[14px] text-[#6a12cd] transition-transform duration-200"
-                                style={{ transform: editDataLabelsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                              />
+                              <ChevronDown className="size-[14px] text-[#6a12cd] transition-transform duration-200" style={{ transform: editYAxisOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                             </button>
-                            {editDataLabelsOpen && (
-                              <div className="bg-[#fafafa] p-3">
-                                <p className="text-[11px] text-ink-400">Data label configuration options will appear here.</p>
+                            {editYAxisOpen && (
+                              <div className="bg-[#fafafa] p-2.5 space-y-3">
+                                <div className="flex flex-col gap-1.5">
+                                  <label className="text-[12px] font-medium text-[#26064a]">Title</label>
+                                  <input type="text" value={editYAxisTitleVal} onChange={e => onCustomizeChange?.('yAxisTitle', e.target.value)} placeholder="Enter Y Axis Title" className="w-full px-3.5 py-2 text-[12px] bg-white border border-[rgba(38,6,74,0.2)] rounded-[8px] text-[#26064a] placeholder:text-[rgba(38,6,74,0.2)] focus:outline-none focus:border-[#6a12cd] focus:ring-1 focus:ring-[#6a12cd] transition-all shadow-sm" />
+                                </div>
                               </div>
                             )}
                           </div>
+                          )}
 
-                          {/* RANGE (Y AXIS) section */}
+                          {/* LEGEND section — hidden for KPI, Table */}
+                          {editChartType !== 'kpi' && editChartType !== 'table' && !isTable && (
+                            <LegendSection />
+                          )}
+
+                          {/* DATA LABELS section — hidden for Table, Scatter */}
+                          {editChartType !== 'table' && editChartType !== 'scatter' && !isTable && (
+                            <TypographySection />
+                          )}
+
+                          {/* RANGE (Y AXIS) section — hidden for Pie, KPI, Table */}
+                          {editChartType !== 'pie' && editChartType !== 'kpi' && editChartType !== 'table' && !isTable && (
                           <div className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
                             <button
                               onClick={() => setEditRangeOpen(!editRangeOpen)}
@@ -2263,20 +2523,45 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                               </div>
                             )}
                           </div>
+                          )}
+
+                          {/* CONDITIONAL FORMATTING section — all chart types */}
+                          <ConditionalFormattingSection />
+
+                          {/* DATA SERIES section — hidden for KPI, Table */}
+                          {editChartType !== 'kpi' && editChartType !== 'table' && !isTable && (
+                            <DataSeriesFormattingSection
+                              series={(() => {
+                                if (editChartType === 'pie') return ['Compliant', 'Non-Compliant', 'Under Review', 'Pending', 'Flagged'];
+                                if (editChartType === 'line' || editChartType === 'line-clustered') return ['Actual', 'Target'];
+                                if (editChartType === 'area') return ['Actual', 'Target'];
+                                return ['Total', 'Resolved', 'Pending'];
+                              })()}
+                              seriesColors={{}}
+                              onSeriesColorsChange={() => {}}
+                              spacingType={editChartType === 'pie' ? 'pie' : ['clustered-column', 'stacked-column', 'clustered-bar', 'stacked-bar'].includes(editChartType) ? 'bar' : 'disabled'}
+                            />
+                          )}
                         </div>
                       )}
                     </div>
 
                     {/* Bottom CTA */}
-                    <div className="shrink-0 px-4 py-3 border-t border-canvas-border bg-white">
+                    <div className="shrink-0 px-4 py-3 border-t border-canvas-border bg-white flex gap-2">
+                      <button
+                        onClick={() => setShowEditSidebar(false)}
+                        className="flex-1 py-2.5 bg-white border border-canvas-border hover:bg-surface-2 text-ink-700 text-[13px] font-semibold rounded-xl transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
                       <button
                         onClick={() => {
                           addToast({ message: 'Widget updated', type: 'success' });
                           setShowEditSidebar(false);
                         }}
-                        className="w-full py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-[13px] font-semibold rounded-xl transition-colors cursor-pointer"
+                        className="flex-1 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-[13px] font-semibold rounded-xl transition-colors cursor-pointer"
                       >
-                        Update Widget
+                        Update
                       </button>
                     </div>
                   </motion.div>
@@ -2723,16 +3008,6 @@ function WidgetCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setShowMenu(false); }}
     >
-      {/* Alert badge — pulsing bell in top-right when widget has an active alert */}
-      {hasAlert && (
-        <div className="absolute top-2 right-2 z-20 flex items-center justify-center" title="Active threshold alert">
-          <span className="absolute inline-flex size-5 rounded-full bg-orange-400/30 animate-ping" />
-          <span className="relative flex items-center justify-center size-5 rounded-full bg-orange-500 shadow-sm">
-            <Bell size={10} className="text-white" strokeWidth={2.5} />
-          </span>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-2 pb-0">
         {/* Drag handle */}
@@ -2769,10 +3044,14 @@ function WidgetCard({
               className="text-[15px] font-semibold text-ink-900 w-full bg-transparent border-none outline-none ring-0 shadow-none" style={{ outline: 'none', boxShadow: 'none' }}
             />
           ) : (
-            <h3
-              className="text-[15px] font-semibold text-ink-900 truncate hover:text-brand-600 transition-colors cursor-pointer"
-              onClick={() => onExpand?.()}
-            >{localTitle}</h3>
+            <div className="flex items-center gap-1.5">
+              <h3
+                className="text-[15px] font-semibold text-ink-900 truncate hover:text-brand-600 transition-colors cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => { e.stopPropagation(); setEditingTitle(true); setEditingSubtitle(true); }}
+              >{localTitle}</h3>
+              {hasAlert && <Bell size={13} className="text-warning shrink-0" />}
+            </div>
           )}
           {editingSubtitle ? (
             <input
@@ -2786,18 +3065,10 @@ function WidgetCard({
               className="text-[12px] text-ink-500 mt-1 w-full bg-transparent border-none outline-none ring-0 shadow-none" style={{ outline: 'none', boxShadow: 'none' }}
             />
           ) : (
-            <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center gap-2 mt-0.5" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => { e.stopPropagation(); setEditingTitle(true); setEditingSubtitle(true); }}>
               {localSubtitle && <p className="text-[11px] text-ink-500 truncate">{localSubtitle}</p>}
               {localSubtitle && <span className="text-ink-300 text-[9px]">·</span>}
-              {(() => {
-                const t = localTitle.toLowerCase();
-                if (t.includes('accuracy') || t.includes('detection')) return <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0"><Database size={8} className="text-[#6a12cd]" /> SQL</span>;
-                if (t.includes('volume') && t.includes('trend')) return <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0"><FileText size={8} className="text-green-600" /> Excel</span>;
-                if (t.includes('monthly') || (t.includes('volume') && !t.includes('trend'))) return <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0"><FileText size={8} className="text-blue-500" /> CSV</span>;
-                if (t.includes('status') || t.includes('distribution')) return <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0"><Database size={8} className="text-amber-500" /> Query</span>;
-                if (t.includes('record') || t.includes('table') || chartType === 'table') return <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0"><Database size={8} className="text-[#6a12cd]" /> SQL</span>;
-                return <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0"><Database size={8} className="text-[#6a12cd]" /> SQL</span>;
-              })()}
+              <span className="inline-flex items-center gap-1 text-[9px] text-ink-400 shrink-0"><FileText size={8} className="text-green-600" /> Excel</span>
               {dataLinksFromParent && dataLinksFromParent.length > 0 && (() => {
                 const widgetLabels = (widgetFields || []).map(id => DRAG_FIELDS.find(f => f.id === id)?.label).filter(Boolean);
                 const relevantCount = dataLinksFromParent.filter(l => widgetLabels.includes(l.fieldA) || widgetLabels.includes(l.fieldB)).length;
@@ -3035,22 +3306,6 @@ function WidgetCard({
               <>
                 <div className="fixed inset-0 z-30" onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} />
                 <div className="absolute top-full right-0 z-40 mt-1 w-[160px] bg-canvas-elevated border border-canvas-border rounded-lg shadow-xl py-1">
-                  {onExpand && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowMenu(false); onExpand(); }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] text-ink-700 hover:bg-brand-50 hover:text-brand-600 transition-colors text-left cursor-pointer"
-                    >
-                      <Maximize2 size={13} />
-                      Expand
-                    </button>
-                  )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowMenu(false); setEditingTitle(true); setEditingSubtitle(true); }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] text-ink-700 hover:bg-brand-50 hover:text-brand-600 transition-colors text-left cursor-pointer"
-                  >
-                    <Edit size={13} />
-                    Rename
-                  </button>
                   {onEdit && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEdit(); }}
@@ -3895,8 +4150,16 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
   const [widgetLoadingStates, setWidgetLoadingStates] = useState<Record<string, 'loading' | 'loaded' | 'error'>>({});
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const dashboardContainerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handler = () => setIsFullScreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
   const [isExporting, setIsExporting] = useState(false);
   const [expandedWidget, setExpandedWidget] = useState<{ title: string; subtitle?: string } | null>(null);
+  const [kpiOverrides, setKpiOverrides] = useState<Record<number, { title: string; field: string }>>({});
+  const [editingKpiIdx, setEditingKpiIdx] = useState<number | null>(null);
   const [openEditSidebarOnExpand, setOpenEditSidebarOnExpand] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterDateRange, setFilterDateRange] = useState('last-30-days');
@@ -3905,6 +4168,43 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
   const [filterDepartment, setFilterDepartment] = useState<string[]>([]);
   const [pageFilterFields, setPageFilterFields] = useState<string[]>([]);
   const [addWidgetOpen, setAddWidgetOpen] = useState(!!initialCustomFields?.length);
+  const [addDataOpen, setAddDataOpen] = useState(false);
+  const [tablePage, setTablePage] = useState(0);
+  const TABLE_PAGE_SIZE = 14;
+  const [expandCustomize, setExpandCustomize] = useState({
+    fontFamily: 'Inter', bold: false, italic: false, underline: false,
+    xAxisTitle: '', yAxisTitle: '', yMin: '', yMax: '', invertRange: false,
+  });
+  const [expandXField, setExpandXField] = useState('Month');
+  const [expandYField, setExpandYField] = useState('Duplicate Count');
+  const [expandLegendField, setExpandLegendField] = useState('');
+  const handleExpandCustomizeChange = (key: string, value: any) => {
+    setExpandCustomize(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Pre-fill customize state when expanding a widget
+  useEffect(() => {
+    if (!expandedWidget) return;
+    const t = expandedWidget.title.toLowerCase();
+    let xLabel = 'Month';
+    let yLabel = 'Duplicate Count';
+    if (t.includes('accuracy') || t.includes('detection') || t.includes('goals')) {
+      xLabel = 'Month'; yLabel = 'Duplicate Count';
+    } else if (t.includes('volume') && t.includes('trend')) {
+      xLabel = 'Month'; yLabel = 'Duplicate Count';
+    } else if (t.includes('volume') || t.includes('monthly')) {
+      xLabel = 'Month'; yLabel = 'Count';
+    } else if (t.includes('status') || t.includes('distribution') || t.includes('pie')) {
+      xLabel = 'Status'; yLabel = 'Duplicate Count';
+    }
+    setExpandCustomize({
+      fontFamily: 'Inter', bold: false, italic: false, underline: false,
+      xAxisTitle: xLabel, yAxisTitle: yLabel, yMin: '', yMax: '', invertRange: false,
+    });
+    setExpandXField(xLabel);
+    setExpandYField(yLabel);
+    setExpandLegendField('');
+  }, [expandedWidget]);
   const [editingWidget, setEditingWidget] = useState<{ index: number; data: { chartType: string; title: string; xField: string; yField: string; color?: string; fontFamily?: string; seriesColors?: Record<string, string> } } | null>(null);
   const [customFields] = useState<string[] | null>(initialCustomFields || null);
   const [userWidgets, setUserWidgets] = useState<Array<{ chartType: string; title: string; xField: string; yField: string; color?: string; fontFamily?: string; seriesColors?: Record<string, string> }>>(savedWidgets);
@@ -3979,11 +4279,12 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
   if (loading) return <DashboardSkeleton />;
 
   const dashboard = DASHBOARDS.find(d => d.id === activeId) || DASHBOARDS[0];
+  const isExcelDashboard = activeId === 'excel';
   const displayName = dashName || dashboard.name;
   const displaySubtitle = isCustomDashboard ? 'Custom dashboard' : dashboard.subtitle;
 
   return (
-    <div className="h-full flex bg-canvas relative overflow-hidden">
+    <div ref={dashboardContainerRef} className="h-full flex bg-canvas relative overflow-hidden">
       <Orb hoverIntensity={0.09} rotateOnHover hue={dashboard.accentHue} opacity={0.08} />
 
       {/* Per-widget refresh — no full-page overlay */}
@@ -4036,7 +4337,8 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Refreshed indicator */}
+                  {/* Refreshed indicator — hidden for Excel */}
+                  {!isExcelDashboard && (
                   <button
                     onClick={handleRefresh}
                     className="flex items-center gap-1.5 px-4 h-9 border border-canvas-border bg-white rounded-full text-[12px] text-ink-500 hover:border-brand-200 shadow-sm transition-colors cursor-pointer"
@@ -4045,8 +4347,10 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                     <RefreshCw size={13} className={isRefreshing ? 'animate-spin text-brand-600' : ''} />
                     <span className="tabular-nums">Refreshed {lastRefreshTime}</span>
                   </button>
+                  )}
 
-                  {/* Auto refresh with frequency dropdown */}
+                  {/* Auto refresh with frequency dropdown — hidden for Excel */}
+                  {!isExcelDashboard && (
                   <div className="relative">
                     <button
                       onClick={() => setShowFrequencyDropdown(!showFrequencyDropdown)}
@@ -4088,6 +4392,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                       </>
                     )}
                   </div>
+                  )}
 
                   {/* Divider */}
                   <div className="w-px h-5 bg-canvas-border" />
@@ -4101,7 +4406,8 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                     Add Widget
                   </button>
 
-                  {/* Connect Tables */}
+                  {/* Connect Tables — hidden for Excel */}
+                  {!isExcelDashboard && (
                   <button
                     onClick={() => setConnectTablesOpen(true)}
                     className={`relative flex items-center justify-center size-9 rounded-lg transition-colors cursor-pointer border ${
@@ -4118,6 +4424,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                       </span>
                     )}
                   </button>
+                  )}
 
                   {/* Filter */}
                   <button
@@ -4164,15 +4471,9 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                   <button
                     onClick={() => {
                       if (!document.fullscreenElement) {
-                        document.documentElement.requestFullscreen().then(() => {
-                          setIsFullScreen(true);
-                          addToast({ message: 'Entered fullscreen', type: 'info' });
-                        }).catch(() => {});
+                        dashboardContainerRef.current?.requestFullscreen().catch(() => {});
                       } else {
-                        document.exitFullscreen().then(() => {
-                          setIsFullScreen(false);
-                          addToast({ message: 'Exited fullscreen', type: 'info' });
-                        }).catch(() => {});
+                        document.exitFullscreen().catch(() => {});
                       }
                     }}
                     className="flex items-center justify-center size-9 border border-canvas-border bg-canvas-elevated rounded-lg text-ink-500 hover:text-brand-600 hover:border-brand-200 transition-colors cursor-pointer"
@@ -4186,8 +4487,72 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
 
             {/* AI Summary — Generate / View / Edit */}
             {/* Alerts & Daily Digest */}
-            {!isCustomDashboard && <AlertsPanel dashboardId={activeId} />}
+            {!isCustomDashboard && !isExcelDashboard && <AlertsPanel dashboardId={activeId} />}
             {isCustomDashboard && <EmptyAlertsPanel />}
+
+            {/* KPI Cards */}
+            {!isCustomDashboard && (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+              >
+                {dashboard.kpis.map((kpi, i) => {
+                  const override = kpiOverrides[i];
+                  const displayTitle = override?.title || kpi.title;
+                  const isEditing = editingKpiIdx === i;
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.12 + i * 0.05 }}
+                      className="glass-card rounded-xl px-5 py-4 cursor-pointer hover:border-brand-200 hover:shadow-md transition-all"
+                      onClick={() => { if (!isEditing) setExpandedWidget({ title: displayTitle, subtitle: 'KPI detail' }); }}
+                      onDoubleClick={(e) => { e.stopPropagation(); setEditingKpiIdx(i); }}
+                    >
+                      {isEditing ? (
+                        <div className="space-y-2" onClick={e => e.stopPropagation()}>
+                          <input
+                            autoFocus
+                            value={override?.title || kpi.title}
+                            onChange={e => setKpiOverrides(prev => ({ ...prev, [i]: { ...prev[i], title: e.target.value, field: prev[i]?.field || '' } }))}
+                            onKeyDown={e => { if (e.key === 'Enter') setEditingKpiIdx(null); if (e.key === 'Escape') setEditingKpiIdx(null); }}
+                            className="w-full text-[11px] font-semibold text-ink-900 uppercase tracking-wide bg-transparent border-b border-brand-300 outline-none pb-0.5"
+                            placeholder="KPI Title"
+                          />
+                          <select
+                            value={override?.field || ''}
+                            onChange={e => { setKpiOverrides(prev => ({ ...prev, [i]: { ...prev[i], title: prev[i]?.title || kpi.title, field: e.target.value } })); }}
+                            className="w-full text-[11px] text-ink-700 bg-white border border-canvas-border rounded-md px-2 py-1.5 outline-none focus:border-brand-400 cursor-pointer"
+                          >
+                            <option value="">Select source column...</option>
+                            {EXCEL_RAW_HEADERS.filter(h => h !== 'Row #').map(h => (
+                              <option key={h} value={h}>{h}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => setEditingKpiIdx(null)}
+                            className="w-full text-[11px] font-semibold text-white bg-brand-600 hover:bg-brand-500 rounded-md py-1.5 transition-colors cursor-pointer"
+                          >
+                            Done
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-[11px] font-semibold text-ink-500 uppercase tracking-wide mb-2 truncate">{displayTitle}</p>
+                          <p className="text-[26px] font-bold text-ink-900 leading-none">{kpi.value}</p>
+                          {override?.field && (
+                            <p className="text-[10px] text-ink-400 mt-2">Source: {override.field}</p>
+                          )}
+                        </>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            )}
 
             {/* Page-level filter strip */}
             {(pageFilterFields.length > 0 || activeCrossFilters.length > 0) && (
@@ -4384,7 +4749,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                 loading={widgetLoadingStates['w1'] === 'loading'}
                 isFirstLoad={!hasLoadedOnce}
                 chartType="bar"
-                hasAlert
+                hasAlert={!isExcelDashboard}
               >
                 <div className="w-full h-full">
                   <ConfigurableChart type={"combo" as any} xAxis="Month" yAxis="Duplicate Count" />
@@ -4393,11 +4758,11 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
 
               {/* Widget 2 — Area Chart */}
               <WidgetCard
-                title={'Invoice Volume Trend'}
-                subtitle="Volume over time"
+                title={dashboard.progress?.title || 'Invoice Volume Trend'}
+                subtitle={dashboard.progress ? 'Sheet distribution' : 'Volume over time'}
                 addToast={addToast}
-                onExpand={() => setExpandedWidget({ title: 'Invoice Volume Trend', subtitle: 'Volume over time' })}
-                onEdit={() => handleEditDefaultWidget('Invoice Volume Trend', 'area', 'Volume over time')}
+                onExpand={() => setExpandedWidget({ title: dashboard.progress?.title || 'Invoice Volume Trend', subtitle: dashboard.progress ? 'Sheet distribution' : 'Volume over time' })}
+                onEdit={() => handleEditDefaultWidget(dashboard.progress?.title || 'Invoice Volume Trend', 'area', dashboard.progress ? 'Sheet distribution' : 'Volume over time')}
                 onDelete={() => addToast({ message: 'Widget deleted.', type: 'info' })}
                 onFilter={() => addToast({ message: 'Widget filter opening.', type: 'info' })}
                 pageFilterFields={pageFilterFields}
@@ -4408,7 +4773,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                 loading={widgetLoadingStates['w2'] === 'loading'}
                 isFirstLoad={!hasLoadedOnce}
                 chartType="line"
-                hasAlert
+                hasAlert={!isExcelDashboard}
               >
                 <div className="w-full h-full">
                   <ConfigurableChart type="area" xAxis="Month" yAxis="Duplicate Count" />
@@ -4455,7 +4820,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
                 loading={widgetLoadingStates['w4'] === 'loading'}
                 isFirstLoad={!hasLoadedOnce}
                 chartType="pie"
-                hasAlert
+                hasAlert={!isExcelDashboard}
               >
                 <div className="w-full h-full">
                   <ConfigurableChart type="pie" xAxis="Status" yAxis="Duplicate Count" />
@@ -4576,21 +4941,43 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
           userWidgets.forEach(w => allWidgetTitles.push({ title: w.title, subtitle: w.yField && w.xField ? `${w.yField} by ${w.xField}` : 'Custom widget' }));
         } else {
           allWidgetTitles.push({ title: dashboard.lineTrend?.title || 'Detection Accuracy Goals', subtitle: 'Performance over time' });
-          allWidgetTitles.push({ title: 'Invoice Volume Trend', subtitle: 'Volume over time' });
+          allWidgetTitles.push({ title: dashboard.progress?.title || 'Invoice Volume Trend', subtitle: dashboard.progress ? 'Sheet distribution' : 'Volume over time' });
           allWidgetTitles.push({ title: dashboard.bars?.title || 'Monthly Invoice Volume', subtitle: 'Trend analysis' });
           allWidgetTitles.push({ title: dashboard.donut?.title || 'Invoice Status', subtitle: 'Distribution breakdown' });
           allWidgetTitles.push({ title: dashboard.table.title, subtitle: 'Detailed records' });
         }
         const currentIdx = expandedWidget ? allWidgetTitles.findIndex(w => w.title === expandedWidget.title) : -1;
+        const expandedChartType = (() => {
+          if (!expandedWidget) return 'clustered-column';
+          const et = expandedWidget.title.toLowerCase();
+          if (et === dashboard.table.title.toLowerCase()) return 'table';
+          if (et.includes('accuracy') || et.includes('detection') || et.includes('goals')) return 'line-clustered';
+          if (et.includes('volume') && et.includes('trend')) return 'area';
+          if (et.includes('volume') || et.includes('monthly')) return 'clustered-column';
+          if (et.includes('status') || et.includes('distribution') || et.includes('pie')) return 'pie';
+          const uw = userWidgets.find(w => w.title === expandedWidget.title);
+          return uw?.chartType || 'clustered-column';
+        })();
         return (
       <ExpandedWidgetModal
         open={!!expandedWidget}
-        onClose={() => { setExpandedWidget(null); setOpenEditSidebarOnExpand(false); }}
+        onClose={() => { setExpandedWidget(null); setOpenEditSidebarOnExpand(false); setExpandCustomize({ fontFamily: 'Inter', bold: false, italic: false, underline: false, xAxisTitle: '', yAxisTitle: '', yMin: '', yMax: '', invertRange: false }); }}
         title={expandedWidget?.title ?? ''}
         subtitle={expandedWidget?.subtitle}
         isTable={expandedWidget?.title === dashboard.table.title}
+        widgetChartType={expandedChartType}
         autoOpenEditSidebar={openEditSidebarOnExpand}
         onEditSidebarOpened={() => setOpenEditSidebarOnExpand(false)}
+        onOpenAddData={() => setAddDataOpen(true)}
+        customizeState={expandCustomize}
+        onCustomizeChange={handleExpandCustomizeChange}
+        xField={expandXField}
+        yField={expandYField}
+        legendField={expandLegendField}
+        onXFieldChange={(v) => { setExpandXField(v); setExpandCustomize(prev => ({ ...prev, xAxisTitle: v })); }}
+        onYFieldChange={(v) => { setExpandYField(v); setExpandCustomize(prev => ({ ...prev, yAxisTitle: v })); }}
+        onLegendFieldChange={setExpandLegendField}
+        isExcelDashboard={isExcelDashboard}
         hasPrev={currentIdx > 0}
         hasNext={currentIdx < allWidgetTitles.length - 1 && currentIdx >= 0}
         onPrev={() => { if (currentIdx > 0) setExpandedWidget(allWidgetTitles[currentIdx - 1]); }}
@@ -4609,7 +4996,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
               const yField = parts[0]?.trim() || '';
               const xField = parts[1]?.trim() || '';
               // Try to guess chart type from dashboard data
-              let chartType = 'clustered-col';
+              let chartType = 'clustered-column';
               if (widgetTitle.toLowerCase().includes('trend') || widgetTitle.toLowerCase().includes('line')) chartType = 'line';
               else if (widgetTitle.toLowerCase().includes('donut') || widgetTitle.toLowerCase().includes('pie') || widgetTitle.toLowerCase().includes('distribution')) chartType = 'pie';
               else if (widgetTitle.toLowerCase().includes('kpi') || widgetTitle.toLowerCase().includes('score')) chartType = 'kpi';
@@ -4652,40 +5039,102 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
           if (match) {
             return (
               <div className="w-full h-full">
-                <ConfigurableChart type={match.type as any} xAxis={match.xAxis} yAxis={match.yAxis} showTarget={match.singleSeries ? false : undefined} />
+                <ConfigurableChart
+                  type={match.type as any}
+                  xAxis={expandXField || match.xAxis}
+                  yAxis={expandYField || match.yAxis}
+                  showTarget={match.singleSeries ? false : undefined}
+                  fontFamily={expandCustomize.fontFamily}
+                  bold={expandCustomize.bold}
+                  italic={expandCustomize.italic}
+                  underline={expandCustomize.underline}
+                  xAxisTitle={expandCustomize.xAxisTitle}
+                  yAxisTitle={expandCustomize.yAxisTitle}
+                  yMin={expandCustomize.yMin}
+                  yMax={expandCustomize.yMax}
+                  invertRange={expandCustomize.invertRange}
+                />
               </div>
             );
           }
-          if (t === dashboard.table.title) {
+          if (t === dashboard.table.title.toLowerCase()) {
+            const totalRows = EXPANDED_TABLE_ROWS.length;
+            const totalPages = Math.ceil(totalRows / TABLE_PAGE_SIZE);
+            const pageRows = EXPANDED_TABLE_ROWS.slice(tablePage * TABLE_PAGE_SIZE, (tablePage + 1) * TABLE_PAGE_SIZE);
+            const startRow = tablePage * TABLE_PAGE_SIZE + 1;
+            const endRow = Math.min((tablePage + 1) * TABLE_PAGE_SIZE, totalRows);
             return (
-              <div className="overflow-x-auto py-2">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-canvas-border">
-                      {dashboard.table.headers.map(h => (
-                        <th key={h} className="text-[13px] text-ink-500 font-medium pb-3 pr-4">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dashboard.table.rows.map((row, i) => (
-                      <motion.tr
-                        key={i}
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.03 }}
-                        className="border-b border-canvas-border/50 last:border-0 hover:bg-brand-50/50 transition-colors cursor-pointer"
-                      >
-                        {row.cells.map((cell, j) => (
-                          <td key={j} className={`text-[13px] py-3 pr-4 ${j === 0 ? 'font-medium text-ink-900' : 'text-ink-600'}`}>
-                            {cell}
-                          </td>
+              <>
+                <div className="overflow-x-auto flex-1">
+                  <table className="w-full text-left" style={{ minWidth: 900 }}>
+                    <thead>
+                      <tr className="border-b border-canvas-border bg-surface-2/50">
+                        {dashboard.table.headers.map(h => (
+                          <th key={h} className="text-[11px] font-bold text-ink-500 uppercase tracking-wider px-4 py-3">{h}</th>
                         ))}
-                      </motion.tr>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageRows.map((row, i) => (
+                        <motion.tr
+                          key={row.cells[0]}
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.03 }}
+                          className="border-b border-canvas-border/50 last:border-0 hover:bg-brand-50/30 transition-colors cursor-pointer"
+                        >
+                          <td className="px-4 py-3 text-[12px] font-semibold text-brand-700">{row.cells[0]}</td>
+                          <td className="px-4 py-3 text-[12px] text-ink-800">{row.cells[1]}</td>
+                          <td className="px-4 py-3 text-[12px] font-medium text-ink-900">{row.cells[2]}</td>
+                          <td className="px-4 py-3 text-[12px] text-ink-600">{row.cells[3]}</td>
+                          <td className="px-4 py-3">
+                            <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${STATUS_COLORS[row.cells[4]] || 'bg-gray-50 text-gray-600'}`}>
+                              {row.cells[4]}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-[12px] text-ink-600">{row.cells[5]}</td>
+                          <td className="px-4 py-3">
+                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${RISK_COLORS[row.cells[6]] || ''}`}>
+                              {row.cells[6]}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-[12px] text-ink-500 font-mono">{row.cells[7]}</td>
+                        </motion.tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex items-center justify-between px-4 py-3 border-t border-canvas-border shrink-0">
+                  <span className="text-[12px] text-ink-400">Showing {startRow}–{endRow} of {totalRows}</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setTablePage(p => Math.max(0, p - 1))}
+                      disabled={tablePage === 0}
+                      className={`size-7 flex items-center justify-center rounded transition-colors ${tablePage === 0 ? 'text-ink-300 cursor-not-allowed' : 'text-ink-400 hover:bg-surface-2 cursor-pointer'}`}
+                    >
+                      <ChevronDown size={14} className="rotate-90" />
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setTablePage(i)}
+                        className={`size-7 flex items-center justify-center rounded-md text-[12px] font-medium transition-colors cursor-pointer ${
+                          tablePage === i ? 'bg-brand-600 text-white font-semibold' : 'text-ink-600 hover:bg-surface-2'
+                        }`}
+                      >
+                        {i + 1}
+                      </button>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                    <button
+                      onClick={() => setTablePage(p => Math.min(totalPages - 1, p + 1))}
+                      disabled={tablePage === totalPages - 1}
+                      className={`size-7 flex items-center justify-center rounded transition-colors ${tablePage === totalPages - 1 ? 'text-ink-300 cursor-not-allowed' : 'text-ink-400 hover:bg-surface-2 cursor-pointer'}`}
+                    >
+                      <ChevronDown size={14} className="-rotate-90" />
+                    </button>
+                  </div>
+                </div>
+              </>
             );
           }
           return null;
@@ -4770,7 +5219,11 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
         }}
         onOpenExcelUpload={() => addToast({ message: 'Upload Excel', type: 'info' })}
         onOpenQueryModal={() => addToast({ message: 'Open Query', type: 'info' })}
-        onOpenAddData={() => addToast({ message: 'Add data modal opening...', type: 'info' })}
+        onOpenAddData={() => setAddDataOpen(true)}
+      />
+      <AddDataModal
+        open={addDataOpen}
+        onClose={() => setAddDataOpen(false)}
       />
     </div>
   );
