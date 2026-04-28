@@ -818,112 +818,7 @@ const AGG_OPTIONS = [
   { value: 'max', label: 'Max', symbol: '↑' },
 ];
 
-// ─── Common File Tree Data & Component ───────────────────────────────────
-
-interface FileTreeSheet { name: string; columns: string[]; }
-interface FileTreeFile { name: string; icon?: 'excel' | 'csv'; sheets: FileTreeSheet[]; }
-
-const FILE_TREE_DATA: FileTreeFile[] = [
-  {
-    name: 'Invoice_Master.xlsx',
-    icon: 'excel',
-    sheets: [
-      { name: 'Sheet1', columns: ['Date', 'Month', 'Week', 'Year', 'Region', 'State', 'Vendor Name', 'Status', 'Category', 'Invoice Amount (₹)', 'Duplicate Count', 'Duplicate Score (%)'] },
-      { name: 'Sheet2', columns: ['Order ID', 'Order Date', 'Ship Date', 'Priority', 'Quantity'] },
-    ],
-  },
-  {
-    name: 'Vendor_Finance.xlsx',
-    icon: 'excel',
-    sheets: [
-      { name: 'Sheet1', columns: ['Vendor ID', 'Vendor Name', 'Payment Terms', 'Credit Limit', 'Outstanding Amount', 'Risk Score'] },
-    ],
-  },
-];
-
-function FileTreeView({ files, search, draggable, fieldIdMap }: { files: FileTreeFile[]; search?: string; draggable?: boolean; fieldIdMap?: Record<string, string> }) {
-  const [expandedFiles, setExpandedFiles] = useState<Record<string, boolean>>({ [files[0]?.name]: true });
-  const [expandedSheets, setExpandedSheets] = useState<Record<string, boolean>>({ [`${files[0]?.name}::${files[0]?.sheets[0]?.name}`]: true });
-
-  const toggleFile = (name: string) => setExpandedFiles(p => ({ ...p, [name]: !p[name] }));
-  const toggleSheet = (key: string) => setExpandedSheets(p => ({ ...p, [key]: !p[key] }));
-
-  const filteredFiles = files.map(f => ({
-    ...f,
-    sheets: f.sheets.map(s => ({
-      ...s,
-      columns: search ? s.columns.filter(c => c.toLowerCase().includes(search.toLowerCase())) : s.columns,
-    })).filter(s => !search || s.columns.length > 0),
-  })).filter(f => !search || f.sheets.length > 0 || f.name.toLowerCase().includes(search.toLowerCase()));
-
-  return (
-    <div className="space-y-2">
-      {filteredFiles.map(file => {
-        const isFileOpen = expandedFiles[file.name] ?? false;
-        return (
-          <div key={file.name} className="bg-white rounded-[8px] border border-[#e5e7eb] overflow-hidden shadow-sm">
-            <button
-              onClick={() => toggleFile(file.name)}
-              className="w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-[#faf5ff] to-white hover:from-[#f5f0ff] transition-all cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <FileText size={14} className="text-[#6a12cd]" />
-                <span className="text-[12px] font-semibold text-[#26064a]">{file.name}</span>
-              </div>
-              <ChevronDown
-                size={14}
-                className="text-[#6a12cd] transition-transform"
-                style={{ transform: isFileOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-              />
-            </button>
-            {isFileOpen && (
-              <div className="border-t border-[#f0f0f0]">
-                {file.sheets.map(sheet => {
-                  const sheetKey = `${file.name}::${sheet.name}`;
-                  const isSheetOpen = expandedSheets[sheetKey] ?? false;
-                  return (
-                    <div key={sheetKey}>
-                      <button
-                        onClick={() => toggleSheet(sheetKey)}
-                        className="w-full flex items-center justify-between px-4 py-2 hover:bg-[#faf5ff] transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          <LayoutGrid size={12} className="text-ink-400" />
-                          <span className="text-[11px] font-medium text-ink-700">{sheet.name}</span>
-                          <span className="text-[10px] text-ink-400">({sheet.columns.length})</span>
-                        </div>
-                        <ChevronDown
-                          size={12}
-                          className="text-ink-400 transition-transform"
-                          style={{ transform: isSheetOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                        />
-                      </button>
-                      {isSheetOpen && (
-                        <div className="pb-1">
-                          {sheet.columns.map(col => (
-                            <div
-                              key={col}
-                              draggable={!!draggable}
-                              onDragStart={draggable ? (e) => { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('fieldId', fieldIdMap?.[col] || col); } : undefined}
-                              className={`flex items-center gap-2.5 px-6 py-1.5 hover:bg-[#f0ecff] transition-colors ${draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
-                            >
-                              <GripVertical size={11} className="text-ink-300 shrink-0" />
-                              <span className="text-[11px] text-ink-600">{col}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+import { FileTreeView, FILE_TREE_DATA } from './add-widget/FileTreeView';
 
 // ─── Filter Panel ───────────────────────────────────────────────────────────
 
@@ -1463,7 +1358,7 @@ const RISK_COLORS: Record<string, string> = {
 
 const TIME_PERIODS = ['Today', '7D', '30D', '3M', '6M', '12M'];
 
-function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit, onDelete, onPrev, onNext, hasPrev, hasNext, isTable }: {
+function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit, onDelete, onPrev, onNext, hasPrev, hasNext, isTable, autoOpenEditSidebar, onEditSidebarOpened }: {
   open: boolean;
   onClose: () => void;
   title: string;
@@ -1476,6 +1371,8 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
   hasPrev?: boolean;
   hasNext?: boolean;
   isTable?: boolean;
+  autoOpenEditSidebar?: boolean;
+  onEditSidebarOpened?: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<'visualization' | 'records' | 'summary'>(isTable ? 'records' : 'visualization');
   const [timePeriod, setTimePeriod] = useState('30D');
@@ -1491,6 +1388,20 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
   useEffect(() => { setExpandTitle(title); setEditingExpandTitle(false); }, [title]);
   const [showEditSidebar, setShowEditSidebar] = useState(false);
   const [editSidebarTab, setEditSidebarTab] = useState<'datasource' | 'customize'>('datasource');
+
+  // Auto-open edit sidebar when triggered from card-level edit
+  const prevAutoOpen = useRef(false);
+  useEffect(() => {
+    if (autoOpenEditSidebar && open && !prevAutoOpen.current) {
+      prevAutoOpen.current = true;
+      setTimeout(() => {
+        setShowEditSidebar(true);
+        setEditSidebarTab('datasource');
+        onEditSidebarOpened?.();
+      }, 300);
+    }
+    if (!open) prevAutoOpen.current = false;
+  }, [autoOpenEditSidebar, open]);
   const [editChartType, setEditChartType] = useState('clustered-column');
   const [editChartTypeOpen, setEditChartTypeOpen] = useState(true);
   const [editDataSourceOpen, setEditDataSourceOpen] = useState(true);
@@ -1780,40 +1691,6 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                       </>
                     )}
 
-                    {/* Chart type dropdown — only on Visualization */}
-                    {activeTab === 'visualization' && (
-                      <>
-                        <div className="relative">
-                          <button
-                            onClick={() => setChartTypeOpen(!chartTypeOpen)}
-                            className="flex items-center gap-2 px-3 py-2.5 text-[13px] font-medium text-ink-700 hover:bg-surface-2 transition-colors cursor-pointer"
-                          >
-                            {chartType === 'line' ? <LineChart size={15} /> : chartType === 'area' ? <AreaChart size={15} /> : <BarChart3 size={15} />}
-                            <span>{chartType === 'line' ? 'Line Chart' : chartType === 'area' ? 'Area Chart' : 'Bar Chart'}</span>
-                            <ChevronDown size={13} className="text-ink-400" />
-                          </button>
-                          {chartTypeOpen && (
-                            <>
-                              <div className="fixed inset-0 z-30" onClick={() => setChartTypeOpen(false)} />
-                              <div className="absolute top-full right-0 mt-1 z-40 bg-canvas-elevated border border-canvas-border rounded-xl shadow-xl py-1 min-w-[150px]">
-                                {([['line', 'Line Chart', LineChart], ['bar', 'Bar Chart', BarChart3], ['area', 'Area Chart', AreaChart]] as const).map(([type, label, Icon]) => (
-                                  <button
-                                    key={type}
-                                    onClick={() => { setChartType(type as any); setChartTypeOpen(false); addToast({ message: `Chart type: ${label}`, type: 'info' }); }}
-                                    className={`w-full flex items-center gap-2.5 px-4 py-2 text-[13px] transition-colors cursor-pointer ${
-                                      chartType === type ? 'text-brand-700 bg-brand-50' : 'text-ink-600 hover:bg-surface-2'
-                                    }`}
-                                  >
-                                    <Icon size={14} /> {label}
-                                  </button>
-                                ))}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                        <div className="w-px h-8 bg-canvas-border mx-2" />
-                      </>
-                    )}
 
                     {/* Filter + Settings — hidden on Summary */}
                     {activeTab !== 'summary' && (<>
@@ -2200,7 +2077,7 @@ function ExpandedWidgetModal({ open, onClose, title, subtitle, children, onEdit,
                                   <span className="text-[11px] font-bold uppercase tracking-[0.8px] text-[#26064a]">Data Source</span>
                                 </div>
                                 <button
-                                  onClick={() => addToast({ message: 'Add data source', type: 'info' })}
+                                  onClick={() => addToast({ message: 'Add data modal opening...', type: 'info' })}
                                   className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-white bg-brand-600 hover:bg-brand-500 rounded-md transition-colors cursor-pointer shrink-0"
                                 >
                                   <Plus size={10} />
@@ -4020,6 +3897,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [expandedWidget, setExpandedWidget] = useState<{ title: string; subtitle?: string } | null>(null);
+  const [openEditSidebarOnExpand, setOpenEditSidebarOnExpand] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterDateRange, setFilterDateRange] = useState('last-30-days');
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
@@ -4039,12 +3917,9 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
   const [activeCrossFilters, setActiveCrossFilters] = useState<string[]>([]);
   const [activeFiltersCount, setActiveFiltersCount] = useState(0);
 
-  const handleEditDefaultWidget = (widgetTitle: string, chartType: string, subtitle?: string) => {
-    const parts = (subtitle || '').split(' by ');
-    const yField = parts[0]?.trim() || '';
-    const xField = parts[1]?.trim() || '';
-    setEditingWidget({ index: -1, data: { chartType, title: widgetTitle, xField, yField } });
-    setAddWidgetOpen(true);
+  const handleEditDefaultWidget = (widgetTitle: string, _chartType: string, subtitle?: string) => {
+    setOpenEditSidebarOnExpand(true);
+    setExpandedWidget({ title: widgetTitle, subtitle });
   };
 
   // Recalculate active filter count
@@ -4710,10 +4585,12 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
         return (
       <ExpandedWidgetModal
         open={!!expandedWidget}
-        onClose={() => setExpandedWidget(null)}
+        onClose={() => { setExpandedWidget(null); setOpenEditSidebarOnExpand(false); }}
         title={expandedWidget?.title ?? ''}
         subtitle={expandedWidget?.subtitle}
         isTable={expandedWidget?.title === dashboard.table.title}
+        autoOpenEditSidebar={openEditSidebarOnExpand}
+        onEditSidebarOpened={() => setOpenEditSidebarOnExpand(false)}
         hasPrev={currentIdx > 0}
         hasNext={currentIdx < allWidgetTitles.length - 1 && currentIdx >= 0}
         onPrev={() => { if (currentIdx > 0) setExpandedWidget(allWidgetTitles[currentIdx - 1]); }}
@@ -4893,6 +4770,7 @@ export default function DashboardView({ initialDashboardId, initialDashboardName
         }}
         onOpenExcelUpload={() => addToast({ message: 'Upload Excel', type: 'info' })}
         onOpenQueryModal={() => addToast({ message: 'Open Query', type: 'info' })}
+        onOpenAddData={() => addToast({ message: 'Add data modal opening...', type: 'info' })}
       />
     </div>
   );
