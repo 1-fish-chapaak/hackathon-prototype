@@ -1254,10 +1254,44 @@ export function ConfigurableChart({
                 </tr>
               ))}
             </tbody>
+            {aggregation && (() => {
+              const NUMERIC_COLS = new Set(['Invoice Amount (₹)', 'Amount at Risk (₹)', 'Duplicate Count', 'Duplicate Score (%)', 'Invoices Scanned', 'Duplicates Found', 'Detection Accuracy (%)', 'Processing Time (d)']);
+              const parseNum = (s: string) => parseFloat(s.replace(/[₹,%,k]/g, '').replace(/,/g, ''));
+              const AGG_LABELS: Record<string, string> = { sum: 'Sum', average: 'Avg', minimum: 'Min', maximum: 'Max', count: 'Count', count_d: 'Count', stddev: 'StdDev', variance: 'Var', median: 'Median' };
+              const hasNumericCol = cols.some(c => NUMERIC_COLS.has(c));
+              if (!hasNumericCol) return null;
+              return (
+                <tfoot>
+                  <tr className="bg-[#faf5ff] border-t-2 border-[#6a12cd]/20">
+                    {cols.map((col, j) => {
+                      if (!NUMERIC_COLS.has(col)) {
+                        return <td key={col} className="py-2.5 px-4 text-[11px] font-bold text-[#6a12cd] uppercase whitespace-nowrap">{j === 0 ? AGG_LABELS[aggregation] || aggregation : ''}</td>;
+                      }
+                      const vals = Array.from({ length: rowCount }, (_, i) => parseNum(TABLE_MOCK[col]?.[i] || '0')).filter(n => !isNaN(n));
+                      let result = 0;
+                      switch (aggregation) {
+                        case 'sum': result = vals.reduce((a, b) => a + b, 0); break;
+                        case 'average': result = vals.reduce((a, b) => a + b, 0) / vals.length; break;
+                        case 'minimum': result = Math.min(...vals); break;
+                        case 'maximum': result = Math.max(...vals); break;
+                        case 'count': case 'count_d': result = vals.length; break;
+                        case 'median': { const s = [...vals].sort((a, b) => a - b); result = s.length % 2 ? s[Math.floor(s.length / 2)] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; break; }
+                        case 'stddev': { const m = vals.reduce((a, b) => a + b, 0) / vals.length; result = Math.sqrt(vals.reduce((a, b) => a + (b - m) ** 2, 0) / vals.length); break; }
+                        case 'variance': { const m2 = vals.reduce((a, b) => a + b, 0) / vals.length; result = vals.reduce((a, b) => a + (b - m2) ** 2, 0) / vals.length; break; }
+                        default: result = vals.reduce((a, b) => a + b, 0);
+                      }
+                      const fmt = col.includes('₹') ? `₹${result.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : col.includes('%') ? `${result.toFixed(1)}%` : col.includes('(d)') ? result.toFixed(1) : result.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+                      return <td key={col} className="py-2.5 px-4 text-[12px] font-bold text-[#6a12cd] whitespace-nowrap">{fmt}</td>;
+                    })}
+                  </tr>
+                </tfoot>
+              );
+            })()}
           </table>
         </div>
         <div className="flex items-center justify-between px-3 py-2 border-t border-[#e5e7eb] shrink-0 text-[11px] text-[#9ca3af]">
           <span>Showing 1–{rowCount} of {rowCount}</span>
+          {aggregation && <span className="text-[#6a12cd] font-medium">Aggregation: {aggregation.charAt(0).toUpperCase() + aggregation.slice(1)}</span>}
         </div>
       </div>
     );
