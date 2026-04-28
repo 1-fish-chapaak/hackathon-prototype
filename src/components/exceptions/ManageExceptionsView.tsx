@@ -26,6 +26,8 @@ import ActionHubView from './ActionHubView';
 import ExceptionsTable from './ExceptionsTable';
 import SampleDataModal from './SampleDataModal';
 import BulkClassifyModal from './BulkClassifyModal';
+import ActivityTimelineDrawer from './ActivityTimelineDrawer';
+import { useToast } from '../shared/Toast';
 
 type DrawerState =
   | { type: 'classification'; exceptionId: string }
@@ -157,9 +159,13 @@ export default function ManageExceptionsView({ role, setRole, onBack, embedded =
   const [bulkModalId, setBulkModalId] = useState<string | null>(null);
   const [sampleModalOpen, setSampleModalOpen] = useState(false);
   const [sampleCountLeft, setSampleCountLeft] = useState(5);
+  const [sampleSheets, setSampleSheets] = useState<{ id: string; name: string }[]>([]);
+  const [activeSheetId, setActiveSheetId] = useState<string>('all');
+  const [activityDrawerOpen, setActivityDrawerOpen] = useState(false);
+  const { addToast } = useToast();
   const [bulkClassifyOpen, setBulkClassifyOpen] = useState(false);
   const [nextActionableNum, setNextActionableNum] = useState(2);
-  const [atrExpanded, setAtrExpanded] = useState(true);
+  const [atrExpanded, setAtrExpanded] = useState(false);
 
   const sourceQuery = useMemo(() => {
     if (typeof window === 'undefined') return null;
@@ -246,7 +252,11 @@ export default function ManageExceptionsView({ role, setRole, onBack, embedded =
         <div className="flex-1" />
 
         <div className="flex items-center gap-2">
-          <button className="w-9 h-9 rounded-full flex items-center justify-center text-ink-500 hover:text-brand-700 hover:bg-brand-50 cursor-pointer" aria-label="Activity">
+          <button
+            onClick={() => setActivityDrawerOpen(true)}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-ink-500 hover:text-brand-700 hover:bg-brand-50 cursor-pointer"
+            aria-label="Activity timeline"
+          >
             <Activity size={16} />
           </button>
           <button className="relative w-9 h-9 rounded-full flex items-center justify-center text-ink-500 hover:text-brand-700 hover:bg-brand-50 cursor-pointer" aria-label="Notifications">
@@ -268,7 +278,7 @@ export default function ManageExceptionsView({ role, setRole, onBack, embedded =
           transition={{ duration: 0.2 }}
           className="flex-1 overflow-auto"
         >
-          <div className="px-8 py-6 max-w-[1600px] mx-auto">
+          <div className="px-8 py-6 max-w-[1600px] mx-auto min-h-full flex flex-col">
             {/* Title row */}
             <div className="flex items-center justify-between mb-5">
               <h1 className="font-display text-[26px] text-ink-900 font-semibold tracking-tight">Manage Exceptions</h1>
@@ -415,6 +425,9 @@ export default function ManageExceptionsView({ role, setRole, onBack, embedded =
                   Sample Data
                 </button>
               }
+              sampleSheets={sampleSheets}
+              activeSheetId={activeSheetId}
+              onChangeSheet={setActiveSheetId}
             />
           </div>
         </motion.div>
@@ -462,9 +475,13 @@ export default function ManageExceptionsView({ role, setRole, onBack, embedded =
             availableCount={sampleCountLeft}
             totalCount={5}
             onClose={() => setSampleModalOpen(false)}
-            onCreate={() => {
+            onCreate={(payload) => {
+              const id = `sheet-${Date.now()}`;
+              setSampleSheets(prev => [...prev, { id, name: payload.name }]);
+              setActiveSheetId(id);
               setSampleCountLeft(c => Math.max(0, c - 1));
               setSampleModalOpen(false);
+              addToast({ type: 'success', message: `Sample sheet "${payload.name}" has been created successfully` });
             }}
           />
         )}
@@ -479,6 +496,12 @@ export default function ManageExceptionsView({ role, setRole, onBack, embedded =
               setSelected(new Set());
               setBulkClassifyOpen(false);
             }}
+          />
+        )}
+        {activityDrawerOpen && (
+          <ActivityTimelineDrawer
+            key="activity-timeline-drawer"
+            onClose={() => setActivityDrawerOpen(false)}
           />
         )}
       </AnimatePresence>
