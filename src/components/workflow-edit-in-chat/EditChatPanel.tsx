@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ArrowLeft, Bot, CheckCircle2, Eye, Link2, Play, Send, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Eye, Link2, Play, Send, ShieldCheck, Sparkles } from 'lucide-react';
 import InlineClarifyCard from './InlineClarifyCard';
 import StepOutputView from '../concierge-workflow-builder/StepOutputView';
 import type { RunResult, WorkflowDraft } from '../concierge-workflow-builder/types';
@@ -165,7 +165,7 @@ function ChatBubble({
   if (msg.role === 'user') {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[88%] rounded-full bg-brand-50 border border-brand-100 text-ink-800 text-[12.5px] leading-relaxed px-4 py-1.5">
+        <div className="max-w-[78%] px-3 py-2 rounded-2xl rounded-br-md bg-brand-50 border border-brand-200 text-ink-800 text-[13px] leading-relaxed break-words">
           {msg.text}
         </div>
       </div>
@@ -174,13 +174,12 @@ function ChatBubble({
 
   return (
     <div>
-      <div className="flex items-center gap-1.5 mb-1.5 text-[10.5px] font-bold uppercase tracking-wider text-ink-400">
-        <Bot size={11} className="text-brand-600" />
-        IRA
+      <div className="mb-1 font-mono text-[10.5px] text-ink-400 uppercase tracking-[0.14em]">
+        Ira
       </div>
       <div className="space-y-2">
         {msg.text && (
-          <div className="text-[12.5px] leading-relaxed text-ink-800">
+          <div className="text-[13.5px] leading-[1.65] text-ink-800 break-words">
             {renderRich(msg.text)}
           </div>
         )}

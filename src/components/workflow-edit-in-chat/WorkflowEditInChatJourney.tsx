@@ -24,7 +24,6 @@ const CLARIFICATION_STEPS: EditClarificationStep[] = [
     question: 'First — what date range should I cover?',
     options: ['Last 30 days', 'Last 90 days', 'Full FY26', 'Custom range'],
     shortLabel: 'Date range',
-    highlightTab: 'input',
   },
   {
     id: 'sources',
@@ -36,7 +35,6 @@ const CLARIFICATION_STEPS: EditClarificationStep[] = [
       'Pick individually in the editor',
     ],
     shortLabel: 'Sources',
-    highlightTab: 'input',
   },
   {
     id: 'thresholds',
@@ -48,7 +46,6 @@ const CLARIFICATION_STEPS: EditClarificationStep[] = [
       'Switch to exact match only',
     ],
     shortLabel: 'Thresholds',
-    highlightTab: 'plan',
   },
   {
     id: 'output',
@@ -60,7 +57,6 @@ const CLARIFICATION_STEPS: EditClarificationStep[] = [
       'Re-route delivery (Slack / email)',
     ],
     shortLabel: 'Output',
-    highlightTab: 'output',
   },
 ];
 

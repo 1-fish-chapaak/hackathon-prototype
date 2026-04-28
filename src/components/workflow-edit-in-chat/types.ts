@@ -3,8 +3,6 @@ export interface EditClarificationStep {
   question: string;
   options: string[];
   shortLabel: string;
-  // Tab in the right workspace this answer most affects.
-  highlightTab: 'input' | 'plan' | 'output' | 'preview';
 }
 
 export interface PlanStep {
