@@ -45,7 +45,13 @@ const SEED_CONTROLS: ControlRow[] = [
 ];
 
 /* ─── Component ─── */
-export default function ControlLibraryView() {
+
+interface ControlLibraryProps {
+  /** When set, filters controls to this process and pre-fills create drawer */
+  processFilter?: string;
+}
+
+export default function ControlLibraryView({ processFilter }: ControlLibraryProps = {}) {
   const { addToast } = useToast();
 
   // Stateful controls list
@@ -57,8 +63,8 @@ export default function ControlLibraryView() {
   // Drawer state
   const [showCreateDrawer, setShowCreateDrawer] = useState(false);
 
-  // Filters
-  const [bpFilter, setBpFilter] = useState<string>('all');
+  // Filters — lock BP filter when processFilter is provided
+  const [bpFilter, setBpFilter] = useState<string>(processFilter || 'all');
   const [classFilter, setClassFilter] = useState<string>('all');
   const [automationFilter, setAutomationFilter] = useState<string>('all');
   const [workflowStatusFilter, setWorkflowStatusFilter] = useState<string>('all');
@@ -79,9 +85,12 @@ export default function ControlLibraryView() {
     );
   }
 
+  // Base controls (process-scoped when embedded)
+  const baseControls = processFilter ? controls.filter(c => c.businessProcess === processFilter) : controls;
+
   // Filtered data
-  const filtered = controls.filter(c => {
-    if (bpFilter !== 'all' && c.businessProcess !== bpFilter) return false;
+  const filtered = baseControls.filter(c => {
+    if (!processFilter && bpFilter !== 'all' && c.businessProcess !== bpFilter) return false;
     if (classFilter !== 'all' && c.classification !== classFilter) return false;
     if (automationFilter !== 'all' && c.automation !== automationFilter) return false;
     if (workflowStatusFilter === 'linked' && c.linkedWorkflows.length === 0) return false;
@@ -90,11 +99,11 @@ export default function ControlLibraryView() {
   });
 
   // KPI computations
-  const totalControls = controls.length;
-  const readyControls = controls.filter(c => c.status === 'Ready').length;
-  const keyControls = controls.filter(c => c.classification === 'Key').length;
-  const automatedControls = controls.filter(c => c.automation === 'Automated').length;
-  const missingWorkflow = controls.filter(c => c.linkedWorkflows.length === 0).length;
+  const totalControls = baseControls.length;
+  const readyControls = baseControls.filter(c => c.status === 'Ready').length;
+  const keyControls = baseControls.filter(c => c.classification === 'Key').length;
+  const automatedControls = baseControls.filter(c => c.automation === 'Automated').length;
+  const missingWorkflow = baseControls.filter(c => c.linkedWorkflows.length === 0).length;
 
   const kpis = [
     { label: 'Total Controls', value: totalControls, icon: Shield, color: 'border-brand-600 bg-brand-50', textColor: 'text-brand-700', iconColor: 'text-brand-600' },
@@ -544,6 +553,7 @@ export default function ControlLibraryView() {
           <CreateControlDrawer
             onClose={() => setShowCreateDrawer(false)}
             onSave={handleCreateControl}
+            defaultProcess={processFilter}
           />
         )}
       </AnimatePresence>

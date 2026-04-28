@@ -1,343 +1,335 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Sparkles, Download, ExternalLink, AlertTriangle, Shield,
-  ChevronDown, ChevronRight, Info, Eye, FileText, Plus,
-  Link2, CheckCircle2, XCircle, Clock, Search, Filter,
-  ArrowRight, ShieldCheck, Layers, Activity
+  Plus, Search, X, ChevronRight, AlertTriangle,
+  CheckCircle2, Clock, Archive, Edit3, Eye,
+  ArrowRight, FileText,
 } from 'lucide-react';
-import { RISKS, CONTROLS, BUSINESS_PROCESSES, RACMS, ENGAGEMENTS } from '../../data/mockData';
-import { SeverityBadge } from '../shared/StatusBadge';
 import Orb from '../shared/Orb';
 import { useToast } from '../shared/Toast';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-type DerivedStatus = 'stable' | 'at-risk' | 'unvalidated' | 'needs-mapping' | 'partially-covered';
-type ProcessFilter = 'All' | 'P2P' | 'O2C' | 'R2R' | 'S2C' | 'ITGC' | 'Cross';
-type RacmFilter = string;
-type FrameworkFilter = 'All' | 'SOX' | 'IFC' | 'Internal' | 'Compliance';
-type StatusFilter = 'All' | 'stable' | 'at-risk' | 'unvalidated' | 'needs-mapping' | 'partially-covered';
-type CoverageFilter = 'All' | 'has-key' | 'no-key' | 'no-controls';
-type SeverityFilter = 'All' | 'critical' | 'high' | 'medium' | 'low';
+type RiskLifecycleStatus = 'Draft' | 'Active' | 'Under Review' | 'Archived';
+type RiskPriority = 'Critical' | 'High' | 'Medium' | 'Low';
+type RiskCategory = 'Financial' | 'Operational' | 'Compliance' | 'IT' | 'Fraud' | 'Reporting' | 'Other';
+type FilterKey = 'all' | 'draft' | 'active' | 'under-review' | 'archived' | 'high-priority' | 'unreviewed';
 
-interface EnrichedRisk {
+interface RiskEntry {
   id: string;
   name: string;
-  severity: string;
-  bpId: string;
-  bpAbbr: string;
-  bpColor: string;
-  racmId: string;
-  racmName: string;
-  racmVersion: string;
-  framework: string;
-  ctls: number;
-  keyCtls: number;
-  mappedControls: typeof CONTROLS[number][];
-  derivedStatus: DerivedStatus;
-  latestEngagement: string | null;
-  lastTested: string | null;
+  description: string;
+  businessProcess: string;
+  subProcess: string;
+  category: RiskCategory;
+  priority: RiskPriority;
+  owner: string;
+  reviewer: string;
+  status: RiskLifecycleStatus;
+  lastReviewed: string;
+  createdAt: string;
 }
 
-// ─── Derive risk status from control data ───────────────────────────────────
+// ─── Seed Data ──────────────────────────────────────────────────────────────
 
-function deriveStatus(risk: typeof RISKS[number], controls: typeof CONTROLS): DerivedStatus {
-  const mapped = controls.filter(c => c.riskId === risk.id);
-  if (mapped.length === 0) return 'needs-mapping';
+const SEED_RISKS: RiskEntry[] = [
+  { id: 'RSK-001', name: 'Unauthorized vendor payments', description: 'Payments processed without proper PO or approval, leading to financial loss', businessProcess: 'P2P', subProcess: 'Accounts Payable', category: 'Financial', priority: 'Critical', owner: 'Rajiv Sharma', reviewer: 'Deepak Bansal', status: 'Active', lastReviewed: 'Apr 10, 2026', createdAt: 'Jan 15, 2026' },
+  { id: 'RSK-002', name: 'Duplicate invoices processed', description: 'Same invoice paid twice due to weak detection controls', businessProcess: 'P2P', subProcess: 'Invoice Processing', category: 'Financial', priority: 'High', owner: 'Rajiv Sharma', reviewer: 'Meera Patel', status: 'Active', lastReviewed: 'Apr 8, 2026', createdAt: 'Jan 15, 2026' },
+  { id: 'RSK-003', name: 'Fictitious vendor registration', description: 'Vendor created without verification of identity and bank details', businessProcess: 'P2P', subProcess: 'Vendor Management', category: 'Fraud', priority: 'Critical', owner: 'Deepak Bansal', reviewer: 'Rajiv Sharma', status: 'Active', lastReviewed: 'Apr 12, 2026', createdAt: 'Jan 15, 2026' },
+  { id: 'RSK-004', name: 'Unauthorized PO creation', description: 'Purchase orders above threshold committed without dual sign-off', businessProcess: 'P2P', subProcess: 'Procurement', category: 'Operational', priority: 'High', owner: 'Meera Patel', reviewer: 'Rajiv Sharma', status: 'Draft', lastReviewed: '—', createdAt: 'Mar 20, 2026' },
+  { id: 'RSK-005', name: 'SOD violation in AP', description: 'Same user creates and approves payment transactions', businessProcess: 'P2P', subProcess: 'Accounts Payable', category: 'IT', priority: 'Critical', owner: 'IT Security', reviewer: 'Deepak Bansal', status: 'Under Review', lastReviewed: 'Apr 5, 2026', createdAt: 'Feb 1, 2026' },
+  { id: 'RSK-006', name: 'Revenue recognition timing', description: 'Revenue recognized before performance obligation completion under ASC 606', businessProcess: 'O2C', subProcess: 'Revenue Accounting', category: 'Financial', priority: 'High', owner: 'Neha Joshi', reviewer: 'Karan Mehta', status: 'Active', lastReviewed: 'Apr 10, 2026', createdAt: 'Jan 20, 2026' },
+  { id: 'RSK-007', name: 'Incorrect journal entries', description: 'Manual JE posted without review or with incorrect amounts', businessProcess: 'R2R', subProcess: 'General Ledger', category: 'Financial', priority: 'High', owner: 'Rohan Patel', reviewer: 'Karan Mehta', status: 'Active', lastReviewed: 'Apr 14, 2026', createdAt: 'Jan 20, 2026' },
+  { id: 'RSK-008', name: 'GL balance discrepancy', description: 'Subsidiary balances do not reconcile to consolidated GL', businessProcess: 'R2R', subProcess: 'Reconciliation', category: 'Financial', priority: 'Medium', owner: 'Karan Mehta', reviewer: 'Rohan Patel', status: 'Draft', lastReviewed: '—', createdAt: 'Mar 25, 2026' },
+  { id: 'RSK-009', name: 'Credit limit override without approval', description: 'Customer credit limits changed without proper authorization', businessProcess: 'O2C', subProcess: 'Credit Management', category: 'Operational', priority: 'Medium', owner: 'Sneha Desai', reviewer: 'Neha Joshi', status: 'Active', lastReviewed: 'Apr 2, 2026', createdAt: 'Feb 10, 2026' },
+  { id: 'RSK-010', name: 'Unauthorized access to financial systems', description: 'Users retain access after role change or termination', businessProcess: 'ITGC', subProcess: 'Access Management', category: 'IT', priority: 'Critical', owner: 'IT Security', reviewer: 'Deepak Bansal', status: 'Active', lastReviewed: 'Apr 15, 2026', createdAt: 'Jan 10, 2026' },
+  { id: 'RSK-011', name: 'Uncontrolled change management', description: 'System changes deployed without proper testing and approval', businessProcess: 'ITGC', subProcess: 'Change Management', category: 'IT', priority: 'High', owner: 'IT Security', reviewer: 'Rohan Patel', status: 'Under Review', lastReviewed: 'Apr 1, 2026', createdAt: 'Feb 5, 2026' },
+  { id: 'RSK-012', name: 'Regulatory reporting delay', description: 'Financial reports not submitted to regulators within deadline', businessProcess: 'R2R', subProcess: 'Reporting', category: 'Compliance', priority: 'High', owner: 'Karan Mehta', reviewer: 'Neha Joshi', status: 'Active', lastReviewed: 'Apr 8, 2026', createdAt: 'Jan 25, 2026' },
+  { id: 'RSK-013', name: 'Contract revenue leakage', description: 'Revenue not billed per contract terms due to manual tracking', businessProcess: 'O2C', subProcess: 'Contract Billing', category: 'Financial', priority: 'Medium', owner: 'Neha Joshi', reviewer: 'Sneha Desai', status: 'Archived', lastReviewed: 'Mar 15, 2026', createdAt: 'Dec 1, 2025' },
+  { id: 'RSK-014', name: 'Inadequate backup and recovery', description: 'Critical system backups not tested or failing silently', businessProcess: 'ITGC', subProcess: 'Operations', category: 'IT', priority: 'Medium', owner: 'IT Security', reviewer: 'Deepak Bansal', status: 'Draft', lastReviewed: '—', createdAt: 'Apr 10, 2026' },
+];
 
-  const keyControls = mapped.filter(c => c.isKey);
-  if (keyControls.length === 0) return 'partially-covered';
+const PROCESSES = ['P2P', 'O2C', 'R2R', 'ITGC', 'S2C'];
+const CATEGORIES: RiskCategory[] = ['Financial', 'Operational', 'Compliance', 'IT', 'Fraud', 'Reporting', 'Other'];
+const PRIORITIES: RiskPriority[] = ['Critical', 'High', 'Medium', 'Low'];
 
-  const hasIneffective = keyControls.some(c => c.status === 'ineffective');
-  if (hasIneffective) return 'at-risk';
+// ─── Style maps ─────────────────────────────────────────────────────────────
 
-  const allTested = keyControls.every(c => c.status === 'effective');
-  if (allTested) return 'stable';
-
-  return 'unvalidated';
-}
-
-function getLatestEngagement(risk: typeof RISKS[number]): { name: string; date: string } | null {
-  // Match risk to engagement via business process
-  const activeEng = ENGAGEMENTS.find(e =>
-    e.status === 'active' && e.bps.includes(risk.bpId)
-  );
-  if (activeEng) return { name: activeEng.name, date: activeEng.start };
-
-  const completeEng = ENGAGEMENTS.find(e =>
-    e.status === 'complete' && e.bps.includes(risk.bpId)
-  );
-  if (completeEng) return { name: completeEng.name, date: completeEng.start };
-
-  return null;
-}
-
-// ─── Enrich risks with RACM data ────────────────────────────────────────────
-
-function enrichRisks(): EnrichedRisk[] {
-  return RISKS.map(risk => {
-    const bp = BUSINESS_PROCESSES.find(b => b.id === risk.bpId);
-    const racm = RACMS.find(r => r.bpId === risk.bpId && r.status === 'active') || RACMS.find(r => r.bpId === risk.bpId);
-    const mapped = CONTROLS.filter(c => c.riskId === risk.id);
-    const engagement = getLatestEngagement(risk);
-
-    return {
-      id: risk.id,
-      name: risk.name,
-      severity: risk.severity,
-      bpId: risk.bpId,
-      bpAbbr: bp?.abbr || risk.bpId.toUpperCase(),
-      bpColor: bp?.color || '#6B5D82',
-      racmId: racm?.id || '—',
-      racmName: racm?.name || 'No RACM',
-      racmVersion: racm ? 'v2.1' : '—',
-      framework: racm?.fw || '—',
-      ctls: mapped.length,
-      keyCtls: mapped.filter(c => c.isKey).length,
-      mappedControls: mapped,
-      derivedStatus: deriveStatus(risk, CONTROLS),
-      latestEngagement: engagement?.name || null,
-      lastTested: engagement?.date || null,
-    };
-  });
-}
-
-// ─── Status badge rendering ─────────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<DerivedStatus, { label: string; cls: string; icon: React.ElementType }> = {
-  'stable':            { label: 'Stable',            cls: 'bg-compliant-50 text-compliant-700', icon: CheckCircle2 },
-  'at-risk':           { label: 'At Risk',           cls: 'bg-risk-50 text-risk-700',           icon: AlertTriangle },
-  'unvalidated':       { label: 'Unvalidated',       cls: 'bg-draft-50 text-draft-700',         icon: Clock },
-  'needs-mapping':     { label: 'Needs Mapping',     cls: 'bg-high-50 text-high-700',           icon: Link2 },
-  'partially-covered': { label: 'Partially Covered', cls: 'bg-mitigated-50 text-mitigated-700', icon: Layers },
+const STATUS_STYLES: Record<RiskLifecycleStatus, string> = {
+  Draft: 'bg-gray-100 text-gray-600',
+  Active: 'bg-emerald-50 text-emerald-700',
+  'Under Review': 'bg-amber-50 text-amber-700',
+  Archived: 'bg-gray-100 text-gray-400',
 };
 
-function DerivedStatusBadge({ status }: { status: DerivedStatus }) {
-  const cfg = STATUS_CONFIG[status];
-  const Icon = cfg.icon;
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold ${cfg.cls}`}>
-      <Icon size={10} />
-      {cfg.label}
-    </span>
-  );
+const PRIORITY_STYLES: Record<RiskPriority, string> = {
+  Critical: 'text-red-600 font-bold',
+  High: 'text-amber-600 font-semibold',
+  Medium: 'text-gray-600 font-medium',
+  Low: 'text-gray-400 font-medium',
+};
+
+// ─── Action derivation ─────────────────────────────────────────────────────
+
+function getRiskRegisterAction(status: RiskLifecycleStatus): { label: string; cls: string } {
+  switch (status) {
+    case 'Draft': return { label: 'Complete Setup', cls: 'bg-primary/10 text-primary hover:bg-primary/20' };
+    case 'Active': return { label: 'View', cls: 'bg-gray-100 text-gray-600 hover:bg-gray-200/70' };
+    case 'Under Review': return { label: 'Review', cls: 'bg-amber-50 text-amber-700 hover:bg-amber-100/70' };
+    case 'Archived': return { label: 'View', cls: 'bg-gray-50 text-gray-400 hover:bg-gray-100' };
+  }
 }
 
-// ─── Process badge ──────────────────────────────────────────────────────────
+// ─── Create / Edit Risk Drawer ──────────────────────────────────────────────
 
-function ProcessBadge({ abbr, color }: { abbr: string; color: string }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 px-2 h-5 rounded-full text-[10px] font-bold border"
-      style={{ background: `${color}10`, color, borderColor: `${color}30` }}
-    >
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
-      {abbr}
-    </span>
-  );
+interface DrawerProps {
+  risk: RiskEntry | null; // null = create mode
+  onClose: () => void;
+  onSave: (risk: RiskEntry) => void;
+  defaultProcess?: string;
 }
 
-// ─── KPI Card ───────────────────────────────────────────────────────────────
+function RiskDrawer({ risk, onClose, onSave, defaultProcess }: DrawerProps) {
+  const isEdit = !!risk;
+  const [name, setName] = useState(risk?.name || '');
+  const [description, setDescription] = useState(risk?.description || '');
+  const [businessProcess, setBusinessProcess] = useState(risk?.businessProcess || defaultProcess || '');
+  const [subProcess, setSubProcess] = useState(risk?.subProcess || '');
+  const [category, setCategory] = useState<RiskCategory | ''>(risk?.category || '');
+  const [priority, setPriority] = useState<RiskPriority | ''>(risk?.priority || '');
+  const [owner, setOwner] = useState(risk?.owner || '');
+  const [reviewer, setReviewer] = useState(risk?.reviewer || '');
 
-function KpiCard({ label, value, icon: Icon, color, index, active, onClick }: {
-  label: string; value: number; icon: React.ElementType; color: string; index: number;
-  active?: boolean; onClick?: () => void;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.08 + index * 0.04 }}
-      onClick={onClick}
-      className={`glass-card rounded-2xl p-4 transition-all duration-200 ${
-        onClick ? 'cursor-pointer hover:border-primary/20' : 'cursor-default'
-      } ${active ? 'ring-2 ring-primary/30 border-primary/20' : ''}`}
-    >
-      <div className="flex items-start justify-between mb-2">
-        <div className={`p-1.5 rounded-lg ${color}`}>
-          <Icon size={14} />
-        </div>
-      </div>
-      <div className="text-2xl font-bold text-text">{value}</div>
-      <div className="text-[11px] text-text-muted mt-0.5">{label}</div>
-    </motion.div>
-  );
-}
+  const isValid = name.trim() && description.trim() && businessProcess;
 
-// ─── Expanded Row Content ───────────────────────────────────────────────────
+  const buildRisk = (status: RiskLifecycleStatus): RiskEntry => ({
+    id: risk?.id || `RSK-${String(Date.now()).slice(-3)}`,
+    name: name.trim(),
+    description: description.trim(),
+    businessProcess,
+    subProcess: subProcess.trim(),
+    category: (category as RiskCategory) || 'Other',
+    priority: (priority as RiskPriority) || 'Medium',
+    owner: owner.trim(),
+    reviewer: reviewer.trim(),
+    status,
+    lastReviewed: status === 'Active' ? new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : risk?.lastReviewed || '—',
+    createdAt: risk?.createdAt || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+  });
 
-function ExpandedRiskRow({ risk, onNavigate }: { risk: EnrichedRisk; onNavigate: (view: string) => void }) {
-  const mappedControls = risk.mappedControls;
-
-  const engHistory = ENGAGEMENTS.filter(e => e.bps.includes(risk.bpId)).map(e => ({
-    name: e.name,
-    period: `${e.start} — ${e.end}`,
-    testedControls: e.tested,
-    status: e.status,
-    owner: e.owner,
-  }));
-
-  const recommendations: { text: string; action: string; target: string }[] = [];
-  if (risk.derivedStatus === 'needs-mapping') {
-    recommendations.push({ text: 'Map controls to this risk in RACM', action: 'Open RACM Mapping', target: 'governance-racm' });
-  }
-  if (risk.derivedStatus === 'partially-covered') {
-    recommendations.push({ text: 'Designate a key control for this risk', action: 'Open RACM Mapping', target: 'governance-racm' });
-  }
-  if (risk.derivedStatus === 'at-risk') {
-    recommendations.push({ text: 'Review failed key controls', action: 'View Failed Controls', target: 'governance-controls' });
-  }
-  if (risk.derivedStatus === 'unvalidated') {
-    recommendations.push({ text: 'Create or activate an engagement to test controls', action: 'View Engagements', target: 'audit-planning' });
-  }
-  if (mappedControls.some(c => c.status === 'not-tested')) {
-    recommendations.push({ text: 'Untested controls exist — schedule testing', action: 'View Engagements', target: 'audit-planning' });
-  }
+  const fieldCls = 'w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text bg-white outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all';
+  const labelCls = 'text-[12px] font-semibold text-text-muted block mb-1.5';
 
   return (
-    <div className="px-6 py-5 bg-surface-2/30 border-t border-border/30">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left — Risk Context + Mapped Controls */}
-        <div className="space-y-5">
-          {/* Risk Context */}
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+        className="fixed inset-0 z-50 bg-ink-900/20 backdrop-blur-sm" onClick={onClose} />
+      <motion.aside initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        className="fixed top-0 right-0 z-50 w-full max-w-[480px] h-full bg-white border-l border-canvas-border shadow-2xl flex flex-col">
+
+        {/* Header */}
+        <div className="px-6 pt-5 pb-4 border-b border-canvas-border flex items-start justify-between shrink-0">
           <div>
-            <h4 className="text-[11px] font-bold text-text-muted uppercase tracking-wide mb-2">Risk Context</h4>
-            <div className="glass-card rounded-xl p-4 space-y-2">
-              <div className="text-[12px] text-text leading-relaxed">{risk.name}</div>
-              <div className="flex items-center gap-4 pt-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-text-muted">Process:</span>
-                  <ProcessBadge abbr={risk.bpAbbr} color={risk.bpColor} />
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-text-muted">RACM:</span>
-                  <button onClick={() => onNavigate('governance-racm')} className="text-[10px] font-semibold text-primary hover:underline cursor-pointer">{risk.racmName}</button>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-text-muted">Severity:</span>
-                  <SeverityBadge severity={risk.severity} />
-                </div>
+            <h2 className="font-display text-[18px] font-semibold text-ink-900">{isEdit ? 'Edit Risk' : 'Create Risk'}</h2>
+            <p className="text-[12px] text-ink-500 mt-0.5">{isEdit ? 'Update risk definition and metadata.' : 'Define a reusable risk for RACM mapping.'}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full text-ink-500 hover:text-ink-800 hover:bg-[#F4F2F7] flex items-center justify-center cursor-pointer"><X size={16} /></button>
+        </div>
+
+        {/* Form */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          {/* Basic Details */}
+          <div className="space-y-3">
+            <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-wider">Basic Details</h3>
+            <div>
+              <label className={labelCls}>Risk Name <span className="text-red-400">*</span></label>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Unauthorized vendor payments" className={fieldCls} autoFocus />
+            </div>
+            <div>
+              <label className={labelCls}>Description <span className="text-red-400">*</span></label>
+              <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Describe the risk scenario and potential impact..." className={fieldCls + ' resize-none'} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Business Process <span className="text-red-400">*</span></label>
+                <select value={businessProcess} onChange={e => setBusinessProcess(e.target.value)} className={fieldCls + ' cursor-pointer appearance-none'}>
+                  <option value="">Select...</option>
+                  {PROCESSES.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Sub-process</label>
+                <input value={subProcess} onChange={e => setSubProcess(e.target.value)} placeholder="e.g. Accounts Payable" className={fieldCls} />
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Risk Category</label>
+              <select value={category} onChange={e => setCategory(e.target.value as RiskCategory)} className={fieldCls + ' cursor-pointer appearance-none'}>
+                <option value="">Select...</option>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Ownership */}
+          <div className="space-y-3 pt-2">
+            <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-wider">Ownership</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Risk Owner</label>
+                <input value={owner} onChange={e => setOwner(e.target.value)} placeholder="Name" className={fieldCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Reviewer</label>
+                <input value={reviewer} onChange={e => setReviewer(e.target.value)} placeholder="Name" className={fieldCls} />
               </div>
             </div>
           </div>
 
-          {/* Mapped Controls */}
-          <div>
-            <h4 className="text-[11px] font-bold text-text-muted uppercase tracking-wide mb-2">
-              Mapped Controls ({mappedControls.length})
-            </h4>
-            {mappedControls.length === 0 ? (
-              <div className="glass-card rounded-xl p-4 text-center">
-                <Link2 size={20} className="text-text-muted mx-auto mb-2" />
-                <p className="text-[12px] text-text-muted">This risk is not mapped to any controls.</p>
-                <button onClick={() => onNavigate('governance-racm')} className="mt-2 text-[11px] font-semibold text-primary hover:underline cursor-pointer">
-                  Open RACM mapping to add controls
-                </button>
-              </div>
-            ) : (
-              <div className="glass-card rounded-xl overflow-hidden">
-                <table className="w-full text-[11px]">
-                  <thead>
-                    <tr className="border-b border-border bg-surface-2/50">
-                      {['Control ID', 'Name', 'Key', 'Status', 'Action'].map(h => (
-                        <th key={h} className="px-3 py-2 text-left text-[9px] font-semibold text-text-muted uppercase tracking-wide">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mappedControls.map(ctrl => (
-                      <tr key={ctrl.id} className="border-b border-border/30 hover:bg-white/50">
-                        <td className="px-3 py-2">
-                          <button onClick={() => onNavigate('governance-controls')} className="font-mono text-primary hover:underline cursor-pointer">{ctrl.id}</button>
-                        </td>
-                        <td className="px-3 py-2 text-text max-w-[180px] truncate">{ctrl.name}</td>
-                        <td className="px-3 py-2">
-                          {ctrl.isKey ? (
-                            <span className="px-1.5 h-4 rounded text-[9px] font-bold bg-high-50 text-high-700 inline-flex items-center">Key</span>
-                          ) : (
-                            <span className="text-text-muted">—</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2">
-                          <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${
-                            ctrl.status === 'effective' ? 'bg-compliant-50 text-compliant-700' :
-                            ctrl.status === 'ineffective' ? 'bg-risk-50 text-risk-700' :
-                            'bg-draft-50 text-draft-700'
-                          }`}>
-                            {ctrl.status === 'effective' ? 'Effective' : ctrl.status === 'ineffective' ? 'Ineffective' : 'Not Tested'}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2">
-                          <button onClick={() => onNavigate('governance-controls')} className="text-[10px] font-semibold text-primary hover:underline cursor-pointer flex items-center gap-0.5">
-                            View <ChevronRight size={9} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+          {/* Priority */}
+          <div className="space-y-3 pt-2">
+            <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-wider">Priority</h3>
+            <div className="flex gap-2">
+              {PRIORITIES.map(p => (
+                <button key={p} onClick={() => setPriority(p)}
+                  className={`px-3 py-2 rounded-lg text-[12px] font-medium border transition-all cursor-pointer ${
+                    priority === p ? 'border-primary bg-primary/5 text-primary' : 'border-border text-text-muted hover:border-primary/30'
+                  }`}>{p}</button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Right — Engagement History + Recommendations */}
-        <div className="space-y-5">
-          {/* Engagement History */}
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-canvas-border flex items-center justify-end gap-3 shrink-0">
+          <button onClick={onClose} className="px-4 py-2.5 rounded-lg border border-canvas-border text-[13px] font-medium text-ink-600 hover:bg-canvas transition-colors cursor-pointer">Cancel</button>
+          <button onClick={() => { if (isValid) onSave(buildRisk('Draft')); }} disabled={!isValid}
+            className="px-4 py-2.5 rounded-lg border border-border text-[13px] font-medium text-text hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+            Save as Draft
+          </button>
+          <button onClick={() => { if (isValid) onSave(buildRisk('Active')); }} disabled={!isValid}
+            className="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-[13px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+            Save & Activate
+          </button>
+        </div>
+      </motion.aside>
+    </>
+  );
+}
+
+// ─── Risk Detail Drawer ─────────────────────────────────────────────────────
+
+function RiskDetailDrawer({ risk, onClose, onUpdate }: { risk: RiskEntry; onClose: () => void; onUpdate: (r: RiskEntry) => void }) {
+  const { addToast } = useToast();
+  const [editing, setEditing] = useState(false);
+
+  const handleStatusChange = (newStatus: RiskLifecycleStatus) => {
+    onUpdate({ ...risk, status: newStatus, lastReviewed: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) });
+    addToast({ message: `Risk status changed to ${newStatus}`, type: 'success' });
+  };
+
+  const transitions: Partial<Record<RiskLifecycleStatus, { label: string; status: RiskLifecycleStatus; cls: string }[]>> = {
+    Draft: [
+      { label: 'Activate', status: 'Active', cls: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100/70' },
+      { label: 'Archive', status: 'Archived', cls: 'bg-gray-100 text-gray-500 hover:bg-gray-200/70' },
+    ],
+    Active: [
+      { label: 'Mark Under Review', status: 'Under Review', cls: 'bg-amber-50 text-amber-700 hover:bg-amber-100/70' },
+      { label: 'Archive', status: 'Archived', cls: 'bg-gray-100 text-gray-500 hover:bg-gray-200/70' },
+    ],
+    'Under Review': [
+      { label: 'Activate', status: 'Active', cls: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100/70' },
+      { label: 'Archive', status: 'Archived', cls: 'bg-gray-100 text-gray-500 hover:bg-gray-200/70' },
+    ],
+    Archived: [],
+  };
+
+  const availableActions = transitions[risk.status] || [];
+
+  const fields = [
+    { label: 'Risk ID', value: risk.id },
+    { label: 'Business Process', value: risk.businessProcess },
+    { label: 'Sub-process', value: risk.subProcess || '—' },
+    { label: 'Category', value: risk.category },
+    { label: 'Priority', value: risk.priority },
+    { label: 'Owner', value: risk.owner || '—' },
+    { label: 'Reviewer', value: risk.reviewer || '—' },
+    { label: 'Created', value: risk.createdAt },
+    { label: 'Last Reviewed', value: risk.lastReviewed },
+  ];
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+        className="fixed inset-0 z-50 bg-ink-900/20 backdrop-blur-sm" onClick={onClose} />
+      <motion.aside initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        className="fixed top-0 right-0 z-50 w-full max-w-[480px] h-full bg-white border-l border-canvas-border shadow-2xl flex flex-col">
+
+        <div className="px-6 pt-5 pb-4 border-b border-canvas-border flex items-start justify-between shrink-0">
           <div>
-            <h4 className="text-[11px] font-bold text-text-muted uppercase tracking-wide mb-2">Engagement History</h4>
-            {engHistory.length === 0 ? (
-              <div className="glass-card rounded-xl p-4 text-center">
-                <FileText size={20} className="text-text-muted mx-auto mb-2" />
-                <p className="text-[12px] text-text-muted">No engagements have tested this risk.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {engHistory.map((eng, i) => (
-                  <div key={i} className="glass-card rounded-xl p-3 hover:border-primary/15 transition-colors">
-                    <div className="flex items-center justify-between mb-1">
-                      <button onClick={() => onNavigate('engagement-detail')} className="text-[12px] font-semibold text-primary hover:underline cursor-pointer">{eng.name}</button>
-                      <span className={`px-2 h-4 rounded-full text-[9px] font-semibold ${
-                        eng.status === 'active' ? 'bg-compliant-50 text-compliant-700' :
-                        eng.status === 'complete' ? 'bg-evidence-50 text-evidence-700' :
-                        'bg-draft-50 text-draft-700'
-                      }`}>{eng.status === 'active' ? 'Active' : eng.status === 'complete' ? 'Complete' : 'Draft'}</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-[10px] text-text-muted">
-                      <span>{eng.period}</span>
-                      <span>{eng.testedControls} controls tested</span>
-                      <span>{eng.owner}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <h2 className="font-display text-[18px] font-semibold text-ink-900">{risk.name}</h2>
+              <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${STATUS_STYLES[risk.status]}`}>{risk.status}</span>
+            </div>
+            <p className="text-[12px] text-ink-500 mt-0.5 font-mono">{risk.id}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full text-ink-500 hover:text-ink-800 hover:bg-[#F4F2F7] flex items-center justify-center cursor-pointer"><X size={16} /></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          {/* Description */}
+          <div>
+            <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2">Description</h3>
+            <p className="text-[13px] text-text leading-relaxed">{risk.description}</p>
           </div>
 
-          {/* Recommended Next Actions */}
-          {recommendations.length > 0 && (
+          {/* Fields */}
+          <div>
+            <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2">Details</h3>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              {fields.map(f => (
+                <div key={f.label}>
+                  <span className="text-[10px] text-gray-400 uppercase block">{f.label}</span>
+                  <span className={`text-[13px] mt-0.5 block ${f.label === 'Priority' ? PRIORITY_STYLES[risk.priority] : 'text-text'}`}>{f.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Status Actions */}
+          {availableActions.length > 0 && (
             <div>
-              <h4 className="text-[11px] font-bold text-text-muted uppercase tracking-wide mb-2">Recommended Next Actions</h4>
-              <div className="space-y-1.5">
-                {recommendations.map((rec, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-primary/[0.03] border border-primary/8 hover:border-primary/15 transition-colors">
-                    <Sparkles size={12} className="text-primary shrink-0" />
-                    <span className="text-[11px] text-text flex-1">{rec.text}</span>
-                    <button
-                      onClick={() => onNavigate(rec.target)}
-                      className="text-[10px] font-semibold text-primary hover:underline cursor-pointer flex items-center gap-0.5 shrink-0"
-                    >
-                      {rec.action} <ChevronRight size={9} />
-                    </button>
-                  </div>
+              <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-wider mb-2">Actions</h3>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => setEditing(true)}
+                  className="px-3 py-2 rounded-lg text-[12px] font-medium border border-border text-text hover:bg-gray-50 transition-colors cursor-pointer inline-flex items-center gap-1.5">
+                  <Edit3 size={12} />Edit Risk
+                </button>
+                {availableActions.map(a => (
+                  <button key={a.status} onClick={() => handleStatusChange(a.status)}
+                    className={`px-3 py-2 rounded-lg text-[12px] font-medium transition-colors cursor-pointer ${a.cls}`}>
+                    {a.label}
+                  </button>
                 ))}
               </div>
             </div>
           )}
         </div>
-      </div>
-    </div>
+
+        <footer className="shrink-0 px-6 py-4 border-t border-canvas-border">
+          <button onClick={onClose} className="w-full px-4 py-2.5 rounded-lg border border-canvas-border text-[13px] font-medium text-ink-600 hover:bg-canvas transition-colors cursor-pointer">Close</button>
+        </footer>
+
+        {/* Edit drawer (nested) */}
+        <AnimatePresence>
+          {editing && (
+            <RiskDrawer risk={risk} onClose={() => setEditing(false)} onSave={(updated) => { onUpdate(updated); setEditing(false); }} />
+          )}
+        </AnimatePresence>
+      </motion.aside>
+    </>
   );
 }
 
@@ -346,465 +338,214 @@ function ExpandedRiskRow({ risk, onNavigate }: { risk: EnrichedRisk; onNavigate:
 interface Props {
   onRunWorkflow?: (workflowId: string) => void;
   onNavigate?: (view: string) => void;
+  /** When set, filters risks to this process and pre-fills create drawer */
+  processFilter?: string;
 }
 
-export default function RiskRegister({ onNavigate }: Props) {
+export default function RiskRegister({ onNavigate, processFilter }: Props) {
   const { addToast } = useToast();
+  const [risks, setRisks] = useState<RiskEntry[]>(SEED_RISKS);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const [showCreateDrawer, setShowCreateDrawer] = useState(false);
+  const [detailRisk, setDetailRisk] = useState<RiskEntry | null>(null);
 
-  // Enriched data
-  const allRisks = enrichRisks();
+  // Apply process filter first (for embedded mode)
+  const baseRisks = processFilter ? risks.filter(r => r.businessProcess === processFilter) : risks;
+
+  // Derived KPIs
+  const totalRisks = baseRisks.length;
+  const activeCount = baseRisks.filter(r => r.status === 'Active').length;
+  const highPriorityCount = baseRisks.filter(r => r.priority === 'Critical' || r.priority === 'High').length;
+  const unreviewedCount = baseRisks.filter(r => r.lastReviewed === '—').length;
 
   // Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [processFilter, setProcessFilter] = useState<ProcessFilter>('All');
-  const [racmFilter, setRacmFilter] = useState<RacmFilter>('All');
-  const [frameworkFilter, setFrameworkFilter] = useState<FrameworkFilter>('All');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
-  const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>('All');
-  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('All');
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
+  const filters: { key: FilterKey; label: string; count: number }[] = [
+    { key: 'all', label: 'All', count: baseRisks.length },
+    { key: 'draft', label: 'Draft', count: baseRisks.filter(r => r.status === 'Draft').length },
+    { key: 'active', label: 'Active', count: baseRisks.filter(r => r.status === 'Active').length },
+    { key: 'under-review', label: 'Under Review', count: baseRisks.filter(r => r.status === 'Under Review').length },
+    { key: 'archived', label: 'Archived', count: baseRisks.filter(r => r.status === 'Archived').length },
+    { key: 'high-priority', label: 'High Priority', count: highPriorityCount },
+    { key: 'unreviewed', label: 'Unreviewed', count: unreviewedCount },
+  ];
 
-  const navigate = (view: string) => {
-    if (onNavigate) onNavigate(view);
-  };
+  const filteredRisks = useMemo(() => {
+    let result = baseRisks;
 
-  // Apply filters
-  const filtered = allRisks.filter(r => {
-    if (searchQuery) {
+    // Status / priority filters
+    switch (activeFilter) {
+      case 'draft': result = result.filter(r => r.status === 'Draft'); break;
+      case 'active': result = result.filter(r => r.status === 'Active'); break;
+      case 'under-review': result = result.filter(r => r.status === 'Under Review'); break;
+      case 'archived': result = result.filter(r => r.status === 'Archived'); break;
+      case 'high-priority': result = result.filter(r => r.priority === 'Critical' || r.priority === 'High'); break;
+      case 'unreviewed': result = result.filter(r => r.lastReviewed === '—'); break;
+    }
+
+    // Search
+    if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      if (!r.id.toLowerCase().includes(q) && !r.name.toLowerCase().includes(q)) return false;
+      result = result.filter(r =>
+        r.id.toLowerCase().includes(q) ||
+        r.name.toLowerCase().includes(q) ||
+        r.businessProcess.toLowerCase().includes(q) ||
+        r.owner.toLowerCase().includes(q)
+      );
     }
-    if (processFilter !== 'All' && r.bpAbbr !== processFilter) return false;
-    if (racmFilter !== 'All' && r.racmId !== racmFilter) return false;
-    if (frameworkFilter !== 'All' && r.framework !== frameworkFilter) return false;
-    if (statusFilter !== 'All' && r.derivedStatus !== statusFilter) return false;
-    if (severityFilter !== 'All' && r.severity !== severityFilter) return false;
-    if (coverageFilter === 'has-key' && r.keyCtls === 0) return false;
-    if (coverageFilter === 'no-key' && (r.keyCtls > 0 || r.ctls === 0)) return false;
-    if (coverageFilter === 'no-controls' && r.ctls > 0) return false;
-    return true;
-  });
 
-  // KPI counts
-  const kpis = {
-    total: allRisks.length,
-    atRisk: allRisks.filter(r => r.derivedStatus === 'at-risk').length,
-    stable: allRisks.filter(r => r.derivedStatus === 'stable').length,
-    unvalidated: allRisks.filter(r => r.derivedStatus === 'unvalidated').length,
-    needsMapping: allRisks.filter(r => r.derivedStatus === 'needs-mapping').length,
-  };
+    return result;
+  }, [baseRisks, activeFilter, searchQuery]);
 
-  // AI insight
-  const needsMappingCount = kpis.needsMapping;
-  const atRiskCount = kpis.atRisk;
-  const partiallyCoveredCount = allRisks.filter(r => r.derivedStatus === 'partially-covered').length;
-
-  // RACM filter options
-  const racmOptions = ['All', ...RACMS.map(r => r.id)];
-
-  // Action column logic
-  const getAction = (risk: EnrichedRisk): { label: string; cls: string; target: string } => {
-    switch (risk.derivedStatus) {
-      case 'needs-mapping': return { label: 'Open RACM Mapping', cls: 'bg-high-50 text-high-700 hover:bg-high-50/80', target: 'governance-racm' };
-      case 'at-risk': return { label: 'View Failed Controls', cls: 'bg-risk-50 text-risk-700 hover:bg-risk-50/80', target: 'governance-controls' };
-      case 'unvalidated': return { label: 'View Engagements', cls: 'bg-draft-50 text-draft-700 hover:bg-draft-50/80', target: 'audit-planning' };
-      case 'partially-covered': return { label: 'Open RACM Mapping', cls: 'bg-mitigated-50 text-mitigated-700 hover:bg-mitigated-50/80', target: 'governance-racm' };
-      default: return { label: 'View Details', cls: 'bg-primary/10 text-primary hover:bg-primary/15', target: 'governance-controls' };
+  const handleSaveRisk = (risk: RiskEntry) => {
+    const exists = risks.find(r => r.id === risk.id);
+    if (exists) {
+      setRisks(prev => prev.map(r => r.id === risk.id ? risk : r));
+      addToast({ message: `Risk "${risk.name}" updated`, type: 'success' });
+    } else {
+      setRisks(prev => [risk, ...prev]);
+      addToast({ message: `Risk "${risk.name}" created as ${risk.status}`, type: 'success' });
     }
+    setShowCreateDrawer(false);
+    setDetailRisk(null);
   };
 
-  const hasActiveFilters = processFilter !== 'All' || racmFilter !== 'All' || frameworkFilter !== 'All' || statusFilter !== 'All' || coverageFilter !== 'All' || severityFilter !== 'All';
-
-  const clearAllFilters = () => {
-    setProcessFilter('All');
-    setRacmFilter('All');
-    setFrameworkFilter('All');
-    setStatusFilter('All');
-    setCoverageFilter('All');
-    setSeverityFilter('All');
-    setSearchQuery('');
+  const handleUpdateRisk = (updated: RiskEntry) => {
+    setRisks(prev => prev.map(r => r.id === updated.id ? updated : r));
+    setDetailRisk(updated);
   };
+
+  const kpis = [
+    { label: 'Total Risks', value: totalRisks, color: 'text-text' },
+    { label: 'Active', value: activeCount, color: 'text-emerald-700' },
+    { label: 'High Priority', value: highPriorityCount, color: highPriorityCount > 0 ? 'text-red-600' : 'text-gray-400' },
+    { label: 'Unreviewed', value: unreviewedCount, color: unreviewedCount > 0 ? 'text-amber-600' : 'text-gray-400' },
+  ];
 
   return (
-    <div className="h-full overflow-y-auto bg-white bg-mesh-gradient relative">
-      <Orb hoverIntensity={0.06} rotateOnHover hue={275} opacity={0.05} />
+    <div className="relative h-full overflow-y-auto">
+      <Orb className="fixed top-[-180px] right-[-120px] w-[500px] h-[500px] opacity-20" />
 
-      <div className="p-8 relative">
+      <div className="relative z-10 max-w-[1200px] mx-auto px-6 py-6 space-y-5">
         {/* Header */}
-        <div className="flex items-end justify-between mb-5">
+        <div className="flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-primary-medium text-white">
-                <AlertTriangle size={16} />
-              </div>
-              <h1 className="text-xl font-bold text-text">Risks</h1>
-            </div>
-            <p className="text-sm text-text-secondary mt-1 ml-9">Aggregated risk view across RACMs and business processes</p>
+            <h1 className="text-xl font-bold text-text">Risk Register</h1>
+            <p className="text-[13px] text-text-muted mt-1">Maintain the master list of business and audit risks across processes.</p>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => addToast({ message: 'Risk data exported as CSV', type: 'success' })}
-              className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg text-[13px] text-text-secondary hover:bg-white transition-colors cursor-pointer"
-            >
-              <Download size={14} />
-              Export
-            </button>
-            <button
-              onClick={() => navigate('governance-racm')}
-              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer"
-            >
-              <ExternalLink size={14} />
-              Create / Edit in RACM
-            </button>
-          </div>
+          <button onClick={() => setShowCreateDrawer(true)}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
+            <Plus size={14} />New Risk
+          </button>
         </div>
-
-        {/* Helper text */}
-        <div className="flex items-start gap-2 mb-5 px-1">
-          <Info size={13} className="text-primary/50 shrink-0 mt-0.5" />
-          <p className="text-[11px] text-text-muted leading-relaxed">
-            Risks shown here come from <span className="font-semibold text-text-secondary">RACM mappings</span>. Create, edit, and map risks inside RACM. This page summarizes coverage and execution status.
-          </p>
-        </div>
-
-        {/* AI Insight Banner */}
-        <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <div className="bg-gradient-to-r from-primary-xlight via-white to-primary-xlight rounded-2xl border border-primary/10 p-4 mb-6 flex items-center gap-4">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center shrink-0">
-              <Sparkles size={16} className="text-white" />
-            </div>
-            <div className="flex-1">
-              <div className="text-[12.5px] font-semibold text-text">RACM Risk Coverage Analysis</div>
-              <div className="text-[12px] text-text-secondary mt-0.5">
-                {needsMappingCount > 0 && <>{needsMappingCount} risk{needsMappingCount !== 1 ? 's have' : ' has'} no mapped controls. </>}
-                {atRiskCount > 0 && <>{atRiskCount} risk{atRiskCount !== 1 ? 's are' : ' is'} At Risk due to failed key controls. </>}
-                {partiallyCoveredCount > 0 && <>{partiallyCoveredCount} risk{partiallyCoveredCount !== 1 ? 's have' : ' has'} no key control designated. </>}
-                {needsMappingCount > 0 || atRiskCount > 0 ? (
-                  <button onClick={() => navigate('governance-racm')} className="text-primary font-semibold hover:underline cursor-pointer ml-0.5">
-                    Review RACM mappings
-                  </button>
-                ) : (
-                  <span className="text-compliant-700 font-semibold">All risks have mapped controls.</span>
-                )}
-              </div>
-            </div>
-          </div>
-        </motion.div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-5 gap-3 mb-6">
-          <KpiCard label="Total Risks" value={kpis.total} icon={Layers} color="text-primary bg-primary-xlight" index={0} />
-          <KpiCard
-            label="At Risk" value={kpis.atRisk} icon={AlertTriangle} color="text-risk-700 bg-risk-50" index={1}
-            active={statusFilter === 'at-risk'}
-            onClick={() => setStatusFilter(statusFilter === 'at-risk' ? 'All' : 'at-risk')}
-          />
-          <KpiCard
-            label="Stable" value={kpis.stable} icon={CheckCircle2} color="text-compliant-700 bg-compliant-50" index={2}
-            active={statusFilter === 'stable'}
-            onClick={() => setStatusFilter(statusFilter === 'stable' ? 'All' : 'stable')}
-          />
-          <KpiCard
-            label="Unvalidated" value={kpis.unvalidated} icon={Clock} color="text-draft-700 bg-draft-50" index={3}
-            active={statusFilter === 'unvalidated'}
-            onClick={() => setStatusFilter(statusFilter === 'unvalidated' ? 'All' : 'unvalidated')}
-          />
-          <KpiCard
-            label="Needs Mapping" value={kpis.needsMapping} icon={Link2} color="text-high-700 bg-high-50" index={4}
-            active={statusFilter === 'needs-mapping'}
-            onClick={() => setStatusFilter(statusFilter === 'needs-mapping' ? 'All' : 'needs-mapping')}
-          />
+        <div className="grid grid-cols-4 gap-3">
+          {kpis.map((kpi, i) => (
+            <motion.div key={kpi.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+              className="glass-card rounded-xl p-4 text-center">
+              <div className={`text-2xl font-bold tabular-nums ${kpi.color}`}>{kpi.value}</div>
+              <div className="text-[11px] text-text-muted mt-0.5">{kpi.label}</div>
+            </motion.div>
+          ))}
         </div>
 
-        {/* Search + Filter Bar */}
-        <div className="flex items-center gap-3 mb-3">
-          {/* Search */}
-          <div className="relative flex-1 max-w-sm">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-            <input
-              type="text"
-              placeholder="Search by Risk ID or description..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-[12px] border border-border rounded-lg bg-white text-text placeholder:text-text-muted outline-none focus:border-primary/40 transition-colors"
-            />
-          </div>
-
-          {/* Process filter pills */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-text-muted uppercase">Process:</span>
-            {(['All', 'P2P', 'O2C', 'R2R', 'S2C'] as ProcessFilter[]).map(p => (
-              <button key={p} onClick={() => setProcessFilter(p)}
-                className={`px-2 py-1 rounded-full text-[10px] font-semibold transition-all cursor-pointer ${
-                  processFilter === p ? 'bg-primary text-white' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
-                }`}>{p}</button>
+        {/* Filters + Search */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {filters.map(f => (
+              <button key={f.key} onClick={() => setActiveFilter(f.key)}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
+                  activeFilter === f.key ? 'bg-primary text-white' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
+                }`}>
+                {f.label}
+                {f.count > 0 && <span className={`ml-1 text-[10px] tabular-nums ${activeFilter === f.key ? 'text-white/80' : 'text-text-muted/60'}`}>{f.count}</span>}
+              </button>
             ))}
           </div>
-
-          <div className="w-px h-5 bg-border-light" />
-
-          {/* More Filters toggle */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
-              showFilters || hasActiveFilters ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
-            }`}
-          >
-            <Filter size={12} />
-            Filters
-            {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
-          </button>
-
-          {hasActiveFilters && (
-            <button onClick={clearAllFilters} className="text-[10px] font-semibold text-text-muted hover:text-primary cursor-pointer">
-              Clear all
-            </button>
-          )}
+          <div className="relative shrink-0">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
+            <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search risks..."
+              className="pl-9 pr-3 py-2 rounded-lg border border-border bg-white text-[12px] w-[220px] placeholder:text-ink-400 outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all" />
+          </div>
         </div>
 
-        {/* Extended Filters Row */}
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.15 }}
-              className="overflow-hidden"
-            >
-              <div className="flex items-center gap-4 mb-4 flex-wrap px-1 py-2 rounded-xl bg-surface-2/40 border border-border/50">
-                {/* RACM Version */}
-                <div className="flex items-center gap-1.5 pl-3">
-                  <span className="text-[10px] font-bold text-text-muted uppercase">RACM:</span>
-                  <select value={racmFilter} onChange={e => setRacmFilter(e.target.value)}
-                    className="px-2 py-1 rounded-lg border border-border bg-white text-[11px] text-text outline-none focus:border-primary/40 cursor-pointer">
-                    {racmOptions.map(o => (
-                      <option key={o} value={o}>{o === 'All' ? 'All RACMs' : RACMS.find(r => r.id === o)?.name || o}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="w-px h-4 bg-border-light" />
-
-                {/* Framework */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold text-text-muted uppercase">Framework:</span>
-                  {(['All', 'SOX', 'IFC', 'Internal'] as FrameworkFilter[]).map(f => (
-                    <button key={f} onClick={() => setFrameworkFilter(f)}
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold transition-all cursor-pointer ${
-                        frameworkFilter === f ? 'bg-evidence-700 text-white' : 'bg-white text-text-muted hover:bg-evidence-50 hover:text-evidence-700 border border-border/50'
-                      }`}>{f}</button>
-                  ))}
-                </div>
-
-                <div className="w-px h-4 bg-border-light" />
-
-                {/* Coverage */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold text-text-muted uppercase">Coverage:</span>
-                  {([
-                    { key: 'All', label: 'All' },
-                    { key: 'has-key', label: 'Has Key Control' },
-                    { key: 'no-key', label: 'No Key Control' },
-                    { key: 'no-controls', label: 'No Controls' },
-                  ] as { key: CoverageFilter; label: string }[]).map(c => (
-                    <button key={c.key} onClick={() => setCoverageFilter(c.key)}
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold transition-all cursor-pointer ${
-                        coverageFilter === c.key ? 'bg-mitigated-700 text-white' : 'bg-white text-text-muted hover:bg-mitigated-50 hover:text-mitigated-700 border border-border/50'
-                      }`}>{c.label}</button>
-                  ))}
-                </div>
-
-                <div className="w-px h-4 bg-border-light" />
-
-                {/* Severity */}
-                <div className="flex items-center gap-1.5 pr-3">
-                  <span className="text-[10px] font-bold text-text-muted uppercase">Severity:</span>
-                  {(['All', 'critical', 'high', 'medium', 'low'] as SeverityFilter[]).map(s => (
-                    <button key={s} onClick={() => setSeverityFilter(s)}
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold transition-all cursor-pointer capitalize ${
-                        severityFilter === s ? 'bg-primary text-white' : 'bg-white text-text-muted hover:bg-primary/10 hover:text-primary border border-border/50'
-                      }`}>{s}</button>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Risk Table */}
-        {filtered.length === 0 ? (
-          <div className="glass-card rounded-xl p-12 text-center">
-            <AlertTriangle size={32} className="text-text-muted mx-auto mb-3" />
-            <p className="text-[14px] font-semibold text-text mb-1">
-              {allRisks.length === 0 ? 'No RACM has been created yet' : 'No risks found'}
-            </p>
-            <p className="text-[12px] text-text-muted max-w-sm mx-auto">
-              {allRisks.length === 0
-                ? 'Create a RACM to start defining risks and controls.'
-                : 'No risks match the selected filters. Try adjusting your filters above.'}
-            </p>
-            {allRisks.length === 0 && (
-              <button onClick={() => navigate('governance-racm')} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
-                <Plus size={13} />
-                Create RACM
-              </button>
-            )}
+        <div className="glass-card rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="border-b border-border bg-surface-2/50">
+                  {['Risk ID', 'Risk Name', 'Process', 'Category', 'Priority', 'Owner', 'Status', 'Last Reviewed', 'Action'].map(h => (
+                    <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRisks.length === 0 ? (
+                  <tr><td colSpan={9} className="px-4 py-10 text-center text-[12px] text-text-muted">No risks match your search or filters</td></tr>
+                ) : filteredRisks.map((risk, i) => {
+                  const action = getRiskRegisterAction(risk.status);
+                  return (
+                    <motion.tr key={risk.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.015 }}
+                      onClick={() => setDetailRisk(risk)}
+                      className="border-b border-border/50 hover:bg-gray-50/60 transition-colors cursor-pointer group">
+                      <td className="px-3 py-2.5">
+                        <span className="font-mono text-[10px] text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded">{risk.id}</span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="text-[12px] font-medium text-text">{risk.name}</span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="inline-flex items-center px-2 h-5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200/60">{risk.businessProcess}</span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="text-[11px] text-gray-500">{risk.category}</span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className={`text-[11px] ${PRIORITY_STYLES[risk.priority]}`}>{risk.priority}</span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="text-[11px] text-gray-500">{risk.owner || '—'}</span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${STATUS_STYLES[risk.status]}`}>{risk.status}</span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="text-[11px] text-gray-400">{risk.lastReviewed}</span>
+                      </td>
+                      <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setDetailRisk(risk)}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors inline-flex items-center gap-1 ${action.cls}`}>
+                          {action.label}<ChevronRight size={8} />
+                        </button>
+                      </td>
+                    </motion.tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        ) : (
-          <div className="glass-card rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-[12px]">
-                <thead>
-                  <tr className="border-b border-border bg-surface-2/50">
-                    <th className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide w-6" />
-                    {[
-                      { key: 'id', label: 'Risk ID' },
-                      { key: 'name', label: 'Risk Description' },
-                      { key: 'bp', label: 'Business Process' },
-                      { key: 'racm', label: 'RACM / Version' },
-                      { key: 'severity', label: 'Severity' },
-                      { key: 'controls', label: 'Mapped Controls' },
-                      { key: 'engagement', label: 'Latest Engagement' },
-                      { key: 'tested', label: 'Last Tested' },
-                      { key: 'status', label: 'Derived Status', tooltip: 'Derived from key control testing outcomes' },
-                      { key: 'action', label: 'Action' },
-                    ].map(col => (
-                      <th key={col.key} className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide whitespace-nowrap">
-                        {col.tooltip ? (
-                          <span className="group relative inline-flex items-center gap-1 cursor-help">
-                            {col.label}
-                            <Info size={9} className="text-text-muted/50" />
-                            <span className="absolute left-0 top-full mt-1.5 z-50 hidden group-hover:block w-[200px] px-2.5 py-2 rounded-lg bg-ink-900 text-white text-[10px] font-normal normal-case tracking-normal leading-snug shadow-lg">
-                              {col.tooltip}
-                            </span>
-                          </span>
-                        ) : col.label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((risk, i) => {
-                    const isExpanded = expandedRow === risk.id;
-                    const action = getAction(risk);
-
-                    return (
-                      <motion.tbody key={risk.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.015 }}>
-                        <tr
-                          onClick={() => setExpandedRow(isExpanded ? null : risk.id)}
-                          className={`border-b border-border/50 hover:bg-brand-50/30 transition-colors cursor-pointer group ${
-                            risk.derivedStatus === 'at-risk' ? 'border-l-[3px] border-l-risk' :
-                            risk.derivedStatus === 'needs-mapping' ? 'border-l-[3px] border-l-high' : ''
-                          }`}
-                        >
-                          {/* Expand chevron */}
-                          <td className="px-2 py-2.5 w-6">
-                            <ChevronRight size={12} className={`text-text-muted transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                          </td>
-
-                          {/* Risk ID */}
-                          <td className="px-3 py-2.5">
-                            <span className="font-mono text-[11px] text-primary font-semibold">{risk.id}</span>
-                          </td>
-
-                          {/* Description */}
-                          <td className="px-3 py-2.5">
-                            <span className="text-[12px] text-text font-medium max-w-[220px] truncate block">{risk.name}</span>
-                          </td>
-
-                          {/* Business Process */}
-                          <td className="px-3 py-2.5">
-                            <ProcessBadge abbr={risk.bpAbbr} color={risk.bpColor} />
-                          </td>
-
-                          {/* RACM / Version */}
-                          <td className="px-3 py-2.5">
-                            <div>
-                              <button onClick={e => { e.stopPropagation(); navigate('governance-racm'); }} className="text-[11px] font-medium text-primary hover:underline cursor-pointer truncate block max-w-[140px]">
-                                {risk.racmId}
-                              </button>
-                              <span className="text-[10px] text-text-muted">{risk.racmVersion}</span>
-                            </div>
-                          </td>
-
-                          {/* Severity */}
-                          <td className="px-3 py-2.5">
-                            <SeverityBadge severity={risk.severity} />
-                          </td>
-
-                          {/* Mapped Controls */}
-                          <td className="px-3 py-2.5">
-                            {risk.ctls > 0 ? (
-                              <span className="text-[11px] text-text">
-                                {risk.ctls} control{risk.ctls !== 1 ? 's' : ''}
-                                {risk.keyCtls > 0 && <span className="text-text-muted"> · {risk.keyCtls} key</span>}
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-high-700 font-medium">None</span>
-                            )}
-                          </td>
-
-                          {/* Latest Engagement */}
-                          <td className="px-3 py-2.5">
-                            {risk.latestEngagement ? (
-                              <button onClick={e => { e.stopPropagation(); navigate('engagement-detail'); }}
-                                className="text-[11px] text-primary hover:underline cursor-pointer truncate block max-w-[120px]">
-                                {risk.latestEngagement}
-                              </button>
-                            ) : (
-                              <span className="text-[11px] text-text-muted">Not tested</span>
-                            )}
-                          </td>
-
-                          {/* Last Tested */}
-                          <td className="px-3 py-2.5">
-                            <span className="text-[11px] text-text-muted">{risk.lastTested || '—'}</span>
-                          </td>
-
-                          {/* Derived Status */}
-                          <td className="px-3 py-2.5">
-                            <DerivedStatusBadge status={risk.derivedStatus} />
-                          </td>
-
-                          {/* Action */}
-                          <td className="px-3 py-2.5">
-                            <button
-                              onClick={e => { e.stopPropagation(); navigate(action.target); }}
-                              className={`px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors inline-flex items-center gap-1 ${action.cls}`}
-                            >
-                              {action.label}
-                              <ChevronRight size={9} />
-                            </button>
-                          </td>
-                        </tr>
-
-                        {/* Expanded content */}
-                        {isExpanded && (
-                          <tr>
-                            <td colSpan={12}>
-                              <ExpandedRiskRow risk={risk} onNavigate={navigate} />
-                            </td>
-                          </tr>
-                        )}
-                      </motion.tbody>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-surface-2/30">
-              <span className="text-[11px] text-text-muted">{filtered.length} of {allRisks.length} risks</span>
-              {hasActiveFilters && (
-                <span className="text-[10px] text-text-muted">Filters active — showing filtered results</span>
-              )}
-            </div>
+          <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-surface-2/30">
+            <span className="text-[11px] text-text-muted">{filteredRisks.length} of {risks.length} risks</span>
           </div>
-        )}
+        </div>
       </div>
+
+      {/* Create Drawer */}
+      <AnimatePresence>
+        {showCreateDrawer && (
+          <RiskDrawer risk={null} onClose={() => setShowCreateDrawer(false)} onSave={handleSaveRisk} defaultProcess={processFilter} />
+        )}
+      </AnimatePresence>
+
+      {/* Detail Drawer */}
+      <AnimatePresence>
+        {detailRisk && !showCreateDrawer && (
+          <RiskDetailDrawer risk={detailRisk} onClose={() => setDetailRisk(null)} onUpdate={handleUpdateRisk} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
