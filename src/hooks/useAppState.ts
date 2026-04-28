@@ -19,6 +19,7 @@ export type View =
   | 'governance-control-detail'
   | 'audit-risk-register'
   | 'audit-planning'
+  | 'programs'
   // Execution
   | 'audit-execution'
   | 'engagement-detail'
@@ -107,6 +108,7 @@ const getInitialView = (): View => {
   const params = new URLSearchParams(window.location.search);
   const v = params.get('view');
   if (v === 'reports') return 'reports';
+  if (v === 'manage-exceptions') return 'manage-exceptions';
   return 'home';
 };
 

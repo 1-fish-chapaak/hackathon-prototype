@@ -14,10 +14,10 @@ see the [Appendix](#appendix--paste-this-into-a-fresh-claude-code-session).
 ## 1. What this repo is
 
 - **Stack:** React 18 + TypeScript + Vite. Frontend-only, all data mocked in `src/data/mockData.ts`.
-- **Repo:** https://github.com/1-fish-chapaak/hackathon-prototype
+- **Repo:** https://github.com/tech-irame/hackathon-prototype
 - **Live URL:** https://hackathon-demo-ujihgyhrpa-uc.a.run.app
 - **Branch model:** **direct push to `main`**. Every push auto-deploys to Cloud Run in ~2 min.
-- **Don't touch:** the upstream `1-fish-chapaak/auditify-copilot`, and the production stack at `auditify.platform.irame.ai`.
+- **Don't touch:** the production stack at `auditify.platform.irame.ai`.
 
 ---
 
@@ -44,12 +44,12 @@ gh auth login                    # GitHub.com → HTTPS → browser
 gh auth status                   # confirm
 ```
 
-You need write access to `1-fish-chapaak/hackathon-prototype`. Ask the repo owner if `git push` is rejected.
+You need write access to `tech-irame/hackathon-prototype`. Ask the repo owner if `git push` is rejected.
 
 ### 2.3 Clone and bootstrap
 
 ```bash
-git clone https://github.com/1-fish-chapaak/hackathon-prototype.git
+git clone https://github.com/tech-irame/hackathon-prototype.git
 cd hackathon-prototype
 npm install
 npm run setup-hooks         # ★ enables the Claude preflight on git push
@@ -325,7 +325,7 @@ You can re-run the review on a PR by commenting `@claude` in the PR thread.
 ### 5.1 Auth model (FYI, you don't need to touch it)
 
 GitHub Actions auths to GCP via **Workload Identity Federation** — no service
-account keys exist anywhere. Only repos under `1-fish-chapaak` can use the
+account keys exist anywhere. Only repos under `tech-irame` can use the
 deploy SA `gh-actions-deploy@gen-lang-client-0250661731.iam.gserviceaccount.com`.
 
 The Claude PR reviewer auths via the `CLAUDE_CODE_OAUTH_TOKEN` repo secret.
@@ -336,8 +336,8 @@ The Claude PR reviewer auths via the `CLAUDE_CODE_OAUTH_TOKEN` repo secret.
 
 ```bash
 # what's the latest deploy doing?
-gh run list --repo 1-fish-chapaak/hackathon-prototype --limit 5
-gh run watch --repo 1-fish-chapaak/hackathon-prototype
+gh run list --repo tech-irame/hackathon-prototype --limit 5
+gh run watch --repo tech-irame/hackathon-prototype
 
 # is the live site up?
 curl -sS -o /dev/null -w "HTTP %{http_code}\n" https://hackathon-demo-ujihgyhrpa-uc.a.run.app/
@@ -380,7 +380,7 @@ gcloud run services update-traffic hackathon-demo \
 >
 > **Pod workflow:** multiple teams push directly to `main` from their Claude CLI sessions. No PRs required. Every push to `main` auto-deploys to Cloud Run in ~2 min.
 >
-> - Repo: https://github.com/1-fish-chapaak/hackathon-prototype
+> - Repo: https://github.com/tech-irame/hackathon-prototype
 > - Live URL: https://hackathon-demo-ujihgyhrpa-uc.a.run.app
 > - GCP project: `gen-lang-client-0250661731` · region `us-central1` · service `hackathon-demo`
 >

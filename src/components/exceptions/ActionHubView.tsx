@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Clock,
   CheckCircle2,
+  CircleDashed,
   ArrowRight,
   ChevronDown,
   BarChart3,
@@ -18,6 +19,7 @@ import {
   ACTION_HUB_SUMMARY,
   ACTION_HUB_TIMELINE,
   GRC_EXCEPTIONS,
+  GRC_CASE_DETAILS,
   type ActionHubEvent,
   type ActionHubActorRole,
   type GrcException,
@@ -33,12 +35,32 @@ type DrillPreset = {
   ids: string[];
 };
 
+// Implementation status derivation — must mirror ExceptionsTable / ReviewDrawers logic.
+function normaliseActionReview(v: string): 'Pending' | 'Approved' | 'Rejected' {
+  if (v === 'Approved' || v === 'Rejected' || v === 'Pending') return v;
+  if (v === 'Implemented') return 'Approved';
+  return 'Pending';
+}
+type ImplementationStatus = 'Implemented' | 'Partially Implemented' | 'Discrepancy';
+function deriveImplementation(ex: GrcException): ImplementationStatus | null {
+  const actionStatus = GRC_CASE_DETAILS[ex.id]?.actionStatus ?? 'Pending';
+  const norm = normaliseActionReview(ex.actionReview);
+  if (norm === 'Rejected') return 'Discrepancy';
+  if (norm === 'Approved') {
+    if (actionStatus === 'Discrepancy') return 'Discrepancy';
+    if (actionStatus === 'Pending') return 'Implemented';
+    return actionStatus as ImplementationStatus;
+  }
+  return null;
+}
+
 const PRESETS: Record<string, { title: string; subtitle: string; ids: string[] | 'all' | ((ex: GrcException) => boolean) }> = {
   total:             { title: 'Total Exceptions',    subtitle: 'All flagged exceptions',                          ids: 'all' },
   classified:        { title: 'Classified',          subtitle: 'Exceptions with a Risk Owner classification',     ids: ['EXC001','EXC003','EXC004','EXC005','EXC006','EXC008','EXC010','EXC011','EXC012','EXC014'] },
   actionPlans:       { title: 'Action Plans',        subtitle: 'Exceptions with an action plan documented',       ids: ['EXC001','EXC003','EXC004','EXC006','EXC010','EXC012'] },
-  underReview:       { title: 'Under Review',        subtitle: 'Awaiting auditor review',                         ids: (ex) => ex.status === 'Under Review' },
-  resolved:          { title: 'Resolved',            subtitle: 'Closed exceptions',                               ids: ['EXC003','EXC006','EXC010'] },
+  underReview:       { title: 'In-Progress',         subtitle: 'Cases currently in progress',                     ids: (ex) => ex.status === 'Under Review' },
+  open:              { title: 'Open',                subtitle: 'Exceptions still open and awaiting resolution',   ids: (ex) => ex.status === 'Open' },
+  resolved:          { title: 'Closed',              subtitle: 'Closed exceptions',                               ids: ['EXC003','EXC006','EXC010'] },
   overdue:           { title: 'Overdue',             subtitle: 'Past action due date, not yet resolved',          ids: (ex) => ex.flags?.includes('Overdue') ?? false },
   // Risk Owner tiles
   roClassifications:   { title: 'Classifications',       subtitle: 'Exceptions classified by Risk Owner',            ids: ['EXC001','EXC003','EXC004','EXC005','EXC006','EXC008','EXC010','EXC011','EXC012','EXC014'] },
@@ -50,6 +72,10 @@ const PRESETS: Record<string, { title: string; subtitle: string; ids: string[] |
   auApproved:          { title: 'Approved / Accepted',   subtitle: 'Action plans approved by Auditor',               ids: ['EXC003','EXC010'] },
   auRejected:          { title: 'Rejected',              subtitle: 'Action plans rejected by Auditor',               ids: ['EXC012'] },
   auCasesClosed:       { title: 'Cases Closed',          subtitle: 'Cases finalized by Auditor',                     ids: ['EXC003','EXC006','EXC010'] },
+  // Implementation outcomes
+  implImplemented:     { title: 'Implemented',           subtitle: 'Action approved and fully implemented',          ids: (ex) => deriveImplementation(ex) === 'Implemented' },
+  implPartial:         { title: 'Partially Implemented', subtitle: 'Action approved but only partially in place',    ids: (ex) => deriveImplementation(ex) === 'Partially Implemented' },
+  implDiscrepancy:     { title: 'Discrepancy',           subtitle: 'Action rejected — case reopened at Risk Owner',  ids: (ex) => deriveImplementation(ex) === 'Discrepancy' },
 };
 
 function resolvePreset(key: string): DrillPreset | null {
@@ -63,7 +89,6 @@ function resolvePreset(key: string): DrillPreset | null {
 }
 
 type BreakdownTone = 'high' | 'risk' | 'brand' | 'compliant' | 'draft';
-type PersonaTileTone = 'brand' | 'compliant' | 'risk' | 'evidence';
 
 const BREAKDOWN_BAR: Record<BreakdownTone, string> = {
   high:      'bg-high',
@@ -71,6 +96,14 @@ const BREAKDOWN_BAR: Record<BreakdownTone, string> = {
   brand:     'bg-brand-400',
   compliant: 'bg-[#22C55E]',
   draft:     'bg-ink-300',
+};
+
+const BREAKDOWN_HEX: Record<BreakdownTone, string> = {
+  high:      '#C2410C',
+  risk:      '#F07A74',
+  brand:     '#A366F0',
+  compliant: '#22C55E',
+  draft:     '#C2B9CB',
 };
 
 const BREAKDOWN_LABEL: Record<BreakdownTone, string> = {
@@ -81,12 +114,6 @@ const BREAKDOWN_LABEL: Record<BreakdownTone, string> = {
   draft:     'text-ink-700',
 };
 
-const PERSONA_TILE_VALUE: Record<PersonaTileTone, string> = {
-  brand:     'text-brand-700',
-  compliant: 'text-compliant-700',
-  risk:      'text-risk',
-  evidence:  'text-evidence-700',
-};
 
 const ROLE_AVATAR: Record<ActionHubActorRole, { initials: string; bg: string; fg: string }> = {
   'Risk Owner': { initials: 'RO', bg: 'bg-brand-100',    fg: 'text-brand-700' },
@@ -229,81 +256,82 @@ function StatCard({
   );
 }
 
-function PersonaCard({
-  name,
-  initials,
-  role,
-  totalActions,
-  tiles,
-  onTileClick,
-}: {
-  name: string;
-  initials: string;
-  role: 'Risk Owner' | 'Auditor';
-  totalActions: number;
-  tiles: { label: string; value: number; tone: PersonaTileTone; presetKey?: string }[];
-  onTileClick?: (presetKey: string) => void;
-}) {
-  const avatarStyle = role === 'Risk Owner'
-    ? { bg: 'bg-brand-100',  fg: 'text-brand-700' }
-    : { bg: 'bg-[#EDE4FA]', fg: 'text-brand-700' };
-  return (
-    <div className="bg-canvas-elevated border border-canvas-border rounded-[12px] p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-[8px] ${avatarStyle.bg} ${avatarStyle.fg} flex items-center justify-center font-semibold text-[13px]`}>
-            {initials}
-          </div>
-          <div>
-            <div className="text-[15px] font-semibold text-ink-900 leading-tight">{name}</div>
-            <div className="text-[12px] text-ink-500">{role}</div>
-          </div>
-        </div>
-        <span className="inline-flex items-center h-6 px-2.5 text-[11px] font-medium bg-brand-50 text-brand-700 rounded-full tabular-nums">
-          {totalActions} total actions
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {tiles.map((t) => (
-          <button
-            key={t.label}
-            onClick={() => t.presetKey && onTileClick?.(t.presetKey)}
-            className="border border-canvas-border rounded-[10px] p-3 text-left hover:border-brand-200 hover:bg-[#FAFAFB] transition-colors cursor-pointer flex items-start justify-between"
-          >
-            <div>
-              <div className={`text-[24px] leading-none font-semibold tabular-nums ${PERSONA_TILE_VALUE[t.tone]}`}>{t.value}</div>
-              <div className="text-[12px] text-ink-500 mt-2">{t.label}</div>
-            </div>
-            <ArrowRight size={13} className="text-ink-400 mt-0.5" />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
-function BreakdownBar({
-  row,
-  maxCount,
-}: {
-  row: { label: string; count: number; tone: BreakdownTone; underline?: boolean };
-  maxCount: number;
-}) {
-  const pct = Math.max(6, (row.count / maxCount) * 100);
+function ClassificationDonut({ rows }: { rows: { label: string; count: number; tone: BreakdownTone }[] }) {
+  const total = rows.reduce((sum, r) => sum + r.count, 0);
+  const size = 200;
+  const stroke = 28;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  let offsetDeg = -90; // start at 12 o'clock
+
   return (
-    <button className="group grid grid-cols-[200px_1fr_auto_auto] items-center gap-4 py-2.5 w-full text-left cursor-pointer">
-      <span className={`text-[13px] font-medium ${BREAKDOWN_LABEL[row.tone]} ${row.underline ? 'underline underline-offset-4' : ''}`}>
-        {row.label}
-      </span>
-      <div className="h-2 rounded-full bg-[#EEEEF1] overflow-hidden">
-        <div
-          className={`h-full rounded-full ${BREAKDOWN_BAR[row.tone]}`}
-          style={{ width: `${pct}%` }}
-        />
+    <div className="flex items-center gap-8">
+      {/* Donut */}
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
+          {/* Track */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="#EEEEF1"
+            strokeWidth={stroke}
+          />
+          {/* Segments */}
+          {total > 0 && rows.map((row) => {
+            const pct = row.count / total;
+            const dashLength = pct * circumference;
+            const gap = circumference - dashLength;
+            const seg = (
+              <circle
+                key={row.label}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={BREAKDOWN_HEX[row.tone]}
+                strokeWidth={stroke}
+                strokeLinecap="butt"
+                strokeDasharray={`${dashLength} ${gap}`}
+                strokeDashoffset={-(offsetDeg + 90) / 360 * circumference}
+                transform={`rotate(0 ${size / 2} ${size / 2})`}
+                style={{ transition: 'stroke-dasharray 400ms cubic-bezier(0.2, 0, 0, 1)' }}
+              />
+            );
+            offsetDeg += pct * 360;
+            return seg;
+          })}
+        </svg>
+        {/* Center label */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <div className="text-[28px] leading-none font-semibold text-ink-900 tabular-nums">{total}</div>
+          <div className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-500 mt-1">classified</div>
+        </div>
       </div>
-      <span className="text-[13px] font-semibold text-ink-800 tabular-nums w-4 text-right">{row.count}</span>
-      <ArrowRight size={13} className="text-ink-400 group-hover:text-brand-700" />
-    </button>
+
+      {/* Legend */}
+      <ul className="flex-1 space-y-2.5">
+        {rows.map(row => {
+          const pct = total > 0 ? Math.round((row.count / total) * 100) : 0;
+          return (
+            <li key={row.label} className="group flex items-center gap-3">
+              <span
+                className="w-2.5 h-2.5 rounded-sm shrink-0"
+                style={{ backgroundColor: BREAKDOWN_HEX[row.tone] }}
+                aria-hidden="true"
+              />
+              <span className={`flex-1 text-[12.5px] font-medium truncate ${BREAKDOWN_LABEL[row.tone]}`}>
+                {row.label}
+              </span>
+              <span className="text-[12.5px] font-semibold text-ink-900 tabular-nums w-6 text-right">{row.count}</span>
+              <span className="text-[11.5px] text-ink-500 tabular-nums w-10 text-right">{pct}%</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -349,7 +377,6 @@ function TimelineEntry({ event }: { event: ActionHubEvent }) {
 export default function ActionHubView() {
   const s = ACTION_HUB_SUMMARY;
   const timeline = ACTION_HUB_TIMELINE;
-  const maxBreakdown = useMemo(() => Math.max(...s.classificationBreakdown.rows.map(r => r.count)), [s]);
 
   const [openPresetKey, setOpenPresetKey] = useState<string | null>(null);
   const [atrModalOpen, setAtrModalOpen] = useState(false);
@@ -360,14 +387,17 @@ export default function ActionHubView() {
   );
   const openDrawer = useCallback((key: string) => setOpenPresetKey(key), []);
 
-  const roTiles = s.riskOwner.tiles.map((t, i) => ({
-    ...t,
-    presetKey: ['roClassifications', 'roActionPlansFiled', 'roBulkActions', 'roIndividualActions'][i],
-  }));
-  const auTiles = s.auditor.tiles.map((t, i) => ({
-    ...t,
-    presetKey: ['auReviewsPerformed', 'auApproved', 'auRejected', 'auCasesClosed'][i],
-  }));
+  const openCount = useMemo(() => GRC_EXCEPTIONS.filter(ex => ex.status === 'Open').length, []);
+
+  // Implementation outcome counts derived from live mock data.
+  const implCounts = useMemo(() => {
+    const acc = { Implemented: 0, 'Partially Implemented': 0, Discrepancy: 0 } as Record<ImplementationStatus, number>;
+    GRC_EXCEPTIONS.forEach(ex => {
+      const v = deriveImplementation(ex);
+      if (v) acc[v] += 1;
+    });
+    return acc;
+  }, []);
 
   // Group timeline events by date preserving order.
   const grouped = useMemo(() => {
@@ -425,7 +455,7 @@ export default function ActionHubView() {
               </span>
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-5">
+          <div className="grid grid-cols-3 gap-5">
             {s.atrReadiness.steps.map(step => {
               const pct = (step.current / step.total) * 100;
               return (
@@ -472,13 +502,27 @@ export default function ActionHubView() {
         )}
 
         {/* Count stats */}
-        <div className="grid grid-cols-6 gap-3 mb-5">
+        <div className="grid grid-cols-7 gap-3 mb-5">
           <StatCard label="Total Exceptions" value={s.counts.total}        tone="default"   icon={AlertTriangle}  onClick={() => openDrawer('total')} />
           <StatCard label="Classified"       value={s.counts.classified}   tone="brand"     icon={Tag}            navigable onClick={() => openDrawer('classified')} />
           <StatCard label="Action Plans"     value={s.counts.actionPlans}  tone="evidence"  icon={ClipboardList}  navigable onClick={() => openDrawer('actionPlans')} />
-          <StatCard label="Under Review"     value={s.counts.underReview}  tone="mitigated" icon={Clock}          navigable onClick={() => openDrawer('underReview')} />
-          <StatCard label="Resolved"         value={s.counts.resolved}     tone="compliant" icon={CheckCircle2}   navigable onClick={() => openDrawer('resolved')} />
+          <StatCard label="Open"             value={openCount}             tone="evidence"  icon={FileText}       navigable onClick={() => openDrawer('open')} />
+          <StatCard label="Closed"           value={s.counts.resolved}     tone="compliant" icon={CheckCircle2}   navigable onClick={() => openDrawer('resolved')} />
+          <StatCard label="In-Progress"      value={s.counts.underReview}  tone="mitigated" icon={Clock}          navigable onClick={() => openDrawer('underReview')} />
           <StatCard label="Overdue"          value={s.counts.overdue}      tone="risk"      icon={AlertTriangle}  navigable onClick={() => openDrawer('overdue')} />
+        </div>
+
+        {/* Implementation Outcomes — clickable tiles drill into the case list */}
+        <div className="mb-5">
+          <div className="flex items-baseline justify-between mb-2.5">
+            <h3 className="text-[13px] font-semibold text-ink-800">Implementation Outcomes</h3>
+            <span className="text-[11.5px] text-ink-500">Click any tile to view the underlying cases</span>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <StatCard label="Implemented"           value={implCounts['Implemented']}           tone="compliant" icon={CheckCircle2}   navigable onClick={() => openDrawer('implImplemented')} />
+            <StatCard label="Partially Implemented" value={implCounts['Partially Implemented']} tone="mitigated" icon={CircleDashed}   navigable onClick={() => openDrawer('implPartial')} />
+            <StatCard label="Discrepancy"           value={implCounts['Discrepancy']}           tone="risk"      icon={AlertTriangle}  navigable onClick={() => openDrawer('implDiscrepancy')} />
+          </div>
         </div>
 
         {/* Exception Status Tracker */}
@@ -490,32 +534,8 @@ export default function ActionHubView() {
           title="Classification Breakdown"
           subtitle={`${s.classificationBreakdown.classified} classified · ${s.classificationBreakdown.unclassified} unclassified · ${s.classificationBreakdown.bulk} bulk · ${s.classificationBreakdown.individual} individual`}
         >
-          <div className="divide-y divide-canvas-border">
-            {s.classificationBreakdown.rows.map(row => (
-              <BreakdownBar key={row.label} row={row} maxCount={maxBreakdown} />
-            ))}
-          </div>
+          <ClassificationDonut rows={s.classificationBreakdown.rows} />
         </CollapsibleSection>
-
-        {/* Persona split — sits above the Activity Timeline */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <PersonaCard
-            name={s.riskOwner.name}
-            initials={s.riskOwner.initials}
-            role="Risk Owner"
-            totalActions={s.riskOwner.totalActions}
-            tiles={roTiles}
-            onTileClick={openDrawer}
-          />
-          <PersonaCard
-            name={s.auditor.name}
-            initials={s.auditor.initials}
-            role="Auditor"
-            totalActions={s.auditor.totalActions}
-            tiles={auTiles}
-            onTileClick={openDrawer}
-          />
-        </div>
 
         {/* Activity Timeline */}
         <CollapsibleSection

@@ -12,13 +12,24 @@ import {
   Tag,
   X,
   Check,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  LayoutGrid,
+  AlertCircle,
+  Plus,
+  Download,
 } from 'lucide-react';
-import type {
-  GrcException,
-  GrcExceptionSeverity,
-  GrcExceptionStatus,
-  GrcExceptionClassification,
-  GrcReviewStatus,
+import {
+  GRC_CASE_DETAILS,
+  type GrcException,
+  type GrcExceptionSeverity,
+  type GrcExceptionStatus,
+  type GrcExceptionClassification,
+  type GrcActionStatus,
 } from '../../data/mockData';
 import type { ExceptionRole } from '../../hooks/useAppState';
 
@@ -33,6 +44,12 @@ const STATUS_STYLE: Record<GrcExceptionStatus, string> = {
   'Under Review': 'bg-mitigated-50 text-mitigated-700',
   Closed:         'bg-compliant-50 text-compliant-700',
 };
+// Display label — the data value 'Under Review' renders as 'In-Progress' across the UI.
+const STATUS_LABEL: Record<GrcExceptionStatus, string> = {
+  Open:           'Open',
+  'Under Review': 'In-Progress',
+  Closed:         'Closed',
+};
 const CLASSIFICATION_STYLE: Record<GrcExceptionClassification, string> = {
   Unclassified:                'bg-[#F4F2F7] text-ink-600',
   'Design Deficiency':         'bg-high-50 text-high-700',
@@ -41,12 +58,64 @@ const CLASSIFICATION_STYLE: Record<GrcExceptionClassification, string> = {
   'Business as Usual':         'bg-compliant-50 text-compliant-700',
   'False Positive':            'bg-[#EEEEF1] text-ink-600',
 };
-const REVIEW_STYLE: Record<GrcReviewStatus, string> = {
-  Pending:     'bg-mitigated-50 text-mitigated-700',
-  Approved:    'bg-compliant-50 text-compliant-700',
-  Rejected:    'bg-risk-50 text-risk-700',
-  Implemented: 'bg-compliant-50 text-compliant-700',
+// Combined Action Review status — folds the auditor decision and the
+// implementation outcome into a single column so users see one verdict
+// per row rather than two interdependent columns.
+type ActionReviewBase = 'Pending' | 'Approved' | 'Rejected';
+type CombinedActionReview =
+  | 'Pending'
+  | 'Approved (Implemented)'
+  | 'Approved (Partially Implemented)'
+  | 'Rejected (Discrepancy)'
+  | 'Approved'   // Business as Usual / False Positive — no action plan, just classification verdict
+  | 'Rejected';  // same — auditor disagreed with the BAU/FP classification
+
+const COMBINED_REVIEW_STYLE: Record<CombinedActionReview, string> = {
+  'Pending':                          'bg-[#EEEEF1] text-ink-600',
+  'Approved (Implemented)':           'bg-compliant-50 text-compliant-700',
+  'Approved (Partially Implemented)': 'bg-mitigated-50 text-mitigated-700',
+  'Rejected (Discrepancy)':           'bg-risk-50 text-risk-700',
+  'Approved':                         'bg-compliant-50 text-compliant-700',
+  'Rejected':                         'bg-risk-50 text-risk-700',
 };
+// Display label — 'Pending' (no auditor decision yet) renders as 'Under Review'.
+const COMBINED_REVIEW_LABEL: Record<CombinedActionReview, string> = {
+  'Pending':                          'Under Review',
+  'Approved (Implemented)':           'Approved (Implemented)',
+  'Approved (Partially Implemented)': 'Approved (Partially Implemented)',
+  'Rejected (Discrepancy)':           'Rejected (Discrepancy)',
+  'Approved':                         'Approved',
+  'Rejected':                         'Rejected',
+};
+
+// Classifications that don't carry an action plan — review verdict is plain Approved/Rejected.
+const NO_PLAN_CLASSIFICATIONS = new Set<string>(['Business as Usual', 'False Positive']);
+
+// Legacy mock data sometimes stores 'Implemented' in actionReview — normalise.
+function normaliseActionReview(v: string): ActionReviewBase {
+  if (v === 'Approved' || v === 'Rejected' || v === 'Pending') return v;
+  if (v === 'Implemented') return 'Approved';
+  return 'Pending';
+}
+
+function combineActionReview(
+  actionReview: string,
+  actionStatus: GrcActionStatus,
+  classification: string,
+): CombinedActionReview {
+  const norm = normaliseActionReview(actionReview);
+  // BAU / False Positive — no action plan; show plain Approved / Rejected / Pending.
+  if (NO_PLAN_CLASSIFICATIONS.has(classification)) {
+    if (norm === 'Pending') return 'Pending';
+    if (norm === 'Rejected') return 'Rejected';
+    return 'Approved';
+  }
+  if (norm === 'Rejected' || actionStatus === 'Discrepancy') return 'Rejected (Discrepancy)';
+  if (norm === 'Pending') return 'Pending';
+  // Approved: pick the partial / implemented variant.
+  if (actionStatus === 'Partially Implemented') return 'Approved (Partially Implemented)';
+  return 'Approved (Implemented)';
+}
 
 function Pill({ children, className }: { children: React.ReactNode; className: string }) {
   return (
@@ -88,7 +157,6 @@ export type ColumnKey =
   | 'severity'
   | 'status'
   | 'classification'
-  | 'classReview'
   | 'actionReview'
   | 'actionableId'
   | 'lastUpdated'
@@ -102,7 +170,8 @@ interface ColumnDef {
   key: ColumnKey;
   label: string;
   alwaysVisible?: boolean;     // cannot be hidden
-  alwaysPinned?: PinSide;      // fixed pin position
+  alwaysPinned?: PinSide;      // fixed pin position (locked, no menu)
+  defaultPin?: PinSide;        // initial pin (user can change via menu)
   draggable?: boolean;
   filterable?: boolean;
   filterOptions?: string[];
@@ -113,28 +182,65 @@ interface ColumnDef {
 }
 
 const ALL_SEVERITIES: GrcExceptionSeverity[] = ['High', 'Medium', 'Low'];
-const ALL_STATUSES:   GrcExceptionStatus[]   = ['Open', 'Under Review', 'Closed'];
+const ALL_STATUS_LABELS: string[] = ['Open', 'In-Progress', 'Closed'];
 const ALL_CLASSIFICATIONS: GrcExceptionClassification[] = [
   'Unclassified', 'Design Deficiency', 'System Deficiency', 'Procedural Non-Compliance', 'Business as Usual', 'False Positive',
 ];
-const ALL_REVIEWS: GrcReviewStatus[] = ['Pending', 'Approved', 'Rejected', 'Implemented'];
+const ALL_COMBINED_REVIEW_LABELS: string[] = [
+  'Under Review',
+  'Approved (Implemented)',
+  'Approved (Partially Implemented)',
+  'Rejected (Discrepancy)',
+  'Approved',
+  'Rejected',
+];
+
+function combinedReviewAccessor(ex: GrcException): string {
+  const actionStatus = GRC_CASE_DETAILS[ex.id]?.actionStatus ?? 'Pending';
+  return COMBINED_REVIEW_LABEL[combineActionReview(ex.actionReview, actionStatus, ex.classification)];
+}
+
+// Action-state filter options for auditor's Classify / Action columns —
+// reflect what the row-action button actually says.
+const CLASSIFY_AUDIT_OPTIONS  = ['Review Classification', 'View'] as const;
+const ACTION_AUDIT_OPTIONS    = ['Review Action', 'View'] as const;
+
+function classifyAuditAccessor(ex: GrcException): string {
+  return ex.classificationReview === 'Pending' && ex.classification !== 'Unclassified'
+    ? 'Review Classification'
+    : 'View';
+}
+function actionAuditAccessor(ex: GrcException): string {
+  return ex.actionReview === 'Pending' && ex.classification !== 'Unclassified'
+    ? 'Review Action'
+    : 'View';
+}
 
 function buildColumnDefs(role: ExceptionRole, riskCategories: string[]): ColumnDef[] {
+  const isAuditor = role === 'auditor';
   const base: ColumnDef[] = [
     { key: 'select',         label: '',               alwaysVisible: true,  draggable: false, minWidth: 40 },
     { key: 'id',             label: 'Exception ID',   alwaysVisible: true,  draggable: true, filterable: true, filterMode: 'text', accessor: (e) => e.id },
     { key: 'riskCategory',   label: 'Risk Category',  draggable: true, filterable: true, filterMode: 'multi', filterOptions: riskCategories, accessor: (e) => e.riskCategory },
     { key: 'severity',       label: 'Severity',       draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_SEVERITIES, accessor: (e) => e.severity },
-    { key: 'status',         label: 'Status',         draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_STATUSES, accessor: (e) => e.status },
+    { key: 'status',         label: 'Status',         draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_STATUS_LABELS, accessor: (e) => STATUS_LABEL[e.status] },
     { key: 'classification', label: 'Classification', draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_CLASSIFICATIONS, accessor: (e) => e.classification },
-    { key: 'classReview',    label: 'Class. Review',  draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_REVIEWS, accessor: (e) => e.classificationReview },
-    { key: 'actionReview',   label: 'Action Review',  draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_REVIEWS, accessor: (e) => e.actionReview },
+    { key: 'actionReview',   label: 'Action Review',  draggable: true, filterable: true, filterMode: 'multi', filterOptions: ALL_COMBINED_REVIEW_LABELS, accessor: combinedReviewAccessor, minWidth: 220 },
     { key: 'actionableId',   label: 'Actionable ID',  draggable: true, filterable: true, filterMode: 'text', accessor: (e) => e.bulkId ?? '', minWidth: 110 },
     { key: 'lastUpdated',    label: 'Last Updated',   draggable: true, filterable: false, accessor: (e) => e.lastUpdated },
-    { key: 'classify',       label: 'Classify',       alwaysVisible: true, alwaysPinned: 'right', draggable: false, align: 'center', minWidth: 150 },
   ];
-  if (role === 'auditor') {
-    base.push({ key: 'action', label: 'Action', alwaysVisible: true, alwaysPinned: 'right', draggable: false, align: 'center', minWidth: 150 });
+  // Risk Owner gets the Classify CTA; Auditor only sees the Action CTA.
+  if (!isAuditor) {
+    base.push({ key: 'classify', label: 'Classify', alwaysVisible: true, alwaysPinned: 'right', align: 'center', minWidth: 150 });
+  }
+  if (isAuditor) {
+    base.push({
+      key: 'action', label: 'Action', alwaysVisible: true,
+      defaultPin: 'right', draggable: true,
+      filterable: true, filterMode: 'multi', filterOptions: [...ACTION_AUDIT_OPTIONS],
+      accessor: actionAuditAccessor,
+      align: 'center', minWidth: 150,
+    });
   }
   return base;
 }
@@ -427,13 +533,14 @@ function renderCell(
     case 'severity':
       return <Pill className={SEVERITY_STYLE[ex.severity]}>{ex.severity}</Pill>;
     case 'status':
-      return <Pill className={STATUS_STYLE[ex.status]}>{ex.status}</Pill>;
+      return <Pill className={STATUS_STYLE[ex.status]}>{STATUS_LABEL[ex.status]}</Pill>;
     case 'classification':
       return <Pill className={CLASSIFICATION_STYLE[ex.classification]}>{ex.classification}</Pill>;
-    case 'classReview':
-      return <Pill className={REVIEW_STYLE[ex.classificationReview]}>{ex.classificationReview}</Pill>;
-    case 'actionReview':
-      return <Pill className={REVIEW_STYLE[ex.actionReview]}>{ex.actionReview}</Pill>;
+    case 'actionReview': {
+      const actionStatus = GRC_CASE_DETAILS[ex.id]?.actionStatus ?? 'Pending';
+      const combined = combineActionReview(ex.actionReview, actionStatus, ex.classification);
+      return <Pill className={COMBINED_REVIEW_STYLE[combined]}>{COMBINED_REVIEW_LABEL[combined]}</Pill>;
+    }
     case 'actionableId':
       return ex.bulkId ? (
         <button
@@ -520,7 +627,7 @@ export default function ExceptionsTable({
   }, [defs]);
   const defaultPins = useMemo(() => {
     const p = {} as PinsMap;
-    defs.forEach(d => { p[d.key] = d.alwaysPinned ?? null; });
+    defs.forEach(d => { p[d.key] = d.alwaysPinned ?? d.defaultPin ?? null; });
     return p;
   }, [defs]);
   const emptyFilters = useMemo(() => {
@@ -551,7 +658,8 @@ export default function ExceptionsTable({
       const next = { ...defaultPins };
       defaultOrder.forEach(k => {
         const def = defByKey[k];
-        next[k] = def.alwaysPinned ?? prev[k] ?? null;
+        // Always-locked wins → user's last choice → column's default → unpinned.
+        next[k] = def.alwaysPinned ?? prev[k] ?? def.defaultPin ?? null;
       });
       return next;
     });
@@ -602,8 +710,10 @@ export default function ExceptionsTable({
       for (const k of defaultOrder) {
         const def = defByKey[k];
         if (!def.filterable) continue;
+        // Mid-role-switch render: filters may not yet include keys newly
+        // introduced by the role change — guard against undefined.
         const value = filters[k];
-        if (!value.length) continue;
+        if (!value || !value.length) continue;
         const actual = def.accessor?.(ex) ?? '';
         if (def.filterMode === 'text') {
           if (!actual.toLowerCase().includes(String(value[0]).toLowerCase())) return false;
@@ -616,7 +726,60 @@ export default function ExceptionsTable({
   }, [exceptions, filters, defByKey, defaultOrder]);
 
   const allIds = useMemo(() => filteredExceptions.map(e => e.id), [filteredExceptions]);
+
+  // Pagination
+  const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSizeMenuOpen, setPageSizeMenuOpen] = useState(false);
+
+  // Filter Set + Export CSV menus
+  const [filterSetOpen, setFilterSetOpen] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const filterSetRef = useOutsideClick<HTMLDivElement>(() => setFilterSetOpen(false));
+  const exportMenuRef = useOutsideClick<HTMLDivElement>(() => setExportMenuOpen(false));
+  const totalPages = Math.max(1, Math.ceil(filteredExceptions.length / pageSize));
+
+  // Snap currentPage when filters change or page size shrinks below current page.
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+  useEffect(() => { setCurrentPage(1); }, [filters, pageSize]);
+
+  const pagedExceptions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredExceptions.slice(start, start + pageSize);
+  }, [filteredExceptions, currentPage, pageSize]);
+  const pagedIds = useMemo(() => pagedExceptions.map(e => e.id), [pagedExceptions]);
+
+  const pageSelected = pagedIds.length > 0 && pagedIds.every(id => selected.has(id));
   const allSelected = allIds.length > 0 && allIds.every(id => selected.has(id));
+  const someSelected = pagedIds.some(id => selected.has(id));
+  const showAllOnPageBanner = pageSelected && !allSelected && totalPages > 1;
+
+  // Select-mode dropdown in the header checkbox (All Cases / This Page).
+  const [selectMenuOpen, setSelectMenuOpen] = useState(false);
+
+  const handleHeaderCheckbox = () => {
+    // Parent's onToggleAll: if every passed id is already selected → clears them;
+    // otherwise selects them all. Passing pagedIds gives the right behaviour for
+    // both "nothing selected" and "indeterminate" states.
+    onToggleAll(pagedIds);
+  };
+
+  const selectAllCases = () => {
+    // Add every filtered id that isn't already selected.
+    const missing = allIds.filter(id => !selected.has(id));
+    if (missing.length) onToggleAll(missing);
+    setSelectMenuOpen(false);
+  };
+  const selectThisPage = () => {
+    const missing = pagedIds.filter(id => !selected.has(id));
+    if (missing.length) onToggleAll(missing);
+    setSelectMenuOpen(false);
+  };
+  const selectMenuRef = useOutsideClick<HTMLDivElement>(() => setSelectMenuOpen(false));
+  const pageSizeMenuRef = useOutsideClick<HTMLDivElement>(() => setPageSizeMenuOpen(false));
 
   // Compose render order: left-pinned (in order) → unpinned (in order) → right-pinned (in order).
   const renderOrder = useMemo(() => {
@@ -627,18 +790,83 @@ export default function ExceptionsTable({
     return [...left, ...middle, ...right];
   }, [order, visibility, pins]);
 
+  // Cumulative left/right offsets so multiple pinned columns don't overlap.
+  // Each pinned column sticks at the sum of widths of the pinned columns
+  // closer to the same edge.
+  const pinOffsets = useMemo(() => {
+    const off: Partial<Record<ColumnKey, number>> = {};
+    const fallback = 120;
+    let leftSoFar = 0;
+    for (const k of renderOrder) {
+      // During a role swap there's a brief render where stale state still
+      // references a removed column key — fall back gracefully.
+      const def = defByKey[k];
+      if (!def) continue;
+      if (pins[k] === 'left') {
+        off[k] = leftSoFar;
+        leftSoFar += def.minWidth ?? fallback;
+      }
+    }
+    let rightSoFar = 0;
+    for (let i = renderOrder.length - 1; i >= 0; i--) {
+      const k = renderOrder[i];
+      const def = defByKey[k];
+      if (!def) continue;
+      if (pins[k] === 'right') {
+        off[k] = rightSoFar;
+        rightSoFar += def.minWidth ?? fallback;
+      }
+    }
+    return off;
+  }, [renderOrder, pins, defByKey]);
+
   const activeFilterCount = useMemo(
     () => Object.values(filters).reduce((sum, v) => sum + (v.length > 0 ? 1 : 0), 0),
     [filters],
   );
 
   return (
+    <div className="space-y-3">
     <div className="bg-canvas-elevated border border-canvas-border rounded-[12px] overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-canvas-border gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-[13px] font-medium text-ink-700 tabular-nums">
-            {filteredExceptions.length}{filteredExceptions.length !== exceptions.length ? ` / ${exceptions.length}` : ''} Exceptions
-          </span>
+          {/* Filter Set dropdown — replaces the previous "N Exceptions" label */}
+          <div className="relative" ref={filterSetRef}>
+            <button
+              type="button"
+              onClick={() => setFilterSetOpen(o => !o)}
+              className={`inline-flex items-center gap-1.5 h-8 pl-2.5 pr-2 text-[12.5px] font-medium rounded-[8px] border cursor-pointer transition-colors ${
+                filterSetOpen
+                  ? 'bg-brand-50 border-brand-200 text-brand-700'
+                  : 'bg-canvas-elevated border-canvas-border text-ink-700 hover:border-brand-200'
+              }`}
+              aria-haspopup="menu"
+              aria-expanded={filterSetOpen}
+            >
+              <LayoutGrid size={13} />
+              Filter Set
+              {filterSetOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            </button>
+            {filterSetOpen && (
+              <div className="absolute z-30 left-0 top-9 w-[300px] bg-canvas-elevated border border-canvas-border rounded-[10px] shadow-xl overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-canvas-border">
+                  <span className="text-[12.5px] font-medium text-ink-700">Saved Sets</span>
+                  <span className="text-[11.5px] text-ink-500 tabular-nums">0/10</span>
+                </div>
+                <div className="px-4 py-8 flex flex-col items-center justify-center text-center">
+                  <AlertCircle size={20} className="text-ink-400 mb-2.5" />
+                  <span className="text-[12.5px] text-ink-500">No filter sets saved yet</span>
+                </div>
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[12.5px] font-medium text-ink-500 border-t border-canvas-border hover:bg-[#FAFAFB] hover:text-brand-700 cursor-pointer"
+                >
+                  <Plus size={13} />
+                  Generate Filter Set
+                </button>
+              </div>
+            )}
+          </div>
           {activeFilterCount > 0 && (
             <button
               onClick={() => setFilters(emptyFilters)}
@@ -668,22 +896,28 @@ export default function ExceptionsTable({
             <tr className="bg-[#FAFAFB] border-b border-canvas-border text-left text-ink-500 uppercase tracking-wider">
               {renderOrder.map((key) => {
                 const def = defByKey[key];
+                if (!def) return null;
                 const pinned = pins[key];
                 const isDragTarget = dropTargetKey === key;
                 const isDragging = draggingKey === key;
+                const offset = pinOffsets[key] ?? 0;
                 const stickyStyle: React.CSSProperties = pinned
                   ? {
                       position: 'sticky',
-                      [pinned === 'left' ? 'left' : 'right']: 0,
+                      [pinned === 'left' ? 'left' : 'right']: offset,
                       zIndex: 5,
                       background: '#FAFAFB',
                       boxShadow: pinned === 'left' ? '1px 0 0 var(--color-canvas-border)' : '-1px 0 0 var(--color-canvas-border)',
                     }
                   : {};
+                // Lock pinned columns to their declared width so cumulative offsets stay accurate.
+                const widthStyle: React.CSSProperties = pinned && def.minWidth
+                  ? { width: def.minWidth, minWidth: def.minWidth, maxWidth: def.minWidth }
+                  : { minWidth: def.minWidth };
                 return (
                   <th
                     key={key}
-                    style={{ ...stickyStyle, minWidth: def.minWidth }}
+                    style={{ ...stickyStyle, ...widthStyle }}
                     draggable={def.draggable && !pinned}
                     onDragStart={def.draggable && !pinned ? handleDragStart(key) : undefined}
                     onDragOver={def.draggable && !pinned ? handleDragOver(key) : undefined}
@@ -693,39 +927,87 @@ export default function ExceptionsTable({
                       def.align === 'center' ? 'text-center' : ''
                     } ${isDragTarget ? 'bg-brand-50' : ''} ${isDragging ? 'opacity-50' : ''}`}
                   >
-                    <div className={`flex items-center gap-1 ${def.align === 'center' ? 'justify-center' : ''}`}>
-                      {def.draggable && !pinned && (
-                        <GripVertical size={11} className="text-ink-300 shrink-0 cursor-grab active:cursor-grabbing" />
-                      )}
-                      <span className="whitespace-nowrap">{def.label}</span>
-                      {pinned && (
-                        <Pin size={9} className={`text-brand-600 shrink-0 ${pinned === 'left' ? '-rotate-45' : 'rotate-45'}`} />
-                      )}
-                      {def.filterable || !def.alwaysPinned ? (
-                        <HeaderMenu
-                          col={def}
-                          filterValue={filters[key] ?? []}
-                          onFilterChange={(v) => setFilters(prev => ({ ...prev, [key]: v }))}
-                          pin={pinned}
-                          onPin={(side) => setPins(prev => ({ ...prev, [key]: side }))}
-                        />
-                      ) : null}
-                      {key === 'select' && (
+                    {key === 'select' ? (
+                      <div className="relative inline-flex items-center gap-1" ref={selectMenuRef}>
                         <input
                           type="checkbox"
-                          checked={allSelected}
-                          onChange={() => onToggleAll(allIds)}
+                          checked={pageSelected}
+                          ref={(el) => {
+                            if (el) el.indeterminate = !pageSelected && someSelected;
+                          }}
+                          onChange={handleHeaderCheckbox}
                           className="accent-brand-600 cursor-pointer"
-                          aria-label="Select all"
+                          aria-label="Select rows on this page"
                         />
-                      )}
-                    </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectMenuOpen(o => !o)}
+                          className="w-4 h-4 flex items-center justify-center rounded text-ink-400 hover:text-brand-700 hover:bg-[#F4F2F7] cursor-pointer"
+                          aria-label="Selection menu"
+                        >
+                          <ChevronDown size={12} />
+                        </button>
+                        {selectMenuOpen && (
+                          <div className="absolute z-30 left-0 top-6 w-[140px] bg-canvas-elevated border border-canvas-border rounded-[10px] shadow-xl py-1 normal-case tracking-normal">
+                            <button
+                              type="button"
+                              onClick={selectAllCases}
+                              className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-ink-800 hover:bg-[#FAFAFB] cursor-pointer"
+                            >
+                              All Cases
+                              {allSelected && <Check size={13} className="ml-auto text-brand-700" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={selectThisPage}
+                              className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-ink-800 hover:bg-[#FAFAFB] cursor-pointer"
+                            >
+                              This Page
+                              {pageSelected && !allSelected && <Check size={13} className="ml-auto text-brand-700" />}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className={`flex items-center gap-1 ${def.align === 'center' ? 'justify-center' : ''}`}>
+                        {def.draggable && !pinned && (
+                          <GripVertical size={11} className="text-ink-300 shrink-0 cursor-grab active:cursor-grabbing" />
+                        )}
+                        <span className="whitespace-nowrap">{def.label}</span>
+                        {pinned && (
+                          <Pin size={9} className={`text-brand-600 shrink-0 ${pinned === 'left' ? '-rotate-45' : 'rotate-45'}`} />
+                        )}
+                        {def.filterable || !def.alwaysPinned ? (
+                          <HeaderMenu
+                            col={def}
+                            filterValue={filters[key] ?? []}
+                            onFilterChange={(v) => setFilters(prev => ({ ...prev, [key]: v }))}
+                            pin={pinned}
+                            onPin={(side) => setPins(prev => ({ ...prev, [key]: side }))}
+                          />
+                        ) : null}
+                      </div>
+                    )}
                   </th>
                 );
               })}
             </tr>
           </thead>
           <tbody>
+            {showAllOnPageBanner && (
+              <tr className="bg-brand-50/40 border-b border-canvas-border">
+                <td colSpan={renderOrder.length} className="px-5 py-2.5 text-center text-[12.5px] text-ink-700">
+                  All <span className="font-semibold">{pagedIds.length}</span> Cases on this page are selected.{' '}
+                  <button
+                    type="button"
+                    onClick={selectAllCases}
+                    className="text-brand-700 font-semibold underline hover:text-brand-600 cursor-pointer"
+                  >
+                    Select all {filteredExceptions.length} Cases.
+                  </button>
+                </td>
+              </tr>
+            )}
             {filteredExceptions.length === 0 ? (
               <tr>
                 <td colSpan={renderOrder.length} className="px-6 py-10 text-center text-[13px] text-ink-500">
@@ -733,7 +1015,7 @@ export default function ExceptionsTable({
                 </td>
               </tr>
             ) : (
-              filteredExceptions.map((ex) => {
+              pagedExceptions.map((ex) => {
                 const isOverdue = ex.flags?.includes('Overdue');
                 const sel = selected.has(ex.id);
                 const rowBg = isOverdue ? 'bg-risk-50/40' : sel ? 'bg-brand-50/60' : 'hover:bg-[#FAFAFB]';
@@ -742,20 +1024,25 @@ export default function ExceptionsTable({
                   <tr key={ex.id} className={`border-b border-canvas-border last:border-b-0 transition-colors ${rowBg}`}>
                     {renderOrder.map((key) => {
                       const def = defByKey[key];
+                      if (!def) return null;
                       const pinned = pins[key];
+                      const offset = pinOffsets[key] ?? 0;
                       const stickyStyle: React.CSSProperties = pinned
                         ? {
                             position: 'sticky',
-                            [pinned === 'left' ? 'left' : 'right']: 0,
+                            [pinned === 'left' ? 'left' : 'right']: offset,
                             zIndex: 4,
                             background: rowBgForPin,
                             boxShadow: pinned === 'left' ? '1px 0 0 var(--color-canvas-border)' : '-1px 0 0 var(--color-canvas-border)',
                           }
                         : {};
+                      const widthStyle: React.CSSProperties = pinned && def.minWidth
+                        ? { width: def.minWidth, minWidth: def.minWidth, maxWidth: def.minWidth }
+                        : { minWidth: def.minWidth };
                       return (
                         <td
                           key={key}
-                          style={{ ...stickyStyle, minWidth: def.minWidth }}
+                          style={{ ...stickyStyle, ...widthStyle }}
                           className={`px-3 py-3 align-middle ${def.align === 'center' ? 'text-center' : ''} ${key === 'id' ? 'align-top' : ''}`}
                         >
                           {renderCell(
@@ -777,6 +1064,113 @@ export default function ExceptionsTable({
             )}
           </tbody>
         </table>
+      </div>
+    </div>
+
+      {/* Pagination footer — sticks to the bottom of the viewport while scrolling */}
+      <div className="sticky bottom-0 z-20 flex items-center justify-between gap-5 px-5 py-3 bg-canvas-elevated border border-canvas-border rounded-[12px] shadow-[0_-4px_12px_rgba(15,15,30,0.04)] text-[12.5px] text-ink-700">
+        {/* Export CSV split button — left side */}
+        <div className="relative inline-flex items-stretch" ref={exportMenuRef}>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 h-8 pl-3 pr-3 text-[12.5px] font-medium text-brand-700 bg-canvas-elevated border border-canvas-border rounded-l-[6px] hover:border-brand-200 cursor-pointer"
+          >
+            <Download size={13} />
+            Export CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => setExportMenuOpen(o => !o)}
+            className="inline-flex items-center justify-center w-7 h-8 bg-canvas-elevated border-y border-r border-canvas-border rounded-r-[6px] text-ink-500 hover:text-brand-700 hover:border-brand-200 cursor-pointer"
+            aria-haspopup="menu"
+            aria-expanded={exportMenuOpen}
+            aria-label="Export options"
+          >
+            <ChevronDown size={12} />
+          </button>
+          {exportMenuOpen && (
+            <div className="absolute z-30 left-0 bottom-full mb-1 w-[140px] bg-canvas-elevated border border-canvas-border rounded-[8px] shadow-xl py-1">
+              <button
+                type="button"
+                onClick={() => setExportMenuOpen(false)}
+                className="block w-full text-left px-3 py-1.5 text-[12.5px] text-ink-800 hover:bg-[#FAFAFB] cursor-pointer"
+              >
+                All Data
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-2 relative" ref={pageSizeMenuRef}>
+          <span className="text-brand-700 font-medium">Rows per page :</span>
+          <button
+            type="button"
+            onClick={() => setPageSizeMenuOpen(o => !o)}
+            className="inline-flex items-center justify-between gap-1.5 h-7 w-[64px] px-2 bg-canvas-elevated border border-canvas-border rounded-[6px] hover:border-brand-200 cursor-pointer tabular-nums"
+          >
+            {pageSize}
+            <ChevronDown size={12} className="text-ink-500" />
+          </button>
+          {pageSizeMenuOpen && (
+            <div className="absolute z-20 left-[calc(100%-64px)] bottom-full mb-1 w-[64px] bg-canvas-elevated border border-canvas-border rounded-[8px] shadow-xl py-1">
+              {PAGE_SIZE_OPTIONS.map(n => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => { setPageSize(n); setPageSizeMenuOpen(false); }}
+                  className={`block w-full text-left px-3 py-1.5 text-[12.5px] tabular-nums hover:bg-[#FAFAFB] cursor-pointer ${
+                    n === pageSize ? 'text-brand-700 font-medium bg-brand-50/40' : 'text-ink-800'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <span className="tabular-nums">
+          Page {currentPage} of {totalPages}
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="w-7 h-7 flex items-center justify-center rounded-[6px] text-ink-500 hover:bg-[#F4F2F7] hover:text-brand-700 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-500 disabled:cursor-not-allowed cursor-pointer"
+            aria-label="First page"
+          >
+            <ChevronsLeft size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="w-7 h-7 flex items-center justify-center rounded-[6px] text-ink-500 hover:bg-[#F4F2F7] hover:text-brand-700 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-500 disabled:cursor-not-allowed cursor-pointer"
+            aria-label="Previous page"
+          >
+            <ChevronLeft size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="w-7 h-7 flex items-center justify-center rounded-[6px] text-ink-500 hover:bg-[#F4F2F7] hover:text-brand-700 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-500 disabled:cursor-not-allowed cursor-pointer"
+            aria-label="Next page"
+          >
+            <ChevronRight size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="w-7 h-7 flex items-center justify-center rounded-[6px] text-ink-500 hover:bg-[#F4F2F7] hover:text-brand-700 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-500 disabled:cursor-not-allowed cursor-pointer"
+            aria-label="Last page"
+          >
+            <ChevronsRight size={15} />
+          </button>
+        </div>
+        </div>
       </div>
     </div>
   );

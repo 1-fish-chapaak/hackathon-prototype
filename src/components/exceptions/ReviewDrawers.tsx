@@ -11,6 +11,8 @@ import {
   Calendar,
   FileText,
   User,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import {
   GRC_CASE_DETAILS,
@@ -21,7 +23,6 @@ import {
   type GrcActionStatus,
   type GrcExceptionClassification,
   type GrcExceptionSeverity,
-  type GrcReviewStatus,
 } from '../../data/mockData';
 
 const CLASSIFICATION_STYLE: Record<GrcExceptionClassification, string> = {
@@ -33,18 +34,65 @@ const CLASSIFICATION_STYLE: Record<GrcExceptionClassification, string> = {
   'False Positive':            'bg-[#EEEEF1] text-ink-600',
 };
 
-const REVIEW_STYLE: Record<GrcReviewStatus, string> = {
-  Pending:     'bg-[#EEEEF1] text-ink-600',
-  Approved:    'bg-compliant-50 text-compliant-700',
-  Rejected:    'bg-risk-50 text-risk-700',
-  Implemented: 'bg-compliant-50 text-compliant-700',
+const SEVERITY_STYLE: Record<GrcExceptionSeverity, string> = {
+  High:   'bg-high-50 text-high-700',
+  Medium: 'bg-mitigated-50 text-mitigated-700',
+  Low:    'bg-compliant-50 text-compliant-700',
 };
 
-const ACTION_STATUS_STYLE: Record<GrcActionStatus, string> = {
-  Pending:                'bg-[#EEEEF1] text-ink-600',
-  Implemented:            'bg-compliant-50 text-compliant-700',
-  'Partially Implemented':'bg-mitigated-50 text-mitigated-700',
+// Combined Action Review status — folds the auditor decision and the
+// implementation outcome into a single label.
+type ActionReviewBase = 'Pending' | 'Approved' | 'Rejected';
+type CombinedActionReview =
+  | 'Pending'
+  | 'Approved (Implemented)'
+  | 'Approved (Partially Implemented)'
+  | 'Rejected (Discrepancy)'
+  | 'Approved'
+  | 'Rejected';
+
+const COMBINED_REVIEW_STYLE: Record<CombinedActionReview, string> = {
+  'Pending':                          'bg-[#EEEEF1] text-ink-600',
+  'Approved (Implemented)':           'bg-compliant-50 text-compliant-700',
+  'Approved (Partially Implemented)': 'bg-mitigated-50 text-mitigated-700',
+  'Rejected (Discrepancy)':           'bg-risk-50 text-risk-700',
+  'Approved':                         'bg-compliant-50 text-compliant-700',
+  'Rejected':                         'bg-risk-50 text-risk-700',
 };
+const COMBINED_REVIEW_LABEL: Record<CombinedActionReview, string> = {
+  'Pending':                          'Under Review',
+  'Approved (Implemented)':           'Approved (Implemented)',
+  'Approved (Partially Implemented)': 'Approved (Partially Implemented)',
+  'Rejected (Discrepancy)':           'Rejected (Discrepancy)',
+  'Approved':                         'Approved',
+  'Rejected':                         'Rejected',
+};
+
+const NO_PLAN_CLASSIFICATIONS = new Set<string>(['Business as Usual', 'False Positive']);
+
+// Legacy mock data sometimes stores 'Implemented' in actionReview — normalise.
+function normaliseActionReview(v: string): ActionReviewBase {
+  if (v === 'Approved' || v === 'Rejected' || v === 'Pending') return v;
+  if (v === 'Implemented') return 'Approved';
+  return 'Pending';
+}
+
+function combineActionReview(
+  actionReview: string,
+  actionStatus: GrcActionStatus,
+  classification: string,
+): CombinedActionReview {
+  const norm = normaliseActionReview(actionReview);
+  if (NO_PLAN_CLASSIFICATIONS.has(classification)) {
+    if (norm === 'Pending') return 'Pending';
+    if (norm === 'Rejected') return 'Rejected';
+    return 'Approved';
+  }
+  if (norm === 'Rejected' || actionStatus === 'Discrepancy') return 'Rejected (Discrepancy)';
+  if (norm === 'Pending') return 'Pending';
+  if (actionStatus === 'Partially Implemented') return 'Approved (Partially Implemented)';
+  return 'Approved (Implemented)';
+}
 
 function Overlay({ onClick }: { onClick: () => void }) {
   return (
@@ -236,42 +284,74 @@ export function ReviewClassificationDrawer({
   exception,
   onClose,
   onDecision,
+  role,
 }: {
   exception: GrcException;
   onClose: () => void;
   onDecision: (decision: 'approve' | 'reject') => void;
+  role?: 'risk-owner' | 'auditor';
 }) {
   const detail = GRC_CASE_DETAILS[exception.id];
+  const bulk = exception.bulkId ? GRC_BULK_ACTIONS[exception.bulkId] : null;
   const [comment, setComment] = useState('');
+  const isRiskOwner = role === 'risk-owner';
 
   return (
     <>
       <Overlay onClick={onClose} />
       <DrawerShell
-        title="Review Classification"
+        title={isRiskOwner ? 'Review Request Submitted' : 'Review Classification'}
         onClose={onClose}
         footer={
-          <FooterButtons
-            onCancel={onClose}
-            onReject={() => onDecision('reject')}
-            onApprove={() => onDecision('approve')}
-          />
+          isRiskOwner ? (
+            <>
+              <button
+                onClick={onClose}
+                className="flex-1 h-10 text-[13px] font-medium text-ink-700 bg-canvas-elevated border border-canvas-border rounded-[8px] hover:border-brand-200 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onClose}
+                className="flex-[2] h-10 text-[13px] font-semibold rounded-[8px] transition-colors flex items-center justify-center gap-1.5 bg-brand-600 text-white hover:bg-brand-500 cursor-pointer"
+              >
+                Submit
+              </button>
+            </>
+          ) : (
+            <FooterButtons
+              onCancel={onClose}
+              onReject={() => onDecision('reject')}
+              onApprove={() => onDecision('approve')}
+            />
+          )
         }
       >
-        <div className="bg-brand-50/60 border border-brand-100 rounded-[12px] p-4 mb-5">
-          <div className="text-[10.5px] font-semibold uppercase tracking-wider text-brand-700 mb-2">
-            Classification to Review
+        {bulk && (
+          <div className="bg-brand-50/70 border border-brand-100 rounded-[12px] p-4 mb-5">
+            <div className="flex items-center gap-2 text-[13px] font-semibold text-brand-700 mb-2">
+              <LinkIcon size={13} />
+              Part of Bulk Action
+            </div>
+            <div className="flex items-center gap-3 text-[12.5px] text-ink-700">
+              <span>ID: <span className="font-mono font-semibold text-brand-700">{bulk.id}</span></span>
+              <span className="text-ink-300">|</span>
+              <span className="tabular-nums">{bulk.caseIds.length} cases grouped</span>
+            </div>
           </div>
-          <div className="mb-2">
+        )}
+
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          <section className="border border-canvas-border rounded-[12px] p-4">
+            <SectionLabel>Severity</SectionLabel>
+            <Pill className={SEVERITY_STYLE[exception.severity]}>{exception.severity}</Pill>
+          </section>
+          <section className="border border-canvas-border rounded-[12px] p-4">
+            <SectionLabel>Classification</SectionLabel>
             <Pill className={CLASSIFICATION_STYLE[exception.classification]}>
               {exception.classification}
             </Pill>
-          </div>
-          {detail && (
-            <p className="text-[13px] italic text-ink-700 leading-relaxed">
-              {detail.classificationJustification}
-            </p>
-          )}
+          </section>
         </div>
 
         <div className="mb-5">
@@ -306,38 +386,64 @@ export function ReviewCaseDrawer({
   onClose,
   onDecision,
   onViewBulk,
+  role,
 }: {
   exception: GrcException;
   onClose: () => void;
   onDecision: (decision: 'approve' | 'reject') => void;
   onViewBulk: (bulkId: string) => void;
+  role?: 'risk-owner' | 'auditor';
 }) {
   const detail = GRC_CASE_DETAILS[exception.id];
   const bulk = exception.bulkId ? GRC_BULK_ACTIONS[exception.bulkId] : null;
-  const [activeTab, setActiveTab] = useState<'Case Details' | 'Activity Log'>('Case Details');
-  const [actionStatus, setActionStatus] = useState<GrcActionStatus>(detail?.actionStatus ?? 'Pending');
+  const [decision, setDecision] = useState<'approve' | 'reject' | null>(null);
+  const [implementation, setImplementation] = useState<'Implemented' | 'Partially Implemented' | null>(null);
   const [comment, setComment] = useState('');
+
+  // "Case Reviewed" mode — Auditor opened a case that's already past pending review,
+  // so the decision UI is hidden and only a comment box remains.
+  const isAuditor = role === 'auditor';
+  const isViewMode = isAuditor && (exception.actionReview !== 'Pending' || exception.classification === 'Unclassified');
+
+  // Submit is enabled only when (a) a decision is chosen and (b) for Approve, an implementation
+  // outcome is selected. Reject auto-implies Discrepancy so no extra choice required.
+  const canSubmit = isViewMode
+    ? true
+    : decision === 'reject' || (decision === 'approve' && implementation !== null);
 
   return (
     <>
       <Overlay onClick={onClose} />
       <DrawerShell
-        title="Review Case"
+        title={isViewMode ? 'Case Reviewed' : 'Review Case'}
         onClose={onClose}
-        tabs={['Case Details', 'Activity Log']}
-        activeTab={activeTab}
-        onTabChange={(t) => setActiveTab(t as typeof activeTab)}
         footer={
-          <FooterButtons
-            onCancel={onClose}
-            onReject={() => onDecision('reject')}
-            onApprove={() => onDecision('approve')}
-          />
+          <>
+            <button
+              onClick={onClose}
+              className="flex-1 h-10 text-[13px] font-medium text-ink-700 bg-canvas-elevated border border-canvas-border rounded-[8px] hover:border-brand-200 transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                if (isViewMode) { onClose(); return; }
+                if (canSubmit && decision) onDecision(decision);
+              }}
+              disabled={!canSubmit}
+              className={`flex-[2] h-10 text-[13px] font-semibold rounded-[8px] transition-colors flex items-center justify-center gap-1.5 ${
+                canSubmit
+                  ? 'bg-brand-600 text-white hover:bg-brand-500 cursor-pointer'
+                  : 'bg-brand-600/50 text-white/80 cursor-not-allowed'
+              }`}
+            >
+              {isViewMode ? 'Submit' : 'Submit Decision'}
+            </button>
+          </>
         }
       >
-        {activeTab === 'Case Details' ? (
-          <>
-            {bulk && (
+        <>
+          {bulk && (
               <div className="bg-brand-50/70 border border-brand-100 rounded-[12px] p-4 mb-5">
                 <div className="flex items-center gap-2 text-[13px] font-semibold text-brand-700 mb-2">
                   <LinkIcon size={13} />
@@ -358,19 +464,18 @@ export function ReviewCaseDrawer({
               </div>
             )}
 
-            <section className="border border-canvas-border rounded-[12px] p-4 mb-4">
-              <SectionLabel>Classification</SectionLabel>
-              <div className="mb-2">
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <section className="border border-canvas-border rounded-[12px] p-4">
+                <SectionLabel>Severity</SectionLabel>
+                <Pill className={SEVERITY_STYLE[exception.severity]}>{exception.severity}</Pill>
+              </section>
+              <section className="border border-canvas-border rounded-[12px] p-4">
+                <SectionLabel>Classification</SectionLabel>
                 <Pill className={CLASSIFICATION_STYLE[exception.classification]}>
                   {exception.classification}
                 </Pill>
-              </div>
-              {detail && (
-                <p className="text-[12.5px] text-ink-700 leading-relaxed">
-                  {detail.classificationJustification.replace(/^"|"$/g, '')}
-                </p>
-              )}
-            </section>
+              </section>
+            </div>
 
             {detail && (
               <section className="border border-canvas-border rounded-[12px] p-4 mb-4">
@@ -389,44 +494,118 @@ export function ReviewCaseDrawer({
 
             <section className="border border-canvas-border rounded-[12px] p-4">
               <SectionLabel>Auditor Decision</SectionLabel>
-              <div className="mb-4">
-                <label className="block text-[12.5px] font-medium text-ink-800 mb-2">
-                  Action Status <span className="text-risk">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['Implemented', 'Partially Implemented'] as const).map((status) => {
-                    const selected = actionStatus === status;
-                    return (
-                      <button
-                        key={status}
-                        onClick={() => setActionStatus(status)}
-                        className={`h-10 text-[12.5px] font-medium rounded-[8px] border transition-colors cursor-pointer ${
-                          selected
-                            ? 'bg-brand-50 border-brand-600 text-brand-700'
-                            : 'bg-canvas-elevated border-canvas-border text-ink-700 hover:border-brand-200'
-                        }`}
-                      >
-                        {status}
-                      </button>
-                    );
-                  })}
+
+              {/* Approve / Reject toggle — hidden in Case Reviewed (view) mode */}
+              {!isViewMode && (
+                <div className="mb-4">
+                  <label className="block text-[12.5px] font-medium text-ink-800 mb-2">
+                    Decision <span className="text-risk">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => { setDecision('approve'); }}
+                      className={`h-10 text-[12.5px] font-semibold rounded-[8px] border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                        decision === 'approve'
+                          ? 'bg-compliant text-white border-compliant shadow-[0_2px_8px_rgba(22,163,74,0.25)]'
+                          : 'bg-compliant-50 border-compliant text-compliant-700 hover:bg-compliant hover:text-white'
+                      }`}
+                    >
+                      <CheckCircle2 size={14} />
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => { setDecision('reject'); setImplementation(null); }}
+                      className={`h-10 text-[12.5px] font-semibold rounded-[8px] border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                        decision === 'reject'
+                          ? 'bg-risk text-white border-risk shadow-[0_2px_8px_rgba(220,38,38,0.25)]'
+                          : 'bg-risk-50 border-risk text-risk-700 hover:bg-risk hover:text-white'
+                      }`}
+                    >
+                      <XCircle size={14} />
+                      Reject
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Approve → mandatory implementation outcome */}
+              {!isViewMode && decision === 'approve' && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="mb-4"
+                >
+                  <label className="block text-[12.5px] font-medium text-ink-800 mb-2">
+                    Implementation Status <span className="text-risk">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['Implemented', 'Partially Implemented'] as const).map((status) => {
+                      const selected = implementation === status;
+                      return (
+                        <button
+                          key={status}
+                          onClick={() => setImplementation(status)}
+                          className={`h-10 text-[12.5px] font-medium rounded-[8px] border transition-colors cursor-pointer ${
+                            selected
+                              ? 'bg-brand-50 border-brand-600 text-brand-700'
+                              : 'bg-canvas-elevated border-canvas-border text-ink-700 hover:border-brand-200'
+                          }`}
+                        >
+                          {status}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Reject → Discrepancy auto-applied */}
+              {!isViewMode && decision === 'reject' && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="mb-4 p-3 bg-risk-50 border border-risk/40 rounded-[8px]"
+                >
+                  <div className="flex items-center gap-2 text-[12.5px] font-semibold text-risk-700 mb-1">
+                    <Pill className="bg-risk-50 text-risk-700 border border-risk/40">Discrepancy</Pill>
+                  </div>
+                  <p className="text-[12px] text-risk-700 leading-snug">
+                    On submit, the case will reopen at the Risk Owner's end for further action.
+                  </p>
+                </motion.div>
+              )}
+
               <div>
                 <label className="block text-[12.5px] font-medium text-ink-800 mb-2">Comment</label>
-                <textarea
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Add a review comment..."
-                  rows={4}
-                  className="w-full resize-none p-3 bg-canvas-elevated border border-canvas-border rounded-[8px] text-[13px] text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/20"
-                />
+                <div className="relative">
+                  <textarea
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Add a review comment..."
+                    rows={4}
+                    className="w-full resize-none p-3 pr-10 bg-canvas-elevated border border-canvas-border rounded-[8px] text-[13px] text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/20"
+                  />
+                  <button
+                    type="button"
+                    title="Attach file"
+                    aria-label="Attach file to comment"
+                    className="absolute bottom-2 right-2 w-7 h-7 flex items-center justify-center text-ink-400 hover:text-brand-700 cursor-pointer"
+                  >
+                    <Paperclip size={14} />
+                  </button>
+                </div>
               </div>
             </section>
+
+            {/* Activity log lives directly under the decision/comment section */}
+            {detail && (
+              <div className="mt-4">
+                <ActivityTimeline entries={detail.activityLog} />
+              </div>
+            )}
           </>
-        ) : (
-          detail && <ActivityTimeline entries={detail.activityLog} />
-        )}
       </DrawerShell>
     </>
   );
@@ -441,6 +620,13 @@ const CLASSIFY_OPTIONS: string[] = [
   'Procedural Non-Compliance',
 ];
 
+// Classifications that require an action plan (matches BulkClassifyModal).
+const ACTIONABLE_CLASSIFICATIONS = new Set<string>([
+  'Design Deficiency',
+  'System Deficiency',
+  'Procedural Non-Compliance',
+]);
+
 const SEVERITY_TONE: Record<GrcExceptionSeverity, { base: string; active: string }> = {
   High:   { base: 'text-ink-700', active: 'bg-high-50 border-high text-high-700' },
   Medium: { base: 'text-ink-700', active: 'bg-mitigated-50 border-mitigated text-mitigated-700' },
@@ -454,13 +640,31 @@ export function ClassifyExceptionDrawer({
 }: {
   exception: GrcException;
   onClose: () => void;
-  onSave: (payload: { severity: GrcExceptionSeverity; classification: string; comment: string }) => void;
+  onSave: (payload: {
+    severity: GrcExceptionSeverity;
+    classification: string;
+    comment: string;
+    actionName?: string;
+    actionTaken?: string;
+    dueDate?: string;
+  }) => void;
 }) {
   const [severity, setSeverity] = useState<GrcExceptionSeverity>(exception.severity);
   const [classification, setClassification] = useState<string>('');
   const [comment, setComment] = useState('');
+  const [actionName, setActionName] = useState('');
+  const [actionTaken, setActionTaken] = useState('');
+  const [dueDate, setDueDate] = useState('');
 
-  const canSave = classification && comment.trim().length > 0;
+  const requiresActionPlan = ACTIONABLE_CLASSIFICATIONS.has(classification);
+
+  const canSave = useMemo(() => {
+    if (!classification || !comment.trim()) return false;
+    if (requiresActionPlan) {
+      if (!actionName.trim() || !actionTaken.trim() || !dueDate) return false;
+    }
+    return true;
+  }, [classification, comment, requiresActionPlan, actionName, actionTaken, dueDate]);
 
   return (
     <>
@@ -478,7 +682,14 @@ export function ClassifyExceptionDrawer({
             </button>
             <div className="flex-1" />
             <button
-              onClick={() => canSave && onSave({ severity, classification, comment })}
+              onClick={() => canSave && onSave({
+                severity,
+                classification,
+                comment,
+                actionName: requiresActionPlan ? actionName.trim() : undefined,
+                actionTaken: requiresActionPlan ? actionTaken.trim() : undefined,
+                dueDate: requiresActionPlan ? dueDate : undefined,
+              })}
               disabled={!canSave}
               className={`h-10 px-5 text-[13px] font-semibold rounded-[8px] transition-colors ${
                 canSave
@@ -516,17 +727,116 @@ export function ClassifyExceptionDrawer({
           <label className="block text-[12.5px] font-semibold text-ink-800 mb-2">
             Classification <span className="text-risk">*</span>
           </label>
-          <select
-            value={classification}
-            onChange={(e) => setClassification(e.target.value)}
-            className="w-full h-10 px-3 bg-canvas-elevated border border-canvas-border rounded-[8px] text-[13px] text-ink-800 focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/20 cursor-pointer"
-          >
-            <option value="">Select classification...</option>
-            {CLASSIFY_OPTIONS.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={classification}
+              onChange={(e) => setClassification(e.target.value)}
+              className="w-full h-10 pl-3 pr-9 bg-canvas-elevated border border-canvas-border rounded-[8px] text-[13px] text-ink-800 appearance-none focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/20 cursor-pointer"
+            >
+              <option value="">Select classification...</option>
+              {CLASSIFY_OPTIONS.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none" />
+          </div>
+          {classification && !requiresActionPlan && (
+            <span className="mt-2 inline-block text-[11.5px] text-ink-500">No action plan required.</span>
+          )}
         </div>
+
+        {/* Conditional action-plan fields — mirrors Bulk Classify modal behaviour */}
+        {requiresActionPlan && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.15 }}
+            className="space-y-4 border-t border-canvas-border pt-5 mb-5"
+          >
+            {/* Grouped Action Plan card with shared edit/delete toolbar */}
+            <div className="border border-canvas-border rounded-[10px] p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10.5px] uppercase tracking-wider font-semibold text-ink-500">
+                  Action Plan
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const el = document.querySelector<HTMLInputElement>('input[data-field="action-name"]');
+                      el?.focus();
+                    }}
+                    title="Edit action plan"
+                    aria-label="Edit action plan"
+                    className="w-6 h-6 flex items-center justify-center rounded text-ink-400 hover:text-brand-700 hover:bg-[#F4F2F7] cursor-pointer"
+                  >
+                    <Pencil size={12} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setActionName(''); setActionTaken(''); }}
+                    title="Clear action plan"
+                    aria-label="Clear action plan"
+                    className="w-6 h-6 flex items-center justify-center rounded text-ink-400 hover:text-risk-700 hover:bg-risk-50 cursor-pointer"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[12.5px] font-semibold text-ink-800 mb-2">
+                  Action Name <span className="text-risk">*</span>
+                </label>
+                <input
+                  data-field="action-name"
+                  value={actionName}
+                  onChange={(e) => setActionName(e.target.value)}
+                  placeholder="e.g. MFA enforcement for executive accounts"
+                  className="w-full h-10 px-3 bg-canvas-elevated border border-canvas-border rounded-[8px] text-[13px] text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[12.5px] font-semibold text-ink-800 mb-2">
+                  Action Details <span className="text-risk">*</span>
+                </label>
+                <div className="relative">
+                  <textarea
+                    value={actionTaken}
+                    onChange={(e) => setActionTaken(e.target.value)}
+                    rows={4}
+                    placeholder="Describe the remediation steps, evidence, and rollout plan…"
+                    className="w-full resize-none p-3 pr-10 bg-canvas-elevated border border-canvas-border rounded-[8px] text-[13px] text-ink-800 placeholder:text-ink-400 focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/20"
+                  />
+                  <button
+                    type="button"
+                    title="Attach file"
+                    aria-label="Attach file to action details"
+                    className="absolute bottom-2 right-2 w-7 h-7 flex items-center justify-center text-ink-400 hover:text-brand-700 cursor-pointer"
+                  >
+                    <Paperclip size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[12.5px] font-semibold text-ink-800 mb-2">
+                Due Date <span className="text-risk">*</span>
+              </label>
+              <div className="relative w-[220px]">
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full h-10 pl-3 pr-9 bg-canvas-elevated border border-canvas-border rounded-[8px] text-[13px] text-ink-800 focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-600/20"
+                />
+                <Calendar size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none" />
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         <div className="mb-5">
           <label className="block text-[12.5px] font-semibold text-ink-800 mb-2">
@@ -579,24 +889,15 @@ export function ClassifyExceptionDrawer({
 export function BulkActionGroupModal({
   bulkId,
   onClose,
-  onAcceptAll,
-  onRejectAll,
 }: {
   bulkId: string;
   onClose: () => void;
-  onAcceptAll: () => void;
-  onRejectAll: () => void;
 }) {
   const bulk = GRC_BULK_ACTIONS[bulkId];
   const cases = useMemo(
     () => (bulk ? bulk.caseIds.map(id => GRC_EXCEPTIONS.find(e => e.id === id)).filter(Boolean) as GrcException[] : []),
     [bulk],
   );
-
-  const underReviewCount = cases.filter(c => {
-    const d = GRC_CASE_DETAILS[c.id];
-    return d?.actionStatus === 'Partially Implemented' || d?.actionStatus === 'Implemented';
-  }).length;
 
   if (!bulk) return null;
 
@@ -633,8 +934,8 @@ export function BulkActionGroupModal({
               <thead>
                 <tr className="bg-[#FAFAFB] border-b border-canvas-border text-left text-ink-500 uppercase tracking-wider">
                   <th className="px-4 py-3 font-medium text-[10.5px]">Exception ID</th>
+                  <th className="px-4 py-3 font-medium text-[10.5px]">Severity</th>
                   <th className="px-4 py-3 font-medium text-[10.5px]">Classification</th>
-                  <th className="px-4 py-3 font-medium text-[10.5px]">Classification Review Status</th>
                   <th className="px-4 py-3 font-medium text-[10.5px]">Action Review Status</th>
                 </tr>
               </thead>
@@ -642,21 +943,20 @@ export function BulkActionGroupModal({
                 {cases.map((c) => {
                   const d = GRC_CASE_DETAILS[c.id];
                   const actionStatus = d?.actionStatus ?? 'Pending';
+                  const combined = combineActionReview(c.actionReview, actionStatus, c.classification);
                   return (
                     <tr key={c.id} className="border-b border-canvas-border last:border-b-0">
                       <td className="px-4 py-3 align-middle">
                         <span className="font-mono font-medium text-brand-700 text-[12.5px]">{c.id}</span>
                       </td>
                       <td className="px-4 py-3 align-middle">
+                        <Pill className={SEVERITY_STYLE[c.severity]}>{c.severity}</Pill>
+                      </td>
+                      <td className="px-4 py-3 align-middle">
                         <Pill className={CLASSIFICATION_STYLE[c.classification]}>{c.classification}</Pill>
                       </td>
                       <td className="px-4 py-3 align-middle">
-                        <Pill className={REVIEW_STYLE[c.classificationReview]}>{c.classificationReview}</Pill>
-                      </td>
-                      <td className="px-4 py-3 align-middle">
-                        <Pill className={ACTION_STATUS_STYLE[actionStatus]}>
-                          {actionStatus}
-                        </Pill>
+                        <Pill className={COMBINED_REVIEW_STYLE[combined]}>{COMBINED_REVIEW_LABEL[combined]}</Pill>
                       </td>
                     </tr>
                   );
@@ -665,27 +965,6 @@ export function BulkActionGroupModal({
             </table>
           </div>
 
-          <div className="mt-5 border border-canvas-border rounded-[12px] p-4">
-            <div className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-500 mb-3">
-              Group Decision <span className="text-ink-400 normal-case tracking-normal">({underReviewCount} under review)</span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={onAcceptAll}
-                className="h-11 text-[13px] font-medium text-ink-800 bg-canvas-elevated border border-canvas-border rounded-[8px] hover:border-compliant hover:text-compliant-700 transition-colors cursor-pointer flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 size={15} />
-                Accept All
-              </button>
-              <button
-                onClick={onRejectAll}
-                className="h-11 text-[13px] font-medium text-ink-800 bg-canvas-elevated border border-canvas-border rounded-[8px] hover:border-risk hover:text-risk-700 transition-colors cursor-pointer flex items-center justify-center gap-2"
-              >
-                <XCircle size={15} />
-                Reject All
-              </button>
-            </div>
-          </div>
         </div>
       </motion.div>
     </>

@@ -93,6 +93,14 @@ export const WORKFLOWS = [
 
 // ─── Report Templates ───
 export const REPORT_TEMPLATES = [
+  { id: "rt-internal-audit", name: "Internal Audit Report", desc: "End-to-end audit report with executive summary, audit queries, findings, and recommendations", category: "Audit", icon: "file-text", sections: [
+    { name: 'Executive Summary', icon: 'file-text' },
+    { name: 'Audit Queries', icon: 'check-circle' },
+    { name: 'Findings & Observations', icon: 'alert-triangle' },
+    { name: 'Risk Analysis', icon: 'shield' },
+    { name: 'Recommendations', icon: 'trending-up' },
+    { name: 'Appendix', icon: 'file-text' },
+  ]},
   { id: "rt-001", name: "SOX Compliance Report", desc: "Comprehensive SOX compliance status with control testing results", category: "Compliance", icon: "shield", sections: [
     { name: 'Executive Summary', icon: 'file-text' },
     { name: 'Scope & Objectives', icon: 'file-text' },
@@ -101,61 +109,60 @@ export const REPORT_TEMPLATES = [
     { name: 'Remediation Status', icon: 'shield' },
     { name: 'Appendix', icon: 'file-text' },
   ]},
-  { id: "rt-002", name: "Risk Assessment Summary", desc: "Overview of all identified risks, their ratings, and mitigation status", category: "Risk", icon: "alert-triangle", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Risk Identification', icon: 'alert-triangle' },
-    { name: 'Risk Matrix', icon: 'shield' },
-    { name: 'Mitigation Strategies', icon: 'check-circle' },
-    { name: 'Trend Analysis', icon: 'trending-up' },
-    { name: 'Recommendations', icon: 'file-text' },
-  ]},
-  { id: "rt-003", name: "Control Effectiveness Report", desc: "Detailed analysis of control effectiveness across all business processes", category: "Controls", icon: "check-circle", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Control Environment Overview', icon: 'shield' },
-    { name: 'Testing Methodology', icon: 'file-text' },
-    { name: 'Effectiveness Ratings', icon: 'check-circle' },
-    { name: 'Gap Analysis', icon: 'alert-triangle' },
-    { name: 'Improvement Plan', icon: 'trending-up' },
-  ]},
-  { id: "rt-004", name: "Workflow Analytics Report", desc: "Performance metrics and insights from automated workflow executions", category: "Analytics", icon: "bar-chart", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Workflow Performance Metrics', icon: 'bar-chart' },
-    { name: 'Exception Trends', icon: 'trending-up' },
-    { name: 'Processing Efficiency', icon: 'check-circle' },
-    { name: 'Anomaly Detection Results', icon: 'alert-triangle' },
-    { name: 'Recommendations', icon: 'file-text' },
-  ]},
-  { id: "rt-005", name: "Deficiency Tracker", desc: "Status of all identified deficiencies with remediation progress", category: "Audit", icon: "file-text", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Key Findings', icon: 'alert-triangle' },
-    { name: 'Deficiency Details', icon: 'shield' },
-    { name: 'Remediation Progress', icon: 'check-circle' },
-    { name: 'Timeline & Milestones', icon: 'trending-up' },
-    { name: 'Appendix', icon: 'file-text' },
-  ]},
-  { id: "rt-006", name: "Executive Dashboard Export", desc: "Board-ready summary of GRC posture and key metrics", category: "Executive", icon: "trending-up", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Key Metrics Dashboard', icon: 'bar-chart' },
-    { name: 'Risk Heatmap', icon: 'alert-triangle' },
-    { name: 'Compliance Scorecard', icon: 'shield' },
-    { name: 'Strategic Recommendations', icon: 'check-circle' },
-    { name: 'Outlook & Next Steps', icon: 'trending-up' },
-  ]},
-  { id: "rt-007", name: "Action Taken Report", desc: "Summary of exception actions, risk owner responses, and resolution status", category: "Audit", icon: "clipboard-check", sections: [
-    { name: 'Executive Summary', icon: 'file-text' },
-    { name: 'Exception Overview', icon: 'alert-triangle' },
-    { name: 'Actions Taken', icon: 'check-circle' },
-    { name: 'Risk Owner Responses', icon: 'shield' },
+  { id: "rt-007", name: "ATR Report", desc: "Action Taken Report with query summary, risk details, action plan, and resolution status", category: "Audit", icon: "clipboard-check", sections: [
+    { name: 'Report Information', icon: 'file-text' },
+    { name: 'Query Summary', icon: 'file-text' },
+    { name: 'Risk Details', icon: 'alert-triangle' },
+    { name: 'Action Plan', icon: 'check-circle' },
     { name: 'Resolution Status', icon: 'clipboard-check' },
-    { name: 'Pending Items', icon: 'file-text' },
   ]},
+  // { id: "rt-002", name: "Risk Assessment Summary", desc: "Overview of all identified risks, their ratings, and mitigation status", category: "Risk", icon: "alert-triangle", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Risk Identification', icon: 'alert-triangle' },
+  //   { name: 'Risk Matrix', icon: 'shield' },
+  //   { name: 'Mitigation Strategies', icon: 'check-circle' },
+  //   { name: 'Trend Analysis', icon: 'trending-up' },
+  //   { name: 'Recommendations', icon: 'file-text' },
+  // ]},
+  // { id: "rt-003", name: "Control Effectiveness Report", desc: "Detailed analysis of control effectiveness across all business processes", category: "Controls", icon: "check-circle", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Control Environment Overview', icon: 'shield' },
+  //   { name: 'Testing Methodology', icon: 'file-text' },
+  //   { name: 'Effectiveness Ratings', icon: 'check-circle' },
+  //   { name: 'Gap Analysis', icon: 'alert-triangle' },
+  //   { name: 'Improvement Plan', icon: 'trending-up' },
+  // ]},
+  // { id: "rt-004", name: "Workflow Analytics Report", desc: "Performance metrics and insights from automated workflow executions", category: "Analytics", icon: "bar-chart", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Workflow Performance Metrics', icon: 'bar-chart' },
+  //   { name: 'Exception Trends', icon: 'trending-up' },
+  //   { name: 'Processing Efficiency', icon: 'check-circle' },
+  //   { name: 'Anomaly Detection Results', icon: 'alert-triangle' },
+  //   { name: 'Recommendations', icon: 'file-text' },
+  // ]},
+  // { id: "rt-005", name: "Deficiency Tracker", desc: "Status of all identified deficiencies with remediation progress", category: "Audit", icon: "file-text", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Key Findings', icon: 'alert-triangle' },
+  //   { name: 'Deficiency Details', icon: 'shield' },
+  //   { name: 'Remediation Progress', icon: 'check-circle' },
+  //   { name: 'Timeline & Milestones', icon: 'trending-up' },
+  //   { name: 'Appendix', icon: 'file-text' },
+  // ]},
+  // { id: "rt-006", name: "Executive Dashboard Export", desc: "Board-ready summary of GRC posture and key metrics", category: "Executive", icon: "trending-up", sections: [
+  //   { name: 'Executive Summary', icon: 'file-text' },
+  //   { name: 'Key Metrics Dashboard', icon: 'bar-chart' },
+  //   { name: 'Risk Heatmap', icon: 'alert-triangle' },
+  //   { name: 'Compliance Scorecard', icon: 'shield' },
+  //   { name: 'Strategic Recommendations', icon: 'check-circle' },
+  //   { name: 'Outlook & Next Steps', icon: 'trending-up' },
+  // ]},
 ];
 
 // ─── Generated Reports ───
 export const GENERATED_REPORTS = [
   { id: "gr-001", templateId: "rt-001", name: "FY26 Q1 SOX Compliance Report", tag: "Internal Audit", generatedBy: "Karan Mehta", generatedAt: "Mar 20, 2026", status: "final", pages: 24 },
-  { id: "gr-002", templateId: "rt-002", name: "P2P Risk Assessment — March 2026", tag: "Bulk Audit", generatedBy: "Tushar Goel", generatedAt: "Mar 18, 2026", status: "draft", pages: 12 },
-  { id: "gr-003", templateId: "rt-004", name: "Workflow Performance — Feb 2026", tag: "Internal Audit", generatedBy: "AI Copilot", generatedAt: "Mar 1, 2026", status: "final", pages: 8 },
+  { id: "gr-002", templateId: "ct-custom-01", name: "P2P Risk Assessment — March 2026", tag: "Bulk Audit", generatedBy: "Tushar Goel", generatedAt: "Mar 18, 2026", status: "draft", pages: 12 },
+  { id: "gr-003", templateId: "ct-custom-02", name: "Workflow Performance — Feb 2026", tag: "Internal Audit", generatedBy: "AI Copilot", generatedAt: "Mar 1, 2026", status: "final", pages: 8 },
 ];
 
 export const SHARED_REPORTS = [
@@ -275,7 +282,7 @@ export interface GrcActivityEntry {
   comment?: string;
   attachment?: { name: string };
 }
-export type GrcActionStatus = 'Implemented' | 'Partially Implemented' | 'Pending';
+export type GrcActionStatus = 'Implemented' | 'Partially Implemented' | 'Pending' | 'Discrepancy';
 export interface GrcCaseDetail {
   classificationJustification: string;
   actionTitle: string;
@@ -297,31 +304,29 @@ const PERSON = {
 };
 
 export const GRC_EXCEPTIONS: GrcException[] = [
-  { id: 'EXC001', riskCategory: 'Access Control',    severity: 'High',   status: 'Under Review', classification: 'Design Deficiency',        classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '2 days ago',   flags: ['Overdue'], bulkId: 'ACT002', title: 'Unauthorized Admin Access via Legacy VPN Endpoint',                   assignedTo: PERSON.RK },
+  { id: 'EXC001', riskCategory: 'Access Control',    severity: 'High',   status: 'Under Review', classification: 'Design Deficiency',        classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '2 days ago',   flags: ['Overdue', 'Bulk'], bulkId: 'ACT002', title: 'Unauthorized Admin Access via Legacy VPN Endpoint',                   assignedTo: PERSON.RK },
   { id: 'EXC002', riskCategory: 'Data Privacy',      severity: 'High',   status: 'Open',         classification: 'Unclassified',             classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '1 day ago',                        title: 'Customer PII Stored in Unencrypted S3 Buckets',                       assignedTo: PERSON.SR },
-  { id: 'EXC003', riskCategory: 'Financial Controls',severity: 'High',   status: 'Closed',       classification: 'System Deficiency',        classificationReview: 'Approved',    actionReview: 'Implemented',lastUpdated: '3 days ago',   flags: ['Bulk'], bulkId: 'ACT001', title: 'Vendor Invoice Approval Bypassed for Transactions Over $50K',         assignedTo: PERSON.AS },
+  { id: 'EXC003', riskCategory: 'Financial Controls',severity: 'High',   status: 'Closed',       classification: 'System Deficiency',        classificationReview: 'Approved',    actionReview: 'Approved',lastUpdated: '3 days ago',   flags: ['Bulk'], bulkId: 'ACT001', title: 'Vendor Invoice Approval Bypassed for Transactions Over $50K',         assignedTo: PERSON.AS },
   { id: 'EXC004', riskCategory: 'IT Security',       severity: 'High',   status: 'Under Review', classification: 'System Deficiency',        classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '3 days ago',   flags: ['Bulk'], bulkId: 'ACT001', title: 'Missing MFA for C-Suite Remote Access',                               assignedTo: PERSON.AS },
-  { id: 'EXC005', riskCategory: 'Compliance',        severity: 'High',   status: 'Open',         classification: 'Procedural Non-Compliance',classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '2 days ago',   flags: ['Overdue'], bulkId: 'ACT003', title: 'GDPR Data Subject Requests Exceeding 30-Day SLA',                     assignedTo: PERSON.SR },
-  { id: 'EXC006', riskCategory: 'Financial Controls',severity: 'High',   status: 'Closed',       classification: 'Design Deficiency',        classificationReview: 'Approved',    actionReview: 'Implemented',lastUpdated: '15 days ago',  bulkId: 'ACT004', title: 'Trading Desk Reconciliation Errors in Q3',                            assignedTo: PERSON.RK },
+  { id: 'EXC005', riskCategory: 'Compliance',        severity: 'High',   status: 'Open',         classification: 'Procedural Non-Compliance',classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '2 days ago',   flags: ['Overdue', 'Bulk'], bulkId: 'ACT002', title: 'GDPR Data Subject Requests Exceeding 30-Day SLA',                     assignedTo: PERSON.SR },
+  { id: 'EXC006', riskCategory: 'Financial Controls',severity: 'High',   status: 'Closed',       classification: 'Design Deficiency',        classificationReview: 'Approved',    actionReview: 'Approved',lastUpdated: '15 days ago',  bulkId: 'ACT004', title: 'Trading Desk Reconciliation Errors in Q3',                            assignedTo: PERSON.RK },
   { id: 'EXC007', riskCategory: 'IT Security',       severity: 'Medium', status: 'Open',         classification: 'Unclassified',             classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: 'about 7 hours ago',                title: 'Firewall Rule Permits Unrestricted Outbound Traffic',                 assignedTo: PERSON.AS },
   { id: 'EXC008', riskCategory: 'Compliance',        severity: 'High',   status: 'Open',         classification: 'Business as Usual',        classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '4 days ago',                       title: 'Missing Security Log Retention on Payment Processing System',         assignedTo: PERSON.SR },
   { id: 'EXC009', riskCategory: 'Operational Risk',  severity: 'Medium', status: 'Open',         classification: 'Unclassified',             classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '5 days ago',                       title: 'Inadequate Access Review for Terminated Contractors',                 assignedTo: PERSON.RK },
-  { id: 'EXC010', riskCategory: 'Financial Controls',severity: 'High',   status: 'Closed',       classification: 'System Deficiency',        classificationReview: 'Approved',    actionReview: 'Implemented',lastUpdated: '12 days ago',  bulkId: 'ACT005', title: 'Duplicate Payments to 3 Vendors (Oct-Nov)',                           assignedTo: PERSON.AS },
-  { id: 'EXC011', riskCategory: 'IT Security',       severity: 'Medium', status: 'Open',         classification: 'False Positive',           classificationReview: 'Approved',    actionReview: 'Implemented',lastUpdated: '6 days ago',                       title: 'Service Account API Key Usage — policy-exempt accounts',              assignedTo: PERSON.SR },
+  { id: 'EXC010', riskCategory: 'Financial Controls',severity: 'High',   status: 'Closed',       classification: 'System Deficiency',        classificationReview: 'Approved',    actionReview: 'Approved',lastUpdated: '12 days ago',  bulkId: 'ACT005', title: 'Duplicate Payments to 3 Vendors (Oct-Nov)',                           assignedTo: PERSON.AS },
+  { id: 'EXC011', riskCategory: 'IT Security',       severity: 'Medium', status: 'Open',         classification: 'False Positive',           classificationReview: 'Approved',    actionReview: 'Approved',lastUpdated: '6 days ago',                       title: 'Service Account API Key Usage — policy-exempt accounts',              assignedTo: PERSON.SR },
   { id: 'EXC012', riskCategory: 'Data Privacy',      severity: 'High',   status: 'Open',         classification: 'Procedural Non-Compliance',classificationReview: 'Pending',     actionReview: 'Rejected',   lastUpdated: '1 day ago',   bulkId: 'ACT006', title: 'Customer Data Shared with Unauthorized Third-Party',                  assignedTo: PERSON.RK },
-  { id: 'EXC013', riskCategory: 'Compliance',        severity: 'Low',    status: 'Open',         classification: 'Procedural Non-Compliance',classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '20 days ago', bulkId: 'ACT007', title: 'CAB Approval Bypassed for Production Change',                         assignedTo: PERSON.RK },
-  { id: 'EXC014', riskCategory: 'Access Control',    severity: 'Medium', status: 'Open',         classification: 'Design Deficiency',        classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '8 days ago',  bulkId: 'ACT008', title: 'Change Management System — CAB approval not enforced',                assignedTo: PERSON.SR },
+  { id: 'EXC013', riskCategory: 'Compliance',        severity: 'Low',    status: 'Open',         classification: 'Procedural Non-Compliance',classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '20 days ago', flags: ['Bulk'], bulkId: 'ACT003', title: 'CAB Approval Bypassed for Production Change',                         assignedTo: PERSON.RK },
+  { id: 'EXC014', riskCategory: 'Access Control',    severity: 'Medium', status: 'Open',         classification: 'Design Deficiency',        classificationReview: 'Pending',     actionReview: 'Pending',     lastUpdated: '8 days ago',  flags: ['Bulk'], bulkId: 'ACT003', title: 'Change Management System — CAB approval not enforced',                assignedTo: PERSON.SR },
 ];
 
 export const GRC_BULK_ACTIONS: Record<string, GrcBulkAction> = {
-  'ACT001': { id: 'ACT001', caseIds: ['EXC003', 'EXC004'], title: 'MFA enforcement — executive accounts' },
-  'ACT002': { id: 'ACT002', caseIds: ['EXC001'],           title: 'Legacy VPN endpoint remediation' },
-  'ACT003': { id: 'ACT003', caseIds: ['EXC005'],           title: 'DSR process SLA compliance' },
-  'ACT004': { id: 'ACT004', caseIds: ['EXC006'],           title: 'Q3 trading reconciliation fix' },
-  'ACT005': { id: 'ACT005', caseIds: ['EXC010'],           title: 'Vendor duplicate payment recovery' },
-  'ACT006': { id: 'ACT006', caseIds: ['EXC012'],           title: 'Third-party data share review' },
-  'ACT007': { id: 'ACT007', caseIds: ['EXC013'],           title: 'CAB approval gate reinstatement' },
-  'ACT008': { id: 'ACT008', caseIds: ['EXC014'],           title: 'Change mgmt CAB enforcement' },
+  'ACT001': { id: 'ACT001', caseIds: ['EXC003', 'EXC004'],           title: 'MFA enforcement — executive accounts' },
+  'ACT002': { id: 'ACT002', caseIds: ['EXC001', 'EXC005'],           title: 'Legacy access & SLA remediation bundle' },
+  'ACT003': { id: 'ACT003', caseIds: ['EXC013', 'EXC014'],           title: 'CAB approval enforcement — change mgmt' },
+  'ACT004': { id: 'ACT004', caseIds: ['EXC006'],                     title: 'Q3 trading reconciliation fix' },
+  'ACT005': { id: 'ACT005', caseIds: ['EXC010'],                     title: 'Vendor duplicate payment recovery' },
+  'ACT006': { id: 'ACT006', caseIds: ['EXC012'],                     title: 'Third-party data share review' },
 };
 
 const DEFAULT_ACTIVITY: GrcActivityEntry[] = [
@@ -450,13 +455,12 @@ export const ACTION_HUB_SUMMARY = {
   reportHealthLabel: 'Good' as const,
   atrReadiness: {
     completedSteps: 0,
-    totalSteps: 4,
+    totalSteps: 3,
     overallPct: 60,
     steps: [
-      { id: 'step-1', label: 'All exceptions classified',     current: 10, total: 14 },
-      { id: 'step-2', label: 'Action plan documented',        current: 6,  total: 8  },
-      { id: 'step-3', label: 'Actions submitted by Risk Owner', current: 5, total: 8 },
-      { id: 'step-4', label: 'Auditor review complete',       current: 3,  total: 10 },
+      { id: 'step-1', label: 'All exceptions classified',           current: 10, total: 14 },
+      { id: 'step-3', label: 'Action Plan submitted by Risk Owner', current: 5,  total: 8  },
+      { id: 'step-4', label: 'Auditor review complete',             current: 3,  total: 10 },
     ],
   },
   overdue: [
