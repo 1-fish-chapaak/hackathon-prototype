@@ -2,9 +2,9 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X, BarChart3, Plus, Check, LayoutGrid,
-  ChevronRight, ChevronDown, Search, Lock, Users,
+  ChevronRight, Search, Users,
 } from 'lucide-react';
-import { ConfigurableChart } from '../dashboard/add-widget/ConfigurableChart';
+import { SectionHeader, Checkbox, KpiPreviewRow, ChartPreviewRow, TablePreviewRow, toggleIn, setAll } from './WidgetPickerParts';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,136 +46,7 @@ interface AddToDashboardModalProps {
   }) => void;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function SectionHeader({ title, count, total, collapsed, onToggle, onToggleAll }: {
-  title: string; count: number; total: number; collapsed: boolean;
-  onToggle: () => void; onToggleAll: (all: boolean) => void;
-}) {
-  const allSelected = count === total;
-  return (
-    <div className="flex items-center justify-between">
-      <button onClick={onToggle} className="flex items-center gap-1.5 text-[12px] font-semibold text-ink-700 cursor-pointer">
-        <ChevronDown size={14} className={`transition-transform ${collapsed ? '-rotate-90' : ''}`} />
-        {title}
-        <span className="text-ink-400 font-normal">({count}/{total})</span>
-      </button>
-      <button
-        onClick={() => onToggleAll(!allSelected)}
-        className="text-[11px] font-medium text-brand-600 hover:text-brand-700 cursor-pointer"
-      >
-        {allSelected ? 'None' : 'All'}
-      </button>
-    </div>
-  );
-}
-
-function Checkbox({ checked }: { checked: boolean }) {
-  return (
-    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
-      checked ? 'bg-brand-600 border-brand-600' : 'border-ink-300'
-    }`}>
-      {checked && <Check size={10} className="text-white" />}
-    </div>
-  );
-}
-
-// KPI — compact card: checkbox + label + bold value, all in one tight row
-function KpiPreviewRow({ kpi, checked, onChange }: {
-  kpi: AuditResultData['kpis'][number]; checked: boolean; onChange: () => void;
-}) {
-  return (
-    <button
-      onClick={onChange}
-      className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-all cursor-pointer text-left ${
-        checked ? 'border-brand-200 bg-brand-50/40' : 'border-canvas-border hover:border-brand-200'
-      }`}
-    >
-      <Checkbox checked={checked} />
-      <span className="text-[11px] text-ink-500 flex-1 truncate">{kpi.label}</span>
-      <span className={`text-[13px] font-bold tabular-nums shrink-0 ${kpi.color}`}>{kpi.value}</span>
-    </button>
-  );
-}
-
-// Map chart id → ConfigurableChart props + description
-const CHART_PREVIEW_CONFIG: Record<string, { type: 'bar' | 'pie' | 'area' | 'line'; xAxis?: string; color?: string; description: string }> = {
-  confidence: { type: 'bar', xAxis: 'Quarter', color: '#7C3AED', description: 'Match-score distribution across confidence bands' },
-  vendor: { type: 'pie', xAxis: 'Department', color: '#3d68ee', description: 'Flagged duplicates breakdown by vendor' },
-};
-
-function ChartPreviewRow({ chart, checked, onChange }: {
-  chart: AuditResultData['charts'][number]; checked: boolean; onChange: () => void;
-}) {
-  const cfg = CHART_PREVIEW_CONFIG[chart.id] || { type: 'bar' as const, description: '' };
-  return (
-    <button
-      onClick={onChange}
-      className={`w-full glass-card rounded-xl overflow-hidden transition-all cursor-pointer text-left flex flex-col ${
-        checked ? 'ring-2 ring-brand-400/40 border-brand-200' : ''
-      }`}
-    >
-      {/* Header — matches dashboard WidgetCard header */}
-      <div className="flex items-center gap-2 px-4 pt-3 pb-1 shrink-0">
-        <Checkbox checked={checked} />
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[13px] font-semibold text-ink-900 truncate">{chart.label}</h3>
-          <p className="text-[10px] text-ink-500 truncate mt-0.5">{cfg.description}</p>
-        </div>
-      </div>
-      {/* Chart — matches dashboard flex-1 pattern */}
-      <div className="pointer-events-none relative flex-1 overflow-hidden" style={{ minHeight: 180 }}>
-        <ConfigurableChart
-          type={cfg.type}
-          xAxis={cfg.xAxis}
-          color={cfg.color}
-          showTarget={false}
-          showLegend={false}
-        />
-      </div>
-    </button>
-  );
-}
-
-// Table — header + 2 data rows, max 4 visible cols
-function TablePreviewRow({ columns, sampleRows, checked, onChange }: {
-  columns: string[]; sampleRows: string[][]; checked: boolean; onChange: () => void;
-}) {
-  const cols = columns.slice(0, 4);
-  const rows = sampleRows.slice(0, 2);
-  return (
-    <button
-      onClick={onChange}
-      className={`w-full rounded-lg border transition-all cursor-pointer text-left ${
-        checked ? 'border-brand-200 bg-brand-50/40' : 'border-canvas-border hover:border-brand-200'
-      }`}
-    >
-      <div className="flex items-center gap-2 px-3 pt-2.5 pb-1.5">
-        <Checkbox checked={checked} />
-        <span className="text-[11px] font-medium text-ink-700">Results Table</span>
-        <span className="text-[10px] text-ink-400">{columns.length} columns &middot; {sampleRows.length} rows</span>
-      </div>
-      <div className="px-3 pb-3">
-        <div className="rounded-md border border-canvas-border overflow-hidden">
-          <div className="flex bg-paper-50">
-            {cols.map(c => (
-              <div key={c} className="flex-1 px-2 py-1 text-[9px] font-semibold text-ink-500 truncate border-r border-canvas-border last:border-r-0">{c}</div>
-            ))}
-            {columns.length > 4 && <div className="w-8 px-1 py-1 text-[9px] text-ink-400 text-center shrink-0">+{columns.length - 4}</div>}
-          </div>
-          {rows.map((row, ri) => (
-            <div key={ri} className="flex border-t border-canvas-border">
-              {cols.map((c, ci) => (
-                <div key={c} className="flex-1 px-2 py-1 text-[9px] text-ink-600 truncate border-r border-canvas-border last:border-r-0">{row[ci] || ''}</div>
-              ))}
-              {columns.length > 4 && <div className="w-8 px-1 py-1 text-[9px] text-ink-400 text-center shrink-0">…</div>}
-            </div>
-          ))}
-        </div>
-      </div>
-    </button>
-  );
-}
+// ─── Shared components imported from WidgetPickerParts.tsx ─────────────────────
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -235,15 +106,6 @@ export function AddToDashboardModal({
   };
 
   // Toggle helpers
-  const toggleIn = (set: Set<string>, key: string, setter: (s: Set<string>) => void) => {
-    const next = new Set(set);
-    next.has(key) ? next.delete(key) : next.add(key);
-    setter(next);
-  };
-  const setAll = (items: string[], all: boolean, setter: (s: Set<string>) => void) => {
-    setter(all ? new Set(items) : new Set());
-  };
-
   // Split dashboards into my + shared
   const myDashboards = useMemo(() => dashboards.filter(d => !d.sharedBy), [dashboards]);
   const sharedDashboards = useMemo(() => dashboards.filter(d => !!d.sharedBy), [dashboards]);

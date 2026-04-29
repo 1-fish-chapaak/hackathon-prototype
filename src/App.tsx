@@ -256,8 +256,13 @@ export default function App() {
                 const existing = state.dashboardWidgets[payload.dashboardId] || [];
                 saveDashboardWidgets(payload.dashboardId, [...existing, ...widgetStubs]);
               }}
-              onAddResultToReport={() => {
-                // Report integration — stub for hackathon.
+              onAddResultToReport={(payload) => {
+                // Report builder doesn't have widget persistence yet — for hackathon
+                // the message-level addedTo state (handled in ChatView) is sufficient.
+                // In production, this would append sections to the report draft.
+                if (payload.isNew) {
+                  // Could add to a reports list — skipped for hackathon scope
+                }
               }}
               onViewDashboard={(id) => openDashboard(id)}
               onViewReport={() => setView('reports')}

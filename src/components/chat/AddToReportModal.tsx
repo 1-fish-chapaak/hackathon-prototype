@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  X, FileText, Plus, Check, ChevronRight, ChevronDown, Search, Lock,
+  X, FileText, Plus, Check, ChevronRight, Search, Lock,
 } from 'lucide-react';
 import type { AuditResultData, GranularSelection } from './AddToDashboardModal';
-import { ConfigurableChart } from '../dashboard/add-widget/ConfigurableChart';
+import { SectionHeader, Checkbox, KpiPreviewRow, ChartPreviewRow, TablePreviewRow, toggleIn, setAll } from './WidgetPickerParts';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,131 +30,9 @@ interface AddToReportModalProps {
   }) => void;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Shared components imported from WidgetPickerParts.tsx ─────────────────────
 
-function SectionHeader({ title, count, total, collapsed, onToggle, onToggleAll }: {
-  title: string; count: number; total: number; collapsed: boolean;
-  onToggle: () => void; onToggleAll: (all: boolean) => void;
-}) {
-  const allSelected = count === total;
-  return (
-    <div className="flex items-center justify-between">
-      <button onClick={onToggle} className="flex items-center gap-1.5 text-[12px] font-semibold text-ink-700 cursor-pointer">
-        <ChevronDown size={14} className={`transition-transform ${collapsed ? '-rotate-90' : ''}`} />
-        {title}
-        <span className="text-ink-400 font-normal">({count}/{total})</span>
-      </button>
-      <button
-        onClick={() => onToggleAll(!allSelected)}
-        className="text-[11px] font-medium text-violet-600 hover:text-violet-700 cursor-pointer"
-      >
-        {allSelected ? 'None' : 'All'}
-      </button>
-    </div>
-  );
-}
-
-function Checkbox({ checked }: { checked: boolean }) {
-  return (
-    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
-      checked ? 'bg-violet-600 border-violet-600' : 'border-ink-300'
-    }`}>
-      {checked && <Check size={10} className="text-white" />}
-    </div>
-  );
-}
-
-function KpiPreviewRow({ kpi, checked, onChange }: {
-  kpi: AuditResultData['kpis'][number]; checked: boolean; onChange: () => void;
-}) {
-  return (
-    <button
-      onClick={onChange}
-      className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-all cursor-pointer text-left ${
-        checked ? 'border-violet-200 bg-violet-50/40' : 'border-canvas-border hover:border-violet-200'
-      }`}
-    >
-      <Checkbox checked={checked} />
-      <span className="text-[11px] text-ink-500 flex-1 truncate">{kpi.label}</span>
-      <span className={`text-[13px] font-bold tabular-nums shrink-0 ${kpi.color}`}>{kpi.value}</span>
-    </button>
-  );
-}
-
-const CHART_PREVIEW_CONFIG: Record<string, { type: 'bar' | 'pie' | 'area' | 'line'; xAxis?: string; color?: string; description: string }> = {
-  confidence: { type: 'bar', xAxis: 'Quarter', color: '#7C3AED', description: 'Match-score distribution across confidence bands' },
-  vendor: { type: 'pie', xAxis: 'Department', color: '#3d68ee', description: 'Flagged duplicates breakdown by vendor' },
-};
-
-function ChartPreviewRow({ chart, checked, onChange }: {
-  chart: AuditResultData['charts'][number]; checked: boolean; onChange: () => void;
-}) {
-  const cfg = CHART_PREVIEW_CONFIG[chart.id] || { type: 'bar' as const, description: '' };
-  return (
-    <button
-      onClick={onChange}
-      className={`w-full glass-card rounded-xl overflow-hidden transition-all cursor-pointer text-left flex flex-col ${
-        checked ? 'ring-2 ring-violet-400/40 border-violet-200' : ''
-      }`}
-    >
-      <div className="flex items-center gap-2 px-4 pt-3 pb-1 shrink-0">
-        <Checkbox checked={checked} />
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[13px] font-semibold text-ink-900 truncate">{chart.label}</h3>
-          <p className="text-[10px] text-ink-500 truncate mt-0.5">{cfg.description}</p>
-        </div>
-      </div>
-      <div className="pointer-events-none relative flex-1 overflow-hidden" style={{ minHeight: 180 }}>
-        <ConfigurableChart
-          type={cfg.type}
-          xAxis={cfg.xAxis}
-          color={cfg.color}
-          showTarget={false}
-          showLegend={false}
-        />
-      </div>
-    </button>
-  );
-}
-
-function TablePreviewRow({ columns, sampleRows, checked, onChange }: {
-  columns: string[]; sampleRows: string[][]; checked: boolean; onChange: () => void;
-}) {
-  const cols = columns.slice(0, 4);
-  const rows = sampleRows.slice(0, 2);
-  return (
-    <button
-      onClick={onChange}
-      className={`w-full rounded-lg border transition-all cursor-pointer text-left ${
-        checked ? 'border-violet-200 bg-violet-50/40' : 'border-canvas-border hover:border-violet-200'
-      }`}
-    >
-      <div className="flex items-center gap-2 px-3 pt-2.5 pb-1.5">
-        <Checkbox checked={checked} />
-        <span className="text-[11px] font-medium text-ink-700">Results Table</span>
-        <span className="text-[10px] text-ink-400">{columns.length} columns &middot; {sampleRows.length} rows</span>
-      </div>
-      <div className="px-3 pb-3">
-        <div className="rounded-md border border-canvas-border overflow-hidden">
-          <div className="flex bg-paper-50">
-            {cols.map(c => (
-              <div key={c} className="flex-1 px-2 py-1 text-[9px] font-semibold text-ink-500 truncate border-r border-canvas-border last:border-r-0">{c}</div>
-            ))}
-            {columns.length > 4 && <div className="w-8 px-1 py-1 text-[9px] text-ink-400 text-center shrink-0">+{columns.length - 4}</div>}
-          </div>
-          {rows.map((row, ri) => (
-            <div key={ri} className="flex border-t border-canvas-border">
-              {cols.map((c, ci) => (
-                <div key={c} className="flex-1 px-2 py-1 text-[9px] text-ink-600 truncate border-r border-canvas-border last:border-r-0">{row[ci] || ''}</div>
-              ))}
-              {columns.length > 4 && <div className="w-8 px-1 py-1 text-[9px] text-ink-400 text-center shrink-0">…</div>}
-            </div>
-          ))}
-        </div>
-      </div>
-    </button>
-  );
-}
+const ACCENT = 'violet' as const;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -202,15 +80,6 @@ export function AddToReportModal({
       selection: { kpis: [...selKpis], charts: [...selCharts], columns: [...selCols] },
     });
     handleClose();
-  };
-
-  const toggleIn = (set: Set<string>, key: string, setter: (s: Set<string>) => void) => {
-    const next = new Set(set);
-    next.has(key) ? next.delete(key) : next.add(key);
-    setter(next);
-  };
-  const setAll = (items: string[], all: boolean, setter: (s: Set<string>) => void) => {
-    setter(all ? new Set(items) : new Set());
   };
 
   const filtered = reports.filter(r =>
@@ -366,6 +235,7 @@ export function AddToReportModal({
                       collapsed={!!collapsed.kpis}
                       onToggle={() => setCollapsed(c => ({ ...c, kpis: !c.kpis }))}
                       onToggleAll={(all) => setAll(resultData.kpis.map(k => k.label), all, setSelKpis)}
+                      accent={ACCENT}
                     />
                     {!collapsed.kpis && (
                       <div className="grid grid-cols-2 gap-1.5 pl-1">
@@ -374,6 +244,7 @@ export function AddToReportModal({
                             key={kpi.label} kpi={kpi}
                             checked={selKpis.has(kpi.label)}
                             onChange={() => toggleIn(selKpis, kpi.label, setSelKpis)}
+                            accent={ACCENT}
                           />
                         ))}
                       </div>
@@ -388,6 +259,7 @@ export function AddToReportModal({
                       collapsed={!!collapsed.charts}
                       onToggle={() => setCollapsed(c => ({ ...c, charts: !c.charts }))}
                       onToggleAll={(all) => setAll(resultData.charts.map(c => c.id), all, setSelCharts)}
+                      accent={ACCENT}
                     />
                     {!collapsed.charts && (
                       <div className="grid grid-cols-2 gap-1.5 pl-1">
@@ -396,6 +268,7 @@ export function AddToReportModal({
                             key={chart.id} chart={chart}
                             checked={selCharts.has(chart.id)}
                             onChange={() => toggleIn(selCharts, chart.id, setSelCharts)}
+                            accent={ACCENT}
                           />
                         ))}
                       </div>
@@ -410,6 +283,7 @@ export function AddToReportModal({
                       collapsed={!!collapsed.columns}
                       onToggle={() => setCollapsed(c => ({ ...c, columns: !c.columns }))}
                       onToggleAll={(all) => setAll(resultData.table.columns, all, setSelCols)}
+                      accent={ACCENT}
                     />
                     {!collapsed.columns && (
                       <div className="pl-1">
@@ -418,6 +292,7 @@ export function AddToReportModal({
                           sampleRows={resultData.table.rows || []}
                           checked={selCols.size > 0}
                           onChange={() => setAll(resultData.table.columns, selCols.size === 0, setSelCols)}
+                          accent={ACCENT}
                         />
                       </div>
                     )}
