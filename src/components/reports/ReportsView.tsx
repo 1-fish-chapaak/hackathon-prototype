@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/mockData';
 import { REPORT_QUERIES_ATR, type ReportQueryAtr } from '../../data/reportQueries';
+import { QUERY_SESSIONS, FAVOURITES } from '../../data/queryHistory';
 import { StatusBadge } from '../shared/StatusBadge';
 import SmartTable from '../shared/SmartTable';
 import { useToast } from '../shared/Toast';
@@ -2450,33 +2451,6 @@ const QUERY_LABEL_TO_KEY: Record<string, keyof typeof REPORT_QUERIES_ATR> = {
   'GRC posture for board reporting': 'EX01',
 };
 
-const ADDQ_QUERY_SESSIONS: { group: string; items: string[] }[] = [
-  { group: 'TODAY', items: [
-    'Detect duplicate invoice entries across vendors',
-    'Show unauthorized vendor master changes — last 90 days',
-  ]},
-  { group: 'YESTERDAY', items: [
-    'Risk identification across P2P, O2C, R2R, S2C processes',
-    'Mitigation strategy effectiveness — partially mitigated high risks',
-  ]},
-  { group: 'LAST 7 DAYS', items: [
-    'Control testing results — effectiveness across 87 controls',
-    'Workflow execution performance — runs and accuracy',
-    'Exception trend analysis — flagged vs resolved',
-    'Board-level GRC posture summary',
-  ]},
-];
-
-const ADDQ_FAVOURITES: { group: string; items: string[] }[] = [
-  { group: '', items: [
-    'Duplicate invoice detection summary',
-    'Unauthorized vendor master changes — quarterly review',
-    'Risk register — 12 critical risks across processes',
-    'Control testing — effective vs requires remediation',
-    'GRC posture for board reporting',
-  ]},
-];
-
 type AddQueryTab = 'recent' | 'saved' | 'upload' | 'all' | 'files' | 'db';
 
 function AddQueryModal({ open, onClose, onAttach }: {
@@ -2563,8 +2537,8 @@ function AddQueryModal({ open, onClose, onAttach }: {
             {/* Tabs */}
             <div className="flex gap-5 px-7 border-b border-canvas-border">
               {([
-                { id: 'recent' as AddQueryTab, label: 'Recent Chats', icon: MessageSquare, count: ADDQ_QUERY_SESSIONS.reduce((n, g) => n + g.items.length, 0) },
-                { id: 'saved' as AddQueryTab, label: 'Favourites', icon: Star, count: ADDQ_FAVOURITES.reduce((n, g) => n + g.items.length, 0) },
+                { id: 'recent' as AddQueryTab, label: 'Recent Chats', icon: MessageSquare, count: QUERY_SESSIONS.reduce((n, g) => n + g.items.length, 0) },
+                { id: 'saved' as AddQueryTab, label: 'Favourites', icon: Star, count: FAVOURITES.reduce((n, g) => n + g.items.length, 0) },
                 { id: 'upload' as AddQueryTab, label: 'Upload', icon: Upload, count: 0 },
                 { id: 'all' as AddQueryTab, label: 'All Data', icon: Layers, count: allSources.length },
                 { id: 'files' as AddQueryTab, label: 'Files', icon: FileText, count: fileSources.length },
@@ -2591,7 +2565,7 @@ function AddQueryModal({ open, onClose, onAttach }: {
             <div className="flex-1 overflow-y-auto px-7 py-6">
               <AnimatePresence mode="wait">
                 {(activeTab === 'recent' || activeTab === 'saved') && (() => {
-                  const groups = activeTab === 'recent' ? ADDQ_QUERY_SESSIONS : ADDQ_FAVOURITES;
+                  const groups = activeTab === 'recent' ? QUERY_SESSIONS : FAVOURITES;
                   const hasResults = groups.some(g => g.items.some(q => q.toLowerCase().includes(search.toLowerCase())));
                   return (
                     <motion.div key={activeTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '../shared/Toast';
 import { SEED, TYPE_META, formatDate, type DataSource } from '../data-sources/sources';
+import { QUERY_SESSIONS, FAVOURITES } from '../../data/queryHistory';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -129,36 +130,6 @@ const SORT_LABELS: Record<SortOption, string> = {
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-// ─── Query data ─────────────────────────────────────────────────────────────
-
-const QUERY_SESSIONS = [
-  { group: 'TODAY', items: [
-    'What are the top 5 performing categories?',
-    'Compare year-over-year growth across all states',
-  ]},
-  { group: 'YESTERDAY', items: [
-    'Show customer acquisition cost by channel',
-    'What is the average order value by product category?',
-  ]},
-  { group: 'LAST 7 DAYS', items: [
-    'Analyze revenue trends for the last 12 months',
-    'Which sales person has the highest conversion rate?',
-    'Show me the distribution of products across different regions',
-    'What is the total revenue by country?',
-    'Compare Q1 vs Q2 performance metrics',
-  ]},
-];
-
-const FAVOURITES = [
-  { group: '', items: [
-    'Monthly revenue breakdown by region',
-    'Top 10 vendors by invoice volume',
-    'Compliance score trends Q1–Q4',
-    'Duplicate invoice detection summary',
-    'Department-wise spend analysis',
-    'Year-over-year procurement savings',
-  ]},
-];
 
 const QUERY_TEMPLATES = [
   { group: 'FINANCIAL', items: [
