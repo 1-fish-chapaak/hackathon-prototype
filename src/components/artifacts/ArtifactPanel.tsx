@@ -170,7 +170,7 @@ function SourcesTab() {
   ];
 
   return (
-    <div className="space-y-3 pt-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4">
       {sources.map((src, i) => (
         <CollapsibleSection key={i} title={src.name} icon={Database}>
           <div className="pt-3 space-y-2">
@@ -200,21 +200,12 @@ function SourcesTab() {
 export default function ArtifactPanel({ activeTab, setActiveTab, onClose }: ArtifactPanelProps) {
   return (
     <motion.div
-      initial={{ width: 0, opacity: 0 }}
-      animate={{ width: 440, opacity: 1 }}
-      exit={{ width: 0, opacity: 0 }}
-      transition={{ duration: 0.25, ease: 'easeInOut' }}
-      className="h-full bg-surface-2 border-l border-border-light flex flex-col overflow-hidden shrink-0"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2, ease: 'easeInOut' }}
+      className="h-full w-full bg-surface-2 border-l border-border-light flex flex-col overflow-hidden"
     >
-      {/* IRA Workspace identifier */}
-      <div className="h-7 border-b border-border-light bg-canvas flex items-center px-4 shrink-0">
-        <div className="flex items-center gap-1.5">
-          <Sparkles size={11} className="text-primary" />
-          <span className="text-[10.5px] font-semibold tracking-[0.08em] uppercase text-text-muted">IRA Workspace</span>
-          <span className="text-[10.5px] text-text-muted/70">· Query mode</span>
-        </div>
-      </div>
-
       {/* Header */}
       <div className="h-12 border-b border-border-light bg-white flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-1">
@@ -247,7 +238,7 @@ export default function ArtifactPanel({ activeTab, setActiveTab, onClose }: Arti
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 pb-6">
+      <div className="flex-1 overflow-y-auto px-5 pb-6">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}

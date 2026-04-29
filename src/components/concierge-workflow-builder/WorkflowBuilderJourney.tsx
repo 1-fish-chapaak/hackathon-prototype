@@ -24,6 +24,14 @@ import type {
 
 interface Props {
   onBack: () => void;
+  /**
+   * If provided, the journey skips the Step 1 prompt page and lands the user
+   * directly on the clarification screen for a workflow generated from this
+   * prompt. Used by the chat empty-state Submit-with-toggle handoff.
+   */
+  initialPrompt?: string;
+  /** Fired once the seed prompt has been consumed, so the parent can clear it. */
+  onInitialPromptConsumed?: () => void;
 }
 
 const STEP_META: Record<JourneyStep, { title: string; action: string }> = {
@@ -65,7 +73,7 @@ function tolerancePctFromAnswer(answer: string | undefined): number {
   return 5;
 }
 
-export default function WorkflowBuilderJourney({ onBack }: Props) {
+export default function WorkflowBuilderJourney({ onBack, initialPrompt, onInitialPromptConsumed }: Props) {
   const [step, setStep] = useState<JourneyStep>(1);
   const [prompt, setPrompt] = useState('');
   const [chatInput, setChatInput] = useState('');
@@ -293,6 +301,22 @@ export default function WorkflowBuilderJourney({ onBack }: Props) {
     const draft = generateWorkflow(prompt);
     applyWorkflow(draft, 'prompt', prompt);
   }, [prompt, applyWorkflow]);
+
+  // When the journey is opened with a pre-seeded prompt (e.g. handed off from
+  // the chat empty-state Submit), auto-generate and skip Step 1. The user lands
+  // on the clarification screen so the journey feels like a continuation of
+  // the chat composer rather than a separate intake.
+  const seededPromptRef = useRef<string | null>(null);
+  useEffect(() => {
+    const seed = initialPrompt?.trim();
+    if (!seed) return;
+    if (seededPromptRef.current === seed) return;
+    seededPromptRef.current = seed;
+    setPrompt(seed);
+    const draft = generateWorkflow(seed);
+    applyWorkflow(draft, 'prompt', seed);
+    onInitialPromptConsumed?.();
+  }, [initialPrompt, applyWorkflow, onInitialPromptConsumed]);
 
   const handlePickTemplate = useCallback(
     (id: string) => {

@@ -34,6 +34,10 @@ export interface NewControlData {
 interface Props {
   onClose: () => void;
   onSave: (data: NewControlData) => void;
+  /** Optional prefill for business process (e.g., from RACM context) */
+  defaultProcess?: string;
+  /** Optional prefill for risk mapping (e.g., from RACM row) */
+  defaultRiskIds?: string[];
 }
 
 /* ─── Constants ─── */
@@ -80,13 +84,13 @@ const selectClass = inputClass + ' cursor-pointer';
 const labelClass = 'block text-[12.5px] font-semibold text-ink-700 mb-1.5';
 
 /* ─── Component ─── */
-export default function CreateControlDrawer({ onClose, onSave }: Props) {
+export default function CreateControlDrawer({ onClose, onSave, defaultProcess, defaultRiskIds }: Props) {
   const [step, setStep] = useState(0);
 
-  // Form state
+  // Form state — with optional prefills
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [businessProcess, setBusinessProcess] = useState('');
+  const [businessProcess, setBusinessProcess] = useState(defaultProcess || '');
   const [subProcess, setSubProcess] = useState('');
   const [owner, setOwner] = useState('');
   const [classification, setClassification] = useState<'Key' | 'Non-Key'>('Non-Key');
@@ -94,7 +98,7 @@ export default function CreateControlDrawer({ onClose, onSave }: Props) {
   const [automation, setAutomation] = useState<'Manual' | 'IT-dependent' | 'Automated'>('Manual');
   const [frequency, setFrequency] = useState('');
   const [assertions, setAssertions] = useState<string[]>([]);
-  const [mappedRisks, setMappedRisks] = useState<string[]>([]);
+  const [mappedRisks, setMappedRisks] = useState<string[]>(defaultRiskIds || []);
   const [riskSearch, setRiskSearch] = useState('');
   const [workflowChoice, setWorkflowChoice] = useState<'link' | 'later' | 'skip'>('skip');
   const [linkedWorkflowId, setLinkedWorkflowId] = useState<string | null>(null);

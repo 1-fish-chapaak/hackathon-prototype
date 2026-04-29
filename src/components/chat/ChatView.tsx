@@ -2,8 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Send, Paperclip, Sparkles, History, X, FileText,
-  Workflow, ShieldCheck, BarChart3, ChevronDown, ChevronRight,
-  MessageSquare, ArrowRight, Mic, Plus, Lightbulb,
+  Workflow, BarChart3, ChevronDown, ChevronRight,
+  MessageSquare, ArrowRight, Plus, Lightbulb,
   Save, CheckCircle, Maximize2, Lock,
   ExternalLink, Download, MoreHorizontal, Pencil, CornerDownLeft, ArrowUpRight,
 } from 'lucide-react';
@@ -109,12 +109,19 @@ interface ChatViewProps {
   onChatLoaded?: () => void;
   /** Optional view router so the slide-out can deep-link to /recents. */
   setView?: (v: import('../../hooks/useAppState').View) => void;
+  /** Pending dashboard waiting for chat data */
+  pendingDashboard?: { name: string; description: string } | null;
+  /** Create dashboard with fields from chat */
+  onAddToDashboard?: (fields: string[]) => void;
+  /** Dismiss the pending dashboard banner */
+  onDismissPendingDashboard?: () => void;
+  /**
+   * Hand the typed prompt to the AI Concierge workflow builder. Invoked from
+   * the empty-state Submit when the "Build a workflow" toggle is on — the
+   * builder opens directly on the clarification screen.
+   */
+  onLaunchWorkflowBuilder?: (prompt: string) => void;
 }
-
-const QUICK_ACTIONS = [
-  { icon: Workflow, label: 'Build a workflow', color: 'from-purple-500 to-violet-600' },
-  { icon: ShieldCheck, label: 'Run audit query', color: 'from-blue-500 to-cyan-500' },
-];
 
 // Step labels for the subtle inline audit loader. The artifact panel renders
 // the full Plan / Code / Sources detail; here we only narrate progress as a
@@ -478,18 +485,9 @@ function ClarificationBlock({
     <div className="space-y-2">
       <div className="rounded-xl border border-canvas-border bg-canvas-elevated overflow-hidden shadow-sm">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-canvas-border bg-paper-50/40 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[13px] font-semibold text-ink-800 truncate">{activeQ.question}</span>
-            <span className="text-[11px] text-ink-500 tabular-nums shrink-0">· {activeIndex + 1} of {total}</span>
-          </div>
-          <button
-            onClick={onSkipAll}
-            aria-label="Dismiss clarification"
-            className="text-ink-400 hover:text-ink-700 p-0.5 rounded transition-colors cursor-pointer shrink-0"
-          >
-            <X size={14} />
-          </button>
+        <div className="px-4 py-3 border-b border-canvas-border/60 bg-canvas-elevated flex items-center gap-2 min-w-0">
+          <span className="text-[13px] font-semibold text-ink-800 truncate">{activeQ.question}</span>
+          <span className="text-[11px] text-ink-500 tabular-nums shrink-0">· {activeIndex + 1} of {total}</span>
         </div>
 
         {/* Numbered options */}
@@ -503,25 +501,25 @@ function ClarificationBlock({
                 aria-selected={isHighlighted}
                 onClick={() => selectOption(opt)}
                 onMouseEnter={() => setHighlighted(idx)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left border-t border-canvas-border first:border-t-0 transition-colors cursor-pointer ${
-                  isHighlighted ? 'bg-paper-100/70' : 'hover:bg-paper-50/50'
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left border-t border-canvas-border/60 first:border-t-0 transition-colors cursor-pointer ${
+                  isHighlighted ? 'bg-primary-xlight' : 'hover:bg-primary-xlight/50'
                 }`}
               >
                 <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-[11px] font-mono tabular-nums shrink-0 transition-colors ${
-                  isHighlighted ? 'bg-paper-200 text-ink-800' : 'bg-paper-100 text-ink-500'
+                  isHighlighted ? 'bg-primary-xlight text-primary font-semibold' : 'bg-ink-300/15 text-ink-400'
                 }`}>
                   {idx + 1}
                 </span>
                 <span className="flex-1 text-[13px] text-ink-800">{opt}</span>
                 {isHighlighted && (
-                  <CornerDownLeft size={12} className="text-ink-500 shrink-0" />
+                  <CornerDownLeft size={12} className="text-primary shrink-0" />
                 )}
               </button>
             );
           })}
 
           {/* Custom input row */}
-          <div className="border-t border-canvas-border flex items-center gap-3 px-4 py-2">
+          <div className="border-t border-canvas-border/60 flex items-center gap-3 px-4 py-2">
             <Pencil size={13} className="text-ink-400 shrink-0" />
             <input
               ref={inputRef}
@@ -539,7 +537,7 @@ function ClarificationBlock({
             />
             <button
               onClick={skipCurrent}
-              className="px-3 h-7 text-[12px] font-medium text-ink-600 hover:text-ink-800 border border-canvas-border bg-paper-50/60 hover:bg-paper-100/60 rounded-md transition-colors cursor-pointer shrink-0"
+              className="px-3 h-7 text-[12px] font-medium text-ink-600 hover:text-ink-800 border border-canvas-border bg-canvas-elevated hover:bg-paper-50 rounded-md transition-colors cursor-pointer shrink-0"
             >
               Skip
             </button>
@@ -782,7 +780,7 @@ function SaveAsWorkflowModal({ open, defaultName, defaultDescription, onCancel, 
   );
 }
 
-export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowType, initialQuery, onInitialQueryProcessed, selectedChatId, onChatLoaded, setView }: ChatViewProps) {
+export default function ChatView({ showChatHistory, toggleChatHistory, setShowArtifacts, setActiveArtifactTab, setArtifactMode, setWorkflowType, initialQuery, onInitialQueryProcessed, selectedChatId, onChatLoaded, setView, pendingDashboard, onAddToDashboard, onDismissPendingDashboard, onLaunchWorkflowBuilder }: ChatViewProps) {
   const { addToast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -799,6 +797,10 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
   // Workflow build flow state
   const [workflowBuildPhase, setWorkflowBuildPhase] = useState(0); // 0=idle, 1=asking-files, 2=asking-logic, 3=confirming, 4=input-config, 5=freeze-confirm, 6=output-config, 7=save
   const [currentWorkflowType, setCurrentWorkflowType] = useState<WorkflowTypeId | null>(null);
+
+  // Composer mode toggle — drives whether a Submit routes to query or workflow flow.
+  // Default is query (toggle off); user opts into workflow build by toggling the pill on.
+  const [buildWorkflowMode, setBuildWorkflowMode] = useState(false);
 
   // Save-as-workflow flow state (Path 3 — query → workflow flip)
   const [showSaveAsWfModal, setShowSaveAsWfModal] = useState(false);
@@ -1259,12 +1261,21 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     }, 600);
   };
 
-  const simulateResponse = (userMsg: string) => {
+  const simulateResponse = (userMsg: string, explicitMode?: 'query' | 'workflow') => {
     clearTimers();
 
     // If workflow is awaiting user confirmation (phase 3), any positive reply opens canvas
     if (workflowBuildPhase === 3) {
       openCanvasAfterConfirmation();
+      return;
+    }
+
+    if (explicitMode === 'workflow') {
+      startConversationalWorkflowFlow(userMsg);
+      return;
+    }
+    if (explicitMode === 'query') {
+      startQueryClarificationFlow();
       return;
     }
 
@@ -1287,6 +1298,19 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
       ...files.map(f => f.name),
     ].filter(Boolean);
     if (attachmentLabels.length > 0) text += `\n[Attached: ${attachmentLabels.join(', ')}]`;
+
+    // Empty-state Submit with the "Build a workflow" toggle on hands the
+    // typed prompt off to the AI Concierge workflow builder, which opens on
+    // the clarification screen. The chat thread isn't started — the user
+    // continues the conversation inside the journey.
+    if (buildWorkflowMode && messages.length === 0 && trimmed && onLaunchWorkflowBuilder) {
+      onLaunchWorkflowBuilder(trimmed);
+      setInput('');
+      setFiles([]);
+      setAttachedSources([]);
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+      return;
+    }
 
     // If a clarification message is open, route the typed text to its first
     // unanswered question instead of starting a new chat turn.
@@ -1311,7 +1335,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
     setFiles([]);
     setAttachedSources([]);
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
-    simulateResponse(text);
+    simulateResponse(text, buildWorkflowMode ? 'workflow' : 'query');
   };
 
   const handleFollowUpClick = (question: string) => {
@@ -1456,6 +1480,38 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
             </button>
           </div>
 
+          {pendingDashboard && (
+            <div className="shrink-0 mx-5 mb-2 px-4 py-2.5 bg-white/80 backdrop-blur-sm rounded-xl border border-brand-200 flex items-center justify-between gap-3 relative z-10">
+              <div className="flex items-center gap-2.5">
+                <div className="size-8 rounded-lg bg-brand-600 flex items-center justify-center">
+                  <BarChart3 size={14} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[13px] font-semibold text-brand-900">Creating: {pendingDashboard.name}</p>
+                  <p className="text-[11px] text-brand-600">Run a query, then add results to your dashboard</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const mockFields = ['Date', 'Region', 'Category', 'Vendor Name', 'Invoice Amount (₹)', 'Status', 'Department', 'Quantity'];
+                    onAddToDashboard?.(mockFields);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-[12px] font-semibold rounded-lg transition-colors cursor-pointer"
+                >
+                  <BarChart3 size={12} />
+                  Add to Dashboard
+                </button>
+                <button
+                  onClick={onDismissPendingDashboard}
+                  className="p-1 rounded-md text-brand-400 hover:text-brand-700 hover:bg-brand-100 transition-colors cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
           <div style={{
             flex: 1,
             display: 'flex',
@@ -1524,7 +1580,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                     value={input}
                     onChange={e => { setInput(e.target.value); handleTextareaInput(); }}
                     onKeyDown={handleKeyDown}
-                    placeholder="Describe a workflow and let Auditify do the rest"
+                    placeholder={buildWorkflowMode ? 'Describe a workflow and let Auditify do the rest' : 'Ask a question or run an audit query'}
                     style={{
                       width: '100%', background: 'transparent', border: 'none', outline: 'none',
                       resize: 'none', padding: '20px 20px 56px', fontSize: 15, minHeight: 100,
@@ -1533,10 +1589,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                     }}
                     rows={2}
                   />
-                  <div style={{ position: 'absolute', left: 12, bottom: 12, display: 'flex', gap: 4 }}>
-                    <button className="p-2 text-text-muted/40 hover:text-primary hover:bg-primary-xlight rounded-lg transition-colors cursor-pointer" aria-label="Voice input">
-                      <Mic size={18} />
-                    </button>
+                  <div style={{ position: 'absolute', left: 12, bottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                     <button
                       type="button"
                       onClick={() => setShowDataPicker(true)}
@@ -1544,6 +1597,23 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                       aria-label="Attach data sources or files"
                     >
                       <Plus size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={buildWorkflowMode}
+                      aria-label="Build a workflow"
+                      onClick={() => setBuildWorkflowMode(v => !v)}
+                      className={`flex items-center gap-1.5 h-8 px-3 rounded-full border text-[12.5px] font-medium transition-colors cursor-pointer ${
+                        buildWorkflowMode
+                          ? 'border-primary/40 bg-primary-xlight text-primary'
+                          : 'border-border-light bg-white text-text-secondary hover:text-text hover:border-border'
+                      }`}
+                    >
+                      <span className={`w-4 h-4 rounded-full flex items-center justify-center ${buildWorkflowMode ? 'bg-gradient-to-br from-purple-500 to-violet-600' : 'bg-paper-100'}`}>
+                        <Workflow size={9} className={buildWorkflowMode ? 'text-white' : 'text-text-muted'} />
+                      </span>
+                      Build a workflow
                     </button>
                   </div>
                   <div style={{ position: 'absolute', right: 12, bottom: 12 }}>
@@ -1557,28 +1627,6 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                     </button>
                   </div>
                 </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 32 }}>
-                {QUICK_ACTIONS.map((action, i) => (
-                  <motion.button
-                    key={action.label}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 + i * 0.08 }}
-                    onClick={() => {
-                      const text = action.label;
-                      setMessages(prev => [...prev, { id: `msg-${Date.now()}`, role: 'user', text, timestamp: new Date() }]);
-                      simulateResponse(text);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-border-light bg-white hover:border-primary/30 hover:shadow-sm transition-all text-[13px] text-text-secondary hover:text-text cursor-pointer"
-                  >
-                    <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${action.color} flex items-center justify-center`}>
-                      <action.icon size={11} className="text-white" />
-                    </div>
-                    {action.label}
-                  </motion.button>
-                ))}
               </div>
 
             </motion.div>
@@ -1624,6 +1672,39 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
           </div>
         </div>
 
+        {/* Pending Dashboard Banner */}
+        {pendingDashboard && (
+          <div className="shrink-0 px-4 py-2.5 bg-gradient-to-r from-brand-50 to-brand-100/50 border-b border-brand-200 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="size-8 rounded-lg bg-brand-600 flex items-center justify-center">
+                <BarChart3 size={14} className="text-white" />
+              </div>
+              <div>
+                <p className="text-[13px] font-semibold text-brand-900">Creating: {pendingDashboard.name}</p>
+                <p className="text-[11px] text-brand-600">Run a query, then add results to your dashboard</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const mockFields = ['Date', 'Region', 'Category', 'Vendor Name', 'Invoice Amount (₹)', 'Status', 'Department', 'Quantity'];
+                  onAddToDashboard?.(mockFields);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-[12px] font-semibold rounded-lg transition-colors cursor-pointer"
+              >
+                <BarChart3 size={12} />
+                Add to Dashboard
+              </button>
+              <button
+                onClick={onDismissPendingDashboard}
+                className="p-1 rounded-md text-brand-400 hover:text-brand-700 hover:bg-brand-100 transition-colors cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Messages */}
         <div
           ref={messagesContainerRef}
@@ -1646,6 +1727,11 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                         }
                         steps={msg.thinking}
                       />
+                    )}
+
+                    {/* IRA byline — appears above each assistant response so the source is unambiguous */}
+                    {msg.role === 'assistant' && (msg.text || msg.richType) && (
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-400 mb-2">IRA</div>
                     )}
 
                     {/* Rich inline components */}
@@ -1844,7 +1930,7 @@ export default function ChatView({ showChatHistory, toggleChatHistory, setShowAr
                       </div>
                     ) : msg.text ? (
                       msg.role === 'user' ? (
-                        <div className="px-4 py-3 rounded-2xl rounded-br-sm bg-brand-600 text-white text-[13.5px] leading-relaxed">
+                        <div className="px-4 py-2.5 rounded-2xl bg-primary-xlight text-primary border border-primary/15 text-[13.5px] leading-relaxed">
                           {msg.text}
                         </div>
                       ) : (

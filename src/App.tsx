@@ -7,7 +7,7 @@ import { BulkRunProgressProvider } from './components/shared/BulkRunProgress';
 import Sidebar from './components/sidebar/Sidebar';
 import ChatView from './components/chat/ChatView';
 import ArtifactPanel from './components/artifacts/ArtifactPanel';
-import WorkflowBuilderCanvas from './components/artifacts/WorkflowBuilderCanvas';
+import ChatWorkflowWorkspace from './components/chat/ChatWorkflowWorkspace';
 import WorkflowTemplates from './components/workflow/WorkflowTemplates';
 import WorkflowDetail from './components/workflow/WorkflowDetail';
 import WorkflowLibraryView from './components/workflow/WorkflowLibraryView';
@@ -80,9 +80,12 @@ export default function App() {
     saveDashboardWidgets,
     addCreatedDashboard,
     deleteCreatedDashboard,
+    setPendingDashboard,
     openExecutionPanel,
     closeExecutionPanel,
     setExceptionRole,
+    launchWorkflowBuilderWithPrompt,
+    setWorkflowBuilderSeedPrompt,
   } = useAppState();
 
   const mainScrollRef = useRef<HTMLDivElement>(null);
@@ -113,7 +116,7 @@ export default function App() {
     if (!state.showArtifacts) return null;
 
     const inner = state.artifactMode === 'workflow' ? (
-      <WorkflowBuilderCanvas
+      <ChatWorkflowWorkspace
         onClose={() => setShowArtifacts(false)}
         workflowType={state.workflowType ?? undefined}
       />
@@ -133,7 +136,7 @@ export default function App() {
     // to wrapper for proper 3D feel; transformStyle preserve-3d on the spinning
     // element so the back face renders correctly.
     return (
-      <div style={{ perspective: '1400px' }} className="h-full">
+      <div style={{ perspective: '1400px' }} className="flex-1 min-w-0 h-full">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={state.artifactMode}
@@ -142,7 +145,7 @@ export default function App() {
             exit={{ rotateY: 360 }}
             transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
             style={{ transformStyle: 'preserve-3d', backfaceVisibility: 'hidden' }}
-            className="h-full"
+            className="h-full w-full"
           >
             {inner}
           </motion.div>
@@ -175,7 +178,7 @@ export default function App() {
       case 'chat':
         return (
           <div className="flex flex-1 h-full overflow-hidden">
-            <ChatView
+            <div className="flex-1 min-w-0 h-full"><ChatView
               showChatHistory={state.showChatHistory}
               toggleChatHistory={toggleChatHistory}
               setShowArtifacts={setShowArtifacts}
@@ -189,7 +192,25 @@ export default function App() {
               selectedChatId={state.selectedChatId}
               onChatLoaded={() => setSelectedChatId(null)}
               setView={setView}
-            />
+              pendingDashboard={state.pendingDashboard}
+              onAddToDashboard={(fields) => {
+                const pending = state.pendingDashboard;
+                if (!pending) return;
+                const newId = `custom-${Date.now()}`;
+                addCreatedDashboard({
+                  id: newId,
+                  name: pending.name,
+                  description: pending.description || 'Custom dashboard',
+                  timeAgo: 'Just now',
+                  creator: 'You',
+                  accent: 'bg-brand-50 text-brand-700',
+                });
+                setPendingDashboard(null);
+                openDashboard(newId, fields);
+              }}
+              onDismissPendingDashboard={() => setPendingDashboard(null)}
+              onLaunchWorkflowBuilder={launchWorkflowBuilderWithPrompt}
+            /></div>
             <AnimatePresence>
               {renderArtifactPanel()}
             </AnimatePresence>
@@ -287,6 +308,10 @@ export default function App() {
             createdDashboards={state.createdDashboards}
             onCreateDashboard={addCreatedDashboard}
             onDeleteDashboard={deleteCreatedDashboard}
+            onOpenChat={(pending) => {
+              if (pending) setPendingDashboard(pending);
+              setView('chat');
+            }}
           />
         );
 
@@ -391,7 +416,13 @@ export default function App() {
         return <AIConciergeView setView={setView} />;
 
       case 'ai-concierge-workflow-builder':
-        return <WorkflowBuilderJourney onBack={() => setView('ai-concierge')} />;
+        return (
+          <WorkflowBuilderJourney
+            onBack={() => setView('ai-concierge')}
+            initialPrompt={state.workflowBuilderSeedPrompt ?? undefined}
+            onInitialPromptConsumed={() => setWorkflowBuilderSeedPrompt(null)}
+          />
+        );
 
       // Execution — Findings
       case 'findings':

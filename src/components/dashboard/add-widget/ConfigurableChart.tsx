@@ -41,6 +41,13 @@ import {
 } from "./DrillContext";
 import type { DrillLevel } from "./DrillContext";
 import { KpiCard } from "./KpiCard";
+import {
+  Plus,
+  Eye,
+  Filter,
+  Download,
+  X,
+} from "lucide-react";
 
 /* ─── Colour palette ─────────────────────────────────────────────────────── */
 const PURPLE = "#7C3AED";
@@ -516,7 +523,34 @@ function PieTooltip({ active, payload }: any) {
 
 /* ─── Table preview component ────────────────────────────────────────────── */
 function TablePreview() {
+  const ALL_COLUMNS = [
+    "INVOICE ID",
+    "PO NUMBER",
+    "DATE",
+    "VENDOR",
+    "CATEGORY",
+    "VALUE",
+    "PERFORMANCE",
+  ];
+  const COL_KEYS: Record<string, string> = {
+    "INVOICE ID": "id",
+    "PO NUMBER": "po",
+    DATE: "date",
+    VENDOR: "vendor",
+    CATEGORY: "cat",
+    VALUE: "value",
+    PERFORMANCE: "perf",
+  };
+
   const [page, setPage] = useState(1);
+  const [tableFilters, setTableFilters] = useState<
+    { column: string; value: string }[]
+  >([]);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    ...ALL_COLUMNS,
+  ]);
+  const [showColumnDropdown, setShowColumnDropdown] = useState(false);
+
   const rows = [
     {
       id: "STG-001",
@@ -616,21 +650,163 @@ function TablePreview() {
           ? "#f59e0b"
           : "#ef4444";
 
+  const addFilter = () => {
+    setTableFilters((prev) => [
+      ...prev,
+      { column: ALL_COLUMNS[0], value: "" },
+    ]);
+  };
+
+  const removeFilter = (idx: number) => {
+    setTableFilters((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateFilter = (
+    idx: number,
+    field: "column" | "value",
+    val: string,
+  ) => {
+    setTableFilters((prev) =>
+      prev.map((f, i) => (i === idx ? { ...f, [field]: val } : f)),
+    );
+  };
+
+  const toggleColumn = (col: string) => {
+    setVisibleColumns((prev) =>
+      prev.includes(col)
+        ? prev.filter((c) => c !== col)
+        : [...prev, col],
+    );
+  };
+
+  const clearAllFilters = () => {
+    setTableFilters([]);
+  };
+
+  const handleDownload = () => {
+    const header = visibleColumns.join(",");
+    const csvRows = rows.map((r: any) =>
+      visibleColumns.map((col) => String(r[COL_KEYS[col]])).join(","),
+    );
+    const csv = [header, ...csvRows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "table-export.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const displayedColumns = ALL_COLUMNS.filter((c) =>
+    visibleColumns.includes(c),
+  );
+
   return (
     <div className="w-full h-full flex flex-col text-[12px] font-['Inter',sans-serif]">
+      {/* ── Filter Toolbar ── */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-[#e5e7eb] shrink-0">
+        <button
+          onClick={addFilter}
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-ink-600 rounded-lg border border-canvas-border hover:bg-brand-50 transition-colors"
+        >
+          <Plus size={14} />
+          Add Filter
+        </button>
+
+        {/* Columns toggle */}
+        <div className="relative">
+          <button
+            onClick={() => setShowColumnDropdown((v) => !v)}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-ink-600 rounded-lg border border-canvas-border hover:bg-brand-50 transition-colors"
+          >
+            <Eye size={14} />
+            Columns ({visibleColumns.length}/{ALL_COLUMNS.length})
+          </button>
+          {showColumnDropdown && (
+            <div className="absolute top-full left-0 mt-1 z-30 w-44 bg-white rounded-lg border border-[#e5e7eb] shadow-lg py-1">
+              {ALL_COLUMNS.map((col) => (
+                <label
+                  key={col}
+                  className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-ink-600 hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={visibleColumns.includes(col)}
+                    onChange={() => toggleColumn(col)}
+                    className="accent-brand-600 rounded"
+                  />
+                  {col}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={clearAllFilters}
+          disabled={tableFilters.length === 0}
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-ink-600 rounded-lg border border-canvas-border hover:bg-brand-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <Filter size={14} />
+          Clear All
+        </button>
+
+        <div className="ml-auto">
+          <button
+            onClick={handleDownload}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-ink-600 rounded-lg border border-canvas-border hover:bg-brand-50 transition-colors"
+          >
+            <Download size={14} />
+            Download
+          </button>
+        </div>
+      </div>
+
+      {/* ── Active filter rows ── */}
+      {tableFilters.length > 0 && (
+        <div className="flex flex-col gap-1.5 px-4 py-2 border-b border-[#e5e7eb] bg-gray-50/50 shrink-0">
+          {tableFilters.map((f, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <select
+                value={f.column}
+                onChange={(e) =>
+                  updateFilter(idx, "column", e.target.value)
+                }
+                className="px-2 py-1 text-[12px] text-ink-600 rounded-lg border border-canvas-border bg-white focus:outline-none focus:ring-1 focus:ring-brand-400"
+              >
+                {ALL_COLUMNS.map((col) => (
+                  <option key={col} value={col}>
+                    {col}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={f.value}
+                onChange={(e) =>
+                  updateFilter(idx, "value", e.target.value)
+                }
+                placeholder="Select values..."
+                className="px-2 py-1 text-[12px] text-ink-600 rounded-lg border border-canvas-border bg-white placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-400 w-40"
+              />
+              <button
+                onClick={() => removeFilter(idx)}
+                className="p-1 text-ink-600 rounded hover:bg-gray-200 transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Table ── */}
       <div className="flex-1 overflow-auto">
         <table className="w-full border-collapse">
           <thead className="sticky top-0 bg-white z-10">
             <tr className="border-b border-gray-200">
-              {[
-                "INVOICE ID",
-                "PO NUMBER",
-                "DATE",
-                "VENDOR",
-                "CATEGORY",
-                "VALUE",
-                "PERFORMANCE",
-              ].map((col) => (
+              {displayedColumns.map((col) => (
                 <th
                   key={col}
                   className="text-left py-2.5 px-3 text-[10px] font-semibold text-gray-500 uppercase tracking-[0.5px] whitespace-nowrap"
@@ -646,43 +822,57 @@ function TablePreview() {
                 key={i}
                 className="border-b border-gray-100 transition-colors hover:bg-gray-50"
               >
-                <td className="py-2.5 px-3 text-gray-500 whitespace-nowrap">
-                  {r.id}
-                </td>
-                <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
-                  {r.po}
-                </td>
-                <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
-                  {r.date}
-                </td>
-                <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
-                  {r.vendor}
-                </td>
-                <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
-                  {r.cat}
-                </td>
-                <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
-                  {r.value}
-                </td>
-                <td className="py-2.5 px-3 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-16 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${r.perf}%`,
-                          backgroundColor: perfColor(r.perf),
-                        }}
-                      />
+                {displayedColumns.includes("INVOICE ID") && (
+                  <td className="py-2.5 px-3 text-gray-500 whitespace-nowrap">
+                    {r.id}
+                  </td>
+                )}
+                {displayedColumns.includes("PO NUMBER") && (
+                  <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
+                    {r.po}
+                  </td>
+                )}
+                {displayedColumns.includes("DATE") && (
+                  <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
+                    {r.date}
+                  </td>
+                )}
+                {displayedColumns.includes("VENDOR") && (
+                  <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
+                    {r.vendor}
+                  </td>
+                )}
+                {displayedColumns.includes("CATEGORY") && (
+                  <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
+                    {r.cat}
+                  </td>
+                )}
+                {displayedColumns.includes("VALUE") && (
+                  <td className="py-2.5 px-3 text-gray-900 whitespace-nowrap">
+                    {r.value}
+                  </td>
+                )}
+                {displayedColumns.includes("PERFORMANCE") && (
+                  <td className="py-2.5 px-3 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-16 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${r.perf}%`,
+                            backgroundColor: perfColor(r.perf),
+                          }}
+                        />
+                      </div>
+                      <span
+                        style={{ color: perfColor(r.perf) }}
+                        className="font-medium w-8"
+                      >
+                        {r.perf}%
+                      </span>
                     </div>
-                    <span
-                      style={{ color: perfColor(r.perf) }}
-                      className="font-medium w-8"
-                    >
-                      {r.perf}%
-                    </span>
-                  </div>
-                </td>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -741,6 +931,40 @@ export interface ConfigurableChartProps {
   barSpacing?: string;
   /** Per-slice distance from center for pie charts */
   pieSpacingMap?: Record<string, string>;
+  /** Font family for all chart text. Default: "Inter" */
+  fontFamily?: string;
+  /** Bold text styling for chart labels */
+  bold?: boolean;
+  /** Italic text styling for chart labels */
+  italic?: boolean;
+  /** Underline text styling for chart labels */
+  underline?: boolean;
+  /** Custom X axis title label */
+  xAxisTitle?: string;
+  /** Custom Y axis title label */
+  yAxisTitle?: string;
+  /** Show/hide legend. Default: true */
+  showLegend?: boolean;
+  /** Y axis minimum value */
+  yMin?: string;
+  /** Y axis maximum value */
+  yMax?: string;
+  /** Invert Y axis range */
+  invertRange?: boolean;
+  /** Legend position */
+  legendPosition?: string;
+  /** Legend bold */
+  legendBold?: boolean;
+  /** Legend italic */
+  legendItalic?: boolean;
+  /** Legend text color */
+  legendTextColor?: string;
+  /** Conditional formatting rules */
+  conditionalRules?: { evaluateField: string; condition: string; value: string; value2?: string; color: string }[];
+  /** Aggregation type for Y axis values */
+  aggregation?: string;
+  /** All column names for table type */
+  tableColumns?: string[];
 }
 
 /* ─── Drill-level → effective time-axis mapping ───────────────────────────── */
@@ -767,7 +991,83 @@ export function ConfigurableChart({
   onSeriesColorChange,
   barSpacing,
   pieSpacingMap,
+  fontFamily: fontFamilyProp,
+  bold = false,
+  italic = false,
+  underline: _underline = false,
+  xAxisTitle,
+  yAxisTitle,
+  showLegend = true,
+  yMin,
+  yMax,
+  invertRange = false,
+  legendPosition: legendPosProp,
+  legendBold: legendBoldProp,
+  legendItalic: legendItalicProp,
+  legendTextColor: legendTextColorProp,
+  conditionalRules,
+  aggregation,
+  tableColumns,
 }: ConfigurableChartProps) {
+  const fontFamily = `${fontFamilyProp || "Inter"}, sans-serif`;
+  const fontWeight = bold ? 700 : undefined;
+  const fontStyle = italic ? ("italic" as const) : undefined;
+  const textDecoration = _underline ? ("underline" as const) : undefined;
+  const textStyle = { fontFamily, fontWeight, fontStyle, textDecoration };
+  // Conditional formatting helper
+  const evalCondition = (dataValue: number, rule: { condition: string; value: string; value2?: string }): boolean => {
+    const v = parseFloat(rule.value);
+    if (isNaN(v) && rule.condition !== 'isNull' && rule.condition !== 'isNotNull') return false;
+    switch (rule.condition) {
+      case 'greater': return dataValue > v;
+      case 'greaterEqual': return dataValue >= v;
+      case 'less': return dataValue < v;
+      case 'lessEqual': return dataValue <= v;
+      case 'equal': return dataValue === v;
+      case 'notEqual': return dataValue !== v;
+      case 'between': { const v2 = parseFloat(rule.value2 || ''); return !isNaN(v2) && dataValue >= v && dataValue <= v2; }
+      default: return false;
+    }
+  };
+  const getConditionalColor = (dataValue: number, fallback: string): string => {
+    if (!conditionalRules || conditionalRules.length === 0) return fallback;
+    for (const rule of conditionalRules) {
+      if (!rule.value && rule.condition !== 'isNull' && rule.condition !== 'isNotNull') continue;
+      if (evalCondition(dataValue, rule)) return rule.color;
+    }
+    return fallback;
+  };
+
+  // Aggregation multiplier — simulates different aggregation views on mock data
+  const aggMultiplier = (() => {
+    switch (aggregation) {
+      case 'sum': return 1;
+      case 'average': return 0.45;
+      case 'minimum': return 0.2;
+      case 'maximum': return 1.3;
+      case 'count': return 0.6;
+      case 'count_d': return 0.55;
+      case 'stddev': return 0.3;
+      case 'variance': return 0.15;
+      case 'median': return 0.5;
+      default: return 1;
+    }
+  })();
+  const applyAgg = (val: number) => Math.round(val * aggMultiplier);
+
+  const legendIsVertical = legendPosProp === 'left' || legendPosProp === 'right';
+  const legendLayout = legendIsVertical ? 'vertical' : 'horizontal';
+  const legendVAlign = legendPosProp === 'bottom' ? 'bottom' : legendIsVertical ? 'middle' : 'top';
+  const legendAlign = legendPosProp === 'left' ? 'left' : legendPosProp === 'right' ? 'right' : 'center';
+  const legendStyle: Record<string, any> = {
+    fontSize: 12,
+    ...textStyle,
+    paddingBottom: !legendIsVertical && legendVAlign === 'top' ? 8 : 0,
+    paddingTop: !legendIsVertical && legendVAlign === 'bottom' ? 8 : 0,
+    ...(legendBoldProp ? { fontWeight: 700 } : {}),
+    ...(legendItalicProp ? { fontStyle: 'italic' } : {}),
+    ...(legendTextColorProp ? { color: legendTextColorProp } : {}),
+  };
   /* normalise type string */
   const t = (
     type === "Line Chart"
@@ -883,7 +1183,119 @@ export function ConfigurableChart({
   }
 
   /* ── Table ───────────────────────────────────────────────────────────── */
-  if (t === "table") return <TablePreview />;
+  if (t === "table") {
+    // Show table with columns based on xAxis (columns field) or fallback
+    const TABLE_MOCK: Record<string, string[]> = {
+      'Date': ['20-Mar-25', '15-Dec-24', '31-Dec-24', '13-Dec-24', '12-Jan-25', '05-Feb-25', '22-Jan-25', '18-Mar-25'],
+      'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
+      'Week': ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8'],
+      'Year': ['2023', '2023', '2024', '2024', '2024', '2025', '2025', '2025'],
+      'Region': ['North', 'South', 'East', 'West', 'North', 'South', 'East', 'West'],
+      'State': ['Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Gujarat', 'Rajasthan', 'UP', 'Kerala'],
+      'Vendor Name': ['Acme Corp', 'TechParts Ltd', 'Global Supplies', 'Atlas Mfg', 'DataPipe Co', 'SecureNet', 'PrintWorks', 'CloudHost'],
+      'Status': ['Pending Review', 'Under Review', 'Resolved', 'Flagged', 'Auto-Resolved', 'Pending Review', 'Resolved', 'Under Review'],
+      'Categories': ['IT Hardware', 'Office Supplies', 'Software', 'Logistics', 'Consulting', 'IT Hardware', 'Office Supplies', 'Software'],
+      'Sub Category': ['Laptops', 'Paper', 'Licenses', 'Freight', 'Advisory', 'Servers', 'Toner', 'SaaS'],
+      'Category': ['IT', 'Finance', 'Procurement', 'Operations', 'HR', 'Legal', 'IT', 'Finance'],
+      'Department': ['Finance', 'IT', 'Procurement', 'Operations', 'HR', 'Sales', 'Finance', 'IT'],
+      'Products': ['Laptop Pro X1', 'A4 Print Paper', 'Toner HP', 'USB-C Hub', 'Office Chair', 'Thermal Rolls', 'Monitor 27"', 'Keyboard'],
+      'Services': ['Cloud Hosting', 'IT Support', 'Consulting', 'Logistics', 'Legal Review', 'Audit', 'Training', 'Maintenance'],
+      'Solutions': ['ERP Module', 'CRM Suite', 'BI Dashboard', 'Payroll SaaS', 'HRMS', 'Inventory', 'Procurement', 'Compliance'],
+      'Invoice Amount (₹)': ['₹11,853', '₹4,564', '₹3,835', '₹3,410', '₹24,000', '₹18,500', '₹3,400', '₹8,900'],
+      'Amount at Risk (₹)': ['₹2,371', '₹913', '₹767', '₹682', '₹4,800', '₹3,700', '₹680', '₹1,780'],
+      'Duplicate Count': ['45', '38', '52', '61', '29', '55', '42', '48'],
+      'Duplicate Score (%)': ['94.2%', '87.1%', '91.5%', '78.3%', '96.0%', '88.7%', '92.4%', '85.9%'],
+      'Invoices Scanned': ['1,245', '987', '1,102', '1,350', '876', '1,089', '945', '1,201'],
+      'Duplicates Found': ['12', '8', '15', '22', '5', '18', '9', '14'],
+      'Detection Accuracy (%)': ['96.1%', '93.4%', '97.2%', '89.8%', '98.5%', '94.6%', '95.8%', '91.3%'],
+      'Processing Time (d)': ['1.8', '2.1', '1.5', '2.9', '1.2', '2.3', '1.7', '2.5'],
+    };
+    // Use tableColumns if provided, otherwise fall back to xAxis/yAxis
+    const cols: string[] = tableColumns && tableColumns.length > 0
+      ? tableColumns
+      : [];
+
+    if (cols.length === 0) {
+      return (
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="text-center max-w-[280px]">
+            <div className="mx-auto mb-4 size-20 rounded-2xl bg-[#f4f0ff] flex items-center justify-center">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#6a12cd" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.3">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+              </svg>
+            </div>
+            <p className="text-[15px] font-semibold text-[#26064a] mb-1">Add Columns</p>
+            <p className="text-[13px] text-[#9ca3af] leading-relaxed">Drag data fields into the Columns slot to build your table.</p>
+          </div>
+        </div>
+      );
+    }
+    const rowCount = 8;
+    return (
+      <div className="w-full h-full flex flex-col text-[12px]" style={{ fontFamily }}>
+        <div className="flex-1 overflow-auto">
+          <table className="w-full border-collapse" style={{ tableLayout: cols.length <= 3 ? 'auto' : 'fixed' }}>
+            <thead className="sticky top-0 bg-white z-10">
+              <tr className="border-b border-[#e5e7eb] bg-[#faf5ff]/40">
+                {cols.map(col => (
+                  <th key={col} className="text-left py-2.5 px-4 text-[10px] font-bold text-[#6a12cd] uppercase tracking-[0.5px] whitespace-nowrap border-r border-[#f0f0f0] last:border-r-0">{col}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: rowCount }, (_, i) => (
+                <tr key={i} className="border-b border-[#f3f4f6] hover:bg-[#faf5ff]/30 transition-colors">
+                  {cols.map((col, j) => (
+                    <td key={col} className={`py-2.5 px-4 whitespace-nowrap border-r border-[#f9fafb] last:border-r-0 ${j === 0 ? 'text-[#6a12cd] font-medium' : 'text-[#374151]'}`}>
+                      {TABLE_MOCK[col]?.[i] || '—'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+            {aggregation && (() => {
+              const NUMERIC_COLS = new Set(['Invoice Amount (₹)', 'Amount at Risk (₹)', 'Duplicate Count', 'Duplicate Score (%)', 'Invoices Scanned', 'Duplicates Found', 'Detection Accuracy (%)', 'Processing Time (d)']);
+              const parseNum = (s: string) => parseFloat(s.replace(/[₹,%,k]/g, '').replace(/,/g, ''));
+              const AGG_LABELS: Record<string, string> = { sum: 'Sum', average: 'Avg', minimum: 'Min', maximum: 'Max', count: 'Count', count_d: 'Count', stddev: 'StdDev', variance: 'Var', median: 'Median' };
+              const hasNumericCol = cols.some(c => NUMERIC_COLS.has(c));
+              if (!hasNumericCol) return null;
+              return (
+                <tfoot>
+                  <tr className="bg-[#faf5ff] border-t-2 border-[#6a12cd]/20">
+                    {cols.map((col, j) => {
+                      if (!NUMERIC_COLS.has(col)) {
+                        return <td key={col} className="py-2.5 px-4 text-[11px] font-bold text-[#6a12cd] uppercase whitespace-nowrap">{j === 0 ? AGG_LABELS[aggregation] || aggregation : ''}</td>;
+                      }
+                      const vals = Array.from({ length: rowCount }, (_, i) => parseNum(TABLE_MOCK[col]?.[i] || '0')).filter(n => !isNaN(n));
+                      let result = 0;
+                      switch (aggregation) {
+                        case 'sum': result = vals.reduce((a, b) => a + b, 0); break;
+                        case 'average': result = vals.reduce((a, b) => a + b, 0) / vals.length; break;
+                        case 'minimum': result = Math.min(...vals); break;
+                        case 'maximum': result = Math.max(...vals); break;
+                        case 'count': case 'count_d': result = vals.length; break;
+                        case 'median': { const s = [...vals].sort((a, b) => a - b); result = s.length % 2 ? s[Math.floor(s.length / 2)] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; break; }
+                        case 'stddev': { const m = vals.reduce((a, b) => a + b, 0) / vals.length; result = Math.sqrt(vals.reduce((a, b) => a + (b - m) ** 2, 0) / vals.length); break; }
+                        case 'variance': { const m2 = vals.reduce((a, b) => a + b, 0) / vals.length; result = vals.reduce((a, b) => a + (b - m2) ** 2, 0) / vals.length; break; }
+                        default: result = vals.reduce((a, b) => a + b, 0);
+                      }
+                      const fmt = col.includes('₹') ? `₹${result.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : col.includes('%') ? `${result.toFixed(1)}%` : col.includes('(d)') ? result.toFixed(1) : result.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+                      return <td key={col} className="py-2.5 px-4 text-[12px] font-bold text-[#6a12cd] whitespace-nowrap">{fmt}</td>;
+                    })}
+                  </tr>
+                </tfoot>
+              );
+            })()}
+          </table>
+        </div>
+        <div className="flex items-center justify-between px-3 py-2 border-t border-[#e5e7eb] shrink-0 text-[11px] text-[#9ca3af]">
+          <span>Showing 1–{rowCount} of {rowCount}</span>
+          {aggregation && <span className="text-[#6a12cd] font-medium">Aggregation: {aggregation.charAt(0).toUpperCase() + aggregation.slice(1)}</span>}
+        </div>
+      </div>
+    );
+  }
 
   /* ── Line chart — "Detection Accuracy Goals" style ───────────────────── */
   if (t === "line") {
@@ -897,6 +1309,10 @@ export function ConfigurableChart({
     // Only slice to H1 when this is the active drill card at level 0
     if (isActiveCard && isTimeBased && drillLevel === 0)
       rawData = rawData.slice(0, 6);
+    // Apply aggregation transform
+    if (aggregation && aggregation !== 'count_d') {
+      rawData = rawData.map((d: any) => ({ ...d, actual: applyAgg(d.actual), target: applyAgg(d.target) }));
+    }
 
     const allVals = rawData.flatMap((d) =>
       showTarget ? [d.actual, d.target] : [d.actual],
@@ -904,16 +1320,17 @@ export function ConfigurableChart({
     const minVal = Math.floor(Math.min(...allVals) * 0.97);
     const maxVal = Math.ceil(Math.max(...allVals) * 1.01);
 
+    const yShortLine = (yAxisTitle || yAxis).replace(/\s*\(.*?\)/, "").trim();
     const legendPayload = [
       {
-        value: "Actual Accuracy",
+        value: `Actual ${yShortLine}`,
         type: "circle" as const,
         color: BASE_COLOR,
       },
       ...(showTarget
         ? [
             {
-              value: "Target Accuracy",
+              value: `Target ${yShortLine}`,
               type: "circle" as const,
               color: GRAY,
             },
@@ -968,33 +1385,39 @@ export function ConfigurableChart({
             tick={{
               fontSize: 12,
               fill: "#6b7280",
-              fontFamily: "Inter, sans-serif",
+              ...textStyle,
             }}
             axisLine={false}
             tickLine={false}
             tickMargin={6}
+            label={{ value: xAxisTitle || xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", ...textStyle } }}
           />
           <YAxis
-            domain={[minVal, maxVal]}
+            domain={(() => {
+              const lo = yMin ? Number(yMin) : minVal;
+              const hi = yMax ? Number(yMax) : maxVal;
+              return invertRange ? [hi, lo] : [lo, hi];
+            })()}
             tickFormatter={yFmt}
             tick={{
               fontSize: 12,
               fill: "#6b7280",
-              fontFamily: "Inter, sans-serif",
+              ...textStyle,
             }}
             axisLine={false}
             tickLine={false}
             width={72}
             tickMargin={4}
+            reversed={invertRange}
             label={{
-              value: yAxis,
+              value: yAxisTitle || yAxis,
               angle: -90,
               position: "insideLeft",
               offset: 16,
               style: {
                 fontSize: 12,
                 fill: "#9ca3af",
-                fontFamily: "Inter, sans-serif",
+                ...textStyle,
               },
             }}
           />
@@ -1002,8 +1425,8 @@ export function ConfigurableChart({
           <Area
             type="monotone"
             dataKey="actual"
-            name="Actual Accuracy"
-            stroke={seriesColors?.["Actual Accuracy"] || BASE_COLOR}
+            name={`Actual ${yShortLine}`}
+            stroke={seriesColors?.[`Actual ${yShortLine}`] || seriesColors?.["Actual Accuracy"] || BASE_COLOR}
             strokeWidth={2}
             fill={`url(#lgLine-${BASE_COLOR.replace("#", "")})`}
             dot={{ fill: seriesColors?.["Actual Accuracy"] || BASE_COLOR, r: 4, strokeWidth: 0 }}
@@ -1018,7 +1441,7 @@ export function ConfigurableChart({
                   fontSize: 12,
                   fill: BASE_COLOR,
                   fontWeight: 600,
-                  fontFamily: "Inter, sans-serif",
+                  fontFamily,
                 }}
               />
             )}
@@ -1027,8 +1450,8 @@ export function ConfigurableChart({
             <Line
               type="monotone"
               dataKey="target"
-              name="Target Accuracy"
-              stroke={seriesColors?.["Target Accuracy"] || GRAY}
+              name={`Target ${yShortLine}`}
+              stroke={seriesColors?.[`Target ${yShortLine}`] || seriesColors?.["Target Accuracy"] || GRAY}
               strokeWidth={2}
               strokeDasharray="5 5"
               dot={{ fill: seriesColors?.["Target Accuracy"] || GRAY, r: 3, strokeWidth: 0 }}
@@ -1043,22 +1466,21 @@ export function ConfigurableChart({
                     fontSize: 12,
                     fill: GRAY,
                     fontWeight: 600,
-                    fontFamily: "Inter, sans-serif",
+                    fontFamily,
                   }}
                 />
               )}
             </Line>
           )}
-          <Legend
+          {showLegend && <Legend
             iconType="circle"
             iconSize={8}
-            wrapperStyle={{
-              fontSize: 12,
-              paddingTop: 8,
-              fontFamily: "Inter, sans-serif",
-            }}
+            layout={legendLayout as any}
+            verticalAlign={legendVAlign as any}
+            align={legendAlign as any}
+            wrapperStyle={legendStyle}
             payload={legendPayload}
-          />
+          />}
         </AreaChart>
       </ResponsiveContainer>
     );
@@ -1076,6 +1498,9 @@ export function ConfigurableChart({
     // Only slice to H1 when this is the active drill card at level 0
     if (isActiveCard && isTimeBased && drillLevel === 0)
       rawData = rawData.slice(0, 6);
+    if (aggregation && aggregation !== 'count_d') {
+      rawData = rawData.map((d: any) => ({ ...d, actual: applyAgg(d.actual), target: applyAgg(d.target) }));
+    }
 
     const allVals = rawData.flatMap((d) =>
       showTarget ? [d.actual, d.target] : [d.actual],
@@ -1121,8 +1546,8 @@ export function ConfigurableChart({
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
-          <YAxis domain={[minVal, maxVal]} tickFormatter={yFmt} tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} width={50} tickMargin={4} label={{ value: yAxis, angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
+          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", ...textStyle }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxisTitle || xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", ...textStyle } }} />
+          <YAxis domain={(() => { const lo = yMin ? Number(yMin) : minVal; const hi = yMax ? Number(yMax) : maxVal; return invertRange ? [hi, lo] : [lo, hi]; })()} tickFormatter={yFmt} tick={{ fontSize: 12, fill: "#6b7280", ...textStyle }} axisLine={false} tickLine={false} width={50} tickMargin={4} reversed={invertRange} label={{ value: yAxisTitle || yAxis, angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", ...textStyle } }} />
           <Tooltip content={<TrendTooltip yAxis={yAxis} />} />
           <Area
             type="monotone"
@@ -1148,7 +1573,7 @@ export function ConfigurableChart({
                   fontSize: 12,
                   fill: BASE_COLOR,
                   fontWeight: 600,
-                  fontFamily: "Inter, sans-serif",
+                  fontFamily,
                 }}
               />
             )}
@@ -1173,13 +1598,13 @@ export function ConfigurableChart({
                     fontSize: 12,
                     fill: GRAY,
                     fontWeight: 600,
-                    fontFamily: "Inter, sans-serif",
+                    fontFamily,
                   }}
                 />
               )}
             </Line>
           )}
-          <Legend iconType="circle" iconSize={8} verticalAlign="top" align="right" wrapperStyle={{ fontSize: 12, fontFamily: "Inter, sans-serif", paddingBottom: 8 }} payload={legendPayload} />
+          {showLegend && <Legend iconType="circle" iconSize={8} layout={legendLayout as any} verticalAlign={legendVAlign as any} align={legendAlign as any} wrapperStyle={legendStyle} payload={legendPayload} />}
         </AreaChart>
       </ResponsiveContainer>
     );
@@ -1192,10 +1617,10 @@ export function ConfigurableChart({
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 12, right: 12, left: 12, bottom: 28 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
-          <YAxis tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} width={50} tickMargin={4} label={{ value: "Count", angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
+          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", ...textStyle }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxisTitle || xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", ...textStyle } }} />
+          <YAxis domain={(() => { if (!yMin && !yMax) return undefined; const lo = yMin ? Number(yMin) : 0; const hi = yMax ? Number(yMax) : 'auto'; return invertRange ? [hi, lo] : [lo, hi]; })()} tick={{ fontSize: 12, fill: "#6b7280", ...textStyle }} axisLine={false} tickLine={false} width={50} tickMargin={4} reversed={invertRange} label={{ value: yAxisTitle || "Count", angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", ...textStyle } }} />
           <Tooltip content={<BarTooltip />} cursor={false} />
-          <Legend iconType="circle" verticalAlign="top" align="right" wrapperStyle={{ fontSize: 12, fontFamily: "Inter, sans-serif", paddingBottom: 8 }} />
+          {showLegend && <Legend iconType="circle" layout={legendLayout as any} verticalAlign={legendVAlign as any} align={legendAlign as any} wrapperStyle={legendStyle} />}
           <Bar dataKey="duplicates" name="Total Duplicates" fill={seriesColors?.["Total Duplicates"] || BASE_COLOR} radius={[4, 4, 0, 0]} />
           <Bar dataKey="resolved" name="Resolved" fill={seriesColors?.["Resolved"] || BASE_LIGHT1} radius={[4, 4, 0, 0]} />
           <Line type="monotone" dataKey="pending" name="Pending" stroke={seriesColors?.["Pending"] || AMBER} strokeWidth={2.5} dot={{ fill: seriesColors?.["Pending"] || AMBER, r: 4, strokeWidth: 0 }} activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2 }} />
@@ -1206,8 +1631,9 @@ export function ConfigurableChart({
 
   /* ── Bar chart ────────────────────────────────────────────────────────── */
   if (t === "bar") {
-    const data =
+    const rawBarData =
       barData ?? BAR_DATA[xAxis] ?? BAR_DATA["Month"];
+    const data = aggregation && aggregation !== 'sum' ? rawBarData.map(d => ({ ...d, duplicates: applyAgg(d.duplicates), resolved: applyAgg(d.resolved), pending: applyAgg(d.pending) })) : rawBarData;
     return (
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
@@ -1231,15 +1657,18 @@ export function ConfigurableChart({
           }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
-          <YAxis tick={{ fontSize: 12, fill: "#6b7280", fontFamily: "Inter, sans-serif" }} axisLine={false} tickLine={false} width={50} tickMargin={4} label={{ value: "Count", angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", fontFamily: "Inter, sans-serif" } }} />
+          <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6b7280", ...textStyle }} axisLine={false} tickLine={false} tickMargin={6} label={{ value: xAxisTitle || xAxis, position: "insideBottom", offset: -14, style: { fontSize: 12, fill: "#9ca3af", ...textStyle } }} />
+          <YAxis domain={(() => { if (!yMin && !yMax) return undefined; const lo = yMin ? Number(yMin) : 0; const hi = yMax ? Number(yMax) : 'auto'; return invertRange ? [hi, lo] : [lo, hi]; })()} tick={{ fontSize: 12, fill: "#6b7280", ...textStyle }} axisLine={false} tickLine={false} width={50} tickMargin={4} reversed={invertRange} label={{ value: yAxisTitle || "Count", angle: -90, position: "insideLeft", offset: 4, style: { fontSize: 12, fill: "#9ca3af", ...textStyle } }} />
           <Tooltip content={<BarTooltip />} cursor={false} />
           <Bar
             dataKey="duplicates"
-            name="Total Duplicates"
-            fill={seriesColors?.["Total Duplicates"] || BASE_COLOR}
+            name={yAxisTitle || yAxis || "Total Duplicates"}
+            fill={seriesColors?.[yAxisTitle || yAxis || "Total Duplicates"] || seriesColors?.["Total Duplicates"] || BASE_COLOR}
             radius={[4, 4, 0, 0]}
           >
+            {conditionalRules && conditionalRules.length > 0 && conditionalRules[0]?.value && data.map((entry: any, idx: number) => (
+              <Cell key={idx} fill={getConditionalColor(entry.duplicates, seriesColors?.[yAxisTitle || yAxis || "Total Duplicates"] || seriesColors?.["Total Duplicates"] || BASE_COLOR)} />
+            ))}
             {showLabels && (
               <LabelList
                 dataKey="duplicates"
@@ -1248,7 +1677,7 @@ export function ConfigurableChart({
                   fontSize: 12,
                   fill: BASE_COLOR,
                   fontWeight: 600,
-                  fontFamily: "Inter, sans-serif",
+                  fontFamily,
                 }}
               />
             )}
@@ -1268,7 +1697,7 @@ export function ConfigurableChart({
                     fontSize: 12,
                     fill: BASE_LIGHT1,
                     fontWeight: 600,
-                    fontFamily: "Inter, sans-serif",
+                    fontFamily,
                   }}
                 />
               )}
@@ -1289,12 +1718,13 @@ export function ConfigurableChart({
                     fontSize: 12,
                     fill: BASE_LIGHT2,
                     fontWeight: 600,
-                    fontFamily: "Inter",
+                    fontFamily,
                   }}
                 />
               )}
             </Bar>
           )}
+          {showLegend && <Legend iconType="circle" iconSize={8} layout={legendLayout as any} verticalAlign={legendVAlign as any} align={legendAlign as any} wrapperStyle={legendStyle} />}
         </BarChart>
       </ResponsiveContainer>
     );
@@ -1327,7 +1757,7 @@ export function ConfigurableChart({
           style={{
             fontSize: 11,
             fontWeight: 600,
-            fontFamily: "Inter, sans-serif",
+            fontFamily,
           }}
         >
           {`${(percent * 100).toFixed(0)}%`}
@@ -1454,7 +1884,49 @@ export function ConfigurableChart({
             );
           })()}
           <Tooltip content={<PieTooltip />} />
-          <Legend content={renderLegend} />
+          {showLegend && <Legend
+            content={(props: any) => {
+              const { payload } = props;
+              const isVert = legendPosProp === 'left' || legendPosProp === 'right';
+              return (
+                <div className={`flex ${isVert ? 'flex-col gap-1.5' : 'flex-wrap gap-3 justify-center'} mt-2`} style={legendStyle}>
+                  {payload?.map((e: any, i: number) => {
+                    const entryColor = sliceColors[i] || e.color;
+                    const entryName = e.value;
+                    return (
+                      <div key={i} className="relative flex items-center gap-1.5">
+                        <button
+                          onClick={(ev) => { ev.stopPropagation(); setLegendPickerOpen(legendPickerOpen === entryName ? null : entryName); }}
+                          className="size-3 rounded-full shrink-0 cursor-pointer ring-1 ring-black/10 hover:ring-2 hover:ring-purple-400 transition-all"
+                          style={{ backgroundColor: entryColor }}
+                          title="Click to change color"
+                        />
+                        <span className="text-[11px] text-gray-600" style={legendStyle}>{entryName}</span>
+                        {legendPickerOpen === entryName && onSeriesColorChange && (
+                          <>
+                            <div className="fixed inset-0 z-[60]" onClick={(ev) => { ev.stopPropagation(); setLegendPickerOpen(null); }} />
+                            <div className="absolute left-0 bottom-full mb-1.5 z-[70] bg-white border border-gray-200 rounded-xl shadow-2xl p-2.5 flex flex-wrap gap-1.5 w-[148px]">
+                              {EDITABLE_PALETTE.map(c => (
+                                <button
+                                  key={c}
+                                  onClick={(ev) => { ev.stopPropagation(); onSeriesColorChange(entryName, c); setLegendPickerOpen(null); }}
+                                  className={`size-5 rounded-full cursor-pointer transition-all ${entryColor === c ? 'ring-2 ring-purple-600 ring-offset-1 scale-110' : 'hover:ring-2 hover:ring-gray-300 hover:ring-offset-1 hover:scale-110'}`}
+                                  style={{ background: c }}
+                                />
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            }}
+            layout={legendLayout as any}
+            verticalAlign={legendVAlign as any}
+            align={legendAlign as any}
+          />}
         </PieChart>
       </ResponsiveContainer>
     );

@@ -9,6 +9,7 @@ interface KpiCardProps {
   trendLabel?: string;
   trendDirection?: 'up' | 'down' | 'neutral';
   color?: string;
+  fontFamily?: string;
 }
 
 export function KpiCard({ 
@@ -18,20 +19,22 @@ export function KpiCard({
   trendValue = "12%", 
   trendLabel = "vs last month", 
   trendDirection = 'up',
-  color = "#26064A"
+  color = "#26064A",
+  fontFamily,
 }: KpiCardProps) {
+  const fontStyle = fontFamily ? { fontFamily: `'${fontFamily}', sans-serif` } : undefined;
   const displayLabel = groupingBy || label || "Metric";
   
   return (
     <div className="flex flex-col h-full w-full bg-white rounded-2xl p-6 relative overflow-hidden">
       {/* Label - Fixed at top */}
       <div className="shrink-0 mb-4">
-        <div className="font-normal text-[14px] text-[#26064a]">{displayLabel}</div>
+        <div className="font-normal text-[14px] text-[#26064a]" style={fontStyle}>{displayLabel}</div>
       </div>
       
       {/* Value - Large display */}
       <div className="flex-1 flex items-start min-h-0">
-        <span className="leading-none font-bold tracking-tight text-[32px]" style={{ color }}>
+        <span className="leading-none font-bold tracking-tight text-[32px]" style={{ color, ...fontStyle }}>
           {value}
         </span>
       </div>

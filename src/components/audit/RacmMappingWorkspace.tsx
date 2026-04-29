@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowLeft, Search, Shield, AlertTriangle, CheckCircle2,
@@ -6,6 +6,9 @@ import {
   Clock, User, FileText, Eye, Paperclip, FileCheck, XCircle,
 } from 'lucide-react';
 import { useToast } from '../shared/Toast';
+import CreateControlDrawer, { type NewControlData } from '../governance/CreateControlDrawer';
+import { WORKFLOWS } from '../../data/mockData';
+import { computeRacmStateFromRisks, RACM_STATUS_STYLES, RACM_READINESS_STYLES, type ComputedRacmState, type RiskDetailInput } from './racmStateEngine';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -63,9 +66,9 @@ function getControlReadiness(ctrl: MappedControl): ControlReadiness {
 }
 
 const READINESS_CLS: Record<ControlReadiness, string> = {
-  'Setup Incomplete': 'bg-risk-50 text-risk-700',
-  'Needs Attributes': 'bg-mitigated-50 text-mitigated-700',
-  'Ready': 'bg-compliant-50 text-compliant-700',
+  'Setup Incomplete': 'bg-red-50/60 text-red-600',
+  'Needs Attributes': 'bg-amber-50/60 text-amber-600',
+  'Ready': 'bg-emerald-50/60 text-emerald-600',
 };
 const WF_STATUS_CLS: Record<string, string> = {
   Draft: 'bg-draft-50 text-draft-700',
@@ -82,6 +85,11 @@ interface RiskItem {
   controls: MappedControl[];
   validationStatus: 'Unvalidated' | 'Stable' | 'At Risk';
   freshness: 'Up to Date' | 'Needs Re-execution';
+  // SOP traceability
+  sourceSopName?: string;
+  sourceSopVersion?: string;
+  sourceSection?: string;
+  sourceText?: string;
 }
 
 type RiskFilter = 'all' | 'unmapped' | 'partial' | 'mapped' | 'at-risk' | 'unvalidated';
@@ -89,6 +97,10 @@ type RiskFilter = 'all' | 'unmapped' | 'partial' | 'mapped' | 'at-risk' | 'unval
 interface Props {
   onBack: () => void;
   onGoToExecution?: () => void;
+  racmId?: string;
+  racmName?: string;
+  racmProcess?: string;
+  isEmpty?: boolean;
 }
 
 // ─── Seed Data ──────────────────────────────────────────────────────────────
@@ -152,22 +164,22 @@ const CONTROL_LIBRARY: MappedControl[] = [
 ];
 
 const INITIAL_RISKS: RiskItem[] = [
-  { id: 'rsk-001', name: 'Unauthorized vendor payments', description: 'Payments processed without proper PO or approval', process: 'P2P', sourceRef: 'Row 2', controls: [CONTROL_LIBRARY[0], CONTROL_LIBRARY[3]], validationStatus: 'Stable', freshness: 'Up to Date' },
-  { id: 'rsk-002', name: 'Duplicate invoices processed', description: 'Same invoice paid twice due to weak detection', process: 'P2P', sourceRef: 'Row 3', controls: [CONTROL_LIBRARY[2]], validationStatus: 'At Risk', freshness: 'Needs Re-execution' },
-  { id: 'rsk-003', name: 'Fictitious vendor registration', description: 'Vendor created without verification', process: 'P2P', sourceRef: 'Row 4', controls: [CONTROL_LIBRARY[1]], validationStatus: 'Stable', freshness: 'Up to Date' },
-  { id: 'rsk-004', name: 'Unauthorized PO creation', description: 'POs above threshold without dual sign-off', process: 'P2P', sourceRef: 'Row 5', controls: [], validationStatus: 'Unvalidated', freshness: 'Needs Re-execution' },
-  { id: 'rsk-005', name: 'SOD violation in AP', description: 'Same user creates and approves payment', process: 'P2P', sourceRef: 'Row 6', controls: [], validationStatus: 'Unvalidated', freshness: 'Needs Re-execution' },
-  { id: 'rsk-006', name: 'Revenue recognition timing', description: 'Revenue recognized before obligation completion', process: 'O2C', sourceRef: 'Row 7', controls: [CONTROL_LIBRARY[5]], validationStatus: 'Stable', freshness: 'Up to Date' },
-  { id: 'rsk-007', name: 'Incorrect journal entries', description: 'Manual JE posted without review', process: 'R2R', sourceRef: 'Row 8', controls: [CONTROL_LIBRARY[6]], validationStatus: 'Stable', freshness: 'Up to Date' },
-  { id: 'rsk-008', name: 'GL balance discrepancy', description: 'Subsidiary balances do not reconcile', process: 'R2R', sourceRef: 'Row 9', controls: [], validationStatus: 'Unvalidated', freshness: 'Needs Re-execution' },
+  { id: 'rsk-001', name: 'Unauthorized vendor payments', description: 'Payments processed without proper PO or approval', process: 'P2P', sourceRef: 'Row 2', controls: [CONTROL_LIBRARY[0], CONTROL_LIBRARY[3]], validationStatus: 'Stable', freshness: 'Up to Date', sourceSopName: 'Vendor Payment SOP', sourceSopVersion: 'v2.1', sourceSection: '§3.2 Payment Authorization', sourceText: 'All payments must be matched against an approved PO before release.' },
+  { id: 'rsk-002', name: 'Duplicate invoices processed', description: 'Same invoice paid twice due to weak detection', process: 'P2P', sourceRef: 'Row 3', controls: [CONTROL_LIBRARY[2]], validationStatus: 'At Risk', freshness: 'Needs Re-execution', sourceSopName: 'Vendor Payment SOP', sourceSopVersion: 'v2.1', sourceSection: '§4.1 Invoice Processing', sourceText: 'Invoices shall be scanned against historical records to prevent duplicates.' },
+  { id: 'rsk-003', name: 'Fictitious vendor registration', description: 'Vendor created without verification', process: 'P2P', sourceRef: 'Row 4', controls: [CONTROL_LIBRARY[1]], validationStatus: 'Stable', freshness: 'Up to Date', sourceSopName: 'Vendor Payment SOP', sourceSopVersion: 'v2.1', sourceSection: '§2.3 Vendor Management', sourceText: 'New vendor registration requires tax ID verification and multi-level approval.' },
+  { id: 'rsk-004', name: 'Unauthorized PO creation', description: 'POs above threshold without dual sign-off', process: 'P2P', sourceRef: 'Row 5', controls: [], validationStatus: 'Unvalidated', freshness: 'Needs Re-execution', sourceSopName: 'Purchase Order SOP', sourceSopVersion: 'v1.3', sourceSection: '§3.4 Approval Matrix', sourceText: 'Purchase orders exceeding threshold require dual authorization.' },
+  { id: 'rsk-005', name: 'SOD violation in AP', description: 'Same user creates and approves payment', process: 'P2P', sourceRef: 'Row 6', controls: [], validationStatus: 'Unvalidated', freshness: 'Needs Re-execution', sourceSopName: 'Vendor Payment SOP', sourceSopVersion: 'v2.1', sourceSection: '§5.1 Access Controls', sourceText: 'Segregation of duties must be enforced between payment creation and approval.' },
+  { id: 'rsk-006', name: 'Revenue recognition timing', description: 'Revenue recognized before obligation completion', process: 'O2C', sourceRef: 'Row 7', controls: [CONTROL_LIBRARY[5]], validationStatus: 'Stable', freshness: 'Up to Date', sourceSopName: 'Invoice Management SOP', sourceSopVersion: 'v1.0', sourceSection: '§6.2 Revenue Policy', sourceText: 'Revenue must be recognized per ASC 606 only after performance obligations are met.' },
+  { id: 'rsk-007', name: 'Incorrect journal entries', description: 'Manual JE posted without review', process: 'R2R', sourceRef: 'Row 8', controls: [CONTROL_LIBRARY[6]], validationStatus: 'Stable', freshness: 'Up to Date', sourceSopName: 'Financial Close SOP', sourceSopVersion: 'v3.0', sourceSection: '§3.1 Journal Entries', sourceText: 'All manual journal entries require manager review before posting.' },
+  { id: 'rsk-008', name: 'GL balance discrepancy', description: 'Subsidiary balances do not reconcile', process: 'R2R', sourceRef: 'Row 9', controls: [], validationStatus: 'Unvalidated', freshness: 'Needs Re-execution', sourceSopName: 'GL Reconciliation SOP', sourceSopVersion: 'v1.2', sourceSection: '§2.4 Reconciliation', sourceText: 'Monthly reconciliation of subsidiary balances to consolidated GL is required.' },
 ];
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
 const VAL_CLS: Record<string, string> = {
-  Stable: 'bg-compliant-50 text-compliant-700',
-  'At Risk': 'bg-risk-50 text-risk-700',
-  Unvalidated: 'bg-draft-50 text-draft-700',
+  Stable: 'bg-emerald-100 text-emerald-800',
+  'At Risk': 'bg-red-100 text-red-800',
+  Unvalidated: 'bg-gray-100 text-gray-600',
 };
 const EXEC_CLS: Record<string, string> = {
   Effective: 'bg-compliant-50 text-compliant-700',
@@ -194,19 +206,40 @@ const BP_DOTS: Record<string, string> = { P2P: '#6a12cd', O2C: '#0284c7', R2R: '
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export default function RacmMappingWorkspace({ onBack, onGoToExecution }: Props) {
+export default function RacmMappingWorkspace({ onBack, onGoToExecution, racmId, racmName, racmProcess, isEmpty: isEmptyRacm }: Props) {
   const { addToast } = useToast();
-  const [risks, setRisks] = useState<RiskItem[]>(INITIAL_RISKS);
-  const [selectedRiskId, setSelectedRiskId] = useState<string>(INITIAL_RISKS[0].id);
-  const [filter, setFilter] = useState<RiskFilter>('all');
-  const [search, setSearch] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [risks, setRisks] = useState<RiskItem[]>([]);
+  const [selectedRiskId, setSelectedRiskId] = useState<string>('');
   const [showLinkDrawer, setShowLinkDrawer] = useState(false);
   const [showCreateDrawer, setShowCreateDrawer] = useState(false);
-  const [expandedControlId, setExpandedControlId] = useState<string | null>(null);
   const [linkWorkflowControlId, setLinkWorkflowControlId] = useState<string | null>(null);
   const [createWorkflowControlId, setCreateWorkflowControlId] = useState<string | null>(null);
   const [showValidateModal, setShowValidateModal] = useState(false);
   const [racmValidated, setRacmValidated] = useState(false);
+
+  // Simulate loading RACM data based on racmId
+  useEffect(() => {
+    console.log('[RACM] Loading mapping workspace — racmId:', racmId, 'racmName:', racmName);
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      if (isEmptyRacm) {
+        console.log('[RACM] Empty RACM — no risks to load');
+        setRisks([]);
+      } else {
+        // Load risks for this RACM (in prototype, all RACMs share seed data filtered by process)
+        const filtered = racmProcess
+          ? INITIAL_RISKS.filter(r => r.process === racmProcess || racmProcess === 'Cross')
+          : INITIAL_RISKS;
+        const loaded = filtered.length > 0 ? filtered : INITIAL_RISKS;
+        console.log('[RACM] Loaded', loaded.length, 'risks for racmId:', racmId);
+        setRisks(loaded);
+        setSelectedRiskId(loaded[0]?.id || '');
+      }
+      setIsLoading(false);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [racmId, racmProcess, isEmptyRacm, racmName]);
 
   const selectedRisk = risks.find(r => r.id === selectedRiskId) || risks[0];
 
@@ -217,29 +250,6 @@ export default function RacmMappingWorkspace({ onBack, onGoToExecution }: Props)
   const createWorkflowControl = createWorkflowControlId
     ? risks.flatMap(r => r.controls).find(c => c.id === createWorkflowControlId) || null
     : null;
-
-  // Mapping status helper
-  function getMappingLabel(r: RiskItem): string {
-    if (r.controls.length === 0) return 'Unmapped';
-    if (r.controls.some(c => !c.workflowLinked)) return 'Partially Mapped';
-    return 'Mapped';
-  }
-
-  // Filtered risks
-  const filteredRisks = useMemo(() => {
-    let list = risks;
-    if (filter === 'unmapped') list = list.filter(r => r.controls.length === 0);
-    else if (filter === 'partial') list = list.filter(r => r.controls.length > 0 && r.controls.some(c => !c.workflowLinked));
-    else if (filter === 'mapped') list = list.filter(r => r.controls.length > 0 && r.controls.every(c => c.workflowLinked));
-    else if (filter === 'at-risk') list = list.filter(r => r.validationStatus === 'At Risk');
-    else if (filter === 'unvalidated') list = list.filter(r => r.validationStatus === 'Unvalidated');
-
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(r => r.name.toLowerCase().includes(q) || r.id.toLowerCase().includes(q) || r.process.toLowerCase().includes(q));
-    }
-    return list;
-  }, [risks, filter, search]);
 
   // Summary
   const totalRisks = risks.length;
@@ -318,27 +328,63 @@ export default function RacmMappingWorkspace({ onBack, onGoToExecution }: Props)
     } : r));
   };
 
-  const handleCreateControl = (ctrl: MappedControl) => {
-    // Add to risk's controls
-    setRisks(prev => prev.map(r => r.id === selectedRisk.id ? {
+  const handleCreateControl = (data: NewControlData) => {
+    // Convert NewControlData → MappedControl (same shape as Control Library objects)
+    const linkedWfs: ControlWorkflow[] = [];
+    if (data.workflowChoice === 'link' && data.linkedWorkflowId) {
+      const wf = WORKFLOWS.find(w => w.id === data.linkedWorkflowId);
+      if (wf) linkedWfs.push({ id: wf.id, name: wf.name, version: 'v1.0', status: 'Active', lastRun: '—', dataRequired: true, attributes: [] });
+    }
+
+    const ctrl: MappedControl = {
+      id: `ctl-new-${Date.now()}`,
+      name: data.name,
+      description: data.description,
+      isKey: data.classification === 'Key',
+      automation: data.automation,
+      nature: data.nature,
+      workflowLinked: linkedWfs.length > 0,
+      workflowName: linkedWfs.length > 0 ? linkedWfs[0].name : '',
+      attributeCount: 0,
+      lastExecution: '—',
+      status: 'Not Tested',
+      owner: data.owner,
+      labels: [data.businessProcess],
+      workflows: linkedWfs,
+    };
+
+    // Map to the selected risk (and any risks from mappedRisks)
+    const targetRiskIds = new Set([selectedRisk.id, ...data.mappedRisks.map(rid => {
+      // Find risk by RSK id pattern — map to our local risk IDs if possible
+      const match = risks.find(r => r.id === rid || r.name.toLowerCase().includes(rid.toLowerCase()));
+      return match?.id;
+    }).filter(Boolean) as string[]]);
+
+    setRisks(prev => prev.map(r => targetRiskIds.has(r.id) ? {
       ...r, controls: [...r.controls, ctrl],
     } : r));
     setShowCreateDrawer(false);
-    addToast({ message: `"${ctrl.name}" created and mapped to "${selectedRisk.name}"`, type: 'success' });
+    addToast({ message: `"${ctrl.name}" created in Control Library and mapped`, type: 'success' });
   };
 
-  // Progress breakdown
-  const setupIncompleteCount = risks.filter(r => r.controls.length > 0 && r.controls.some(c => !c.workflowLinked)).length;
-  const keyControlsExist = risks.some(r => r.controls.some(c => c.isKey));
+  // Derived state from engine (single source of truth)
+  const racmComputed = useMemo<ComputedRacmState>(() =>
+    computeRacmStateFromRisks(
+      risks as RiskDetailInput[],
+      racmValidated,
+      false, // not locked at mapping stage
+    ),
+    [risks, racmValidated],
+  );
 
-  // Validation checks (mapping-focused, no workflow/evidence logic)
   const valChecks = [
-    { label: 'All risks reviewed', done: true },
-    { label: 'All risks mapped to at least one control', done: unmappedCount === 0 },
-    { label: 'Key controls identified', done: keyControlsExist },
-    { label: 'No unmapped risks remaining', done: unmappedCount === 0 },
+    { label: 'All risks added', done: racmComputed.checks.hasRisks },
+    { label: 'All risks mapped to controls', done: racmComputed.checks.allRisksMapped },
+    { label: 'Key controls identified', done: racmComputed.checks.hasKeyControls },
+    { label: 'All controls have workflows', done: racmComputed.checks.allControlsHaveWorkflows },
+    { label: 'All workflows have attributes', done: racmComputed.checks.allWorkflowsHaveAttributes },
   ];
-  const allValPassed = valChecks.every(c => c.done);
+  const allValPassed = racmComputed.readiness === 'Ready to Validate' || racmComputed.readiness === 'Ready';
 
   const handleValidate = () => {
     if (!allValPassed) return;
@@ -347,14 +393,51 @@ export default function RacmMappingWorkspace({ onBack, onGoToExecution }: Props)
     addToast({ message: 'RACM validated — status Active, ready for execution', type: 'success' });
   };
 
+  // Fallback guard — no RACM context
+  if (!racmId && !isLoading && risks.length === 0) {
+    return (
+      <div className="space-y-4">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-[12px] text-text-muted hover:text-primary font-medium cursor-pointer transition-colors">
+          <ArrowLeft size={14} />Back to RACM
+        </button>
+        <div className="glass-card rounded-xl p-12 text-center space-y-3">
+          <AlertTriangle size={32} className="mx-auto text-amber-400" />
+          <h3 className="text-[15px] font-semibold text-text">Unable to load RACM</h3>
+          <p className="text-[12px] text-text-muted max-w-sm mx-auto">No RACM context was provided. Please go back and retry by selecting a RACM from the list.</p>
+          <button onClick={onBack} className="mt-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  const filters: { key: RiskFilter; label: string; count: number }[] = [
-    { key: 'all', label: 'All', count: risks.length },
-    { key: 'unmapped', label: 'Unmapped', count: unmappedCount },
-    { key: 'mapped', label: 'Mapped', count: mappedCount },
-    { key: 'at-risk', label: 'At Risk', count: risks.filter(r => r.validationStatus === 'At Risk').length },
-    { key: 'unvalidated', label: 'Unvalidated', count: risks.filter(r => r.validationStatus === 'Unvalidated').length },
-  ];
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <button onClick={onBack} className="flex items-center gap-1.5 text-[12px] text-text-muted hover:text-primary font-medium cursor-pointer transition-colors mb-2">
+            <ArrowLeft size={14} />Back to RACM
+          </button>
+          <div className="h-5 w-48 bg-gray-200 rounded animate-pulse" />
+          <div className="h-3 w-64 bg-gray-100 rounded animate-pulse mt-2" />
+        </div>
+        <div className="glass-card rounded-xl p-8">
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map(n => (
+              <div key={n} className="flex items-center gap-4">
+                <div className="h-4 w-16 bg-gray-100 rounded animate-pulse" />
+                <div className="h-4 flex-1 bg-gray-50 rounded animate-pulse" />
+                <div className="h-4 w-20 bg-gray-100 rounded animate-pulse" />
+                <div className="h-4 w-24 bg-gray-50 rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -364,370 +447,81 @@ export default function RacmMappingWorkspace({ onBack, onGoToExecution }: Props)
           <button onClick={onBack} className="flex items-center gap-1.5 text-[12px] text-text-muted hover:text-primary font-medium cursor-pointer transition-colors mb-2">
             <ArrowLeft size={14} />Back to RACM
           </button>
-          <h3 className="text-[16px] font-bold text-text">Risk-Control Mapping</h3>
-          <p className="text-[12px] text-text-muted mt-0.5">Map risks to reusable controls and verify workflow readiness before execution.</p>
+          <h3 className="text-[16px] font-bold text-text">
+            Risk-Control Mapping
+            {racmName && <span className="text-[13px] font-medium text-text-muted ml-2">— {racmName}</span>}
+          </h3>
+          <p className="text-[12px] text-text-muted mt-0.5">Map risks to controls and prepare for execution.</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {racmValidated ? (
-            <span className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-compliant-50 text-compliant-700 text-[12px] font-semibold"><CheckCircle2 size={14} />Validated</span>
-          ) : (
+        <div className="flex items-center gap-3 shrink-0">
+          {racmComputed.status === 'Active' ? (
+            <span className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-[12px] font-semibold"><CheckCircle2 size={14} />Validated</span>
+          ) : racmComputed.readiness === 'Ready to Validate' ? (
             <button onClick={() => setShowValidateModal(true)}
               className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
+              <FileCheck size={13} />Validate RACM
+            </button>
+          ) : (
+            <button disabled
+              className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-400 rounded-lg text-[12px] font-semibold cursor-not-allowed">
               <FileCheck size={13} />Validate RACM
             </button>
           )}
         </div>
       </div>
 
-      {/* Validation warning */}
-      {!racmValidated && (
-        <div className="rounded-lg border border-mitigated/30 bg-mitigated-50/50 px-4 py-2.5 flex items-center gap-2.5">
-          <AlertTriangle size={13} className="text-mitigated-700 shrink-0" />
-          <span className="text-[11px] text-mitigated-700">RACM must be validated before execution. Complete mapping and click Validate RACM.</span>
+      {/* Empty RACM state */}
+      {risks.length === 0 && !isLoading && (
+        <div className="glass-card rounded-xl p-10 text-center space-y-3">
+          <Shield size={28} className="mx-auto text-gray-300" />
+          <h4 className="text-[14px] font-semibold text-text">No risks added yet</h4>
+          <p className="text-[12px] text-text-muted max-w-sm mx-auto">This RACM has no risks. Import from a file or go back to the setup workspace to add risks.</p>
+          <button onClick={onBack} className="mt-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
+            Back to Setup
+          </button>
         </div>
       )}
 
-      {/* Guidance banner */}
-      <div className="rounded-xl border border-primary/15 bg-gradient-to-r from-primary-xlight via-white to-primary-xlight p-3.5 flex items-center gap-3">
-        <div className="p-1.5 rounded-lg bg-primary/10 shrink-0"><Shield size={14} className="text-primary" /></div>
-        <div className="flex-1">
-          <p className="text-[12px] font-semibold text-text">Map controls to risks to define how risks are mitigated.</p>
-          <p className="text-[10px] text-text-muted mt-0.5">Select a risk on the left, then link or create controls on the right. Move risk-by-risk until all are covered.</p>
-        </div>
-        <span className="text-[12px] font-bold text-primary tabular-nums shrink-0">{mappedCount}/{totalRisks} mapped</span>
-      </div>
+      {/* ══ GRID — primary workspace ══ */}
+      {risks.length > 0 && (
+        <RacmGridView
+          risks={risks}
+          onSelectRisk={(id) => { setSelectedRiskId(id); }}
+          onUpdateRisks={setRisks}
+          onLinkControl={(riskId) => { setSelectedRiskId(riskId); setShowLinkDrawer(true); }}
+          onCreateControl={(riskId) => { setSelectedRiskId(riskId); setShowCreateDrawer(true); }}
+          onLinkWorkflow={(ctrlId) => { setLinkWorkflowControlId(ctrlId); }}
+          onCreateWorkflow={(ctrlId) => { setCreateWorkflowControlId(ctrlId); }}
+        />
+      )}
 
-      {/* Mapping progress */}
-      <div className="glass-card rounded-xl p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[12px] font-semibold text-text">{mappedCount} of {totalRisks} risks mapped</span>
-          <span className="text-[11px] text-text-muted tabular-nums">{Math.round((mappedCount / totalRisks) * 100)}%</span>
-        </div>
-        <div className="h-2 bg-surface-3 rounded-full overflow-hidden mb-3">
-          <div className="h-full rounded-full bg-gradient-to-r from-primary to-primary-medium transition-all" style={{ width: `${Math.round((mappedCount / totalRisks) * 100)}%` }} />
-        </div>
-        <div className="flex items-center gap-4 text-[10px]">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-risk" /><span className="text-text-muted">Unmapped <strong className="text-text">{unmappedCount}</strong></span></span>
-          {setupIncompleteCount > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-high" /><span className="text-text-muted">Setup Incomplete <strong className="text-text">{setupIncompleteCount}</strong></span></span>}
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-compliant" /><span className="text-text-muted">Mapped <strong className="text-text">{mappedCount}</strong></span></span>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-1.5">
-        {filters.map(f => (
-          <button key={f.key} onClick={() => setFilter(f.key)}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
-              filter === f.key ? 'bg-primary text-white' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
-            }`}>{f.label} <span className="tabular-nums ml-0.5">{f.count}</span></button>
-        ))}
-      </div>
-
-      {/* Split layout */}
-      <div className="flex gap-4" style={{ minHeight: 500 }}>
-        {/* ── Left: Risk list ── */}
-        <div className="w-[320px] shrink-0 space-y-2">
-          <div className="relative mb-2">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search risks..."
-              className="w-full pl-8 pr-3 py-2 text-[12px] border border-border rounded-lg bg-white text-text placeholder:text-text-muted outline-none focus:border-primary/40 transition-all" />
+      {/* Readiness + Validation (below grid) */}
+      {!racmValidated && risks.length > 0 && <RacmReadinessCard risks={risks} onGoToExecution={onGoToExecution} />}
+      {racmValidated && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border-2 border-compliant/20 bg-gradient-to-br from-compliant-50/30 to-white p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 rounded-xl bg-compliant"><CheckCircle2 size={18} className="text-white" /></div>
+            <div>
+              <h3 className="text-[15px] font-bold text-compliant-700">RACM is ready</h3>
+              <p className="text-[12px] text-compliant-700/70 mt-0.5">All risks are mapped and validated. You can proceed to execution.</p>
+            </div>
           </div>
+          {onGoToExecution && (
+            <button onClick={onGoToExecution}
+              className="mt-2 flex items-center gap-1.5 px-4 py-2 bg-compliant hover:bg-compliant-700 text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
+              <ChevronRight size={13} />Go to Execution
+            </button>
+          )}
+        </motion.div>
+      )}
 
-          <div className="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
-            {filteredRisks.map(risk => {
-              const isSelected = risk.id === selectedRiskId;
-              const mapping = getMappingLabel(risk);
-              const dotColor = BP_DOTS[risk.process] || '#6B5D82';
-
-              return (
-                <motion.div key={risk.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  onClick={() => setSelectedRiskId(risk.id)}
-                  className={`rounded-xl p-3 border cursor-pointer transition-all ${
-                    isSelected ? 'border-primary/30 bg-primary-xlight/50 ring-1 ring-primary/20' : 'border-border hover:border-primary/15 bg-white'
-                  }`}>
-                  <div className="flex items-start justify-between mb-1.5">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="font-mono text-[10px] text-ink-400">{risk.id.toUpperCase()}</span>
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: dotColor }} />
-                        <span className="text-[10px] text-ink-400">{risk.process}</span>
-                      </div>
-                      <div className="text-[12px] font-medium text-text leading-snug">{risk.name}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className="text-[10px] text-text-muted">{risk.controls.length} control{risk.controls.length !== 1 ? 's' : ''}</span>
-                    <span className={`px-1.5 h-4 rounded text-[9px] font-bold inline-flex items-center ${VAL_CLS[risk.validationStatus]}`}>{risk.validationStatus}</span>
-                    {risk.freshness === 'Needs Re-execution' && <span className="px-1.5 h-4 rounded text-[9px] font-bold bg-high-50 text-high-700 inline-flex items-center">Stale</span>}
-                  </div>
-                </motion.div>
-              );
-            })}
-            {filteredRisks.length === 0 && (
-              <div className="text-center py-8 text-[12px] text-text-muted">No risks match filter</div>
-            )}
-          </div>
-        </div>
-
-        {/* ── Right: Selected risk detail ── */}
-        <div className="flex-1 min-w-0">
-          <AnimatePresence mode="wait">
-            <motion.div key={selectedRisk.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }}
-              className="space-y-4">
-
-              {/* Risk summary card */}
-              <div className="glass-card rounded-xl p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-mono text-[11px] text-ink-500 bg-canvas px-1.5 py-0.5 rounded">{selectedRisk.id.toUpperCase()}</span>
-                      <span className={`px-2 h-5 rounded-full text-[10px] font-semibold inline-flex items-center ${VAL_CLS[selectedRisk.validationStatus]}`}>{selectedRisk.validationStatus}</span>
-                      <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-medium" style={{ background: `${BP_DOTS[selectedRisk.process] || '#6B5D82'}15`, color: BP_DOTS[selectedRisk.process] || '#6B5D82' }}>
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: BP_DOTS[selectedRisk.process] }} />{selectedRisk.process}
-                      </span>
-                      {selectedRisk.freshness === 'Needs Re-execution' && <span className="px-1.5 h-4 rounded text-[9px] font-bold bg-high-50 text-high-700 inline-flex items-center">Stale</span>}
-                    </div>
-                    <h3 className="text-[15px] font-bold text-text">{selectedRisk.name}</h3>
-                    <p className="text-[12px] text-text-muted mt-0.5">{selectedRisk.description}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 gap-3 mt-3 pt-3 border-t border-border/40">
-                  <div><span className="text-[9px] text-ink-400 uppercase">Source</span><div className="text-[11px] font-medium text-text mt-0.5">{selectedRisk.sourceRef}</div></div>
-                  <div><span className="text-[9px] text-ink-400 uppercase">Freshness</span><div className={`text-[11px] font-medium mt-0.5 ${selectedRisk.freshness === 'Up to Date' ? 'text-compliant-700' : 'text-high-700'}`}>{selectedRisk.freshness}</div></div>
-                  <div><span className="text-[9px] text-ink-400 uppercase">Controls</span><div className="text-[11px] font-medium text-text mt-0.5">{selectedRisk.controls.length} mapped</div></div>
-                  <div><span className="text-[9px] text-ink-400 uppercase">Key Controls</span><div className="text-[11px] font-medium text-text mt-0.5">{selectedRisk.controls.filter(c => c.isKey).length}</div></div>
-                </div>
-              </div>
-
-              {/* Action bar */}
-              <div className="flex items-center gap-2">
-                <button onClick={() => setShowLinkDrawer(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer">
-                  <Link2 size={13} />Link Existing Control
-                </button>
-                <button onClick={() => setShowCreateDrawer(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 border border-primary/30 bg-primary/5 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer">
-                  <Plus size={13} />Create New Control
-                </button>
-              </div>
-
-              {/* Mapped controls — expandable cards */}
-              {selectedRisk.controls.length === 0 ? (
-                <div className="glass-card rounded-xl p-8 text-center">
-                  <Shield size={32} className="mx-auto text-ink-300 mb-3" />
-                  <p className="text-[14px] font-semibold text-ink-600 mb-1">No controls mapped yet</p>
-                  <p className="text-[12.5px] text-ink-400 max-w-sm mx-auto mb-4">Link an existing control from the Control Library or create a new control to start protecting this risk.</p>
-                  <div className="flex items-center justify-center gap-2">
-                    <button onClick={() => setShowLinkDrawer(true)} className="flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"><Link2 size={12} />Link Control</button>
-                    <button onClick={() => setShowCreateDrawer(true)} className="flex items-center gap-1.5 px-3 py-2 border border-primary/30 bg-primary/5 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"><Plus size={12} />Create Control</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {selectedRisk.controls.map(ctrl => {
-                    const isExpanded = expandedControlId === ctrl.id;
-                    const readiness = getControlReadiness(ctrl);
-                    const wfs = ctrl.workflows || [];
-                    const totalAttrs = wfs.reduce((s, w) => s + w.attributes.length, 0);
-
-                    return (
-                      <div key={ctrl.id} className="glass-card rounded-xl overflow-hidden">
-                        {/* Control row — clickable header */}
-                        <div className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isExpanded ? 'bg-brand-50/20' : 'hover:bg-surface-2/30'}`}
-                          onClick={() => setExpandedControlId(isExpanded ? null : ctrl.id)}>
-                          <ChevronRight size={13} className={`text-ink-400 transition-transform shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[12px] font-semibold text-text">{ctrl.name}</span>
-                              {ctrl.isKey && <Star size={10} className="fill-mitigated text-mitigated shrink-0" />}
-                              <span className={`px-1.5 h-4 rounded text-[9px] font-bold inline-flex items-center ${AUTO_CLS[ctrl.automation]}`}>{ctrl.automation}</span>
-                              <span className={`px-1.5 h-4 rounded text-[9px] font-bold inline-flex items-center ${NATURE_CLS[ctrl.nature]}`}>{ctrl.nature}</span>
-                            </div>
-                            <div className="flex items-center gap-3 mt-0.5 text-[10px] text-ink-400">
-                              <span>{wfs.length} workflow{wfs.length !== 1 ? 's' : ''}</span>
-                              <span>{totalAttrs} attribute{totalAttrs !== 1 ? 's' : ''}</span>
-                              {ctrl.owner && <span>{ctrl.owner}</span>}
-                            </div>
-                          </div>
-                          <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center shrink-0 ${READINESS_CLS[readiness]}`}>{readiness}</span>
-                          <span className={`px-1.5 h-4 rounded text-[9px] font-bold inline-flex items-center shrink-0 ${EXEC_CLS[ctrl.status]}`}>{ctrl.status}</span>
-                          <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                            <button onClick={() => handleToggleKey(ctrl.id)} className="p-1 rounded-md hover:bg-mitigated-50 text-ink-400 hover:text-mitigated transition-colors cursor-pointer" title="Toggle key">
-                              <Star size={11} className={ctrl.isKey ? 'fill-mitigated text-mitigated' : ''} />
-                            </button>
-                            <button onClick={() => handleRemoveControl(ctrl.id)} className="p-1 rounded-md hover:bg-risk-50 text-ink-400 hover:text-risk-700 transition-colors cursor-pointer" title="Remove">
-                              <Trash2 size={11} />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Expanded detail */}
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }}
-                              className="overflow-hidden">
-                              <div className="px-4 pb-4 pt-1 border-t border-border/50 space-y-4">
-
-                                {/* Control details grid */}
-                                <div className="grid grid-cols-3 gap-3 text-[11px]">
-                                  <div><span className="text-ink-400 text-[10px]">Owner</span><div className="font-medium text-text mt-0.5">{ctrl.owner || '—'}</div></div>
-                                  <div><span className="text-ink-400 text-[10px]">Execution Type</span><div className="font-medium text-text mt-0.5">{ctrl.automation}</div></div>
-                                  <div><span className="text-ink-400 text-[10px]">Labels</span><div className="flex gap-1 mt-0.5">{(ctrl.labels || []).map(l => <span key={l} className="px-1.5 h-4 rounded text-[9px] font-medium bg-brand-50 text-brand-700 inline-flex items-center">{l}</span>)}</div></div>
-                                </div>
-
-                                {/* Workflows section */}
-                                <div>
-                                  <div className="flex items-center justify-between mb-2">
-                                    <h4 className="text-[11px] font-bold text-ink-500 uppercase tracking-wider">Linked Workflows ({wfs.length})</h4>
-                                    <div className="flex items-center gap-2">
-                                      <button onClick={() => setLinkWorkflowControlId(ctrl.id)}
-                                        className="text-[10px] font-semibold text-brand-600 hover:underline cursor-pointer flex items-center gap-1"><Link2 size={9} />Link Workflow</button>
-                                      <span className="text-ink-300">·</span>
-                                      <button onClick={() => setCreateWorkflowControlId(ctrl.id)}
-                                        className="text-[10px] font-semibold text-brand-600 hover:underline cursor-pointer flex items-center gap-1"><Plus size={9} />Create Workflow</button>
-                                      {wfs.length > 0 && <>
-                                        <span className="text-ink-300">·</span>
-                                        <button onClick={() => addToast({ message: 'Open attribute editor for this workflow', type: 'info' })}
-                                          className="text-[10px] font-semibold text-brand-600 hover:underline cursor-pointer flex items-center gap-1"><Paperclip size={9} />Manage Attributes</button>
-                                      </>}
-                                    </div>
-                                  </div>
-
-                                  {wfs.length === 0 ? (
-                                    <div className="rounded-lg border border-risk/20 bg-risk-50/20 px-3 py-3 text-center">
-                                      <Workflow size={16} className="mx-auto text-risk-700/50 mb-1" />
-                                      <p className="text-[11px] font-medium text-risk-700">Setup incomplete — no workflow linked</p>
-                                      <p className="text-[10px] text-risk-700/60 mb-2">Link or create a workflow to define test attributes.</p>
-                                      <button onClick={() => setLinkWorkflowControlId(ctrl.id)}
-                                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-[10px] font-semibold hover:bg-primary-hover transition-colors cursor-pointer">
-                                        <Link2 size={10} />Link Workflow
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <div className="space-y-3">
-                                      {wfs.map(wf => (
-                                        <div key={wf.id} className="rounded-xl border border-border bg-white">
-                                          {/* Workflow header */}
-                                          <div className="flex items-center gap-3 px-3 py-2.5 border-b border-border/40">
-                                            <Workflow size={13} className="text-brand-600 shrink-0" />
-                                            <div className="flex-1 min-w-0">
-                                              <div className="flex items-center gap-2">
-                                                <span className="text-[12px] font-semibold text-text">{wf.name}</span>
-                                                <span className="text-[10px] font-mono text-ink-400">{wf.version}</span>
-                                                <span className={`px-1.5 h-4 rounded text-[9px] font-bold inline-flex items-center ${WF_STATUS_CLS[wf.status]}`}>{wf.status}</span>
-                                              </div>
-                                              <div className="flex items-center gap-3 text-[10px] text-ink-400 mt-0.5">
-                                                <span>Last run: {wf.lastRun}</span>
-                                                <span>Data required: {wf.dataRequired ? 'Yes' : 'No'}</span>
-                                                <span>{wf.attributes.length} attribute{wf.attributes.length !== 1 ? 's' : ''}</span>
-                                              </div>
-                                            </div>
-                                            <button onClick={() => addToast({ message: `View workflow: ${wf.name}`, type: 'info' })}
-                                              className="text-[10px] font-semibold text-brand-600 hover:underline cursor-pointer flex items-center gap-1 shrink-0"><Eye size={10} />View</button>
-                                          </div>
-
-                                          {/* Attributes table */}
-                                          {wf.attributes.length === 0 ? (
-                                            <div className="px-3 py-3 text-center">
-                                              <p className="text-[11px] text-mitigated-700 font-medium">Needs attributes — no test conditions defined</p>
-                                              <button onClick={() => addToast({ message: 'Add attribute to workflow', type: 'info' })}
-                                                className="mt-1 text-[10px] font-semibold text-brand-600 hover:underline cursor-pointer inline-flex items-center gap-1"><Plus size={9} />Add Attribute</button>
-                                            </div>
-                                          ) : (
-                                            <div className="overflow-x-auto">
-                                              <table className="w-full text-[10px]">
-                                                <thead><tr className="bg-surface-2/30">
-                                                  {['Attribute', 'Evidence Type', 'Expected Result', 'Pass/Fail Logic'].map(h =>
-                                                    <th key={h} className="px-3 py-2 text-left text-[9px] font-semibold text-ink-400 uppercase">{h}</th>
-                                                  )}
-                                                </tr></thead>
-                                                <tbody>{wf.attributes.map(attr => (
-                                                  <tr key={attr.id} className="border-t border-border/30">
-                                                    <td className="px-3 py-2">
-                                                      <div className="text-[11px] font-medium text-text">{attr.name}</div>
-                                                      <div className="text-[9.5px] text-ink-400">{attr.description}</div>
-                                                    </td>
-                                                    <td className="px-3 py-2">
-                                                      <span className="inline-flex items-center gap-1 text-[10px] text-evidence-700"><Paperclip size={9} />{attr.evidenceType}</span>
-                                                    </td>
-                                                    <td className="px-3 py-2 text-[10px] text-text-secondary">{attr.expectedResult}</td>
-                                                    <td className="px-3 py-2 text-[10px] text-ink-400 font-mono">{attr.passLogic}</td>
-                                                  </tr>
-                                                ))}</tbody>
-                                              </table>
-                                            </div>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Helper text */}
-              <div className="rounded-lg border border-canvas-border bg-canvas px-3 py-2 flex items-start gap-2">
-                <Shield size={11} className="text-ink-400 mt-0.5 shrink-0" />
-                <span className="text-[10px] text-ink-400">Controls are reusable objects from the Control Library. Workflows and attributes define execution readiness. Mapping creates a risk → control relationship only.</span>
-              </div>
-
-              {/* ── Validated success state ── */}
-              {racmValidated && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                  className="rounded-2xl border-2 border-compliant/20 bg-gradient-to-br from-compliant-50/30 to-white p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2.5 rounded-xl bg-compliant"><CheckCircle2 size={18} className="text-white" /></div>
-                    <div>
-                      <h3 className="text-[15px] font-bold text-compliant-700">RACM is ready</h3>
-                      <p className="text-[12px] text-compliant-700/70 mt-0.5">You can now proceed to execution. All risks are mapped and validated.</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3 mb-4">
-                    <div className="rounded-lg bg-white/80 border border-compliant/10 p-2.5 text-center">
-                      <div className="text-lg font-bold text-text tabular-nums">{totalRisks}</div>
-                      <div className="text-[10px] text-text-muted">Risks Validated</div>
-                    </div>
-                    <div className="rounded-lg bg-white/80 border border-compliant/10 p-2.5 text-center">
-                      <div className="text-lg font-bold text-text tabular-nums">{mappedCount}</div>
-                      <div className="text-[10px] text-text-muted">Controls Mapped</div>
-                    </div>
-                    <div className="rounded-lg bg-white/80 border border-compliant/10 p-2.5 text-center">
-                      <div className="text-lg font-bold text-text tabular-nums">{risks.flatMap(r => r.controls).filter(c => c.isKey).length}</div>
-                      <div className="text-[10px] text-text-muted">Key Controls</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {onGoToExecution && (
-                      <button onClick={onGoToExecution}
-                        className="flex items-center gap-1.5 px-4 py-2.5 bg-compliant hover:bg-compliant-700 text-white rounded-lg text-[13px] font-semibold transition-colors cursor-pointer">
-                        <ChevronRight size={14} />Go to Execution
-                      </button>
-                    )}
-                    <button onClick={onBack}
-                      className="px-4 py-2.5 border border-border rounded-lg text-[13px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer">
-                      Back to RACM List
-                    </button>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-compliant/10">
-                    <p className="text-[10px] text-compliant-700/50">RACM defines <strong>what</strong> should be executed. Execution defines <strong>how</strong> — using linked workflows, population data, and sample testing.</p>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* ── RACM Readiness (shown when not yet validated) ── */}
-              {!racmValidated && <RacmReadinessCard risks={risks} onGoToExecution={onGoToExecution} />}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+      {/* Helper */}
+      <div className="rounded-lg border border-canvas-border bg-canvas px-3 py-2 flex items-start gap-2">
+        <Shield size={11} className="text-ink-400 mt-0.5 shrink-0" />
+        <span className="text-[10px] text-ink-400">Controls are reusable objects from the Control Library. Workflows and attributes define execution readiness. Mapping creates a risk → control relationship only.</span>
       </div>
+
 
       {/* ── Link Existing Control Drawer ── */}
       <AnimatePresence>
@@ -743,10 +537,11 @@ export default function RacmMappingWorkspace({ onBack, onGoToExecution }: Props)
       {/* ── Create New Control Drawer ── */}
       <AnimatePresence>
         {showCreateDrawer && (
-          <CreateControlMiniDrawer
+          <CreateControlDrawer
             onClose={() => setShowCreateDrawer(false)}
-            onCreate={handleCreateControl}
+            onSave={handleCreateControl}
             defaultProcess={selectedRisk.process}
+            defaultRiskIds={[selectedRisk.id]}
           />
         )}
       </AnimatePresence>
@@ -791,8 +586,8 @@ export default function RacmMappingWorkspace({ onBack, onGoToExecution }: Props)
                   {valChecks.map((c, i) => (
                     <div key={i} className="flex items-center gap-2.5 py-1">
                       {c.done
-                        ? <CheckCircle2 size={15} className="text-compliant-700 shrink-0" />
-                        : <XCircle size={15} className="text-risk-700 shrink-0" />}
+                        ? <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                        : <XCircle size={15} className="text-red-500 shrink-0" />}
                       <span className={`text-[13px] ${c.done ? 'text-text-secondary' : 'text-text font-semibold'}`}>{c.label}</span>
                     </div>
                   ))}
@@ -800,12 +595,12 @@ export default function RacmMappingWorkspace({ onBack, onGoToExecution }: Props)
 
                 {/* Blocking errors */}
                 {!allValPassed && (
-                  <div className="rounded-lg border border-risk/20 bg-risk-50/30 px-3 py-2.5 mb-4">
-                    <p className="text-[12px] font-semibold text-risk-700 mb-1">Validation blocked</p>
+                  <div className="rounded-lg border border-red-200/50 bg-red-50/30 px-3 py-2.5 mb-4">
+                    <p className="text-[12px] font-semibold text-red-700 mb-1">Validation blocked — {racmComputed.readiness}</p>
                     <ul className="space-y-0.5">
                       {valChecks.filter(c => !c.done).map((c, i) => (
-                        <li key={i} className="text-[11px] text-risk-700/80 flex items-center gap-1.5">
-                          <span className="w-1 h-1 rounded-full bg-risk-700/50 shrink-0" />{c.label}
+                        <li key={i} className="text-[11px] text-red-600/80 flex items-center gap-1.5">
+                          <span className="w-1 h-1 rounded-full bg-red-500/50 shrink-0" />{c.label}
                         </li>
                       ))}
                     </ul>
@@ -814,7 +609,7 @@ export default function RacmMappingWorkspace({ onBack, onGoToExecution }: Props)
 
                 {allValPassed && (
                   <div className="rounded-lg bg-surface-2/50 border border-border px-3 py-2.5 mb-4">
-                    <p className="text-[12px] text-text leading-relaxed">All checks passed. Validating will set RACM status to <strong>Active</strong> and readiness to <strong>Ready for Execution</strong>.</p>
+                    <p className="text-[12px] text-text leading-relaxed">All checks passed. Validating will set RACM status to <strong>Active</strong> and readiness to <strong>Ready</strong>.</p>
                   </div>
                 )}
 
@@ -844,58 +639,642 @@ export default function RacmMappingWorkspace({ onBack, onGoToExecution }: Props)
   );
 }
 
-// ─── RACM Readiness Card ────────────────────────────────────────────────────
+// ─── RACM Grid View (Excel-style) ───────────────────────────────────────────
 
-type RacmReadinessState = 'Not Ready' | 'Needs Mapping' | 'Needs Workflow Setup' | 'Ready for Execution';
+const MAPPING_STATUS_CLS: Record<string, string> = {
+  Unmapped: 'bg-red-50 text-red-700',
+  'Partially Mapped': 'bg-amber-50 text-amber-700',
+  Mapped: 'bg-emerald-50 text-emerald-700',
+};
 
-function RacmReadinessCard({ risks, onGoToExecution }: { risks: RiskItem[]; onGoToExecution?: () => void }) {
-  const allControls = risks.flatMap(r => r.controls);
+const WF_READINESS_CLS: Record<string, string> = {
+  'Setup Incomplete': 'bg-red-50/60 text-red-600',
+  'Needs Attributes': 'bg-amber-50/60 text-amber-600',
+  Ready: 'bg-emerald-50/60 text-emerald-600',
+  '—': 'bg-gray-50 text-gray-400',
+};
 
-  const checks = [
-    { label: 'Risks imported or created', done: risks.length > 0 },
-    { label: 'All risks reviewed', done: true },
-    { label: 'Required risks mapped to controls', done: risks.every(r => r.controls.length > 0) },
-    { label: 'Key controls identified', done: allControls.some(c => c.isKey) },
-    { label: 'Controls have workflows', done: allControls.length === 0 || allControls.every(c => c.workflowLinked) },
-    { label: 'Workflows have attributes', done: allControls.length === 0 || allControls.filter(c => c.workflowLinked).every(c => (c.workflows || []).some(w => w.attributes.length > 0)) },
-    { label: 'No setup-incomplete controls', done: allControls.every(c => c.workflowLinked) },
-  ];
+function getRowMappingStatus(r: RiskItem): string {
+  if (r.controls.length === 0) return 'Unmapped';
+  if (r.controls.some(c => !c.workflowLinked)) return 'Partially Mapped';
+  return 'Mapped';
+}
 
-  const checksDone = checks.filter(c => c.done).length;
+function getRowWorkflowStatus(r: RiskItem): string {
+  if (r.controls.length === 0) return '—';
+  const readinesses = r.controls.map(c => getControlReadiness(c));
+  if (readinesses.some(s => s === 'Setup Incomplete')) return 'Setup Incomplete';
+  if (readinesses.some(s => s === 'Needs Attributes')) return 'Needs Attributes';
+  return 'Ready';
+}
 
-  // Derive state
-  let readinessState: RacmReadinessState = 'Ready for Execution';
-  if (risks.some(r => r.controls.length === 0)) readinessState = 'Needs Mapping';
-  else if (allControls.some(c => !c.workflowLinked)) readinessState = 'Needs Workflow Setup';
-  else if (allControls.some(c => (c.workflows || []).every(w => w.attributes.length === 0))) readinessState = 'Needs Workflow Setup';
-  else if (!checks.every(c => c.done)) readinessState = 'Not Ready';
+function RacmGridView({ risks, onSelectRisk, onUpdateRisks, onLinkControl, onCreateControl, onLinkWorkflow, onCreateWorkflow }: {
+  risks: RiskItem[];
+  onSelectRisk: (id: string) => void;
+  onUpdateRisks: (updater: (prev: RiskItem[]) => RiskItem[]) => void;
+  onLinkControl: (riskId: string) => void;
+  onCreateControl: (riskId: string) => void;
+  onLinkWorkflow?: (controlId: string) => void;
+  onCreateWorkflow?: (controlId: string) => void;
+}) {
+  const { addToast } = useToast();
+  const [gridSearch, setGridSearch] = useState('');
+  const [gridFilter, setGridFilter] = useState<'All' | 'Unmapped' | 'Partially Mapped' | 'Mapped' | 'At Risk' | 'Unvalidated'>('All');
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [editNameValue, setEditNameValue] = useState('');
+  const [controlPickerRiskId, setControlPickerRiskId] = useState<string | null>(null);
+  const [controlSearch, setControlSearch] = useState('');
+  const [wfDrawerRiskId, setWfDrawerRiskId] = useState<string | null>(null);
+  const wfDrawerRisk = wfDrawerRiskId ? risks.find(r => r.id === wfDrawerRiskId) : null;
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
-  const isReady = readinessState === 'Ready for Execution';
+  // Filtering
+  const q = gridSearch.toLowerCase();
+  const filteredRisks = risks.filter(r => {
+    if (q && !r.name.toLowerCase().includes(q) && !r.id.toLowerCase().includes(q) && !r.process.toLowerCase().includes(q)) return false;
+    if (gridFilter === 'Unmapped' && r.controls.length > 0) return false;
+    if (gridFilter === 'Mapped' && (r.controls.length === 0 || r.controls.some(c => !c.workflowLinked))) return false;
+    if (gridFilter === 'Partially Mapped' && !(r.controls.length > 0 && r.controls.some(c => !c.workflowLinked))) return false;
+    if (gridFilter === 'At Risk' && r.validationStatus !== 'At Risk') return false;
+    if (gridFilter === 'Unvalidated' && r.validationStatus !== 'Unvalidated') return false;
+    return true;
+  });
 
-  const stateStyles: Record<RacmReadinessState, string> = {
-    'Not Ready': 'bg-risk-50 text-risk-700',
-    'Needs Mapping': 'bg-mitigated-50 text-mitigated-700',
-    'Needs Workflow Setup': 'bg-high-50 text-high-700',
-    'Ready for Execution': 'bg-compliant-50 text-compliant-700',
+  // Summary
+  const mappedRiskCount = risks.filter(r => r.controls.length > 0).length;
+  const unmappedRiskCount = risks.filter(r => r.controls.length === 0).length;
+  const mappedPct = risks.length > 0 ? Math.round((mappedRiskCount / risks.length) * 100) : 0;
+
+  // Selection helpers
+  const allSelected = filteredRisks.length > 0 && filteredRisks.every(r => selectedIds.has(r.id));
+  const someSelected = selectedIds.size > 0;
+  const toggleSelect = (id: string) => setSelectedIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const toggleSelectAll = () => {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredRisks.map(r => r.id)));
+  };
+
+  // Inline name edit
+  const startEditName = (risk: RiskItem) => {
+    setEditingNameId(risk.id);
+    setEditNameValue(risk.name);
+  };
+  const saveName = (riskId: string) => {
+    if (editNameValue.trim()) {
+      onUpdateRisks(prev => prev.map(r => r.id === riskId ? { ...r, name: editNameValue.trim() } : r));
+      addToast({ message: 'Risk name updated', type: 'success' });
+    }
+    setEditingNameId(null);
+  };
+
+  // Toggle key control
+  const toggleKeyInGrid = (riskId: string, controlId: string) => {
+    onUpdateRisks(prev => prev.map(r => r.id === riskId ? {
+      ...r, controls: r.controls.map(c => c.id === controlId ? { ...c, isKey: !c.isKey } : c),
+    } : r));
+  };
+
+  // Remove control
+  const removeControlInGrid = (riskId: string, controlId: string) => {
+    onUpdateRisks(prev => prev.map(r => r.id === riskId ? {
+      ...r, controls: r.controls.filter(c => c.id !== controlId),
+    } : r));
+    addToast({ message: 'Control removed from mapping', type: 'info' });
+  };
+
+  // Link control from grid picker
+  const linkControlFromGrid = (riskId: string, controlId: string) => {
+    const ctrl = CONTROL_LIBRARY.find(c => c.id === controlId);
+    if (!ctrl) return;
+    onUpdateRisks(prev => prev.map(r => r.id === riskId ? {
+      ...r, controls: [...r.controls, ctrl],
+    } : r));
+    addToast({ message: `"${ctrl.name}" mapped`, type: 'success' });
+  };
+
+  // Inline control picker — available controls not yet linked to this risk
+  const pickerRisk = controlPickerRiskId ? risks.find(r => r.id === controlPickerRiskId) : null;
+  const pickerLinkedIds = new Set(pickerRisk?.controls.map(c => c.id) || []);
+  const pickerAvailable = CONTROL_LIBRARY.filter(c => !pickerLinkedIds.has(c.id));
+  const pickerFiltered = controlSearch
+    ? pickerAvailable.filter(c => c.name.toLowerCase().includes(controlSearch.toLowerCase()))
+    : pickerAvailable;
+
+  // Bulk actions
+  const handleBulkRemoveMapping = () => {
+    onUpdateRisks(prev => prev.map(r => selectedIds.has(r.id) ? { ...r, controls: [] } : r));
+    addToast({ message: `Mapping removed from ${selectedIds.size} risk${selectedIds.size !== 1 ? 's' : ''}`, type: 'info' });
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkMarkKey = () => {
+    onUpdateRisks(prev => prev.map(r => selectedIds.has(r.id) ? {
+      ...r, controls: r.controls.map(c => ({ ...c, isKey: true })),
+    } : r));
+    addToast({ message: `All controls marked as Key for ${selectedIds.size} risk${selectedIds.size !== 1 ? 's' : ''}`, type: 'success' });
+    setSelectedIds(new Set());
   };
 
   return (
-    <div className={`rounded-xl border p-5 ${isReady ? 'border-compliant/20 bg-compliant-50/10' : 'border-border bg-white'}`}>
+    <div className="space-y-3" onClick={() => { if (controlPickerRiskId) setControlPickerRiskId(null); }}>
+      {/* Summary bar */}
+      <div className="glass-card rounded-xl p-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[12px] font-semibold text-text">{mappedRiskCount} of {risks.length} risks mapped</span>
+          <span className="text-[11px] text-text-muted tabular-nums">{mappedPct}%</span>
+        </div>
+        <div className="h-1.5 bg-surface-3 rounded-full overflow-hidden">
+          <div className="h-full rounded-full bg-gradient-to-r from-primary to-primary-medium transition-all" style={{ width: `${mappedPct}%` }} />
+        </div>
+      </div>
+
+      {/* Warning banner */}
+      {unmappedRiskCount > 0 && (
+        <div className="rounded-lg border border-risk/20 bg-risk-50/30 px-4 py-2.5 flex items-center gap-2.5">
+          <AlertTriangle size={13} className="text-risk-700 shrink-0" />
+          <span className="text-[11px] text-risk-700">{unmappedRiskCount} risk{unmappedRiskCount !== 1 ? 's' : ''} not mapped to controls. Complete mapping before validation.</span>
+        </div>
+      )}
+
+      {/* Toolbar: search + filters + bulk actions */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+            <input type="text" value={gridSearch} onChange={e => setGridSearch(e.target.value)} placeholder="Search risks..."
+              className="pl-8 pr-3 py-1.5 text-[11px] border border-border rounded-lg bg-white text-text placeholder:text-text-muted outline-none focus:border-primary/40 transition-colors w-44" />
+          </div>
+          <div className="flex gap-1">
+            {(['All', 'Unmapped', 'Partially Mapped', 'Mapped', 'At Risk', 'Unvalidated'] as const).map(f => (
+              <button key={f} onClick={() => setGridFilter(f)}
+                className={`px-2 py-1 rounded-full text-[10px] font-semibold transition-all cursor-pointer ${
+                  gridFilter === f ? 'bg-primary text-white' : 'bg-surface-2 text-text-muted hover:bg-primary/10 hover:text-primary'
+                }`}>{f}</button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {someSelected && (
+            <div className="flex items-center gap-1.5 border-l border-border pl-3">
+              <span className="text-[10px] text-text-muted">{selectedIds.size} selected</span>
+              <button onClick={handleBulkMarkKey} className="px-2 py-1 rounded text-[10px] font-semibold text-mitigated-700 bg-mitigated-50 hover:bg-mitigated-50/80 cursor-pointer transition-colors">
+                <Star size={9} className="inline mr-0.5 -mt-0.5" />Mark Key
+              </button>
+              <button onClick={handleBulkRemoveMapping} className="px-2 py-1 rounded text-[10px] font-semibold text-risk-700 bg-risk-50 hover:bg-risk-50/80 cursor-pointer transition-colors">
+                <Trash2 size={9} className="inline mr-0.5 -mt-0.5" />Remove
+              </button>
+              <button onClick={() => setSelectedIds(new Set())} className="px-1.5 py-1 rounded text-[10px] text-ink-400 hover:text-ink-700 cursor-pointer"><X size={10} /></button>
+            </div>
+          )}
+          <span className="text-[10px] text-text-muted">{filteredRisks.length} risk{filteredRisks.length !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+
+      {/* Grid table */}
+      <div className="glass-card rounded-xl overflow-hidden">
+        <div className="overflow-x-auto" style={{ maxHeight: 560 }}>
+          <table className="w-full text-[11px] table-fixed" style={{ minWidth: 1100 }}>
+            <thead className="sticky top-0 z-10">
+              <tr className="border-b border-border bg-surface-2/80 backdrop-blur-sm">
+                <th className="px-2 py-3 w-[40px]">
+                  <input type="checkbox" checked={allSelected} onChange={toggleSelectAll}
+                    className="w-3.5 h-3.5 rounded border-gray-300 text-primary accent-primary cursor-pointer" />
+                </th>
+                {[
+                  { label: 'Risk ID', w: 'w-[100px]' },
+                  { label: 'Risk Name', w: 'w-[180px]' },
+                  { label: 'Process', w: 'w-[100px]' },
+                  { label: 'Risk Status', w: 'w-[90px]' },
+                  { label: 'Control(s)', w: 'w-[240px]' },
+                  { label: 'Key Control', w: 'w-[80px]' },
+                  { label: 'Workflow Status', w: 'w-[110px]' },
+                  { label: 'Mapping', w: 'w-[80px]' },
+                  { label: '', w: 'w-[50px]' },
+                ].map(h => (
+                  <th key={h.label || 'actions'} className={`px-3 py-3 text-left text-[9px] font-semibold text-text-muted uppercase tracking-wide whitespace-nowrap ${h.w}`}>{h.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRisks.length === 0 ? (
+                <tr><td colSpan={10} className="px-4 py-10 text-center text-[12px] text-text-muted">No risks match search or filters</td></tr>
+              ) : filteredRisks.map((risk, i) => {
+                const keyCount = risk.controls.filter(c => c.isKey).length;
+                const mappingStatus = getRowMappingStatus(risk);
+                const wfStatus = getRowWorkflowStatus(risk);
+
+                return (<React.Fragment key={risk.id}>
+                  <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.015 }}
+                    onClick={() => setExpandedRowId(expandedRowId === risk.id ? null : risk.id)}
+                    className={`border-b border-border/30 transition-colors cursor-pointer group ${
+                      mappingStatus === 'Unmapped' ? 'bg-risk-50/5 hover:bg-risk-50/15' : 'hover:bg-brand-50/15'
+                    }`}>
+                    {/* Checkbox */}
+                    <td className="px-2 py-2.5 w-[40px] align-middle" onClick={e => e.stopPropagation()}>
+                      <input type="checkbox" checked={selectedIds.has(risk.id)} onChange={() => toggleSelect(risk.id)}
+                        className="w-3.5 h-3.5 rounded border-gray-300 text-primary accent-primary cursor-pointer" />
+                    </td>
+                    {/* Risk ID + expand chevron */}
+                    <td className="px-3 py-2.5 align-middle">
+                      <div className="flex items-center gap-1.5">
+                        <ChevronRight size={11} className={`text-ink-400 transition-transform shrink-0 ${expandedRowId === risk.id ? 'rotate-90' : ''}`} />
+                        <span className="font-mono text-[10px] text-ink-500 bg-canvas px-1.5 py-0.5 rounded">{risk.id.toUpperCase()}</span>
+                      </div>
+                    </td>
+
+                    {/* Risk Name — editable */}
+                    <td className="px-3 py-2.5 align-middle" onClick={e => e.stopPropagation()}>
+                      {editingNameId === risk.id ? (
+                        <input value={editNameValue} onChange={e => setEditNameValue(e.target.value)}
+                          onBlur={() => saveName(risk.id)}
+                          onKeyDown={e => { if (e.key === 'Enter') saveName(risk.id); if (e.key === 'Escape') setEditingNameId(null); }}
+                          className="w-full px-2 py-1 rounded border border-primary/40 text-[11px] text-text bg-white outline-none ring-2 ring-primary/10"
+                          autoFocus />
+                      ) : (
+                        <div className="group/name cursor-text" onClick={() => startEditName(risk)} title={risk.description}>
+                          <div className="text-[11px] font-medium text-text truncate group-hover/name:text-primary transition-colors">{risk.name}</div>
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Process */}
+                    <td className="px-3 py-2.5 align-middle">
+                      <span className="inline-flex items-center gap-1 px-2 h-5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200/60 whitespace-nowrap">
+                        {risk.process}
+                      </span>
+                    </td>
+
+                    {/* Risk Status */}
+                    <td className="px-3 py-2.5 align-middle">
+                      <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center whitespace-nowrap ${VAL_CLS[risk.validationStatus]}`}>{risk.validationStatus}</span>
+                    </td>
+
+                    {/* Controls — interactive pills */}
+                    <td className="px-3 py-2.5 align-middle relative" onClick={e => e.stopPropagation()}>
+                      <div className="flex flex-wrap gap-1 max-h-[44px] overflow-hidden">
+                        {risk.controls.slice(0, 3).map(c => (
+                          <span key={c.id} className="inline-flex items-center gap-0.5 px-1.5 h-5 rounded bg-gray-50 text-[9px] font-medium text-gray-700 border border-gray-200/70 group/pill cursor-default" title={c.name}>
+                            <button onClick={() => toggleKeyInGrid(risk.id, c.id)} className="cursor-pointer shrink-0" title={c.isKey ? 'Unmark key' : 'Mark as key'}>
+                              <Star size={8} className={c.isKey ? 'fill-amber-400 text-amber-400' : 'text-gray-300 hover:text-amber-400 transition-colors'} />
+                            </button>
+                            <span className="truncate max-w-[80px]">{c.name.length > 14 ? c.name.slice(0, 13) + '…' : c.name}</span>
+                            <button onClick={() => removeControlInGrid(risk.id, c.id)} className="cursor-pointer shrink-0 opacity-0 group-hover/pill:opacity-100 transition-opacity" title="Remove">
+                              <X size={8} className="text-gray-400 hover:text-red-600" />
+                            </button>
+                          </span>
+                        ))}
+                        {risk.controls.length > 3 && (
+                          <span className="inline-flex items-center px-1.5 h-5 rounded bg-gray-50 text-[9px] font-semibold text-gray-500 border border-gray-200/70">+{risk.controls.length - 3} more</span>
+                        )}
+                        {/* Add control button */}
+                        <button onClick={() => { setControlPickerRiskId(controlPickerRiskId === risk.id ? null : risk.id); setControlSearch(''); }}
+                          className="inline-flex items-center gap-0.5 px-1.5 h-5 rounded text-[9px] font-semibold text-primary bg-primary/10 hover:bg-primary/15 cursor-pointer transition-colors border border-primary/20">
+                          <Plus size={8} />{risk.controls.length === 0 ? 'Add Control' : '+'}
+                        </button>
+                      </div>
+
+                      {/* Inline control picker dropdown */}
+                      <AnimatePresence>
+                        {controlPickerRiskId === risk.id && (
+                          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} transition={{ duration: 0.12 }}
+                            className="absolute left-2 top-full mt-1 z-30 w-[260px] bg-white rounded-xl border border-border shadow-xl overflow-hidden">
+                            <div className="p-2 border-b border-border/50">
+                              <div className="relative">
+                                <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-ink-400" />
+                                <input value={controlSearch} onChange={e => setControlSearch(e.target.value)} placeholder="Search controls..."
+                                  className="w-full pl-7 pr-2 py-1.5 rounded-lg border border-border bg-white text-[11px] placeholder:text-ink-400 outline-none focus:border-primary/40" autoFocus />
+                              </div>
+                            </div>
+                            <div className="max-h-[180px] overflow-y-auto">
+                              {pickerFiltered.length === 0 ? (
+                                <div className="px-3 py-4 text-center text-[10px] text-ink-400">No controls available</div>
+                              ) : pickerFiltered.slice(0, 6).map(ctrl => (
+                                <button key={ctrl.id} onClick={() => { linkControlFromGrid(risk.id, ctrl.id); }}
+                                  className="w-full text-left px-3 py-2 hover:bg-brand-50/30 transition-colors cursor-pointer border-b border-border/20 last:border-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] font-medium text-text truncate">{ctrl.name}</span>
+                                    {ctrl.isKey && <Star size={7} className="fill-amber-400 text-amber-400 shrink-0" />}
+                                  </div>
+                                  <div className="text-[9px] text-ink-400 mt-0.5">{ctrl.automation} · {ctrl.nature}</div>
+                                </button>
+                              ))}
+                            </div>
+                            <div className="border-t border-border/50 p-1.5 flex gap-1">
+                              <button onClick={() => { setControlPickerRiskId(null); onLinkControl(risk.id); }}
+                                className="flex-1 text-center px-2 py-1.5 rounded-lg text-[9px] font-semibold text-primary hover:bg-primary/10 cursor-pointer transition-colors">Browse Library</button>
+                              <button onClick={() => { setControlPickerRiskId(null); onCreateControl(risk.id); }}
+                                className="flex-1 text-center px-2 py-1.5 rounded-lg text-[9px] font-semibold text-brand-700 hover:bg-brand-50 cursor-pointer transition-colors">+ Create New</button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </td>
+
+                    {/* Key Control Count */}
+                    <td className="px-3 py-2.5 align-middle text-center">
+                      {keyCount > 0
+                        ? <span className="inline-flex items-center justify-center gap-0.5 text-[10px] font-medium text-gray-600"><Star size={9} className="fill-amber-400 text-amber-400" />{keyCount}</span>
+                        : <span className="text-gray-300 text-[10px]">—</span>}
+                    </td>
+
+                    {/* Workflow Status — clickable */}
+                    <td className="px-3 py-2.5 align-middle" onClick={e => { e.stopPropagation(); if (risk.controls.length > 0) setWfDrawerRiskId(risk.id); }}>
+                      <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center whitespace-nowrap cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all ${WF_READINESS_CLS[wfStatus]}`}>{wfStatus}</span>
+                    </td>
+
+                    {/* Mapping Status */}
+                    <td className="px-3 py-2.5 align-middle">
+                      <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center whitespace-nowrap ${MAPPING_STATUS_CLS[mappingStatus]}`}>{mappingStatus}</span>
+                    </td>
+
+                    {/* Manage Workflow — single row action */}
+                    <td className="px-2 py-2.5 align-middle" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-center">
+                        {risk.controls.length > 0 ? (
+                          <button onClick={() => setWfDrawerRiskId(risk.id)}
+                            title="Manage Workflow" className="p-1.5 rounded-md text-ink-400 hover:bg-brand-50 hover:text-brand-600 transition-colors cursor-pointer">
+                            <Workflow size={13} />
+                          </button>
+                        ) : (
+                          <span className="p-1.5 text-ink-200"><Workflow size={13} /></span>
+                        )}
+                      </div>
+                    </td>
+                  </motion.tr>
+                  {/* Expanded detail row */}
+                  <AnimatePresence>
+                    {expandedRowId === risk.id && (
+                      <motion.tr key={`exp-${risk.id}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+                        <td colSpan={10} className="p-0">
+                          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} transition={{ duration: 0.15 }}
+                            className="overflow-hidden">
+                            <div className="px-6 py-4 bg-surface-2/20 border-b border-border/30 space-y-4">
+                              {/* Risk details */}
+                              <div className="grid grid-cols-4 gap-4">
+                                <div><span className="text-[9px] text-ink-400 uppercase block">Description</span><p className="text-[11px] text-text mt-0.5">{risk.description || '—'}</p></div>
+                                <div><span className="text-[9px] text-ink-400 uppercase block">Source Ref</span><p className="text-[11px] text-text mt-0.5 font-mono">{risk.sourceRef}</p></div>
+                                <div><span className="text-[9px] text-ink-400 uppercase block">Freshness</span><p className={`text-[11px] font-medium mt-0.5 ${risk.freshness === 'Up to Date' ? 'text-compliant-700' : 'text-high-700'}`}>{risk.freshness}</p></div>
+                                <div><span className="text-[9px] text-ink-400 uppercase block">Validation</span><span className={`mt-0.5 px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${VAL_CLS[risk.validationStatus]}`}>{risk.validationStatus}</span></div>
+                              </div>
+
+                              {/* SOP Traceability */}
+                              {risk.sourceSopName && (
+                                <div className="rounded-lg border border-border/40 bg-white px-4 py-3">
+                                  <div className="flex items-center gap-1.5 mb-2">
+                                    <FileText size={10} className="text-gray-400" />
+                                    <span className="text-[9px] font-bold text-ink-400 uppercase tracking-wider">SOP Source</span>
+                                  </div>
+                                  <div className="grid grid-cols-4 gap-3">
+                                    <div>
+                                      <span className="text-[9px] text-gray-400 block">SOP</span>
+                                      <span className="text-[11px] text-text font-medium">{risk.sourceSopName}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[9px] text-gray-400 block">Version</span>
+                                      <span className="text-[10px] font-mono text-gray-500">{risk.sourceSopVersion}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[9px] text-gray-400 block">Section</span>
+                                      <span className="text-[10px] font-mono text-gray-500">{risk.sourceSection}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[9px] text-gray-400 block">Original Text</span>
+                                      <span className="text-[10px] text-gray-500 italic line-clamp-2">"{risk.sourceText}"</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Controls detail */}
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="text-[10px] font-bold text-ink-500 uppercase tracking-wider">Mapped Controls ({risk.controls.length})</h4>
+                                  <div className="flex items-center gap-2">
+                                    <button onClick={e => { e.stopPropagation(); onLinkControl(risk.id); }}
+                                      className="text-[10px] font-semibold text-primary hover:underline cursor-pointer flex items-center gap-1"><Link2 size={9} />Link Control</button>
+                                    <button onClick={e => { e.stopPropagation(); onCreateControl(risk.id); }}
+                                      className="text-[10px] font-semibold text-primary hover:underline cursor-pointer flex items-center gap-1"><Plus size={9} />Create Control</button>
+                                  </div>
+                                </div>
+                                {risk.controls.length === 0 ? (
+                                  <p className="text-[11px] text-ink-400">No controls mapped. Use the actions above to start.</p>
+                                ) : (
+                                  <div className="space-y-1.5">
+                                    {risk.controls.map(ctrl => {
+                                      const rd = getControlReadiness(ctrl);
+                                      const wfs = ctrl.workflows || [];
+                                      return (
+                                        <div key={ctrl.id} className="flex items-center gap-3 px-3 py-2 rounded-lg border border-border/50 bg-white">
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5">
+                                              <span className="text-[11px] font-medium text-text">{ctrl.name}</span>
+                                              {ctrl.isKey && <Star size={8} className="fill-amber-400 text-amber-400 shrink-0" />}
+                                              <span className={`px-1.5 h-3.5 rounded text-[8px] font-bold inline-flex items-center ${AUTO_CLS[ctrl.automation]}`}>{ctrl.automation}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3 mt-0.5 text-[9px] text-ink-400">
+                                              <span>{wfs.length} workflow{wfs.length !== 1 ? 's' : ''}</span>
+                                              <span>{wfs.reduce((s, w) => s + w.attributes.length, 0)} attrs</span>
+                                              {ctrl.owner && <span>{ctrl.owner}</span>}
+                                            </div>
+                                          </div>
+                                          <span className={`px-1.5 h-4 rounded text-[8px] font-bold inline-flex items-center shrink-0 ${READINESS_CLS[rd]}`}>{rd}</span>
+                                          {wfs.length === 0 && onLinkWorkflow && (
+                                            <button onClick={e => { e.stopPropagation(); onLinkWorkflow(ctrl.id); }}
+                                              className="text-[9px] font-semibold text-brand-600 hover:underline cursor-pointer shrink-0">Link Workflow</button>
+                                          )}
+                                          {wfs.length > 0 && (
+                                            <button onClick={e => { e.stopPropagation(); setWfDrawerRiskId(risk.id); }}
+                                              className="text-[9px] font-semibold text-brand-600 hover:underline cursor-pointer shrink-0">Manage</button>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        </td>
+                      </motion.tr>
+                    )}
+                  </AnimatePresence>
+                </React.Fragment>);
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-4 py-2.5 border-t border-border bg-surface-2/30 flex items-center justify-between">
+          <span className="text-[10px] text-text-muted">{filteredRisks.length} risk{filteredRisks.length !== 1 ? 's' : ''} · Use inline controls to map, hover for quick actions, click workflow status for details</span>
+          <div className="flex items-center gap-3 text-[9px]">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-compliant-50 border border-compliant/30" /><span className="text-text-muted">Mapped</span></span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-mitigated-50 border border-mitigated/30" /><span className="text-text-muted">Partial</span></span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-risk-50 border border-risk/30" /><span className="text-text-muted">Unmapped</span></span>
+          </div>
+        </div>
+      </div>
+
+      {/* Workflow Readiness Drawer */}
+      <AnimatePresence>
+        {wfDrawerRisk && (
+          <WorkflowReadinessDrawer
+            risk={wfDrawerRisk}
+            onClose={() => setWfDrawerRiskId(null)}
+            onLinkWorkflow={(ctrlId) => { setWfDrawerRiskId(null); if (onLinkWorkflow) onLinkWorkflow(ctrlId); }}
+            onCreateWorkflow={(ctrlId) => { setWfDrawerRiskId(null); if (onCreateWorkflow) onCreateWorkflow(ctrlId); }}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Workflow Readiness Drawer ──────────────────────────────────────────────
+
+function WorkflowReadinessDrawer({ risk, onClose, onLinkWorkflow, onCreateWorkflow }: {
+  risk: RiskItem;
+  onClose: () => void;
+  onLinkWorkflow: (controlId: string) => void;
+  onCreateWorkflow: (controlId: string) => void;
+}) {
+  const { addToast } = useToast();
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+        className="fixed inset-0 bg-ink-900/40 backdrop-blur-[2px] z-40" onClick={onClose} />
+      <motion.aside initial={{ x: 24, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 24, opacity: 0 }}
+        transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+        className="fixed top-0 right-0 bottom-0 w-full max-w-[460px] bg-canvas-elevated shadow-xl border-l border-canvas-border flex flex-col z-50"
+        role="dialog" aria-label="Workflow Readiness">
+
+        <header className="shrink-0 px-6 pt-5 pb-4 border-b border-canvas-border">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2"><Workflow size={18} className="text-brand-600" /><h2 className="font-display text-[18px] font-semibold text-ink-900">Workflow Readiness</h2></div>
+              <p className="text-[12px] text-ink-500 mt-0.5">{risk.name}</p>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 rounded-full text-ink-500 hover:text-ink-800 hover:bg-[#F4F2F7] flex items-center justify-center cursor-pointer"><X size={16} /></button>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          {risk.controls.length === 0 ? (
+            <div className="text-center py-8">
+              <Shield size={28} className="mx-auto text-ink-300 mb-2" />
+              <p className="text-[13px] font-semibold text-ink-600 mb-1">No controls mapped</p>
+              <p className="text-[11px] text-ink-400">Map controls first, then link workflows.</p>
+            </div>
+          ) : (
+            risk.controls.map(ctrl => {
+              const readiness = getControlReadiness(ctrl);
+              const wfs = ctrl.workflows || [];
+              const totalAttrs = wfs.reduce((s, w) => s + w.attributes.length, 0);
+
+              return (
+                <div key={ctrl.id} className="glass-card rounded-xl p-4">
+                  {/* Control header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Shield size={13} className="text-brand-600 shrink-0" />
+                      <span className="text-[12px] font-semibold text-text">{ctrl.name}</span>
+                      {ctrl.isKey && <Star size={9} className="fill-mitigated text-mitigated" />}
+                    </div>
+                    <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${READINESS_CLS[readiness]}`}>{readiness}</span>
+                  </div>
+
+                  {/* Workflows under this control */}
+                  {wfs.length === 0 ? (
+                    <div className="rounded-lg border border-risk/20 bg-risk-50/15 px-3 py-2.5 text-center mb-2">
+                      <p className="text-[10px] text-risk-700 font-medium">No workflow linked</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 mb-2">
+                      {wfs.map(wf => (
+                        <div key={wf.id} className="rounded-lg border border-border px-3 py-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Workflow size={11} className="text-brand-600 shrink-0" />
+                            <span className="text-[11px] font-medium text-text">{wf.name}</span>
+                            <span className="text-[9px] font-mono text-ink-400">{wf.version}</span>
+                            <span className={`px-1.5 h-4 rounded text-[8px] font-bold inline-flex items-center ${WF_STATUS_CLS[wf.status]}`}>{wf.status}</span>
+                          </div>
+                          <div className="text-[9px] text-ink-400">{wf.attributes.length} attribute{wf.attributes.length !== 1 ? 's' : ''}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => { onLinkWorkflow(ctrl.id); addToast({ message: 'Opening workflow linker in Split View', type: 'info' }); }}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-primary bg-primary/10 hover:bg-primary/15 cursor-pointer transition-colors">
+                      <Link2 size={10} />Link Workflow
+                    </button>
+                    <button onClick={() => { onCreateWorkflow(ctrl.id); addToast({ message: 'Opening workflow builder in Split View', type: 'info' }); }}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-brand-700 bg-brand-50 hover:bg-brand-50/80 cursor-pointer transition-colors">
+                      <Plus size={10} />Create Workflow
+                    </button>
+                  </div>
+
+                  {/* Summary line */}
+                  <div className="mt-2 pt-2 border-t border-border/30 flex items-center gap-3 text-[9px] text-ink-400">
+                    <span>{wfs.length} workflow{wfs.length !== 1 ? 's' : ''}</span>
+                    <span>{totalAttrs} attribute{totalAttrs !== 1 ? 's' : ''}</span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          {/* Notice */}
+          <div className="rounded-lg border border-canvas-border bg-canvas px-3 py-2 flex items-start gap-2">
+            <Shield size={11} className="text-ink-400 mt-0.5 shrink-0" />
+            <span className="text-[9.5px] text-ink-400">Workflow readiness only — no execution or testing data shown here. Link or create workflows to move controls toward Ready status.</span>
+          </div>
+        </div>
+
+        <footer className="shrink-0 px-6 py-4 border-t border-canvas-border bg-canvas">
+          <button onClick={onClose} className="w-full px-4 py-2.5 rounded-lg border border-canvas-border text-[13px] font-medium text-ink-600 hover:bg-canvas transition-colors cursor-pointer">Close</button>
+        </footer>
+      </motion.aside>
+    </>
+  );
+}
+
+// ─── RACM Readiness Card ────────────────────────────────────────────────────
+
+function RacmReadinessCard({ risks, onGoToExecution }: { risks: RiskItem[]; onGoToExecution?: () => void }) {
+  const computed = computeRacmStateFromRisks(risks as RiskDetailInput[], false, false);
+  const { checks } = computed;
+
+  const checkList = [
+    { label: 'Risks added', done: checks.hasRisks },
+    { label: 'All risks mapped to controls', done: checks.allRisksMapped },
+    { label: 'Key controls identified', done: checks.hasKeyControls },
+    { label: 'All controls have workflows', done: checks.allControlsHaveWorkflows },
+    { label: 'All workflows have attributes', done: checks.allWorkflowsHaveAttributes },
+  ];
+
+  const checksDone = checkList.filter(c => c.done).length;
+  const isReady = computed.readiness === 'Ready to Validate' || computed.readiness === 'Ready';
+
+  return (
+    <div className={`rounded-xl border p-5 ${isReady ? 'border-emerald-200/50 bg-emerald-50/10' : 'border-border bg-white'}`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <FileText size={14} className={isReady ? 'text-compliant-700' : 'text-text-muted'} />
+          <FileText size={14} className={isReady ? 'text-emerald-700' : 'text-text-muted'} />
           <h4 className="text-[13px] font-bold text-text">RACM Readiness</h4>
-          <span className={`px-2 h-5 rounded-full text-[10px] font-semibold inline-flex items-center ${stateStyles[readinessState]}`}>{readinessState}</span>
+          <span className={`px-2 h-5 rounded-full text-[10px] font-semibold inline-flex items-center ${RACM_READINESS_STYLES[computed.readiness]}`}>{computed.readiness}</span>
         </div>
-        <span className="text-[11px] text-text-muted">{checksDone}/{checks.length}</span>
+        <span className="text-[11px] text-text-muted">{checksDone}/{checkList.length}</span>
       </div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mb-4">
-        {checks.map((c, i) => (
+        {checkList.map((c, i) => (
           <div key={i} className="flex items-center gap-2 py-0.5">
             {c.done
-              ? <CheckCircle2 size={12} className="text-compliant-700 shrink-0" />
-              : <AlertTriangle size={12} className="text-risk-700 shrink-0" />}
+              ? <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
+              : <AlertTriangle size={12} className="text-amber-500 shrink-0" />}
             <span className={`text-[11px] ${c.done ? 'text-text-secondary' : 'text-text font-medium'}`}>{c.label}</span>
           </div>
         ))}
@@ -906,7 +1285,7 @@ function RacmReadinessCard({ risks, onGoToExecution }: { risks: RiskItem[]; onGo
           disabled={!isReady}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer ${
             isReady
-              ? 'bg-compliant hover:bg-compliant-700 text-white'
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
               : 'bg-gray-100 text-gray-400 cursor-not-allowed'
           }`}>
           <ChevronRight size={13} />Go to Execution

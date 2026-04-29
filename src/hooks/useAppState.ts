@@ -85,6 +85,9 @@ export interface AppState {
   // Chat initial context (for workflow mode entry)
   chatInitialQuery: string | null;
   chatWorkflowContext: { templateId?: string; workflowId?: string } | null;
+  // Seed prompt handed off from chat → AI Concierge workflow builder.
+  // Consumed once on the journey's first render, then cleared by the parent.
+  workflowBuilderSeedPrompt: string | null;
   // Selected chat to load into ChatView (e.g. from Recents); null = fresh chat
   selectedChatId: string | null;
   // Query assumptions
@@ -96,6 +99,8 @@ export interface AppState {
   dashboardWidgets: Record<string, Array<{ chartType: string; title: string; xField: string; yField: string }>>;
   // User-created dashboards (persisted across navigation)
   createdDashboards: Array<{ id: string; name: string; description: string; timeAgo: string; creator: string; accent: string }>;
+  // Pending dashboard — saved while user is in chat before creating
+  pendingDashboard: { name: string; description: string } | null;
   // Execution panels
   executionPanel: ExecutionPanel;
   executionPanelControlId: string | null;
@@ -135,12 +140,14 @@ const INITIAL_STATE: AppState = {
   workflowType: null,
   chatInitialQuery: null,
   chatWorkflowContext: null,
+  workflowBuilderSeedPrompt: null,
   selectedChatId: null,
   queryAssumptions: [],
   selectedDashboardId: null,
   dashboardCustomFields: null,
   dashboardWidgets: {},
   createdDashboards: [],
+  pendingDashboard: null,
   executionPanel: null,
   executionPanelControlId: null,
   exceptionRole: 'risk-owner',
@@ -270,6 +277,10 @@ export function useAppState() {
     setState(prev => ({ ...prev, createdDashboards: prev.createdDashboards.filter(d => d.id !== id) }));
   }, []);
 
+  const setPendingDashboard = useCallback((pending: AppState['pendingDashboard']) => {
+    setState(prev => ({ ...prev, pendingDashboard: pending }));
+  }, []);
+
   const openExecutionPanel = useCallback((panel: ExecutionPanel, controlId?: string) => {
     setState(prev => ({ ...prev, executionPanel: panel, executionPanelControlId: controlId ?? null }));
   }, []);
@@ -280,6 +291,24 @@ export function useAppState() {
 
   const setExceptionRole = useCallback((role: ExceptionRole) => {
     setState(prev => ({ ...prev, exceptionRole: role }));
+  }, []);
+
+  // Hand off a prompt typed in chat (with the "Build a workflow" toggle on)
+  // to the AI Concierge workflow builder. Sets the seed and routes to the
+  // builder view in a single transition; the journey consumes the seed on
+  // mount, generates the workflow, and lands the user on the clarification
+  // screen — skipping the prompt page entirely.
+  const launchWorkflowBuilderWithPrompt = useCallback((prompt: string) => {
+    setState(prev => ({
+      ...prev,
+      view: 'ai-concierge-workflow-builder' as View,
+      workflowBuilderSeedPrompt: prompt,
+      showChatHistory: false,
+    }));
+  }, []);
+
+  const setWorkflowBuilderSeedPrompt = useCallback((prompt: string | null) => {
+    setState(prev => ({ ...prev, workflowBuilderSeedPrompt: prompt }));
   }, []);
 
   return {
@@ -311,8 +340,11 @@ export function useAppState() {
     saveDashboardWidgets,
     addCreatedDashboard,
     deleteCreatedDashboard,
+    setPendingDashboard,
     openExecutionPanel,
     closeExecutionPanel,
     setExceptionRole,
+    launchWorkflowBuilderWithPrompt,
+    setWorkflowBuilderSeedPrompt,
   };
 }
