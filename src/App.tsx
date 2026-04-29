@@ -4,6 +4,7 @@ import { Sparkles } from 'lucide-react';
 import { useAppState } from './hooks/useAppState';
 import { ToastProvider } from './components/shared/Toast';
 import { BulkRunProgressProvider } from './components/shared/BulkRunProgress';
+import { GENERATED_REPORTS } from './data/mockData';
 import Sidebar from './components/sidebar/Sidebar';
 import ChatView from './components/chat/ChatView';
 import ArtifactPanel from './components/artifacts/ArtifactPanel';
@@ -49,6 +50,20 @@ const LAUNCHED_FROM_REPORT =
   typeof window !== 'undefined' &&
   new URLSearchParams(window.location.search).has('from') &&
   new URLSearchParams(window.location.search).get('view') === 'manage-exceptions';
+
+// Built-in dashboards exposed to the "Add to Dashboard" modal in ChatView
+const BUILTIN_DASHBOARDS = [
+  { id: 'p2p', name: 'Procurement (P2P)', description: 'Procure-to-Pay analytics', accent: 'bg-brand-50 text-brand-700' },
+  { id: 'grc', name: 'GRC Overview', description: 'Governance, risk & compliance', accent: 'bg-brand-50 text-brand-700' },
+  { id: 'o2c', name: 'Order to Cash (O2C)', description: 'Revenue & collections overview', accent: 'bg-brand-50 text-brand-700' },
+  { id: 's2c', name: 'Source to Contract (S2C)', description: 'Sourcing & contract management', accent: 'bg-brand-50 text-brand-700' },
+];
+
+const SHARED_DASHBOARD_OPTIONS = [
+  { id: 'shared-1', name: 'Vendor Risk Assessment', description: 'Evaluation of vendor risk profiles', accent: 'bg-brand-50 text-brand-700', sharedBy: 'Sarah Johnson' },
+  { id: 'shared-2', name: 'SOX Compliance Tracker', description: 'SOX compliance progress and control testing', accent: 'bg-brand-50 text-brand-700', sharedBy: 'Michael Chen' },
+  { id: 'shared-3', name: 'GL Reconciliation Monitor', description: 'General Ledger reconciliation status', accent: 'bg-brand-50 text-brand-700', sharedBy: 'Sneha Desai' },
+];
 
 export default function App() {
   const {
@@ -210,6 +225,47 @@ export default function App() {
               }}
               onDismissPendingDashboard={() => setPendingDashboard(null)}
               onLaunchWorkflowBuilder={launchWorkflowBuilderWithPrompt}
+              availableDashboards={[
+                ...state.createdDashboards.map(d => ({ id: d.id, name: d.name, description: d.description, accent: d.accent })),
+                ...BUILTIN_DASHBOARDS,
+                ...SHARED_DASHBOARD_OPTIONS,
+              ]}
+              availableReports={GENERATED_REPORTS.map(r => ({ id: r.id, name: r.name, status: r.status as 'draft' | 'final', generatedBy: r.generatedBy }))}
+              onAddResultToDashboard={(payload) => {
+                if (payload.isNew && payload.newName) {
+                  addCreatedDashboard({
+                    id: payload.dashboardId,
+                    name: payload.newName,
+                    description: payload.newDescription || 'Created from chat',
+                    timeAgo: 'Just now',
+                    creator: 'You',
+                    accent: 'bg-brand-50 text-brand-700',
+                  });
+                }
+                // Build widget stubs from granular selection
+                const widgetStubs: { chartType: string; title: string; xField: string; yField: string }[] = [];
+                if (payload.selection.kpis.length > 0) {
+                  widgetStubs.push({ chartType: 'kpi', title: 'Query KPIs', xField: 'Category', yField: 'Value' });
+                }
+                for (const chartId of payload.selection.charts) {
+                  widgetStubs.push({ chartType: 'bar', title: chartId, xField: 'Category', yField: 'Count' });
+                }
+                if (payload.selection.columns.length > 0) {
+                  widgetStubs.push({ chartType: 'table', title: 'Query Results', xField: payload.selection.columns[0], yField: payload.selection.columns[1] || payload.selection.columns[0] });
+                }
+                const existing = state.dashboardWidgets[payload.dashboardId] || [];
+                saveDashboardWidgets(payload.dashboardId, [...existing, ...widgetStubs]);
+              }}
+              onAddResultToReport={(payload) => {
+                // Report builder doesn't have widget persistence yet — for hackathon
+                // the message-level addedTo state (handled in ChatView) is sufficient.
+                // In production, this would append sections to the report draft.
+                if (payload.isNew) {
+                  // Could add to a reports list — skipped for hackathon scope
+                }
+              }}
+              onViewDashboard={(id) => openDashboard(id)}
+              onViewReport={() => setView('reports')}
             /></div>
             <AnimatePresence>
               {renderArtifactPanel()}
