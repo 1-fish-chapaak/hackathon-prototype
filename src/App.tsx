@@ -40,6 +40,7 @@ import WorkflowBuilderJourney from './components/concierge-workflow-builder/Work
 import AdminView from './components/admin/AdminView';
 import FindingsView from './components/execution/FindingsView';
 import WorkflowExecutor from './components/workflow/WorkflowExecutor';
+import WorkflowEditInChatJourney from './components/workflow-edit-in-chat/WorkflowEditInChatJourney';
 import EngagementDetailView from './components/engagement/EngagementDetailView';
 import ControlDetailDrawer from './components/engagement/ControlDetailDrawer';
 import ManageExceptionsView from './components/exceptions/ManageExceptionsView';
@@ -321,6 +322,14 @@ export default function App() {
           <WorkflowExecutor
             workflowId={state.selectedWorkflowId!}
             onBack={() => setSelectedWorkflow(null)}
+          />
+        );
+
+      case 'workflow-edit-in-chat':
+        return (
+          <WorkflowEditInChatJourney
+            workflowId={state.selectedWorkflowId!}
+            onBack={() => setView('workflow-detail')}
           />
         );
 
