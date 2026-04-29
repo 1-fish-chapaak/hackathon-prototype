@@ -1413,6 +1413,83 @@ function GenerateCasesGate({ queryId, phase, onPhaseChange }: { queryId: string;
   );
 }
 
+// ─── Reusable confirm dialog (delete/destructive prompts) ───
+function ConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  description,
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  destructive = false,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  description: React.ReactNode;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  destructive?: boolean;
+}) {
+  if (!open) return null;
+  const titleId = `confirm-${title.replace(/\s+/g, '-').toLowerCase()}`;
+  const descId = `${titleId}-desc`;
+  return createPortal(
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-6"
+        onClick={onClose}
+      >
+        <div className="absolute inset-0 bg-ink-900/40 backdrop-blur-[2px]" />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 8 }}
+          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          onClick={(e) => e.stopPropagation()}
+          role="alertdialog"
+          aria-labelledby={titleId}
+          aria-describedby={descId}
+          className="relative bg-white rounded-[16px] border border-border-light shadow-2xl w-[440px] max-w-[calc(100vw-32px)] p-6"
+        >
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute top-4 right-4 w-7 h-7 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-paper-50 transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+          <h3 id={titleId} className="text-[16px] font-bold text-text tracking-tight mb-2">{title}</h3>
+          <div id={descId} className="text-[13px] text-text-secondary leading-relaxed mb-6 pr-4">{description}</div>
+          <div className="flex items-center justify-end gap-2.5">
+            <button
+              onClick={onClose}
+              className="inline-flex items-center justify-center h-9 px-4 text-[13px] font-semibold text-text bg-white border border-border-light rounded-[8px] hover:bg-paper-50 transition-colors cursor-pointer"
+            >
+              {cancelLabel}
+            </button>
+            <button
+              onClick={onConfirm}
+              className={`inline-flex items-center justify-center h-9 px-5 text-[13px] font-semibold text-white rounded-[8px] transition-colors cursor-pointer ${
+                destructive ? 'bg-risk hover:bg-risk-700' : 'bg-primary hover:bg-primary-hover'
+              }`}
+            >
+              {confirmLabel}
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>,
+    document.body,
+  );
+}
+
 function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, comments = [], onAddComment, casesPhase, onCasesPhaseChange }: { query: QueryShape; index: number; onManageExceptions?: () => void; onOpenQuery?: (query: { id: string; title: string }) => void; onDelete?: () => void; comments?: QueryComment[]; onAddComment?: (queryId: string, queryTitle: string, text: string, attachment?: string) => void; casesPhase: CasesPhase; onCasesPhaseChange: (phase: CasesPhase) => void }) {
   const { addToast } = useToast();
   const [hovered, setHovered] = useState(false);
@@ -1722,65 +1799,19 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
         document.body,
       )}
 
-      {/* Delete confirmation modal */}
-      {showDeleteConfirm && createPortal(
-        <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center"
-            onClick={() => setShowDeleteConfirm(false)}
-          >
-            <div className="absolute inset-0 bg-ink-900/40 backdrop-blur-[2px]" />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-              onClick={(e) => e.stopPropagation()}
-              role="alertdialog"
-              aria-labelledby="delete-query-title"
-              aria-describedby="delete-query-desc"
-              className="relative bg-white rounded-[16px] border border-border-light shadow-2xl w-[440px] max-w-[calc(100vw-32px)] p-6"
-            >
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                aria-label="Close"
-                className="absolute top-4 right-4 w-7 h-7 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-paper-50 transition-colors cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-              <h3 id="delete-query-title" className="text-[16px] font-bold text-text tracking-tight mb-2">
-                Remove Query Card?
-              </h3>
-              <p id="delete-query-desc" className="text-[13px] text-text-secondary leading-relaxed mb-6 pr-4">
-                This will permanently remove this query card from the report. This action cannot be undone.
-              </p>
-              <div className="flex items-center justify-end gap-2.5">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="inline-flex items-center justify-center h-9 px-4 text-[13px] font-semibold text-text bg-white border border-border-light rounded-[8px] hover:bg-paper-50 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDeleteConfirm(false);
-                    onDelete?.();
-                    addToast({ type: 'success', message: 'Query card removed.' });
-                  }}
-                  className="inline-flex items-center justify-center h-9 px-5 text-[13px] font-semibold text-white bg-risk hover:bg-risk-700 rounded-[8px] transition-colors cursor-pointer"
-                >
-                  Delete
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        </AnimatePresence>,
-        document.body,
-      )}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Remove Query Card?"
+        description="This will permanently remove this query card from the report. This action cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          setShowDeleteConfirm(false);
+          onDelete?.();
+          addToast({ type: 'success', message: 'Query card removed.' });
+        }}
+      />
 
       {graphModalOpen && createPortal(
         <AddGraphModal
@@ -4399,65 +4430,23 @@ export default function ReportsView({
         )}
       </AnimatePresence>
 
-      {reportToDelete && createPortal(
-        <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-6"
-            onClick={() => setReportToDelete(null)}
-          >
-            <div className="absolute inset-0 bg-ink-900/40 backdrop-blur-[2px]" />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-              onClick={(e) => e.stopPropagation()}
-              role="alertdialog"
-              aria-labelledby="delete-report-title"
-              aria-describedby="delete-report-desc"
-              className="relative bg-white rounded-[16px] border border-border-light shadow-2xl w-[440px] max-w-[calc(100vw-32px)] p-6"
-            >
-              <button
-                onClick={() => setReportToDelete(null)}
-                aria-label="Close"
-                className="absolute top-4 right-4 w-7 h-7 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-paper-50 transition-colors cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-              <h3 id="delete-report-title" className="text-[16px] font-bold text-text tracking-tight mb-2">
-                Delete File?
-              </h3>
-              <p id="delete-report-desc" className="text-[13px] text-text-secondary leading-relaxed mb-6 pr-4">
-                Are you sure you want to delete <span className="font-semibold text-text">{reportToDelete.name}</span>? This action cannot be undone.
-              </p>
-              <div className="flex items-center justify-end gap-2.5">
-                <button
-                  onClick={() => setReportToDelete(null)}
-                  className="inline-flex items-center justify-center h-9 px-4 text-[13px] font-semibold text-text bg-white border border-border-light rounded-[8px] hover:bg-paper-50 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    const name = reportToDelete.name;
-                    setGeneratedReports(prev => prev.filter(r => r.id !== reportToDelete.id));
-                    setReportToDelete(null);
-                    addToast({ type: 'success', message: `${name} deleted.` });
-                  }}
-                  className="inline-flex items-center justify-center h-9 px-5 text-[13px] font-semibold text-white bg-risk hover:bg-risk-700 rounded-[8px] transition-colors cursor-pointer"
-                >
-                  Delete
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        </AnimatePresence>,
-        document.body,
-      )}
+      <ConfirmDialog
+        open={!!reportToDelete}
+        onClose={() => setReportToDelete(null)}
+        title="Delete File?"
+        description={reportToDelete && (
+          <>Are you sure you want to delete <span className="font-semibold text-text">{reportToDelete.name}</span>? This action cannot be undone.</>
+        )}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (!reportToDelete) return;
+          const name = reportToDelete.name;
+          setGeneratedReports(prev => prev.filter(r => r.id !== reportToDelete.id));
+          setReportToDelete(null);
+          addToast({ type: 'success', message: `${name} deleted.` });
+        }}
+      />
     </div>
   );
 }
