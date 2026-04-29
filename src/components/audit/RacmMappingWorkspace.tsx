@@ -85,6 +85,11 @@ interface RiskItem {
   controls: MappedControl[];
   validationStatus: 'Unvalidated' | 'Stable' | 'At Risk';
   freshness: 'Up to Date' | 'Needs Re-execution';
+  // SOP traceability
+  sourceSopName?: string;
+  sourceSopVersion?: string;
+  sourceSection?: string;
+  sourceText?: string;
 }
 
 type RiskFilter = 'all' | 'unmapped' | 'partial' | 'mapped' | 'at-risk' | 'unvalidated';
@@ -159,14 +164,14 @@ const CONTROL_LIBRARY: MappedControl[] = [
 ];
 
 const INITIAL_RISKS: RiskItem[] = [
-  { id: 'rsk-001', name: 'Unauthorized vendor payments', description: 'Payments processed without proper PO or approval', process: 'P2P', sourceRef: 'Row 2', controls: [CONTROL_LIBRARY[0], CONTROL_LIBRARY[3]], validationStatus: 'Stable', freshness: 'Up to Date' },
-  { id: 'rsk-002', name: 'Duplicate invoices processed', description: 'Same invoice paid twice due to weak detection', process: 'P2P', sourceRef: 'Row 3', controls: [CONTROL_LIBRARY[2]], validationStatus: 'At Risk', freshness: 'Needs Re-execution' },
-  { id: 'rsk-003', name: 'Fictitious vendor registration', description: 'Vendor created without verification', process: 'P2P', sourceRef: 'Row 4', controls: [CONTROL_LIBRARY[1]], validationStatus: 'Stable', freshness: 'Up to Date' },
-  { id: 'rsk-004', name: 'Unauthorized PO creation', description: 'POs above threshold without dual sign-off', process: 'P2P', sourceRef: 'Row 5', controls: [], validationStatus: 'Unvalidated', freshness: 'Needs Re-execution' },
-  { id: 'rsk-005', name: 'SOD violation in AP', description: 'Same user creates and approves payment', process: 'P2P', sourceRef: 'Row 6', controls: [], validationStatus: 'Unvalidated', freshness: 'Needs Re-execution' },
-  { id: 'rsk-006', name: 'Revenue recognition timing', description: 'Revenue recognized before obligation completion', process: 'O2C', sourceRef: 'Row 7', controls: [CONTROL_LIBRARY[5]], validationStatus: 'Stable', freshness: 'Up to Date' },
-  { id: 'rsk-007', name: 'Incorrect journal entries', description: 'Manual JE posted without review', process: 'R2R', sourceRef: 'Row 8', controls: [CONTROL_LIBRARY[6]], validationStatus: 'Stable', freshness: 'Up to Date' },
-  { id: 'rsk-008', name: 'GL balance discrepancy', description: 'Subsidiary balances do not reconcile', process: 'R2R', sourceRef: 'Row 9', controls: [], validationStatus: 'Unvalidated', freshness: 'Needs Re-execution' },
+  { id: 'rsk-001', name: 'Unauthorized vendor payments', description: 'Payments processed without proper PO or approval', process: 'P2P', sourceRef: 'Row 2', controls: [CONTROL_LIBRARY[0], CONTROL_LIBRARY[3]], validationStatus: 'Stable', freshness: 'Up to Date', sourceSopName: 'Vendor Payment SOP', sourceSopVersion: 'v2.1', sourceSection: '§3.2 Payment Authorization', sourceText: 'All payments must be matched against an approved PO before release.' },
+  { id: 'rsk-002', name: 'Duplicate invoices processed', description: 'Same invoice paid twice due to weak detection', process: 'P2P', sourceRef: 'Row 3', controls: [CONTROL_LIBRARY[2]], validationStatus: 'At Risk', freshness: 'Needs Re-execution', sourceSopName: 'Vendor Payment SOP', sourceSopVersion: 'v2.1', sourceSection: '§4.1 Invoice Processing', sourceText: 'Invoices shall be scanned against historical records to prevent duplicates.' },
+  { id: 'rsk-003', name: 'Fictitious vendor registration', description: 'Vendor created without verification', process: 'P2P', sourceRef: 'Row 4', controls: [CONTROL_LIBRARY[1]], validationStatus: 'Stable', freshness: 'Up to Date', sourceSopName: 'Vendor Payment SOP', sourceSopVersion: 'v2.1', sourceSection: '§2.3 Vendor Management', sourceText: 'New vendor registration requires tax ID verification and multi-level approval.' },
+  { id: 'rsk-004', name: 'Unauthorized PO creation', description: 'POs above threshold without dual sign-off', process: 'P2P', sourceRef: 'Row 5', controls: [], validationStatus: 'Unvalidated', freshness: 'Needs Re-execution', sourceSopName: 'Purchase Order SOP', sourceSopVersion: 'v1.3', sourceSection: '§3.4 Approval Matrix', sourceText: 'Purchase orders exceeding threshold require dual authorization.' },
+  { id: 'rsk-005', name: 'SOD violation in AP', description: 'Same user creates and approves payment', process: 'P2P', sourceRef: 'Row 6', controls: [], validationStatus: 'Unvalidated', freshness: 'Needs Re-execution', sourceSopName: 'Vendor Payment SOP', sourceSopVersion: 'v2.1', sourceSection: '§5.1 Access Controls', sourceText: 'Segregation of duties must be enforced between payment creation and approval.' },
+  { id: 'rsk-006', name: 'Revenue recognition timing', description: 'Revenue recognized before obligation completion', process: 'O2C', sourceRef: 'Row 7', controls: [CONTROL_LIBRARY[5]], validationStatus: 'Stable', freshness: 'Up to Date', sourceSopName: 'Invoice Management SOP', sourceSopVersion: 'v1.0', sourceSection: '§6.2 Revenue Policy', sourceText: 'Revenue must be recognized per ASC 606 only after performance obligations are met.' },
+  { id: 'rsk-007', name: 'Incorrect journal entries', description: 'Manual JE posted without review', process: 'R2R', sourceRef: 'Row 8', controls: [CONTROL_LIBRARY[6]], validationStatus: 'Stable', freshness: 'Up to Date', sourceSopName: 'Financial Close SOP', sourceSopVersion: 'v3.0', sourceSection: '§3.1 Journal Entries', sourceText: 'All manual journal entries require manager review before posting.' },
+  { id: 'rsk-008', name: 'GL balance discrepancy', description: 'Subsidiary balances do not reconcile', process: 'R2R', sourceRef: 'Row 9', controls: [], validationStatus: 'Unvalidated', freshness: 'Needs Re-execution', sourceSopName: 'GL Reconciliation SOP', sourceSopVersion: 'v1.2', sourceSection: '§2.4 Reconciliation', sourceText: 'Monthly reconciliation of subsidiary balances to consolidated GL is required.' },
 ];
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
@@ -442,16 +447,10 @@ export default function RacmMappingWorkspace({ onBack, onGoToExecution, racmId, 
           <button onClick={onBack} className="flex items-center gap-1.5 text-[12px] text-text-muted hover:text-primary font-medium cursor-pointer transition-colors mb-2">
             <ArrowLeft size={14} />Back to RACM
           </button>
-          <div className="flex items-center gap-2">
-            <h3 className="text-[16px] font-bold text-text">
-              Risk-Control Mapping
-              {racmName && <span className="text-[13px] font-medium text-text-muted ml-2">— {racmName}</span>}
-            </h3>
-            <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${RACM_STATUS_STYLES[racmComputed.status]}`}>{racmComputed.status}</span>
-            {racmComputed.readiness !== 'Ready' && (
-              <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${RACM_READINESS_STYLES[racmComputed.readiness]}`}>{racmComputed.readiness}</span>
-            )}
-          </div>
+          <h3 className="text-[16px] font-bold text-text">
+            Risk-Control Mapping
+            {racmName && <span className="text-[13px] font-medium text-text-muted ml-2">— {racmName}</span>}
+          </h3>
           <p className="text-[12px] text-text-muted mt-0.5">Map risks to controls and prepare for execution.</p>
         </div>
         <div className="flex items-center gap-3 shrink-0">
@@ -1014,10 +1013,38 @@ function RacmGridView({ risks, onSelectRisk, onUpdateRisks, onLinkControl, onCre
                               {/* Risk details */}
                               <div className="grid grid-cols-4 gap-4">
                                 <div><span className="text-[9px] text-ink-400 uppercase block">Description</span><p className="text-[11px] text-text mt-0.5">{risk.description || '—'}</p></div>
-                                <div><span className="text-[9px] text-ink-400 uppercase block">Source</span><p className="text-[11px] text-text mt-0.5 font-mono">{risk.sourceRef}</p></div>
+                                <div><span className="text-[9px] text-ink-400 uppercase block">Source Ref</span><p className="text-[11px] text-text mt-0.5 font-mono">{risk.sourceRef}</p></div>
                                 <div><span className="text-[9px] text-ink-400 uppercase block">Freshness</span><p className={`text-[11px] font-medium mt-0.5 ${risk.freshness === 'Up to Date' ? 'text-compliant-700' : 'text-high-700'}`}>{risk.freshness}</p></div>
                                 <div><span className="text-[9px] text-ink-400 uppercase block">Validation</span><span className={`mt-0.5 px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${VAL_CLS[risk.validationStatus]}`}>{risk.validationStatus}</span></div>
                               </div>
+
+                              {/* SOP Traceability */}
+                              {risk.sourceSopName && (
+                                <div className="rounded-lg border border-border/40 bg-white px-4 py-3">
+                                  <div className="flex items-center gap-1.5 mb-2">
+                                    <FileText size={10} className="text-gray-400" />
+                                    <span className="text-[9px] font-bold text-ink-400 uppercase tracking-wider">SOP Source</span>
+                                  </div>
+                                  <div className="grid grid-cols-4 gap-3">
+                                    <div>
+                                      <span className="text-[9px] text-gray-400 block">SOP</span>
+                                      <span className="text-[11px] text-text font-medium">{risk.sourceSopName}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[9px] text-gray-400 block">Version</span>
+                                      <span className="text-[10px] font-mono text-gray-500">{risk.sourceSopVersion}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[9px] text-gray-400 block">Section</span>
+                                      <span className="text-[10px] font-mono text-gray-500">{risk.sourceSection}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[9px] text-gray-400 block">Original Text</span>
+                                      <span className="text-[10px] text-gray-500 italic line-clamp-2">"{risk.sourceText}"</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
 
                               {/* Controls detail */}
                               <div>

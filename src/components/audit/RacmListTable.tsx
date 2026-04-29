@@ -1,11 +1,6 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle2, ChevronRight } from 'lucide-react';
-import {
-  computeRacmState,
-  RACM_STATUS_STYLES, RACM_READINESS_STYLES, RACM_ACTION_STYLES,
-  type ComputedRacmState,
-} from './racmStateEngine';
+import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import { ChevronRight, AlertTriangle } from 'lucide-react';
 import RacmMappingWorkspace from './RacmMappingWorkspace';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -17,19 +12,20 @@ export interface RacmEntry {
   isValidated: boolean; linkedToEngagement: boolean;
 }
 
-function getRacmComputed(racm: RacmEntry): ComputedRacmState {
-  return computeRacmState({
-    risks: racm.risks,
-    controls: racm.controls,
-    mappedRisks: racm.mappedRisks,
-    unmappedRisks: racm.unmappedRisks,
-    keyControls: racm.keyControls,
-    workflowCoverage: racm.workflowCoverage,
-    attributesCoverage: racm.attributesCoverage,
-    isValidated: racm.isValidated,
-    linkedToEngagement: racm.linkedToEngagement,
-  });
+// Simple governance status — Draft / Active / Locked
+type RacmGovStatus = 'Draft' | 'Active' | 'Locked';
+
+function getGovStatus(racm: RacmEntry): RacmGovStatus {
+  if (racm.linkedToEngagement) return 'Locked';
+  if (racm.isValidated) return 'Active';
+  return 'Draft';
 }
+
+const GOV_STATUS_STYLES: Record<RacmGovStatus, string> = {
+  Draft: 'bg-gray-100 text-gray-600',
+  Active: 'bg-emerald-50 text-emerald-700',
+  Locked: 'bg-purple-50 text-purple-700',
+};
 
 // ─── Seed Data ──────────────────────────────────────────────────────────────
 
@@ -45,53 +41,86 @@ export const RACM_SEED_DATA: RacmEntry[] = [
 
 interface Props {
   processFilter?: string;
+  initialMappingRacm?: { id: string; name: string; process: string } | null;
+  onMappingOpened?: () => void;
 }
 
-export default function RacmListTable({ processFilter }: Props) {
+export default function RacmListTable({ processFilter, initialMappingRacm, onMappingOpened }: Props) {
   const [racmList] = useState<RacmEntry[]>(RACM_SEED_DATA);
   const [showMappingWorkspace, setShowMappingWorkspace] = useState(false);
   const [mappingRacm, setMappingRacm] = useState<RacmEntry | null>(null);
+
+  useEffect(() => {
+    if (initialMappingRacm && !showMappingWorkspace) {
+      const found = racmList.find(r => r.id === initialMappingRacm.id);
+      if (found) {
+        setMappingRacm(found);
+      } else {
+        setMappingRacm({
+          id: initialMappingRacm.id, name: initialMappingRacm.name, version: 'v1.0',
+          process: initialMappingRacm.process, framework: 'SOX ICFR',
+          risks: 0, controls: 0, mappedRisks: 0, unmappedRisks: 0, keyControls: 0,
+          workflowCoverage: 0, attributesCoverage: 0, isValidated: false, linkedToEngagement: false,
+        });
+      }
+      setShowMappingWorkspace(true);
+      onMappingOpened?.();
+    }
+  }, [initialMappingRacm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = processFilter
     ? racmList.filter(r => r.process === processFilter)
     : racmList;
 
-  // If mapping workspace is open, render it
   if (showMappingWorkspace && mappingRacm) {
-    const mappingState = getRacmComputed(mappingRacm);
     return (
       <RacmMappingWorkspace
         racmId={mappingRacm.id}
         racmName={mappingRacm.name}
         racmProcess={mappingRacm.process}
-        isEmpty={mappingRacm.risks === 0 && mappingState.status === 'Draft'}
+        isEmpty={mappingRacm.risks === 0}
         onBack={() => { setShowMappingWorkspace(false); setMappingRacm(null); }}
       />
     );
   }
 
+  const unmappedRacmCount = filtered.filter(r => r.unmappedRisks > 0).length;
+
   return (
+    <div className="space-y-3">
+      {/* Governance insight banner */}
+      {unmappedRacmCount > 0 && (
+        <div className="rounded-lg border border-amber-200/50 bg-amber-50/30 px-4 py-3 flex items-center gap-3">
+          <AlertTriangle size={14} className="text-amber-500 shrink-0" />
+          <span className="text-[12px] text-amber-800 flex-1">
+            <span className="font-semibold">{unmappedRacmCount} RACM{unmappedRacmCount !== 1 ? 's' : ''}</span> {unmappedRacmCount !== 1 ? 'have' : 'has'} unmapped risks — complete mapping before execution.
+          </span>
+        </div>
+      )}
+
     <div className="glass-card rounded-xl overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-[12px]">
           <thead>
             <tr className="border-b border-border bg-surface-2/50">
-              {['RACM', 'Framework', 'Risks', 'Controls', 'Key', 'Unmapped', 'Workflow %', 'Status', 'Readiness', 'Action'].map(h => (
-                <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide whitespace-nowrap">{h}</th>
+              {['RACM', 'Process', 'Framework', 'Risks', 'Controls', 'Key Controls', 'Unmapped', 'Status', ''].map(h => (
+                <th key={h || 'action'} className="px-3 py-2.5 text-left text-[10px] font-semibold text-text-muted uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={10} className="px-4 py-10 text-center text-[12px] text-text-muted">No RACMs found for this process</td></tr>
+              <tr><td colSpan={9} className="px-4 py-10 text-center text-[12px] text-text-muted">No RACMs found</td></tr>
             ) : filtered.map((racm, i) => {
-              const computed = getRacmComputed(racm);
+              const status = getGovStatus(racm);
               return (
                 <motion.tr key={racm.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
                   className="border-b border-border/50 hover:bg-gray-50/60 transition-colors">
                   <td className="px-3 py-3">
                     <div className="text-[12px] font-medium text-text">{racm.name}</div>
-                    <div className="text-[10px] text-text-muted font-mono">{racm.version}</div>
+                  </td>
+                  <td className="px-3 py-3">
+                    <span className="inline-flex items-center px-2 h-5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200/60">{racm.process}</span>
                   </td>
                   <td className="px-3 py-3"><span className="text-[11px] text-text-secondary">{racm.framework}</span></td>
                   <td className="px-3 py-3"><span className="text-[12px] font-semibold text-text tabular-nums">{racm.risks}</span></td>
@@ -103,31 +132,12 @@ export default function RacmListTable({ processFilter }: Props) {
                       : <span className="text-[11px] text-gray-400 font-medium">0</span>}
                   </td>
                   <td className="px-3 py-3">
-                    <div className="flex items-center gap-2 min-w-[60px]">
-                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full bg-gray-400 transition-all" style={{ width: `${racm.workflowCoverage}%` }} />
-                      </div>
-                      <span className="text-[10px] text-gray-400 tabular-nums w-7 text-right">{racm.workflowCoverage}%</span>
-                    </div>
+                    <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${GOV_STATUS_STYLES[status]}`}>{status}</span>
                   </td>
-                  <td className="px-3 py-3">
-                    <span className={`px-2 h-5 rounded-full text-[9px] font-semibold inline-flex items-center ${RACM_STATUS_STYLES[computed.status]}`}>{computed.status}</span>
-                  </td>
-                  <td className="px-3 py-3">
-                    {computed.readiness !== 'Ready' ? (
-                      <span className={`inline-flex items-center px-2 h-5 rounded-full text-[9px] font-semibold ${RACM_READINESS_STYLES[computed.readiness]}`}>
-                        {computed.readiness}
-                      </span>
-                    ) : (
-                      <span className={`inline-flex items-center gap-1 px-2 h-5 rounded-full text-[9px] font-semibold ${RACM_READINESS_STYLES.Ready}`}>
-                        <CheckCircle2 size={9} />Ready
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 text-right">
                     <button onClick={() => { setMappingRacm(racm); setShowMappingWorkspace(true); }}
-                      className={`px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors inline-flex items-center gap-1 ${RACM_ACTION_STYLES[computed.action]}`}>
-                      {computed.action}<ChevronRight size={8} />
+                      className="px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors inline-flex items-center gap-1 bg-gray-100 text-gray-600 hover:bg-gray-200/70">
+                      View<ChevronRight size={8} />
                     </button>
                   </td>
                 </motion.tr>
@@ -139,6 +149,7 @@ export default function RacmListTable({ processFilter }: Props) {
       <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-surface-2/30">
         <span className="text-[11px] text-text-muted">{filtered.length} RACM{filtered.length !== 1 ? 's' : ''}</span>
       </div>
+    </div>
     </div>
   );
 }
