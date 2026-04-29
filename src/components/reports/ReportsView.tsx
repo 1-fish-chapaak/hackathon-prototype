@@ -16,10 +16,7 @@ import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/
 import { REPORT_QUERIES_ATR, type ReportQueryAtr } from '../../data/reportQueries';
 import { QUERY_SESSIONS, FAVOURITES } from '../../data/queryHistory';
 import { QUERY_GRAPHS, type QueryGraph } from '../../data/queryGraphs';
-import {
-  ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  AreaChart, Area, XAxis, YAxis, Tooltip as RTooltip,
-} from 'recharts';
+import { ConfigurableChart } from '../dashboard/add-widget/ConfigurableChart';
 import { StatusBadge } from '../shared/StatusBadge';
 import SmartTable from '../shared/SmartTable';
 import { useToast } from '../shared/Toast';
@@ -1559,7 +1556,7 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
                     onClick={() => { setMenuOpen(false); setGraphModalOpen(true); }}
                     className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-primary-xlight hover:text-primary cursor-pointer"
                   >
-                    <TrendingUp size={13} />
+                    <BarChart3 size={13} />
                     Add Graph
                   </button>
                   <button
@@ -1643,8 +1640,15 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
                 <X size={13} />
               </button>
             </div>
-            <div className="h-[180px]">
-              <GraphRenderer graph={attachedGraph} />
+            <div className="h-[200px]">
+              <ConfigurableChart
+                type={attachedGraph.type}
+                xAxis={attachedGraph.xAxis}
+                yAxis={attachedGraph.yAxis}
+                color={attachedGraph.color}
+                showTarget={false}
+                showLegend
+              />
             </div>
           </motion.div>
         )}
@@ -1722,7 +1726,7 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
               role="alertdialog"
               aria-labelledby="delete-query-title"
               aria-describedby="delete-query-desc"
-              className="relative bg-white rounded-[14px] border border-border-light shadow-2xl w-[440px] max-w-[calc(100vw-32px)] p-6"
+              className="relative bg-white rounded-[16px] border border-border-light shadow-2xl w-[440px] max-w-[calc(100vw-32px)] p-6"
             >
               <button
                 onClick={() => setShowDeleteConfirm(false)}
@@ -1777,67 +1781,6 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
         document.body,
       )}
     </motion.div>
-  );
-}
-
-// ─── Reusable graph renderer for QueryCard + AddGraphModal previews ───
-const GRAPH_PALETTE = ['#7C3AED', '#3d68ee', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-
-function GraphRenderer({ graph }: { graph: QueryGraph }) {
-  if (graph.type === 'bar') {
-    return (
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={graph.data} margin={{ top: 6, right: 8, bottom: 6, left: -16 }}>
-          <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b6b76' }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: '#6b6b76' }} axisLine={false} tickLine={false} />
-          <RTooltip cursor={{ fill: 'rgba(124,58,237,0.06)' }} contentStyle={{ borderRadius: 8, fontSize: 11, border: '1px solid #e5e5ea' }} />
-          <Bar dataKey="value" fill={GRAPH_PALETTE[0]} radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-    );
-  }
-  if (graph.type === 'line') {
-    return (
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={graph.data} margin={{ top: 6, right: 8, bottom: 6, left: -16 }}>
-          <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b6b76' }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: '#6b6b76' }} axisLine={false} tickLine={false} />
-          <RTooltip contentStyle={{ borderRadius: 8, fontSize: 11, border: '1px solid #e5e5ea' }} />
-          <Line type="monotone" dataKey="value" stroke={GRAPH_PALETTE[0]} strokeWidth={2} dot={{ r: 3, fill: GRAPH_PALETTE[0] }} />
-        </LineChart>
-      </ResponsiveContainer>
-    );
-  }
-  if (graph.type === 'area') {
-    return (
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={graph.data} margin={{ top: 6, right: 8, bottom: 6, left: -16 }}>
-          <defs>
-            <linearGradient id={`grad-${graph.id}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={GRAPH_PALETTE[0]} stopOpacity={0.4} />
-              <stop offset="100%" stopColor={GRAPH_PALETTE[0]} stopOpacity={0.04} />
-            </linearGradient>
-          </defs>
-          <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b6b76' }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: '#6b6b76' }} axisLine={false} tickLine={false} />
-          <RTooltip contentStyle={{ borderRadius: 8, fontSize: 11, border: '1px solid #e5e5ea' }} />
-          <Area type="monotone" dataKey="value" stroke={GRAPH_PALETTE[0]} strokeWidth={2} fill={`url(#grad-${graph.id})`} />
-        </AreaChart>
-      </ResponsiveContainer>
-    );
-  }
-  // pie
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <RTooltip contentStyle={{ borderRadius: 8, fontSize: 11, border: '1px solid #e5e5ea' }} />
-        <Pie data={graph.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius="80%" innerRadius="50%" paddingAngle={2}>
-          {graph.data.map((_, i) => (
-            <Cell key={i} fill={GRAPH_PALETTE[i % GRAPH_PALETTE.length]} />
-          ))}
-        </Pie>
-      </PieChart>
-    </ResponsiveContainer>
   );
 }
 
@@ -1943,8 +1886,15 @@ function AddGraphModal({
                         </span>
                         <span className="text-[12.5px] font-semibold text-text">{g.title}</span>
                       </div>
-                      <div className="h-[140px] bg-canvas-elevated rounded-lg p-1.5">
-                        <GraphRenderer graph={g} />
+                      <div className="h-[160px] bg-canvas-elevated rounded-lg p-1.5 pointer-events-none">
+                        <ConfigurableChart
+                          type={g.type}
+                          xAxis={g.xAxis}
+                          yAxis={g.yAxis}
+                          color={g.color}
+                          showTarget={false}
+                          showLegend={false}
+                        />
                       </div>
                     </button>
                   );
@@ -3719,6 +3669,7 @@ export default function ReportsView({
   const [tagFilter, setTagFilter] = useState<string>('All');
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [viewingReport, setViewingReport] = useState<GeneratedReport | null>(null);
+  const [reportToDelete, setReportToDelete] = useState<{ id: string; name: string } | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [editingAsCopy, setEditingAsCopy] = useState(false);
   const [customTemplatesLocal, setCustomTemplatesLocal] = useState<typeof REPORT_TEMPLATES[number][]>(CUSTOM_TEMPLATES as typeof REPORT_TEMPLATES[number][]);
@@ -3955,7 +3906,7 @@ export default function ReportsView({
                 <div className="flex items-center justify-end gap-1">
                   <button onClick={() => addToast({ type: 'success', message: `Downloading ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={14} /></button>
                   <button onClick={() => onShare ? onShare(String(item.id)) : addToast({ type: 'info', message: `Sharing ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={14} /></button>
-                  <button onClick={() => addToast({ type: 'success', message: `${item.name} deleted.` })} className="p-1.5 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
+                  <button onClick={() => setReportToDelete({ id: String(item.id), name: String(item.name) })} className="p-1.5 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
                 </div>
               )},
             ]}
@@ -4009,7 +3960,7 @@ export default function ReportsView({
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Download"><Download size={15} /></button>
                         <button onClick={(e) => { e.stopPropagation(); onShare ? onShare(r.id) : addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Share"><Share2 size={15} /></button>
-                        <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="hover:text-risk transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Delete"><Trash2 size={15} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); setReportToDelete({ id: r.id, name: r.name }); }} className="hover:text-risk transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Delete"><Trash2 size={15} /></button>
                       </div>
                     </div>
                     <div className="font-medium text-text group-hover:text-primary transition-colors mb-1" style={{ fontSize: '14px', lineHeight: '20px' }}>{r.name}</div>
@@ -4073,7 +4024,7 @@ export default function ReportsView({
                 <div className="flex items-center justify-end gap-1">
                   <button onClick={() => addToast({ type: 'success', message: `Downloading ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={14} /></button>
                   <button onClick={() => addToast({ type: 'info', message: `Sharing ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={14} /></button>
-                  <button onClick={() => addToast({ type: 'success', message: `${item.name} deleted.` })} className="p-1.5 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
+                  <button onClick={() => setReportToDelete({ id: String(item.id), name: String(item.name) })} className="p-1.5 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
                 </div>
               )},
             ]}
@@ -4109,7 +4060,7 @@ export default function ReportsView({
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Download"><Download size={15} /></button>
                       <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Share"><Share2 size={15} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="hover:text-red-500 transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Delete"><Trash2 size={15} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); setReportToDelete({ id: r.id, name: r.name }); }} className="hover:text-red-500 transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Delete"><Trash2 size={15} /></button>
                     </div>
                   </div>
                   <div className="font-medium text-[13px] text-text group-hover:text-primary transition-colors leading-snug mb-1">{r.name}</div>
@@ -4419,6 +4370,66 @@ export default function ReportsView({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {reportToDelete && createPortal(
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-6"
+            onClick={() => setReportToDelete(null)}
+          >
+            <div className="absolute inset-0 bg-ink-900/40 backdrop-blur-[2px]" />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              role="alertdialog"
+              aria-labelledby="delete-report-title"
+              aria-describedby="delete-report-desc"
+              className="relative bg-white rounded-[16px] border border-border-light shadow-2xl w-[440px] max-w-[calc(100vw-32px)] p-6"
+            >
+              <button
+                onClick={() => setReportToDelete(null)}
+                aria-label="Close"
+                className="absolute top-4 right-4 w-7 h-7 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-paper-50 transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+              <h3 id="delete-report-title" className="text-[16px] font-bold text-text tracking-tight mb-2">
+                Delete File?
+              </h3>
+              <p id="delete-report-desc" className="text-[13px] text-text-secondary leading-relaxed mb-6 pr-4">
+                Are you sure you want to delete <span className="font-semibold text-text">{reportToDelete.name}</span>? This action cannot be undone.
+              </p>
+              <div className="flex items-center justify-end gap-2.5">
+                <button
+                  onClick={() => setReportToDelete(null)}
+                  className="inline-flex items-center justify-center h-9 px-4 text-[13px] font-semibold text-text bg-white border border-border-light rounded-[8px] hover:bg-paper-50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const name = reportToDelete.name;
+                    setGeneratedReports(prev => prev.filter(r => r.id !== reportToDelete.id));
+                    setReportToDelete(null);
+                    addToast({ type: 'success', message: `${name} deleted.` });
+                  }}
+                  className="inline-flex items-center justify-center h-9 px-5 text-[13px] font-semibold text-white bg-risk hover:bg-risk-700 rounded-[8px] transition-colors cursor-pointer"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
   );
 }
