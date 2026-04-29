@@ -190,7 +190,7 @@ export function useAppState() {
   }, []);
 
   const setSelectedBP = useCallback((id: string | null) => {
-    setState(prev => ({ ...prev, selectedBPId: id, view: id ? 'bp-detail' : 'business-processes' }));
+    setState(prev => ({ ...prev, selectedBPId: id, view: id ? 'bp-detail' : 'programs' }));
   }, []);
 
   const setSelectedEngagement = useCallback((id: string | null) => {

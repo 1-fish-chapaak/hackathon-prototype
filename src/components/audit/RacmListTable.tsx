@@ -43,16 +43,19 @@ interface Props {
   processFilter?: string;
   initialMappingRacm?: { id: string; name: string; process: string } | null;
   onMappingOpened?: () => void;
+  /** Additional RACMs created at runtime (e.g. from SOP tab) */
+  extraRacms?: RacmEntry[];
 }
 
-export default function RacmListTable({ processFilter, initialMappingRacm, onMappingOpened }: Props) {
+export default function RacmListTable({ processFilter, initialMappingRacm, onMappingOpened, extraRacms }: Props) {
   const [racmList] = useState<RacmEntry[]>(RACM_SEED_DATA);
+  const allRacms = extraRacms && extraRacms.length > 0 ? [...racmList, ...extraRacms] : racmList;
   const [showMappingWorkspace, setShowMappingWorkspace] = useState(false);
   const [mappingRacm, setMappingRacm] = useState<RacmEntry | null>(null);
 
   useEffect(() => {
     if (initialMappingRacm && !showMappingWorkspace) {
-      const found = racmList.find(r => r.id === initialMappingRacm.id);
+      const found = allRacms.find(r => r.id === initialMappingRacm.id);
       if (found) {
         setMappingRacm(found);
       } else {
@@ -69,8 +72,8 @@ export default function RacmListTable({ processFilter, initialMappingRacm, onMap
   }, [initialMappingRacm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = processFilter
-    ? racmList.filter(r => r.process === processFilter)
-    : racmList;
+    ? allRacms.filter(r => r.process === processFilter)
+    : allRacms;
 
   if (showMappingWorkspace && mappingRacm) {
     return (

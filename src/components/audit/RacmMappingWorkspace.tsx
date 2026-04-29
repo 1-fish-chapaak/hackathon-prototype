@@ -1025,14 +1025,10 @@ function RacmGridView({ risks, onSelectRisk, onUpdateRisks, onLinkControl, onCre
                                     <FileText size={10} className="text-gray-400" />
                                     <span className="text-[9px] font-bold text-ink-400 uppercase tracking-wider">SOP Source</span>
                                   </div>
-                                  <div className="grid grid-cols-4 gap-3">
+                                  <div className="grid grid-cols-3 gap-3">
                                     <div>
                                       <span className="text-[9px] text-gray-400 block">SOP</span>
                                       <span className="text-[11px] text-text font-medium">{risk.sourceSopName}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-[9px] text-gray-400 block">Version</span>
-                                      <span className="text-[10px] font-mono text-gray-500">{risk.sourceSopVersion}</span>
                                     </div>
                                     <div>
                                       <span className="text-[9px] text-gray-400 block">Section</span>
