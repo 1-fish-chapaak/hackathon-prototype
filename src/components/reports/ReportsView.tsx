@@ -1589,8 +1589,8 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
           {query.title}
         </motion.h3>
 
-        {/* KPI strip — only after cases have been generated */}
-        {casesPhase === 'ready' && (() => {
+        {/* KPI strip — populated only after cases generate; placeholder otherwise so users know why metrics are missing */}
+        {casesPhase === 'ready' ? (() => {
           const kpis = computeQueryKpis(query);
           if (kpis.length === 0) {
             return (
@@ -1615,7 +1615,25 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
               ))}
             </div>
           );
-        })()}
+        })() : (
+          <div className="border border-dashed border-border-light rounded-xl px-4 py-5 mb-5 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-paper-50 flex items-center justify-center shrink-0">
+              {casesPhase === 'generating'
+                ? <Loader2 size={15} className="text-primary animate-spin" />
+                : <ShieldAlert size={15} className="text-text-muted" />}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[12.5px] font-semibold text-text">
+                {casesPhase === 'generating' ? 'Generating cases…' : 'Exception metrics not generated yet'}
+              </p>
+              <p className="text-[11.5px] text-text-muted leading-snug">
+                {casesPhase === 'generating'
+                  ? 'Cases are being created — KPIs will appear here in a moment.'
+                  : 'Turn on Generate Cases to populate Total Exceptions, Open, Closed and Check Health.'}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Attached graph (selected from Add Graph modal) */}
         {attachedGraph && (
