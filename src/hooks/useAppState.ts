@@ -9,6 +9,7 @@ export type View =
   | 'workflow-detail'
   | 'workflow-library'
   | 'workflow-executor'
+  | 'workflow-edit-in-chat'
   // Governance
   | 'business-processes'
   | 'bp-detail'
@@ -206,7 +207,7 @@ export function useAppState() {
   }, []);
 
   const setSelectedBP = useCallback((id: string | null) => {
-    setState(prev => ({ ...prev, selectedBPId: id, view: id ? 'bp-detail' : 'business-processes' }));
+    setState(prev => ({ ...prev, selectedBPId: id, view: id ? 'bp-detail' : 'programs' }));
   }, []);
 
   const setSelectedEngagement = useCallback((id: string | null) => {
@@ -264,6 +265,18 @@ export function useAppState() {
   }, []);
 
   const enterWorkflowMode = useCallback((context?: { templateId?: string; workflowId?: string }) => {
+    // Editing an existing workflow → dedicated edit-in-chat journey with
+    // its own clarification phase + 4-tab workspace. Building from scratch
+    // keeps the inline chat artifact flow.
+    if (context?.workflowId) {
+      setState(prev => ({
+        ...prev,
+        view: 'workflow-edit-in-chat' as View,
+        selectedWorkflowId: context.workflowId!,
+        chatWorkflowContext: context,
+      }));
+      return;
+    }
     setState(prev => ({
       ...prev,
       view: 'chat' as View,

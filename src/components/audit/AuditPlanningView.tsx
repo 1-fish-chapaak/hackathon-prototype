@@ -727,13 +727,6 @@ function RacmDashboard({ engagements, onGoToExecution }: { engagements: { source
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer">
             <Upload size={13} />Import RACM
           </button>
-          <button onClick={() => {
-              const needsMapping = racmList.find(r => r.unmappedRisks > 0) || racmList[0];
-              if (needsMapping) { setMappingRacm(needsMapping); setShowMappingWorkspace(true); }
-            }}
-            className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-[12px] font-medium text-text-secondary hover:bg-white transition-colors cursor-pointer">
-            <Target size={13} />Start Mapping
-          </button>
           <button onClick={() => setShowCreateRacmModal(true)}
             className="flex items-center gap-1.5 px-3 py-2 border border-primary/30 bg-primary/5 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer">
             <Plus size={13} />Create RACM
@@ -758,25 +751,6 @@ function RacmDashboard({ engagements, onGoToExecution }: { engagements: { source
           </motion.div>
         ))}
       </div>
-
-      {/* Unmapped warning */}
-      {totalUnmapped > 0 && (
-        <div className="rounded-xl border border-high/20 bg-high-50/30 px-4 py-3 flex items-center gap-3">
-          <AlertTriangle size={15} className="text-high-700 shrink-0" />
-          <div>
-            <span className="text-[12px] font-semibold text-high-700">{totalUnmapped} risk{totalUnmapped !== 1 ? 's' : ''} not mapped to controls.</span>
-            <span className="text-[12px] text-high-700/70 ml-1">Complete mapping before engagement execution.</span>
-          </div>
-          <button onClick={() => {
-              const needsMapping = racmList.find(r => r.unmappedRisks > 0) || racmList[0];
-              setMappingRacm(needsMapping);
-              setShowMappingWorkspace(true);
-            }}
-            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-high-50 text-high-700 text-[11px] font-semibold hover:bg-high/10 transition-colors cursor-pointer shrink-0">
-            <Target size={11} />Start Mapping
-          </button>
-        </div>
-      )}
 
       {/* RACM table */}
       <div className="glass-card rounded-xl overflow-hidden">

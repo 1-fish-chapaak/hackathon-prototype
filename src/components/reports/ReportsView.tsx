@@ -15,6 +15,8 @@ import {
 import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/mockData';
 import { REPORT_QUERIES_ATR, type ReportQueryAtr } from '../../data/reportQueries';
 import { QUERY_SESSIONS, FAVOURITES } from '../../data/queryHistory';
+import { QUERY_GRAPHS, type QueryGraph } from '../../data/queryGraphs';
+import { ConfigurableChart } from '../dashboard/add-widget/ConfigurableChart';
 import { StatusBadge } from '../shared/StatusBadge';
 import SmartTable from '../shared/SmartTable';
 import { useToast } from '../shared/Toast';
@@ -1362,13 +1364,13 @@ function ManageExceptionsLaunchButton({ queryId }: { queryId: string }) {
  * idle → switch off; user flips it on → brief generating state; once ready the
  * toggle is replaced inline by the existing ManageExceptionsLaunchButton.
  */
-function GenerateCasesGate({ queryId }: { queryId: string }) {
-  const [phase, setPhase] = useState<'idle' | 'generating' | 'ready'>('idle');
+type CasesPhase = 'idle' | 'generating' | 'ready';
 
+function GenerateCasesGate({ queryId, phase, onPhaseChange }: { queryId: string; phase: CasesPhase; onPhaseChange: (p: CasesPhase) => void }) {
   const handleToggle = () => {
     if (phase !== 'idle') return;
-    setPhase('generating');
-    window.setTimeout(() => setPhase('ready'), 1400);
+    onPhaseChange('generating');
+    window.setTimeout(() => onPhaseChange('ready'), 1400);
   };
 
   if (phase === 'ready') {
@@ -1411,13 +1413,93 @@ function GenerateCasesGate({ queryId }: { queryId: string }) {
   );
 }
 
-function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, comments = [], onAddComment }: { query: QueryShape; index: number; onManageExceptions?: () => void; onOpenQuery?: (query: { id: string; title: string }) => void; onDelete?: () => void; comments?: QueryComment[]; onAddComment?: (queryId: string, queryTitle: string, text: string, attachment?: string) => void }) {
+// ─── Reusable confirm dialog (delete/destructive prompts) ───
+function ConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  description,
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  destructive = false,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  description: React.ReactNode;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  destructive?: boolean;
+}) {
+  if (!open) return null;
+  const titleId = `confirm-${title.replace(/\s+/g, '-').toLowerCase()}`;
+  const descId = `${titleId}-desc`;
+  return createPortal(
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-6"
+        onClick={onClose}
+      >
+        <div className="absolute inset-0 bg-ink-900/40 backdrop-blur-[2px]" />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 8 }}
+          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          onClick={(e) => e.stopPropagation()}
+          role="alertdialog"
+          aria-labelledby={titleId}
+          aria-describedby={descId}
+          className="relative bg-white rounded-[16px] border border-border-light shadow-2xl w-[440px] max-w-[calc(100vw-32px)] p-6"
+        >
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute top-4 right-4 w-7 h-7 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-paper-50 transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+          <h3 id={titleId} className="text-[16px] font-bold text-text tracking-tight mb-2">{title}</h3>
+          <div id={descId} className="text-[13px] text-text-secondary leading-relaxed mb-6 pr-4">{description}</div>
+          <div className="flex items-center justify-end gap-2.5">
+            <button
+              onClick={onClose}
+              className="inline-flex items-center justify-center h-9 px-4 text-[13px] font-semibold text-text bg-white border border-border-light rounded-[8px] hover:bg-paper-50 transition-colors cursor-pointer"
+            >
+              {cancelLabel}
+            </button>
+            <button
+              onClick={onConfirm}
+              className={`inline-flex items-center justify-center h-9 px-5 text-[13px] font-semibold text-white rounded-[8px] transition-colors cursor-pointer ${
+                destructive ? 'bg-risk hover:bg-risk-700' : 'bg-primary hover:bg-primary-hover'
+              }`}
+            >
+              {confirmLabel}
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>,
+    document.body,
+  );
+}
+
+function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, comments = [], onAddComment, casesPhase, onCasesPhaseChange }: { query: QueryShape; index: number; onManageExceptions?: () => void; onOpenQuery?: (query: { id: string; title: string }) => void; onDelete?: () => void; comments?: QueryComment[]; onAddComment?: (queryId: string, queryTitle: string, text: string, attachment?: string) => void; casesPhase: CasesPhase; onCasesPhaseChange: (phase: CasesPhase) => void }) {
   const { addToast } = useToast();
-  const [expanded, setExpanded] = useState(index === 0);
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [drawerTab, setDrawerTab] = useState<'comments' | 'source-files' | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [graphModalOpen, setGraphModalOpen] = useState(false);
+  const [attachedGraphId, setAttachedGraphId] = useState<string | null>(null);
+  const availableGraphs = QUERY_GRAPHS[query.id] ?? [];
+  const attachedGraph = availableGraphs.find(g => g.id === attachedGraphId) ?? null;
   const menuRef = useRef<HTMLDivElement>(null);
   const baseDelay = index * 0.08;
 
@@ -1495,7 +1577,7 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
               <span className={`w-1 h-1 rounded-full ${statusStyle.dot}`} />
               {query.status}
             </span>
-            <GenerateCasesGate queryId={query.id} />
+            <GenerateCasesGate queryId={query.id} phase={casesPhase} onPhaseChange={onCasesPhaseChange} />
             {(() => {
               const myComments = comments.filter(c => c.queryId === query.id).length;
               return (
@@ -1547,10 +1629,10 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
                     Copy Card ID
                   </button>
                   <button
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => { setMenuOpen(false); setGraphModalOpen(true); }}
                     className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-primary-xlight hover:text-primary cursor-pointer"
                   >
-                    <TrendingUp size={13} />
+                    <BarChart3 size={13} />
                     Add Graph
                   </button>
                   <button
@@ -1584,8 +1666,8 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
           {query.title}
         </motion.h3>
 
-        {/* KPI strip — matches the Executive Summary stats card style */}
-        {(() => {
+        {/* KPI strip — populated only after cases generate; placeholder otherwise so users know why metrics are missing */}
+        {casesPhase === 'ready' ? (() => {
           const kpis = computeQueryKpis(query);
           if (kpis.length === 0) {
             return (
@@ -1610,7 +1692,60 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
               ))}
             </div>
           );
-        })()}
+        })() : (
+          <div className="border border-dashed border-border-light rounded-xl px-4 py-5 mb-5 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-paper-50 flex items-center justify-center shrink-0">
+              {casesPhase === 'generating'
+                ? <Loader2 size={15} className="text-primary animate-spin" />
+                : <ShieldAlert size={15} className="text-text-muted" />}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[12.5px] font-semibold text-text">
+                {casesPhase === 'generating' ? 'Generating cases…' : 'Exception metrics not generated yet'}
+              </p>
+              <p className="text-[11.5px] text-text-muted leading-snug">
+                {casesPhase === 'generating'
+                  ? 'Cases are being created — KPIs will appear here in a moment.'
+                  : 'Turn on Generate Cases to populate Total Exceptions, Open, Closed and Check Health.'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Attached graph (selected from Add Graph modal) */}
+        {attachedGraph && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="bg-canvas-elevated border border-border-light rounded-xl p-4 mb-5"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 text-[11px] font-bold text-text-secondary uppercase tracking-wider">
+                <BarChart3 size={12} />
+                {attachedGraph.title}
+              </div>
+              <button
+                onClick={() => setAttachedGraphId(null)}
+                title="Remove graph"
+                aria-label="Remove graph"
+                className="w-6 h-6 flex items-center justify-center rounded-md text-text-muted hover:text-risk-700 hover:bg-risk-50 transition-colors cursor-pointer"
+              >
+                <X size={13} />
+              </button>
+            </div>
+            <div className="h-[200px]">
+              <ConfigurableChart
+                type={attachedGraph.type}
+                xAxis={attachedGraph.xAxis}
+                yAxis={attachedGraph.yAxis}
+                color={attachedGraph.color ?? '#6a12cd'}
+                showTarget={false}
+                showLegend
+              />
+            </div>
+          </motion.div>
+        )}
 
         {/* Summary */}
         <motion.p
@@ -1622,67 +1757,36 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
           {query.summary}
         </motion.p>
 
-        {/* Bottom row: expand toggle */}
-        <button
-          onClick={() => setExpanded(p => !p)}
-          className="flex items-center gap-1.5 text-[13px] font-semibold text-primary cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 group"
-        >
-          <motion.span
-            animate={{ rotate: expanded ? 0 : -90 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-            className="inline-flex"
-          >
-            <ChevronDown size={14} />
-          </motion.span>
-          <span className="transition-colors group-hover:text-primary-hover">
-            {expanded ? 'Hide findings & observations' : 'Show findings & observations'}
-          </span>
-        </button>
-      </div>
-
-      {/* Expandable details */}
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="px-6 pb-6 pt-2">
-              <div className="space-y-6">
-                {[
-                  { title: 'Findings', items: query.findings, emptyCopy: 'No findings recorded for this query yet.' },
-                  { title: 'Observations', items: query.observations, emptyCopy: 'No observations recorded for this query yet.' },
-                ].map(section => (
-                  <div key={section.title}>
-                    <h4 className="text-[11px] font-bold text-text-secondary uppercase tracking-wider mb-3">{section.title}</h4>
-                    {section.items.length === 0 ? (
-                      <p className="text-[12.5px] text-text-muted italic">{section.emptyCopy}</p>
-                    ) : (
-                      <ul className="space-y-2.5">
-                        {section.items.map((item, i) => (
-                          <motion.li
-                            key={i}
-                            initial={{ opacity: 0, x: -4 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.08 + i * 0.05, duration: 0.3 }}
-                            className="flex gap-2.5 text-[13px] text-text leading-relaxed"
-                          >
-                            <div className="w-1 h-1 rounded-full mt-2 shrink-0 bg-primary/60" />
-                            {item}
-                          </motion.li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </div>
+        {/* Findings & observations (always visible) */}
+        <div className="space-y-6 pt-2">
+          {[
+            { title: 'Findings', items: query.findings, emptyCopy: 'No findings recorded for this query yet.' },
+            { title: 'Observations', items: query.observations, emptyCopy: 'No observations recorded for this query yet.' },
+          ].map(section => (
+            <div key={section.title}>
+              <h4 className="text-[11px] font-bold text-text-secondary uppercase tracking-wider mb-3">{section.title}</h4>
+              {section.items.length === 0 ? (
+                <p className="text-[12.5px] text-text-muted italic">{section.emptyCopy}</p>
+              ) : (
+                <ul className="space-y-2.5">
+                  {section.items.map((item, i) => (
+                    <motion.li
+                      key={i}
+                      initial={{ opacity: 0, x: -4 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: baseDelay + 0.7 + i * 0.05, duration: 0.3 }}
+                      className="flex gap-2.5 text-[13px] text-text leading-relaxed"
+                    >
+                      <div className="w-1 h-1 rounded-full mt-2 shrink-0 bg-primary/60" />
+                      {item}
+                    </motion.li>
+                  ))}
+                </ul>
+              )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          ))}
+        </div>
+      </div>
 
       {drawerTab && createPortal(
         <CommentDrawer
@@ -1695,66 +1799,173 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
         document.body,
       )}
 
-      {/* Delete confirmation modal */}
-      {showDeleteConfirm && createPortal(
-        <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center"
-            onClick={() => setShowDeleteConfirm(false)}
-          >
-            <div className="absolute inset-0 bg-ink-900/40 backdrop-blur-[2px]" />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-              onClick={(e) => e.stopPropagation()}
-              role="alertdialog"
-              aria-labelledby="delete-query-title"
-              aria-describedby="delete-query-desc"
-              className="relative bg-white rounded-[14px] border border-border-light shadow-2xl w-[440px] max-w-[calc(100vw-32px)] p-6"
-            >
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                aria-label="Close"
-                className="absolute top-4 right-4 w-7 h-7 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-paper-50 transition-colors cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-              <h3 id="delete-query-title" className="text-[16px] font-bold text-text tracking-tight mb-2">
-                Remove Query Card?
-              </h3>
-              <p id="delete-query-desc" className="text-[13px] text-text-secondary leading-relaxed mb-6 pr-4">
-                This will permanently remove this query card from the report. This action cannot be undone.
-              </p>
-              <div className="flex items-center justify-end gap-2.5">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="inline-flex items-center justify-center h-9 px-4 text-[13px] font-semibold text-text bg-white border border-border-light rounded-[8px] hover:bg-paper-50 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDeleteConfirm(false);
-                    onDelete?.();
-                    addToast({ type: 'success', message: 'Query card removed.' });
-                  }}
-                  className="inline-flex items-center justify-center h-9 px-5 text-[13px] font-semibold text-white bg-risk hover:bg-risk-700 rounded-[8px] transition-colors cursor-pointer"
-                >
-                  Delete
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        </AnimatePresence>,
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Remove Query Card?"
+        description="This will permanently remove this query card from the report. This action cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          setShowDeleteConfirm(false);
+          onDelete?.();
+          addToast({ type: 'success', message: 'Query card removed.' });
+        }}
+      />
+
+      {graphModalOpen && createPortal(
+        <AddGraphModal
+          queryId={query.id}
+          queryTitle={query.title}
+          graphs={availableGraphs}
+          attachedGraphId={attachedGraphId}
+          onSelect={(id) => {
+            setAttachedGraphId(id);
+            setGraphModalOpen(false);
+            addToast({ type: 'success', message: 'Graph added to query card.' });
+          }}
+          onClose={() => setGraphModalOpen(false)}
+        />,
         document.body,
       )}
     </motion.div>
+  );
+}
+
+// ─── "Add Graph" modal — pick from query's available chat-session graphs ───
+function AddGraphModal({
+  queryId,
+  queryTitle,
+  graphs,
+  attachedGraphId,
+  onSelect,
+  onClose,
+}: {
+  queryId: string;
+  queryTitle: string;
+  graphs: QueryGraph[];
+  attachedGraphId: string | null;
+  onSelect: (id: string) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const [pickedId, setPickedId] = useState<string | null>(attachedGraphId);
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-6"
+        onClick={onClose}
+      >
+        <div className="absolute inset-0 bg-ink-900/45 backdrop-blur-[2px]" />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.97, y: 10 }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-labelledby="add-graph-title"
+          className="relative bg-white rounded-[16px] border border-border-light shadow-2xl w-[820px] max-w-[calc(100vw-48px)] max-h-[calc(100vh-48px)] flex flex-col overflow-hidden"
+        >
+          <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-border-light">
+            <div>
+              <h3 id="add-graph-title" className="text-[16px] font-bold text-text tracking-tight">
+                Add Graph
+              </h3>
+              <p className="text-[12.5px] text-text-secondary mt-1">
+                <span className="font-mono text-[11px] text-primary">{queryId}</span>
+                <span className="mx-1.5 text-text-muted">·</span>
+                {queryTitle}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="w-8 h-8 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-paper-50 transition-colors cursor-pointer"
+            >
+              <X size={17} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            {graphs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-12 h-12 rounded-full bg-paper-50 flex items-center justify-center mb-3">
+                  <BarChart3 size={20} className="text-text-muted" />
+                </div>
+                <p className="text-[13px] font-semibold text-text mb-1">No graphs available for this query yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                {graphs.map((g) => {
+                  const isPicked = pickedId === g.id;
+                  return (
+                    <button
+                      key={g.id}
+                      onClick={() => setPickedId(g.id)}
+                      className={`text-left bg-white border-2 rounded-xl p-3 transition-all cursor-pointer focus:outline-none ${
+                        isPicked
+                          ? 'border-primary shadow-[0_0_0_3px_rgba(106,18,205,0.12)]'
+                          : 'border-border-light hover:border-primary/40'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span
+                          className={`inline-flex items-center justify-center w-5 h-5 rounded-full border transition-colors ${
+                            isPicked
+                              ? 'bg-primary border-primary text-white'
+                              : 'bg-white border-border-light text-transparent'
+                          }`}
+                        >
+                          <Check size={12} />
+                        </span>
+                        <span className="text-[12.5px] font-semibold text-text">{g.title}</span>
+                      </div>
+                      <div className="h-[160px] bg-canvas-elevated rounded-lg p-1.5 pointer-events-none">
+                        <ConfigurableChart
+                          type={g.type}
+                          xAxis={g.xAxis}
+                          yAxis={g.yAxis}
+                          color={g.color ?? '#6a12cd'}
+                          showTarget={false}
+                          showLegend={false}
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-border-light bg-paper-50/40">
+            <button
+              onClick={onClose}
+              className="inline-flex items-center justify-center h-9 px-4 text-[13px] font-semibold text-text bg-white border border-border-light rounded-[8px] hover:bg-paper-50 transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => pickedId && onSelect(pickedId)}
+              disabled={!pickedId}
+              className="inline-flex items-center justify-center h-9 px-5 text-[13px] font-semibold text-white bg-primary hover:bg-primary-hover rounded-[8px] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Add Graph
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
@@ -2242,6 +2453,8 @@ function DraggableQuerySection({
   onDelete,
   comments,
   onAddComment,
+  casesPhase,
+  onCasesPhaseChange,
 }: {
   section: { id: string; kind: 'query'; title: string; query: QueryShape };
   index: number;
@@ -2251,6 +2464,8 @@ function DraggableQuerySection({
   onDelete: () => void;
   comments: QueryComment[];
   onAddComment: (queryId: string, queryTitle: string, text: string, attachment?: string) => void;
+  casesPhase: CasesPhase;
+  onCasesPhaseChange: (phase: CasesPhase) => void;
 }) {
   const controls = useDragControls();
   return (
@@ -2272,6 +2487,8 @@ function DraggableQuerySection({
         onDelete={onDelete}
         comments={comments}
         onAddComment={onAddComment}
+        casesPhase={casesPhase}
+        onCasesPhaseChange={onCasesPhaseChange}
       />
     </Reorder.Item>
   );
@@ -2763,6 +2980,11 @@ function ReportView({ report, onBack, onShare, onManageExceptions, onOpenQuery, 
   const [appliedTemplate, setAppliedTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(initialTemplate ?? null);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
+  // QueryCard "Generate Cases" phase, lifted up so it survives template
+  // switches that re-mount QueryCards. Keyed by query.id.
+  const [casesPhases, setCasesPhases] = useState<Record<string, CasesPhase>>({});
+  const setCasesPhase = (queryId: string, phase: CasesPhase) =>
+    setCasesPhases(prev => ({ ...prev, [queryId]: phase }));
   // Local launch pulse — the whole report surface nudges right + dims when
   // the Manage Exceptions CTA fires, mirroring the new-tab launch.
   const [launching, setLaunching] = useState(false);
@@ -3427,6 +3649,8 @@ function ReportView({ report, onBack, onShare, onManageExceptions, onOpenQuery, 
                         onDelete={() => removeSection(section.id)}
                         comments={comments}
                         onAddComment={addComment}
+                        casesPhase={casesPhases[section.query.id] ?? 'idle'}
+                        onCasesPhaseChange={(p) => setCasesPhase(section.query.id, p)}
                       />
                     );
                   }
@@ -3503,6 +3727,7 @@ export default function ReportsView({
   const [tagFilter, setTagFilter] = useState<string>('All');
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [viewingReport, setViewingReport] = useState<GeneratedReport | null>(null);
+  const [reportToDelete, setReportToDelete] = useState<{ id: string; name: string } | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(null);
   const [editingAsCopy, setEditingAsCopy] = useState(false);
   const [customTemplatesLocal, setCustomTemplatesLocal] = useState<typeof REPORT_TEMPLATES[number][]>(CUSTOM_TEMPLATES as typeof REPORT_TEMPLATES[number][]);
@@ -3739,7 +3964,7 @@ export default function ReportsView({
                 <div className="flex items-center justify-end gap-1">
                   <button onClick={() => addToast({ type: 'success', message: `Downloading ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={14} /></button>
                   <button onClick={() => onShare ? onShare(String(item.id)) : addToast({ type: 'info', message: `Sharing ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={14} /></button>
-                  <button onClick={() => addToast({ type: 'success', message: `${item.name} deleted.` })} className="p-1.5 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
+                  <button onClick={() => setReportToDelete({ id: String(item.id), name: String(item.name) })} className="p-1.5 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
                 </div>
               )},
             ]}
@@ -3793,7 +4018,7 @@ export default function ReportsView({
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Download"><Download size={15} /></button>
                         <button onClick={(e) => { e.stopPropagation(); onShare ? onShare(r.id) : addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Share"><Share2 size={15} /></button>
-                        <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="hover:text-risk transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Delete"><Trash2 size={15} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); setReportToDelete({ id: r.id, name: r.name }); }} className="hover:text-risk transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Delete"><Trash2 size={15} /></button>
                       </div>
                     </div>
                     <div className="font-medium text-text group-hover:text-primary transition-colors mb-1" style={{ fontSize: '14px', lineHeight: '20px' }}>{r.name}</div>
@@ -3857,7 +4082,6 @@ export default function ReportsView({
                 <div className="flex items-center justify-end gap-1">
                   <button onClick={() => addToast({ type: 'success', message: `Downloading ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Download"><Download size={14} /></button>
                   <button onClick={() => addToast({ type: 'info', message: `Sharing ${item.name}...` })} className="p-1.5 text-text-muted hover:text-primary hover:bg-primary-xlight rounded-md transition-colors cursor-pointer" title="Share"><Share2 size={14} /></button>
-                  <button onClick={() => addToast({ type: 'success', message: `${item.name} deleted.` })} className="p-1.5 text-text-muted hover:text-risk-700 hover:bg-risk-50 rounded-md transition-colors cursor-pointer" title="Delete"><Trash2 size={14} /></button>
                 </div>
               )},
             ]}
@@ -3893,7 +4117,6 @@ export default function ReportsView({
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `Downloading ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Download"><Download size={15} /></button>
                       <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'info', message: `Sharing ${r.name}...` }); }} className="hover:text-primary transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Share"><Share2 size={15} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); addToast({ type: 'success', message: `${r.name} deleted.` }); }} className="hover:text-red-500 transition-colors cursor-pointer" style={{ color: 'rgba(38,6,74,0.4)' }} title="Delete"><Trash2 size={15} /></button>
                     </div>
                   </div>
                   <div className="font-medium text-[13px] text-text group-hover:text-primary transition-colors leading-snug mb-1">{r.name}</div>
@@ -4203,6 +4426,24 @@ export default function ReportsView({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={!!reportToDelete}
+        onClose={() => setReportToDelete(null)}
+        title="Delete File?"
+        description={reportToDelete && (
+          <>Are you sure you want to delete <span className="font-semibold text-text">{reportToDelete.name}</span>? This action cannot be undone.</>
+        )}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (!reportToDelete) return;
+          const name = reportToDelete.name;
+          setGeneratedReports(prev => prev.filter(r => r.id !== reportToDelete.id));
+          setReportToDelete(null);
+          addToast({ type: 'success', message: `${name} deleted.` });
+        }}
+      />
     </div>
   );
 }
