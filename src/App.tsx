@@ -18,6 +18,7 @@ import AuditExecution from './components/audit/AuditExecution';
 import DashboardView from './components/dashboard/DashboardView';
 import DashboardListPage from './components/dashboard/DashboardListPage';
 import ReportsView, { CUSTOM_TEMPLATES } from './components/reports/ReportsView';
+import { REPORT_TEMPLATES } from './data/mockData';
 import HomeView from './components/home/HomeView';
 import RecentsView from './components/recents/RecentsView';
 import KnowledgeHubView from './components/knowledge/KnowledgeHubView';
@@ -108,7 +109,20 @@ export default function App() {
   const [controlDrawerId, setControlDrawerId] = useState<string | null>(null);
   const [engagementBackView, setEngagementBackView] = useState<'programs' | 'audit-planning' | 'business-processes'>('programs');
   type CustomTemplate = typeof CUSTOM_TEMPLATES[number];
-  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>(CUSTOM_TEMPLATES);
+  const CUSTOM_TEMPLATES_KEY = 'irame.reports.customTemplates.v1';
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>(() => {
+    try {
+      const raw = localStorage.getItem(CUSTOM_TEMPLATES_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed as CustomTemplate[];
+      }
+    } catch { /* ignore */ }
+    return CUSTOM_TEMPLATES;
+  });
+  useEffect(() => {
+    try { localStorage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(customTemplates)); } catch { /* ignore */ }
+  }, [customTemplates]);
   const addCustomTemplate = (t: CustomTemplate) => setCustomTemplates(prev => [t, ...prev]);
 
   useEffect(() => {
@@ -393,7 +407,7 @@ export default function App() {
             onShare={(id) => setShowShareModal(true, { type: 'report', id })}
             onManageExceptions={() => setView('manage-exceptions')}
             onOpenQuery={(q) => {
-              setChatInitialQuery(`Open the ${q.id} duplicate invoice query`);
+              setChatInitialQuery(`Open ${q.id}: ${q.title}`);
               setView('chat');
             }}
             customTemplates={customTemplates}
@@ -417,6 +431,7 @@ export default function App() {
             context={state.reportBuilderContext}
             onBack={() => setView('reports')}
             onSaveAsTemplate={addCustomTemplate}
+            existingTemplateNames={[...REPORT_TEMPLATES.map(t => t.name), ...customTemplates.map(t => t.name)]}
           />
         );
 
