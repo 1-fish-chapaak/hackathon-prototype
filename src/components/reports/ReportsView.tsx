@@ -15,6 +15,11 @@ import {
 import { REPORT_TEMPLATES, GENERATED_REPORTS, SHARED_REPORTS } from '../../data/mockData';
 import { REPORT_QUERIES_ATR, type ReportQueryAtr } from '../../data/reportQueries';
 import { QUERY_SESSIONS, FAVOURITES } from '../../data/queryHistory';
+import { QUERY_GRAPHS, type QueryGraph } from '../../data/queryGraphs';
+import {
+  ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  AreaChart, Area, XAxis, YAxis, Tooltip as RTooltip,
+} from 'recharts';
 import { StatusBadge } from '../shared/StatusBadge';
 import SmartTable from '../shared/SmartTable';
 import { useToast } from '../shared/Toast';
@@ -1362,13 +1367,13 @@ function ManageExceptionsLaunchButton({ queryId }: { queryId: string }) {
  * idle → switch off; user flips it on → brief generating state; once ready the
  * toggle is replaced inline by the existing ManageExceptionsLaunchButton.
  */
-function GenerateCasesGate({ queryId }: { queryId: string }) {
-  const [phase, setPhase] = useState<'idle' | 'generating' | 'ready'>('idle');
+type CasesPhase = 'idle' | 'generating' | 'ready';
 
+function GenerateCasesGate({ queryId, phase, onPhaseChange }: { queryId: string; phase: CasesPhase; onPhaseChange: (p: CasesPhase) => void }) {
   const handleToggle = () => {
     if (phase !== 'idle') return;
-    setPhase('generating');
-    window.setTimeout(() => setPhase('ready'), 1400);
+    onPhaseChange('generating');
+    window.setTimeout(() => onPhaseChange('ready'), 1400);
   };
 
   if (phase === 'ready') {
@@ -1413,11 +1418,15 @@ function GenerateCasesGate({ queryId }: { queryId: string }) {
 
 function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, comments = [], onAddComment }: { query: QueryShape; index: number; onManageExceptions?: () => void; onOpenQuery?: (query: { id: string; title: string }) => void; onDelete?: () => void; comments?: QueryComment[]; onAddComment?: (queryId: string, queryTitle: string, text: string, attachment?: string) => void }) {
   const { addToast } = useToast();
-  const [expanded, setExpanded] = useState(index === 0);
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [drawerTab, setDrawerTab] = useState<'comments' | 'source-files' | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [casesPhase, setCasesPhase] = useState<CasesPhase>('idle');
+  const [graphModalOpen, setGraphModalOpen] = useState(false);
+  const [attachedGraphId, setAttachedGraphId] = useState<string | null>(null);
+  const availableGraphs = QUERY_GRAPHS[query.id] ?? [];
+  const attachedGraph = availableGraphs.find(g => g.id === attachedGraphId) ?? null;
   const menuRef = useRef<HTMLDivElement>(null);
   const baseDelay = index * 0.08;
 
@@ -1495,7 +1504,7 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
               <span className={`w-1 h-1 rounded-full ${statusStyle.dot}`} />
               {query.status}
             </span>
-            <GenerateCasesGate queryId={query.id} />
+            <GenerateCasesGate queryId={query.id} phase={casesPhase} onPhaseChange={setCasesPhase} />
             {(() => {
               const myComments = comments.filter(c => c.queryId === query.id).length;
               return (
@@ -1547,7 +1556,7 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
                     Copy Card ID
                   </button>
                   <button
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => { setMenuOpen(false); setGraphModalOpen(true); }}
                     className="flex items-center gap-2 w-full text-left px-3 py-2 text-[12.5px] text-text-secondary hover:bg-primary-xlight hover:text-primary cursor-pointer"
                   >
                     <TrendingUp size={13} />
@@ -1584,8 +1593,8 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
           {query.title}
         </motion.h3>
 
-        {/* KPI strip — matches the Executive Summary stats card style */}
-        {(() => {
+        {/* KPI strip — only after cases have been generated */}
+        {casesPhase === 'ready' && (() => {
           const kpis = computeQueryKpis(query);
           if (kpis.length === 0) {
             return (
@@ -1612,6 +1621,34 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
           );
         })()}
 
+        {/* Attached graph (selected from Add Graph modal) */}
+        {attachedGraph && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="bg-canvas-elevated border border-border-light rounded-xl p-4 mb-5"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 text-[11px] font-bold text-text-secondary uppercase tracking-wider">
+                <BarChart3 size={12} />
+                {attachedGraph.title}
+              </div>
+              <button
+                onClick={() => setAttachedGraphId(null)}
+                title="Remove graph"
+                aria-label="Remove graph"
+                className="w-6 h-6 flex items-center justify-center rounded-md text-text-muted hover:text-risk-700 hover:bg-risk-50 transition-colors cursor-pointer"
+              >
+                <X size={13} />
+              </button>
+            </div>
+            <div className="h-[180px]">
+              <GraphRenderer graph={attachedGraph} />
+            </div>
+          </motion.div>
+        )}
+
         {/* Summary */}
         <motion.p
           initial={{ opacity: 0 }}
@@ -1622,67 +1659,36 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
           {query.summary}
         </motion.p>
 
-        {/* Bottom row: expand toggle */}
-        <button
-          onClick={() => setExpanded(p => !p)}
-          className="flex items-center gap-1.5 text-[13px] font-semibold text-primary cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 group"
-        >
-          <motion.span
-            animate={{ rotate: expanded ? 0 : -90 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-            className="inline-flex"
-          >
-            <ChevronDown size={14} />
-          </motion.span>
-          <span className="transition-colors group-hover:text-primary-hover">
-            {expanded ? 'Hide findings & observations' : 'Show findings & observations'}
-          </span>
-        </button>
-      </div>
-
-      {/* Expandable details */}
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="px-6 pb-6 pt-2">
-              <div className="space-y-6">
-                {[
-                  { title: 'Findings', items: query.findings, emptyCopy: 'No findings recorded for this query yet.' },
-                  { title: 'Observations', items: query.observations, emptyCopy: 'No observations recorded for this query yet.' },
-                ].map(section => (
-                  <div key={section.title}>
-                    <h4 className="text-[11px] font-bold text-text-secondary uppercase tracking-wider mb-3">{section.title}</h4>
-                    {section.items.length === 0 ? (
-                      <p className="text-[12.5px] text-text-muted italic">{section.emptyCopy}</p>
-                    ) : (
-                      <ul className="space-y-2.5">
-                        {section.items.map((item, i) => (
-                          <motion.li
-                            key={i}
-                            initial={{ opacity: 0, x: -4 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.08 + i * 0.05, duration: 0.3 }}
-                            className="flex gap-2.5 text-[13px] text-text leading-relaxed"
-                          >
-                            <div className="w-1 h-1 rounded-full mt-2 shrink-0 bg-primary/60" />
-                            {item}
-                          </motion.li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </div>
+        {/* Findings & observations (always visible) */}
+        <div className="space-y-6 pt-2">
+          {[
+            { title: 'Findings', items: query.findings, emptyCopy: 'No findings recorded for this query yet.' },
+            { title: 'Observations', items: query.observations, emptyCopy: 'No observations recorded for this query yet.' },
+          ].map(section => (
+            <div key={section.title}>
+              <h4 className="text-[11px] font-bold text-text-secondary uppercase tracking-wider mb-3">{section.title}</h4>
+              {section.items.length === 0 ? (
+                <p className="text-[12.5px] text-text-muted italic">{section.emptyCopy}</p>
+              ) : (
+                <ul className="space-y-2.5">
+                  {section.items.map((item, i) => (
+                    <motion.li
+                      key={i}
+                      initial={{ opacity: 0, x: -4 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: baseDelay + 0.7 + i * 0.05, duration: 0.3 }}
+                      className="flex gap-2.5 text-[13px] text-text leading-relaxed"
+                    >
+                      <div className="w-1 h-1 rounded-full mt-2 shrink-0 bg-primary/60" />
+                      {item}
+                    </motion.li>
+                  ))}
+                </ul>
+              )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          ))}
+        </div>
+      </div>
 
       {drawerTab && createPortal(
         <CommentDrawer
@@ -1754,7 +1760,217 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
         </AnimatePresence>,
         document.body,
       )}
+
+      {graphModalOpen && createPortal(
+        <AddGraphModal
+          queryId={query.id}
+          queryTitle={query.title}
+          graphs={availableGraphs}
+          attachedGraphId={attachedGraphId}
+          onSelect={(id) => {
+            setAttachedGraphId(id);
+            setGraphModalOpen(false);
+            addToast({ type: 'success', message: 'Graph added to query card.' });
+          }}
+          onClose={() => setGraphModalOpen(false)}
+        />,
+        document.body,
+      )}
     </motion.div>
+  );
+}
+
+// ─── Reusable graph renderer for QueryCard + AddGraphModal previews ───
+const GRAPH_PALETTE = ['#7C3AED', '#3d68ee', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+function GraphRenderer({ graph }: { graph: QueryGraph }) {
+  if (graph.type === 'bar') {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={graph.data} margin={{ top: 6, right: 8, bottom: 6, left: -16 }}>
+          <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b6b76' }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 10, fill: '#6b6b76' }} axisLine={false} tickLine={false} />
+          <RTooltip cursor={{ fill: 'rgba(124,58,237,0.06)' }} contentStyle={{ borderRadius: 8, fontSize: 11, border: '1px solid #e5e5ea' }} />
+          <Bar dataKey="value" fill={GRAPH_PALETTE[0]} radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  }
+  if (graph.type === 'line') {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={graph.data} margin={{ top: 6, right: 8, bottom: 6, left: -16 }}>
+          <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b6b76' }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 10, fill: '#6b6b76' }} axisLine={false} tickLine={false} />
+          <RTooltip contentStyle={{ borderRadius: 8, fontSize: 11, border: '1px solid #e5e5ea' }} />
+          <Line type="monotone" dataKey="value" stroke={GRAPH_PALETTE[0]} strokeWidth={2} dot={{ r: 3, fill: GRAPH_PALETTE[0] }} />
+        </LineChart>
+      </ResponsiveContainer>
+    );
+  }
+  if (graph.type === 'area') {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={graph.data} margin={{ top: 6, right: 8, bottom: 6, left: -16 }}>
+          <defs>
+            <linearGradient id={`grad-${graph.id}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={GRAPH_PALETTE[0]} stopOpacity={0.4} />
+              <stop offset="100%" stopColor={GRAPH_PALETTE[0]} stopOpacity={0.04} />
+            </linearGradient>
+          </defs>
+          <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b6b76' }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 10, fill: '#6b6b76' }} axisLine={false} tickLine={false} />
+          <RTooltip contentStyle={{ borderRadius: 8, fontSize: 11, border: '1px solid #e5e5ea' }} />
+          <Area type="monotone" dataKey="value" stroke={GRAPH_PALETTE[0]} strokeWidth={2} fill={`url(#grad-${graph.id})`} />
+        </AreaChart>
+      </ResponsiveContainer>
+    );
+  }
+  // pie
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <PieChart>
+        <RTooltip contentStyle={{ borderRadius: 8, fontSize: 11, border: '1px solid #e5e5ea' }} />
+        <Pie data={graph.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius="80%" innerRadius="50%" paddingAngle={2}>
+          {graph.data.map((_, i) => (
+            <Cell key={i} fill={GRAPH_PALETTE[i % GRAPH_PALETTE.length]} />
+          ))}
+        </Pie>
+      </PieChart>
+    </ResponsiveContainer>
+  );
+}
+
+// ─── "Add Graph" modal — pick from query's available chat-session graphs ───
+function AddGraphModal({
+  queryId,
+  queryTitle,
+  graphs,
+  attachedGraphId,
+  onSelect,
+  onClose,
+}: {
+  queryId: string;
+  queryTitle: string;
+  graphs: QueryGraph[];
+  attachedGraphId: string | null;
+  onSelect: (id: string) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const [pickedId, setPickedId] = useState<string | null>(attachedGraphId);
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-6"
+        onClick={onClose}
+      >
+        <div className="absolute inset-0 bg-ink-900/45 backdrop-blur-[2px]" />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.97, y: 10 }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-labelledby="add-graph-title"
+          className="relative bg-white rounded-[16px] border border-border-light shadow-2xl w-[820px] max-w-[calc(100vw-48px)] max-h-[calc(100vh-48px)] flex flex-col overflow-hidden"
+        >
+          <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-border-light">
+            <div>
+              <h3 id="add-graph-title" className="text-[18px] font-bold text-text tracking-tight">
+                Add Graph
+              </h3>
+              <p className="text-[12.5px] text-text-secondary mt-1">
+                <span className="font-mono text-[11px] text-primary">{queryId}</span>
+                <span className="mx-1.5 text-text-muted">·</span>
+                {queryTitle}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="w-8 h-8 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-paper-50 transition-colors cursor-pointer"
+            >
+              <X size={17} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            {graphs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-12 h-12 rounded-full bg-paper-50 flex items-center justify-center mb-3">
+                  <BarChart3 size={20} className="text-text-muted" />
+                </div>
+                <p className="text-[13px] font-semibold text-text mb-1">No graphs generated yet</p>
+                <p className="text-[12px] text-text-muted">
+                  Run this query in chat to generate graphs you can attach to the report.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                {graphs.map((g) => {
+                  const isPicked = pickedId === g.id;
+                  return (
+                    <button
+                      key={g.id}
+                      onClick={() => setPickedId(g.id)}
+                      className={`text-left bg-white border-2 rounded-xl p-3 transition-all cursor-pointer focus:outline-none ${
+                        isPicked
+                          ? 'border-primary shadow-[0_0_0_3px_rgba(124,58,237,0.12)]'
+                          : 'border-border-light hover:border-primary/40'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span
+                          className={`inline-flex items-center justify-center w-5 h-5 rounded-full border transition-colors ${
+                            isPicked
+                              ? 'bg-primary border-primary text-white'
+                              : 'bg-white border-border-light text-transparent'
+                          }`}
+                        >
+                          <Check size={12} />
+                        </span>
+                        <span className="text-[12.5px] font-semibold text-text">{g.title}</span>
+                      </div>
+                      <div className="h-[140px] bg-canvas-elevated rounded-lg p-1.5">
+                        <GraphRenderer graph={g} />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-border-light bg-paper-50/40">
+            <button
+              onClick={onClose}
+              className="inline-flex items-center justify-center h-9 px-4 text-[13px] font-semibold text-text bg-white border border-border-light rounded-[8px] hover:bg-paper-50 transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => pickedId && onSelect(pickedId)}
+              disabled={!pickedId}
+              className="inline-flex items-center justify-center h-9 px-5 text-[13px] font-semibold text-white bg-primary hover:bg-primary-hover rounded-[8px] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Add Graph
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
