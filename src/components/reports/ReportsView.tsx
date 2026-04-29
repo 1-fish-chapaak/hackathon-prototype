@@ -1413,13 +1413,12 @@ function GenerateCasesGate({ queryId, phase, onPhaseChange }: { queryId: string;
   );
 }
 
-function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, comments = [], onAddComment }: { query: QueryShape; index: number; onManageExceptions?: () => void; onOpenQuery?: (query: { id: string; title: string }) => void; onDelete?: () => void; comments?: QueryComment[]; onAddComment?: (queryId: string, queryTitle: string, text: string, attachment?: string) => void }) {
+function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, comments = [], onAddComment, casesPhase, onCasesPhaseChange }: { query: QueryShape; index: number; onManageExceptions?: () => void; onOpenQuery?: (query: { id: string; title: string }) => void; onDelete?: () => void; comments?: QueryComment[]; onAddComment?: (queryId: string, queryTitle: string, text: string, attachment?: string) => void; casesPhase: CasesPhase; onCasesPhaseChange: (phase: CasesPhase) => void }) {
   const { addToast } = useToast();
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [drawerTab, setDrawerTab] = useState<'comments' | 'source-files' | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [casesPhase, setCasesPhase] = useState<CasesPhase>('idle');
   const [graphModalOpen, setGraphModalOpen] = useState(false);
   const [attachedGraphId, setAttachedGraphId] = useState<string | null>(null);
   const availableGraphs = QUERY_GRAPHS[query.id] ?? [];
@@ -1501,7 +1500,7 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
               <span className={`w-1 h-1 rounded-full ${statusStyle.dot}`} />
               {query.status}
             </span>
-            <GenerateCasesGate queryId={query.id} phase={casesPhase} onPhaseChange={setCasesPhase} />
+            <GenerateCasesGate queryId={query.id} phase={casesPhase} onPhaseChange={onCasesPhaseChange} />
             {(() => {
               const myComments = comments.filter(c => c.queryId === query.id).length;
               return (
@@ -2408,6 +2407,8 @@ function DraggableQuerySection({
   onDelete,
   comments,
   onAddComment,
+  casesPhase,
+  onCasesPhaseChange,
 }: {
   section: { id: string; kind: 'query'; title: string; query: QueryShape };
   index: number;
@@ -2417,6 +2418,8 @@ function DraggableQuerySection({
   onDelete: () => void;
   comments: QueryComment[];
   onAddComment: (queryId: string, queryTitle: string, text: string, attachment?: string) => void;
+  casesPhase: CasesPhase;
+  onCasesPhaseChange: (phase: CasesPhase) => void;
 }) {
   const controls = useDragControls();
   return (
@@ -2438,6 +2441,8 @@ function DraggableQuerySection({
         onDelete={onDelete}
         comments={comments}
         onAddComment={onAddComment}
+        casesPhase={casesPhase}
+        onCasesPhaseChange={onCasesPhaseChange}
       />
     </Reorder.Item>
   );
@@ -2929,6 +2934,11 @@ function ReportView({ report, onBack, onShare, onManageExceptions, onOpenQuery, 
   const [appliedTemplate, setAppliedTemplate] = useState<typeof REPORT_TEMPLATES[0] | null>(initialTemplate ?? null);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
+  // QueryCard "Generate Cases" phase, lifted up so it survives template
+  // switches that re-mount QueryCards. Keyed by query.id.
+  const [casesPhases, setCasesPhases] = useState<Record<string, CasesPhase>>({});
+  const setCasesPhase = (queryId: string, phase: CasesPhase) =>
+    setCasesPhases(prev => ({ ...prev, [queryId]: phase }));
   // Local launch pulse — the whole report surface nudges right + dims when
   // the Manage Exceptions CTA fires, mirroring the new-tab launch.
   const [launching, setLaunching] = useState(false);
@@ -3593,6 +3603,8 @@ function ReportView({ report, onBack, onShare, onManageExceptions, onOpenQuery, 
                         onDelete={() => removeSection(section.id)}
                         comments={comments}
                         onAddComment={addComment}
+                        casesPhase={casesPhases[section.query.id] ?? 'idle'}
+                        onCasesPhaseChange={(p) => setCasesPhase(section.query.id, p)}
                       />
                     );
                   }
