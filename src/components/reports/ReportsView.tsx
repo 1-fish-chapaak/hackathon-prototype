@@ -1739,7 +1739,7 @@ function QueryCard({ query, index, onManageExceptions, onOpenQuery, onDelete, co
                 type={attachedGraph.type}
                 xAxis={attachedGraph.xAxis}
                 yAxis={attachedGraph.yAxis}
-                color={attachedGraph.color}
+                color={attachedGraph.color ?? '#6a12cd'}
                 showTarget={false}
                 showLegend
               />
@@ -1879,7 +1879,7 @@ function AddGraphModal({
         >
           <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-border-light">
             <div>
-              <h3 id="add-graph-title" className="text-[18px] font-bold text-text tracking-tight">
+              <h3 id="add-graph-title" className="text-[16px] font-bold text-text tracking-tight">
                 Add Graph
               </h3>
               <p className="text-[12.5px] text-text-secondary mt-1">
@@ -1903,10 +1903,7 @@ function AddGraphModal({
                 <div className="w-12 h-12 rounded-full bg-paper-50 flex items-center justify-center mb-3">
                   <BarChart3 size={20} className="text-text-muted" />
                 </div>
-                <p className="text-[13px] font-semibold text-text mb-1">No graphs generated yet</p>
-                <p className="text-[12px] text-text-muted">
-                  Run this query in chat to generate graphs you can attach to the report.
-                </p>
+                <p className="text-[13px] font-semibold text-text mb-1">No graphs available for this query yet</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4">
@@ -1918,7 +1915,7 @@ function AddGraphModal({
                       onClick={() => setPickedId(g.id)}
                       className={`text-left bg-white border-2 rounded-xl p-3 transition-all cursor-pointer focus:outline-none ${
                         isPicked
-                          ? 'border-primary shadow-[0_0_0_3px_rgba(124,58,237,0.12)]'
+                          ? 'border-primary shadow-[0_0_0_3px_rgba(106,18,205,0.12)]'
                           : 'border-border-light hover:border-primary/40'
                       }`}
                     >
@@ -1939,7 +1936,7 @@ function AddGraphModal({
                           type={g.type}
                           xAxis={g.xAxis}
                           yAxis={g.yAxis}
-                          color={g.color}
+                          color={g.color ?? '#6a12cd'}
                           showTarget={false}
                           showLegend={false}
                         />
