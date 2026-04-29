@@ -96,6 +96,8 @@ export default function App() {
     saveDashboardWidgets,
     addCreatedDashboard,
     deleteCreatedDashboard,
+    updateDashboardSource,
+    openKnowledgeHub,
     setPendingDashboard,
     openExecutionPanel,
     closeExecutionPanel,
@@ -378,6 +380,7 @@ export default function App() {
             createdDashboards={state.createdDashboards}
             onCreateDashboard={addCreatedDashboard}
             onDeleteDashboard={deleteCreatedDashboard}
+            onUpdateDashboardSource={updateDashboardSource}
             onOpenChat={(pending) => {
               if (pending) setPendingDashboard(pending);
               setView('chat');
@@ -385,19 +388,31 @@ export default function App() {
           />
         );
 
-      case 'dashboard-detail':
+      case 'dashboard-detail': {
+        const created = state.createdDashboards.find(d => d.id === state.selectedDashboardId);
         return (
           <DashboardView
             initialDashboardId={state.selectedDashboardId}
-            initialDashboardName={state.createdDashboards.find(d => d.id === state.selectedDashboardId)?.name}
+            initialDashboardName={created?.name}
             initialCustomFields={state.dashboardCustomFields}
+            initialDataSource={created?.dataSource ? {
+              type: created.dataSource,
+              sourceId: created.sourceId,
+              sourceName: created.dataSourceNames?.[0],
+            } : undefined}
+            initialDataSourceNames={created?.dataSourceNames}
             savedWidgets={state.dashboardWidgets[state.selectedDashboardId || ''] || []}
             onSaveWidgets={(widgets) => saveDashboardWidgets(state.selectedDashboardId || '', widgets)}
+            onUpdateDashboardSource={(patch) => {
+              if (state.selectedDashboardId) updateDashboardSource(state.selectedDashboardId, patch);
+            }}
+            onOpenKnowledgeHub={openKnowledgeHub}
             onBack={() => setView('dashboards')}
             onImportPowerBI={() => setShowPowerBIWizard(true)}
             onShare={() => setShowShareModal(true, { type: 'dashboard', id: state.selectedDashboardId || 'dash-1' })}
           />
         );
+      }
 
       case 'reports':
       case 'report-history':

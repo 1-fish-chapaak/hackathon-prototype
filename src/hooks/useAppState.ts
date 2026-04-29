@@ -98,7 +98,18 @@ export interface AppState {
   // Persisted widgets per custom dashboard
   dashboardWidgets: Record<string, Array<{ chartType: string; title: string; xField: string; yField: string }>>;
   // User-created dashboards (persisted across navigation)
-  createdDashboards: Array<{ id: string; name: string; description: string; timeAgo: string; creator: string; accent: string }>;
+  createdDashboards: Array<{
+    id: string;
+    name: string;
+    description: string;
+    timeAgo: string;
+    creator: string;
+    accent: string;
+    dataSource?: 'excel' | 'csv' | 'sql' | 'query' | 'combo';
+    dataSourceNames?: string[];
+    /** SEED id of the picked source — required for live-SQL dashboards. */
+    sourceId?: string;
+  }>;
   // Pending dashboard — saved while user is in chat before creating
   pendingDashboard: { name: string; description: string } | null;
   // Execution panels
@@ -106,6 +117,11 @@ export interface AppState {
   executionPanelControlId: string | null;
   // Manage Exceptions (Case Mgmt) active role
   exceptionRole: ExceptionRole;
+  // When the user navigates to Knowledge Hub from a dashboard chip / Add
+  // Widget empty state, this carries the sourceId they came from so the
+  // Knowledge Hub view can highlight / scroll to that connection. Cleared
+  // when the user navigates away.
+  knowledgeHubFocusSourceId: string | null;
 }
 
 const getInitialView = (): View => {
@@ -151,6 +167,7 @@ const INITIAL_STATE: AppState = {
   executionPanel: null,
   executionPanelControlId: null,
   exceptionRole: 'risk-owner',
+  knowledgeHubFocusSourceId: null,
 };
 
 export function useAppState() {
@@ -277,6 +294,31 @@ export function useAppState() {
     setState(prev => ({ ...prev, createdDashboards: prev.createdDashboards.filter(d => d.id !== id) }));
   }, []);
 
+  /** Update the source binding of an already-created dashboard. Caller passes
+   *  any subset of `dataSource | sourceId | dataSourceNames`; missing fields
+   *  are left as-is. Used by the kebab "Change data source" action and by
+   *  AddDataModal's onAttach / onSetPrimary. */
+  const updateDashboardSource = useCallback((
+    id: string,
+    patch: Partial<Pick<AppState['createdDashboards'][number], 'dataSource' | 'sourceId' | 'dataSourceNames'>>,
+  ) => {
+    setState(prev => ({
+      ...prev,
+      createdDashboards: prev.createdDashboards.map(d => d.id === id ? { ...d, ...patch } : d),
+    }));
+  }, []);
+
+  /** Navigate to Knowledge Hub, optionally focusing a connection. The view
+   *  reads `knowledgeHubFocusSourceId` to highlight / scroll to the right
+   *  connection if present. */
+  const openKnowledgeHub = useCallback((sourceId?: string) => {
+    setState(prev => ({
+      ...prev,
+      view: 'knowledge-hub' as View,
+      knowledgeHubFocusSourceId: sourceId ?? null,
+    }));
+  }, []);
+
   const setPendingDashboard = useCallback((pending: AppState['pendingDashboard']) => {
     setState(prev => ({ ...prev, pendingDashboard: pending }));
   }, []);
@@ -340,6 +382,8 @@ export function useAppState() {
     saveDashboardWidgets,
     addCreatedDashboard,
     deleteCreatedDashboard,
+    updateDashboardSource,
+    openKnowledgeHub,
     setPendingDashboard,
     openExecutionPanel,
     closeExecutionPanel,
